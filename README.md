@@ -16,4 +16,4 @@ AB (absolute busy) app is product of InfoParc http://absolutebusy.com/ moved to 
 
 - http://ru.coresky.net/tree?id69 (Ghost SQLs)
 - http://ru.coresky.net/tree?id62 (Parser Jet)
-- http://ru.coresky.net/tree?id67 (SkyGate)
+- http://ru.coresky.net/tree?id67 (Sky Gate)
