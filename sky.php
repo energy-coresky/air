@@ -6,8 +6,7 @@
 function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
     global $sky;
 
-    if (!isset($sky))
-        return;
+    //if (!isset($sky))        return;
     if (true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;
         if (!$sky->loaded)
@@ -114,9 +113,9 @@ function sql() {
             case '-': return $sql->_dd->one($sql->stmt, 'R', true);
             case '~': return $sql->_dd->one($sql->stmt, 'A', true);
             case '>': return $sql->_dd->one($sql->stmt, 'O', true);
-            case '@': return $sql->all('R', 1);
-            case '%': return $sql->all('A', 1);
-            case '#': return $sql->all('O', 1);
+            case '@': return $sql->all('R', true);
+            case '%': return $sql->all('A', true);
+            case '#': return $sql->all('O', true);
             case '&': return new eVar(['query' => $sql]);
         }
     }
@@ -181,12 +180,13 @@ final class SQL # avoid SQL injection !
 
     private static $onduty = 'memory'; # table name without prefix
     private static $re_func = '\B\$([a-z]+)([ \t]*)(\(((?>[^()]+)|(?3))*\))?'; // revision later
-    private static $method = ['table', 'columns', 'where', 'join', 'group', 'having', 'order', 'limit'];
+    private static $qb_set =  ['table', 'columns', 'where', 'join', 'group', 'having', 'order', 'limit'];
+    private static $qb_exec = ['insert', 'update', 'delete', 'replace'];
     private static $connections = [];
 
     private $in;
     private $depth = 3; # for constructor (if parse error to show)
-    private $qbuild = false;
+    private $qba = false;
 
     function __construct($in = false) {
         if (is_string($in)) {
@@ -203,11 +203,14 @@ final class SQL # avoid SQL injection !
     }
 
     function __call($name, $args) { # query builder methods
-        if (!in_array($name, SQL::$method))
+        if ( in_array($name, SQL::$qb_exec))
+            return $this->_dd->build($this, $name);
+        if (!in_array($name, SQL::$qb_set))
             throw new Err("SQL::$name() - unknown method");
-        if (!$this->qbuild)
-            $this->qbuild = array_combine(SQL::$method, array_fill(0, count(SQL::$method), []));
-        $this->qbuild[$name] = array_merge($this->qbuild[$name], $args[0]);
+
+        if (!$this->qba)
+            $this->qba = array_combine(SQL::$qb_set, array_fill(0, count(SQL::$qb_set), []));
+        $this->qba[$name] = array_merge($this->qba[$name], $args[0]);
         return $this;
     }
 
@@ -240,15 +243,17 @@ final class SQL # avoid SQL injection !
     }
 
     function one($meth = 'A', $free = false) {
-        return $this->_dd->one($this->stmt, $meth, $free);
+        if ($this->qba)
+            return $this->_dd->build($this, 'one', $meth);
+        if (true !== $this->stmt)
+            return $this->_dd->one($this->stmt, $meth, $free);
     }
 
-    function all($meth = 'A', $mode = 0) { # 0-usual 1-c0_is_key
+    function all($meth = 'A', $mode = null) { # NULL-usual true-c0_is_key
         if ('I' == $meth)
-            return new eVar(['query' => $this]);
-        $m2 = $meth;
-        if ($mode)
-            'R' == $m2 or $m2 = 'A';
+            return new eVar(['query' => $this, 'row_c' => $mode]);
+
+        $m2 = $mode && 'R' != $meth ? 'A' : $meth;
         $ary = [];
         for ($cnt = 0; $row = $this->_dd->one($this->stmt, $m2); ) {
             if (!$mode) {

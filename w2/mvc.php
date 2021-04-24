@@ -384,7 +384,7 @@ class MVC extends MVC_BASE
         global $sky;
         $std = '__std' == $name;
         if ($std || '__lng' == $name)
-            return DIR_S . '/w2/' . ($std ? 'standard_c' : 'language') . '.tpl';
+            return DIR_S . '/w2/' . ($std ? 'standard_c' : 'language') . '.jet';
         $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
         if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.php"))
             $name = "b$name";
