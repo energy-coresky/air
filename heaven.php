@@ -752,7 +752,6 @@ function js($x = '', $p2 = true) {
     global $sky;
 
     if (is_string($x))
-    //  return '<script>' . $x . ($x && $p2 ? '</script>' : '');
         return "<script>$x</script>";
     $pref = $sky->surl ? PATH : '';
     $js = '';
