@@ -386,9 +386,9 @@ class MVC extends MVC_BASE
         if ($std || '__lng' == $name)
             return DIR_S . '/w2/' . ($std ? 'standard_c' : 'language') . '.jet';
         $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
-        if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.php"))
+        if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.jet"))
             $name = "b$name";
-        return "$dir/$name.php";
+        return "$dir/$name.jet";
     }
 
     static function recompile($layout, $name) {

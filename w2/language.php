@@ -5,7 +5,7 @@
 class Language
 {
     public $list;
-    public $error;
+    public $error;  //TODO: rerr
     public $lg;
     public $sql;
     public $nsort = 0;

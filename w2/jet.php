@@ -18,9 +18,9 @@ class Jet
         self::$dirs += is_array($name) ? $name : [$name => $func];
     }
 
-    static function q($tpl, $arg) {
+    static function q($pattern, $arg) {
         $arg = in_array(@$arg[0], [false, "'", '"']) ? $arg : '"' . escape($arg, '\\"') . '"';
-        return sprintf("<?php $tpl ?>", $arg);
+        return sprintf("<?php $pattern ?>", $arg);
     }
     
     function __construct($layout, $name, $fn = false, $is_fire = false) {

@@ -1,7 +1,7 @@
 #.jet core template
 
 #.dev //////////////////////////////////////////////////////////////////////////////
-{- this jet template used by `standard_c` class -}
+~{- this jet template used by `standard_c` class -}
 
 <h1><u>DEV instance only</u> configuration and information</h1>
 <fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>

@@ -173,6 +173,7 @@ final class SQL # avoid SQL injection !
     public $i = 0;
     public $qstr = false;
     public $_dd; # database driver for this object
+    public $qb_ary = false;
 
     static $databases;
     static $query_num = 0;
@@ -186,7 +187,6 @@ final class SQL # avoid SQL injection !
 
     private $in;
     private $depth = 3; # for constructor (if parse error to show)
-    private $qba = false;
 
     function __construct($in = false) {
         if (is_string($in)) {
@@ -208,9 +208,8 @@ final class SQL # avoid SQL injection !
         if (!in_array($name, SQL::$qb_set))
             throw new Err("SQL::$name() - unknown method");
 
-        if (!$this->qba)
-            $this->qba = array_combine(SQL::$qb_set, array_fill(0, count(SQL::$qb_set), []));
-        $this->qba[$name] = array_merge($this->qba[$name], $args[0]);
+        $this->qb_ary or $this->qb_ary = array_combine(SQL::$qb_set, array_fill(0, count(SQL::$qb_set), []));
+        $this->qb_ary[$name] = array_merge($this->qb_ary[$name], $args[0]);
         return $this;
     }
 
@@ -243,7 +242,7 @@ final class SQL # avoid SQL injection !
     }
 
     function one($meth = 'A', $free = false) {
-        if ($this->qba)
+        if ($this->qb_ary)
             return $this->_dd->build($this, 'one', $meth);
         if (true !== $this->stmt)
             return $this->_dd->one($this->stmt, $meth, $free);
