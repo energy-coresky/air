@@ -84,6 +84,13 @@ class dd_sqlite3
         }
     }
 
+    function _tables($table = false) {
+        $select = 'SELECT name FROM sqlite_master WHERE type = "table" AND name';
+        if ($table)
+            return (bool)sqlf("+$select LIKE %s", $this->pref . $table);
+        return sqlf("@$select NOT LIKE 'sqlite_%'");
+    }
+
     function _rows_count($table) {
         return sql('+select count(1) from $_`', $table);
     }

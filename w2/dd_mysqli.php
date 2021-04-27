@@ -143,6 +143,12 @@ class dd_mysqli
         return !$ok && is_callable($par) ? $par() : $ok && $par;
     }
 
+    function _tables($table = false) {
+        if ($table)
+            return (bool)sqlf('+show tables like %s', $this->pref . $table);
+        return sqlf('@show tables');
+    }
+
     function _rows_count($table) {
         $row = sqlf("-show table status like %s", $this->pref . $table);
         return $row[4];

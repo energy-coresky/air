@@ -188,7 +188,7 @@ class Language
     }
 
     private function fail_rows() {
-        if (!cnt(sqlf('show tables like %s', SQL::$dd->pref . 'language'))) {
+        if (!SKY::$dd->_tables('language')) {
             $this->sql = array_join($this->list, function($k, $v) {
                 return 'insert into ' . SQL::$dd->pref . "language values(null, '$v', '*', 1, '', now());";
             });

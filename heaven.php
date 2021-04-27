@@ -611,9 +611,7 @@ function pagination($ipp, $cnt = null, $ipl = 5, $current = null, $throw = true)
 
     if (!is_numeric($cnt)) {
         if ($cnt instanceof SQL) {
-            $q = sql('select 1 $$', $cnt)->stmt;
-            $cnt = cnt($q);
-            SQL::$dd->free($q);
+            $cnt = sql('+select count(1) $$', $cnt);
         } else {
             is_string($cnt) or $cnt = SQL::onduty();
             $cnt = SQL::$dd->_rows_count($cnt);

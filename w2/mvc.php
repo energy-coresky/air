@@ -278,7 +278,7 @@ abstract class Model_t extends MVC_BASE
             list ($limit, $pages, $cnt) = pagination($ipp);
             return ['query' => sql(1, 'select * from $_ limit $., $.', $limit, $ipp), 'pages' => $pages, 'cnt' => $cnt];
         }
-        return ['query' => $q = sql(1, 'select * from $_'), 'pages' => false, 'cnt' => cnt($q)];
+        return ['query' => $q = sql(1, 'select * from $_'), 'pages' => false, 'cnt' => $q->_dd->_rows_count($this->table)];
     }
 }
 

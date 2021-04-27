@@ -449,10 +449,6 @@ final class SQL # avoid SQL injection !
     }
 }
 
-function cnt($q, $rows = true) {
-    return SQL::$dd->num($q, $rows);
-}
-
 function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
     $str = htmlspecialchars($str, $mode, ENC);
     return $hide_percent ? str_replace('%', '&#37;', $str) : $str;
@@ -557,6 +553,7 @@ class SKY
     static $mem = [];
     static $reg = [];
     static $vars = [];
+    static $dd;
 
     protected $ghost = false;
     protected $except = false;
@@ -580,9 +577,9 @@ class SKY
         global $argv;
         if (CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
-        $dd = SQL::dd_set();
+        SKY::$dd = SQL::dd_set();
         require 'main/app/hook.php';
-        call_user_func(['hook', get_class($dd)], $dd);
+        call_user_func(['hook', get_class(SKY::$dd)], SKY::$dd);
         if (DEV)
             Ext::init();
         list($this->imemo, $tmemo) = sqlf('-select imemo, tmemo from $_ where id=3');
@@ -631,7 +628,7 @@ class SKY
     function shutdown() {
         chdir(DIR); # restore dir!
         if ($this->loaded)
-            SQL::dd_set(); # main database driver
+            SQL::dd_set(); # switch main database driver
         foreach ($this->shutdown as $object)
             call_user_func([$object, 'shutdown']);
         $e = error_get_last();
