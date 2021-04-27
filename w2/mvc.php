@@ -90,6 +90,8 @@ class eVar implements Iterator
     }
 
     function rewind() {
+        if (!$this->e)
+            $this->state = 2;
         if ($this->state)
             return;
         $this->row = new stdClass;

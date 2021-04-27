@@ -19,7 +19,7 @@ class Jet
     }
 
     static function q($pattern, $arg) {
-        $arg = in_array(@$arg[0], [false, "'", '"']) ? $arg : '"' . escape($arg, '\\"') . '"';
+        $arg = in_array(@$arg[0], [false, "'", '"']) ? $arg : '"' . escape($arg, false, '\\"') . '"';
         return sprintf("<?php $pattern ?>", $arg);
     }
     

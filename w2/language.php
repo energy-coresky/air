@@ -17,7 +17,7 @@ class Language
         trace($coll, 'Collected new translations');
         $next_id = 0x7FFF & sqlf('+select flag from $_language where lg=%s and name="*"', DEFAULT_LG);
         $new = array_join($coll, function($k, $v) use (&$next_id) {
-            return $next_id++ . '  ' . escape($k, true);
+            return $next_id++ . '  ' . escape($k);
         });
         sqlf('update $_language set tmemo=trim("\n" from concat(%s, tmemo)) where name="*"', "$new\n");
         sqlf('update $_language set flag=%d where lg=%s and name="*"', $next_id | self::NON_SORT, DEFAULT_LG);
@@ -37,18 +37,18 @@ class Language
         $err = $this->error || 'list' == $sky->_1 && $this->fail_rows();
         return [
             'd_obj' => $this,
-            'e_list' => ($this->lg = $lg) && !$err ? $this->listing($lg) : false,
+            'e_list' => ($this->lg = $lg) && !$err ? $this->listing($lg) : [],
         ];
     }
 
     function c_edit($lg) {
         $ary = $this->act($lg, $_POST['id']);
-        return ['val' => unescape($ary[2], true)];
+        return ['val' => escape($ary[2], true)];
     }
 
     function c_const($lg) {
         $ary = $this->act($lg, $_POST['id']);
-        return ['val' => unescape($ary[1], true)];
+        return ['val' => escape($ary[1], true)];
     }
 
     function c_all($id) {
@@ -58,10 +58,10 @@ class Language
     function c_store($id) {
         $const = strtoupper($_POST['const']);
         $new = !$id; # $id pass by reference!
-        if ($this->act(DEFAULT_LG, $id, 'all', [$const, escape($_POST[DEFAULT_LG], true), $new], true))
+        if ($this->act(DEFAULT_LG, $id, 'all', [$const, escape($_POST[DEFAULT_LG]), $new], true))
             return [];
         foreach ($this->list as $lg)
-            $lg == DEFAULT_LG or $this->act($lg, $id, 'all', [$const, escape($_POST[$lg], true), $new]);
+            $lg == DEFAULT_LG or $this->act($lg, $id, 'all', [$const, escape($_POST[$lg]), $new]);
         return $this->c_list(DEFAULT_LG);
     }
 
@@ -76,7 +76,7 @@ class Language
                 foreach ($this->list as $v)
                     $v == DEFAULT_LG or $this->act($v, $_POST['id'], 'const', $const);
             } else {
-                $this->act($lg, $_POST['id'], 'text', escape($_POST['save'], true));
+                $this->act($lg, $_POST['id'], 'text', escape($_POST['save']));
             }
         } else foreach ($this->list as $v) { # delete item
             $this->act($v, $_POST['delete'], 'delete');
@@ -188,7 +188,7 @@ class Language
     }
 
     private function fail_rows() {
-        if (!cnt(sqlf('show tables like "$_language"'))) {
+        if (!cnt(sqlf('show tables like %s', SQL::$dd->pref . 'language'))) {
             $this->sql = array_join($this->list, function($k, $v) {
                 return 'insert into ' . SQL::$dd->pref . "language values(null, '$v', '*', 1, '', now());";
             });
@@ -217,7 +217,7 @@ class Language
             return [
                 'lg' => $lg,
                 'const' => $const,
-                'val' => unescape($val, true),
+                'val' => escape($val, true),
             ];
         }];
     }

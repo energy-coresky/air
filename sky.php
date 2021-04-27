@@ -462,28 +462,12 @@ function unhtml($str, $mode = ENT_QUOTES) {
     return html_entity_decode($str, $mode, ENC);
 } # list($month, $day, $year) = sscanf('Январь 01 2000', "%s %d %d");
 
-function escape($in, $char = false) {
-    global $sky;
-    if (is_array($in)) return array_map(function($v) use ($sky) {
-        return SQL::$dd->escape($v);
-    }, $in);
-    else $in = (string)$in;
-    if (is_string($char)) {
-        $dst = array_map(function($v) {
-            return "\\\\$v";
-        }, $src = str_split($char));
-        return strtr($in, array_combine($src, $dst));
-    }
-    return $char ? SQL::$dd->escape($in, false) : SQL::$dd->escape($in);
-}
-
-function unescape($in, $char = false) {
-    if (is_string($char)) {
-        $src = array_map(create_function('$v', 'return "\\\\$v";'), $dst = str_split($char));
-        return strtr($in, array_combine($src, $dst));
-    }
-    $char or $in = substr($in, 1, -1);
-    return strtr($in, ['\0' => "\x00", '\n' => "\n", '\r' => "\r", '\\\\' => "\\", '\\\'' => "'", '\"' => '"', '\Z' => "\x1a"]);
+function escape($in, $reverse = false, $chars = "\\\n") {
+    $src = str_split($chars);
+    $dst = array_map(function($v) use ($src) {
+        return $src[0] . ("\n" == $v ? 'n' : $v);
+    }, $src);
+    return strtr($in, $reverse ? array_combine($dst, $src) : array_combine($src, $dst));
 }
 
 function strand($n = 23) {
@@ -735,7 +719,7 @@ class SKY
             trace('GHOST SQL: ' . (is_array($tpl) ? end($tpl) : $tpl), false, 1);
         if ($original) foreach (explode("\n", unl($original)) as $v) {
             list($k, $v) = explode(' ', $v, 2);
-            SKY::$mem[$char][3][$k] = unescape($v, true);
+            SKY::$mem[$char][3][$k] = escape($v, true);
         }
         return SKY::$mem[$char][3];
     }
@@ -745,7 +729,7 @@ class SKY
         $flags =& $x[0];
         if ($f1 = $flags & 1) {
             $new = array_join($x[3], function($k, $v) {
-                return "$k " . escape($v, true);
+                return "$k " . escape($v);
             });
             if ($new === $x[1]) $f1 = 0; else $x[1] = $new;
         }

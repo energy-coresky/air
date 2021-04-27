@@ -31,6 +31,12 @@ class dd_mysqli
         return $quote ? "'" . mysqli_real_escape_string($this->conn, $s) . "'" : mysqli_real_escape_string($this->conn, $s);
     }
 
+    function unescape($s, $quote = true) {
+        if ($quote)
+            $s = substr($s, 1, -1);
+        return strtr($s, ['\0' => "\x00", '\n' => "\n", '\r' => "\r", '\\\\' => "\\", '\\\'' => "'", '\"' => '"', '\Z' => "\x1a"]);
+    }
+
     function error() {
         return mysqli_error($this->conn);
     }

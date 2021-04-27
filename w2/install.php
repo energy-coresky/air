@@ -110,7 +110,8 @@ class Install
                 $tbl = array_shift($rows);
                 $one = preg_replace("/^$pref(\w+)$/", '$1', $tbl);
                 for ($q = sql('select * from $_`', $one); $r = $q->one('R'); ) {
-                    foreach ($r as &$v) $v = null === $v ? 'NULL' : (is_numeric($v && $v[0]) ? $v : escape($v));
+                    foreach ($r as &$v)
+                        $v = null === $v ? 'NULL' : (is_num($v) && '0' != $v[0] ? $v : $q->_dd->escape($v));
                     $this->write_sql("insert into `$one` values(" . implode(',', $r) . ")");
                     $cr++;
                 }
@@ -179,7 +180,7 @@ class Install
                 foreach ($this->filelist($one) as $fn)
                     isset($exf[$fn]) or $this->skip_file($fn) or $max++;
             $head = "type app\nmod_required $head";
-            $head .= "\ndesc " . escape($_POST['desc'], true);
+            $head .= "\ndesc " . escape($_POST['desc']);
             $head .= "\nversion $_POST[vphp] $and $_POST[vphp2] $_POST[vmysql]\nwww " . WWW;
             $head .= "\ncompiled " . PHP_TZ . ' ' . $sky->s_version;
             $sql = isset($_POST['sql']) ? $this->memo('count_tr', '0.0.') : '0.0.';
