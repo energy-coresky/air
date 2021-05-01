@@ -143,6 +143,10 @@ class dd_mysqli
         return !$ok && is_callable($par) ? $par() : $ok && $par;
     }
 
+    function _xtrace() {
+        sqlf('update $_memory d left join $_memory s on (s.id= if(d.id=15, 1, 15)) set d.tmemo=s.tmemo where d.id in (15, 16)');
+    }
+
     function _tables($table = false) {
         if ($table)
             return (bool)sqlf('+show tables like %s', $this->pref . $table);

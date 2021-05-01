@@ -14,14 +14,16 @@ class Schedule
     private $stdout = [];
     private $now    = [];
     private $php    = 'php';
+
     const TPL = '%s, execution time: %01.3f sec, SQL nums in cron tasks: %d';
     const UPD = 'update $_memory set tmemo=substr(concat(%s,%s,tmemo),1,10000) where id=%d';
+
     public $dt;
     public $imemo;
 
     function &load() {
         global $sky;
-        $sky->loaded or $sky->load();
+        SKY::$dd or $sky->load();
         if (!isset(SKY::$mem['n'])) {
             list($this->dt, $this->imemo, $tmemo) = sqlf('-select dt, imemo, tmemo from $_memory where id=9');
             SKY::ghost('n', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=9');
@@ -69,7 +71,7 @@ class Schedule
 
     function mail_error() {
         global $sky;
-        $sky->loaded or $sky->load();
+        SKY::$dd or $sky->load();
 
         list ($dt, $err) = sqlf('-select dt, tmemo from $_memory where id=4');
         if (!$dt)
@@ -90,13 +92,14 @@ class Schedule
     function at($schedule, $load_sky = true, $func = null) {
         # Minutes Hours Days Months WeekDays-0=sunday  *   or  12   or  */3   or   1,2,3
         global $argv, $sky;
+
         if (is_callable($load_sky))
             $func = $load_sky;
 
         if (-1 == $this->arg) {
             if ($this->ok($schedule)) {
                 if ($this->single_thread) {
-                    if ($load_sky && !$sky->loaded)
+                    if ($load_sky && !SKY::$dd)
                         $sky->load();
                     $func();
                 } else {
@@ -106,10 +109,10 @@ class Schedule
                 $this->started++;
             }
         } elseif ($this->i == $this->arg) {
-            if ($load_sky && !$sky->loaded)
+            if ($load_sky && !SKY::$dd)
                 $sky->load();
             $func();
-            if ($sky->loaded)
+            if (SKY::$dd)
                 $this->n_cron_dt = sprintf(self::TPL, NOW, microtime(true) - START_TS, SQL::$query_num);
         }
         $this->i++;
@@ -149,7 +152,7 @@ class Schedule
 
     function sql() {
         global $sky;
-        $sky->loaded or $sky->load();
+        SKY::$dd or $sky->load();
         $start = microtime(true);
         $sql = (string)call_user_func_array('qp', func_get_args());
         $n = sql(SQL::NO_PARSE + 1, $sql);
@@ -162,7 +165,7 @@ class Schedule
         if ($unk = -1 == $task)
             $task = $this->single_thread ? $this->i : $this->arg;
         $date = date(DATE_DT);
-        if (!$this->amp || !$sky->loaded) {
+        if (!$this->amp || !SKY::$dd) {
             echo $unk ? "$str\n" : "$date [$task] $str\n";
             return;
         }
@@ -220,7 +223,7 @@ class Schedule
 
         global $sky;// $sky->was_error=1;
         $sky->was_error or $sky->debug = false;
-        if ($this->started && $this->single_thread && $sky->loaded)
+        if ($this->started && $this->single_thread && SKY::$dd)
             $this->n_cron_dt = sprintf(self::TPL, NOW, microtime(true) - START_TS, SQL::$query_num);
     }
 }

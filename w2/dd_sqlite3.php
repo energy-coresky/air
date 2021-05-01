@@ -84,6 +84,10 @@ class dd_sqlite3
         }
     }
 
+    function _xtrace() {
+        ; #2do
+    }
+
     function _tables($table = false) {
         $select = 'SELECT name FROM sqlite_master WHERE type = "table" AND name';
         if ($table)

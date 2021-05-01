@@ -1,536 +1,6 @@
 <?php
 
 # For Licence and Disclaimer of this code, see http://coresky.net/license
-# Filename: unique
-
-function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
-    global $sky;
-
-    //if (!isset($sky))        return;
-    if (true === $is_error) {
-        $sky->was_error |= SKY::ERR_DETECT;
-        if (!$sky->loaded)
-            $sky->load();
-        if (++$sky->cnt_error > 99) {
-            $sky->tracing("Error 500", true);
-            throw new Err("500 Internal SKY error");
-        }
-    }
-    if ($sky->debug || $sky->s_prod_error && true === $is_error) {
-        is_string($var) or $var = var_export($var, true);
-        if (is_string($is_error)) {
-            $var = "$is_error: $var";
-            $is_error = false;
-        }
-        if ($has_depth = !$file) {
-            $depth = 1 + $line;
-            $db = debug_backtrace();
-            list ($file, $line) = array_values($db[$line]);
-            if (is_array($line)) { # file-line don't supported
-                list ($file, $line) = array_values($db[$depth - 2]);
-                $depth--;
-                $fln = sprintf(span_r, "<span>$file^$line</span>");
-            }
-        }
-        isset($fln) or $fln = "<span>$file^$line</span>";
-        $error = "$fln\n" . html($var);
-        if ($is_error) {
-            $sky->was_error |= SKY::ERR_SHOW;
-            if ($sky->cli)
-                echo "\n$file^$line\n$var\n\n";
-            if ($sky->loaded && $sky->s_prod_error) { # collect error log
-                $type = $sky->cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
-                $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
-                if (!$sky->cli)
-                    $sky->error_prod .= ' uri: ' . html(URI);
-                $sky->error_prod .= "\n$error\n\n";
-            }
-        }
-        if (!$sky->debug)
-            return; # else collect tracing
-        if ($is_error) {
-            $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>";
-            ob_start();
-            debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $backtrace = html(ob_get_clean());
-            if ($sky->is_front || $sky->ajax) {
-                $sky->error_title or $sky->error_title = 'User Error';
-                $sky->errors .= "<h1>$sky->error_title</h1><pre>$error\n\n$backtrace</pre>";
-                $sky->error_title = '';
-                $str = Debug::context($context, $has_depth ? $depth : 2) and $sky->errors .= "<pre>$str</pre>";
-            } else {
-                $sky->tracing .= "BACKTRACE:\n$backtrace";
-                if (!$sky->cli && !$sky->ajax && !$sky->s_trace_single) {
-                    printf(span_r, "<br /><b>SKY:</b> " . html($var) . " at <b>$file</b> on line <b>$line</b>");
-                }
-            }
-            $sky->tracing .= "\n";
-        } else {
-            $sky->tracing .= "$error\n\n";
-        }
-    }
-}
-
-function sql() {
-    $in = func_get_args();
-    $sql = $in[0] instanceof SQL ? $in[0] : new SQL($in);
-    $qstr = (string)$sql; # build sql string
-    if (SQL::NO_EXEC & $sql->mode)
-        return $qstr;
-    if ($sql->error)
-        return false;
-    if (false !== strpos('+-~>^@%#', $char = $qstr[0])) {
-        $qstr = substr($qstr, 1);
-    } else {
-        $char = '';
-    }
-    if ('^' == $char)
-        return '$q = sql(' . ++$sql->mode . ',' . var_export($qstr, true) . ');' . $sql->_dd->one(null, 'E');
-
-    global $sky;
-    $ts = microtime(true);
-    if ($no = $sql->_dd->query($qstr, $sql->stmt))
-        $sky->was_error |= SKY::ERR_DETECT;
-    if ($sky->debug || $no && $sky->s_prod_error) {
-        $ts = microtime(true) - $ts;
-        SQL::$query_num++;
-        if ($is_error = (bool)$no)
-            $sky->error_title = 'SQL Error';
-        $depth = SQL::NO_TRACE & $sql->mode ? (int)$is_error : 1 + $sql->mode & 7;
-        if ($depth)
-            trace(($is_error ? "ERROR in {$sql->_dd->name} - $no: " . $sql->_dd->error() . "\n" : '') . "SQL: $char$qstr", $is_error, $depth);
-        if (DEV && Ext::cfg('sql'))
-            Ext::ed_sql($qstr, $ts, $depth, $no);
-    }
-
-    if ($no)
-        return false;
-    switch (strtolower(substr($qstr, 0, 6))) {
-        case 'delete': case 'update': case 'replac': return $sql->_dd->affected();
-        case 'insert': return $sql->_dd->insert_id();
-        default: switch ($char) {
-            case '+': return $sql->_dd->one($sql->stmt, 'C', true);
-            case '-': return $sql->_dd->one($sql->stmt, 'R', true);
-            case '~': return $sql->_dd->one($sql->stmt, 'A', true);
-            case '>': return $sql->_dd->one($sql->stmt, 'O', true);
-            case '@': return $sql->all('R', true);
-            case '%': return $sql->all('A', true);
-            case '#': return $sql->all('O', true);
-            case '&': return new eVar(['query' => $sql]);
-        }
-    }
-    return $sql;
-}
-
-function sqlf() { # just more quick parsing, using printf syntax. No SQL injection!
-    //$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);//new Exception();  |DEBUG_BACKTRACE_PROVIDE_OBJECT
-    //$trace = $e->getTrace();
-    //trace($trace[1]);
-
-    $sql = new SQL;
-    $in = func_get_args();
-    if (is_int($sql->qstr = array_shift($in))) {
-        $sql->mode = $sql->qstr;
-        $sql->qstr = array_shift($in);
-    }
-    $sql->mode++; # add 1 depth
-    if (SQL::NO_PARSE & $sql->mode)
-        return sql($sql);
-    if (false !== strpos($sql->qstr, '$'))
-        $sql->qstr = $sql->replace_nop(false, $sql->qstr);
-
-    if ($in) $sql->qstr = vsprintf($sql->qstr, array_map(function ($val) use ($sql) {
-        $sql->i++;
-        return is_array($val)
-            ? $sql->array_join($val)
-            : ($val instanceof Closure
-                ? $val($sql)
-                : (is_num($val) ? $val : $sql->_dd->escape($val)));
-    }, $in));
-
-    return sql($sql);
-}
-
-function qp() { # Query Part, Query Parse
-    return new SQL(func_get_args());
-}
-
-//////////////////////////////////////////////////////////////////////////
-final class SQL # avoid SQL injection !
-{
-    const _NC  =  8; # no comma in implode arrays
-    const _OR  = 16; # implode via "OR"
-    const _UPD = 32; # insert in update's style
-    const _EQ  = 64;
-    const NO_TRACE = 128;
-    const NO_PARSE = 256;
-    const NO_EXEC  = 512;
-    const NO_FUNC = 1024;
-
-    public $mode = 0;
-    public $error = false;
-    public $stmt = true;
-    public $i = 0;
-    public $qstr = false;
-    public $_dd; # database driver for this object
-    public $qb_ary = false;
-
-    static $databases;
-    static $query_num = 0;
-    static $dd;  # selected database driver
-
-    private static $onduty = 'memory'; # table name without prefix
-    private static $re_func = '\B\$([a-z]+)([ \t]*)(\(((?>[^()]+)|(?3))*\))?'; // revision later
-    private static $qb_set =  ['table', 'columns', 'where', 'join', 'group', 'having', 'order', 'limit'];
-    private static $qb_exec = ['insert', 'update', 'delete', 'replace'];
-    private static $connections = [];
-
-    private $in;
-    private $depth = 3; # for constructor (if parse error to show)
-
-    function __construct($in = false) {
-        if (is_string($in)) {
-            SQL::dd_set($in, $this); # single query to different connection
-        } else {
-            $this->_dd = SQL::$dd;
-            if ($in)
-                $this->parse($in);
-        }
-    }
-
-    function __toString() {
-        return $this->qstr;
-    }
-
-    function __call($name, $args) { # query builder methods
-        if ( in_array($name, SQL::$qb_exec))
-            return $this->_dd->build($this, $name);
-        if (!in_array($name, SQL::$qb_set))
-            throw new Err("SQL::$name() - unknown method");
-
-        $this->qb_ary or $this->qb_ary = array_combine(SQL::$qb_set, array_fill(0, count(SQL::$qb_set), []));
-        $this->qb_ary[$name] = array_merge($this->qb_ary[$name], $args[0]);
-        return $this;
-    }
-
-    static function onduty($table = false) {
-        $t = SQL::$onduty;
-        false === $table or SQL::$onduty = $table;
-        return $t;
-    }
-
-    static function close($name = false) {
-        if ($name) {
-            SQL::$connections[$name]->close();
-            unset(SQL::$connections[$name]);
-            return;
-        }
-        foreach (SQL::$connections as $dd)
-            $dd->close();
-    }
-
-    static function dd_set($in = '', $obj = false) {
-        if (isset(SQL::$connections[$in])) {
-            $dd = SQL::$connections[$in];
-        } else {
-            '' === $in ? ($cfg =& SQL::$databases) : ($cfg =& SQL::$databases[$in]);
-            $driver = "dd_$cfg[driver]";
-            $dd = SQL::$connections[$in] = new $driver($cfg['dsn'], $cfg['pref']);
-            unset($cfg['dsn']);
-        }
-        return $obj ? ($obj->_dd = $dd) : (SQL::$dd = $dd); # set selected database driver
-    }
-
-    function one($meth = 'A', $free = false) {
-        if ($this->qb_ary)
-            return $this->_dd->build($this, 'one', $meth);
-        if (true !== $this->stmt)
-            return $this->_dd->one($this->stmt, $meth, $free);
-    }
-
-    function all($meth = 'A', $mode = null) { # NULL-usual true-c0_is_key
-        if ('I' == $meth)
-            return new eVar(['query' => $this, 'row_c' => $mode]);
-
-        $m2 = $mode && 'R' != $meth ? 'A' : $meth;
-        $ary = [];
-        for ($cnt = 0; $row = $this->_dd->one($this->stmt, $m2); ) {
-            if (!$mode) {
-                $ary[] = $row;
-                continue;
-            }
-            $cnt or $cnt = count($row);
-            $key = current(array_splice($row, 0, 1));
-            if (1 == $cnt) {
-                $ary[] = $key;
-            } else {
-                $ary[$key] = 2 == $cnt ? current($row) : ('O' == $meth ? (object)$row : $row);
-            }
-        }
-        return $ary;
-    }
-
-    function append() {
-        $this->depth = 2;
-        $tmp = $this->qstr;
-        $this->qstr = $tmp . $this->parse(func_get_args());
-        return $this;
-    }
-
-    function prepend() {
-        $this->depth = 2;
-        $tmp = $this->qstr;
-        $this->qstr = $this->parse(func_get_args()) . $tmp;
-        return $this;
-    }
-
-    private function parse($in) {
-        $this->error = false;
-        if (is_int($this->qstr = array_shift($in))) {
-            $this->mode |= $this->qstr;
-            $this->qstr = array_shift($in);
-        }
-        if ($this->qstr instanceof SQL)
-            $this->qstr = (string)$this->qstr;
-        if (!$in)
-            return (SQL::NO_PARSE & $this->mode) || false === strpos($this->qstr, '$')
-                ? $this->qstr
-                : ($this->qstr = $this->replace_nop(false, $this->qstr));
-        $this->in =& $in;
-        $this->i = 0;
-        $re = '\$_`|\$[@\$\.\+`]|\\\\[1-9]|@@|!!|' . $this->replace_nop();
-
-        if ($this->qstr = preg_replace_callback("~$re~u", [$this, 'replace_par'], $this->qstr))
-            count($in) == $this->i or $this->error = 'Placeholder\'s count don\'t match parameters count';
-    
-        if ($this->error) {
-            global $sky;
-            $sky->error_title = 'SQL parse Error';
-            trace("$this->error\nSQL-x: $this->qstr", true, $this->depth + ($this->mode & 7));
-        }
-        return $this->qstr;
-    }
-
-    function replace_nop($m = false, $str = false) {
-        if (!$m) {
-            $re = '\$_[a-z_\d]*';
-            if (SQL::$re_func && !(SQL::NO_FUNC & $this->mode))
-                $re .= '|' . SQL::$re_func;
-            return $str ? preg_replace_callback("~$re~u", [$this, __FUNCTION__], $str) : $re;
-        } elseif ('_' == $m[0][1]) { # $_ (on-duty table) or $_sometable
-            return '`' . $this->_dd->pref . (2 == strlen($m[0]) ? SQL::onduty() : substr($m[0], 2)) . '`';
-        }
-        if (isset($m[3]) && strpos($m[3], '$'))
-            $m[3] = preg_replace_callback('~' . SQL::$re_func . '~u', [$this, __FUNCTION__], $m[3]);
-        return Func_parse::one($this->_dd, $m);
-    }
-
-    private function replace_par($m) {
-        global $sky;
-
-        $c2 = $m[0][1];
-        if ('\\' == $m[0][0]) # \1..\9 - backlinks
-            return $this->in[$c2 - 1];
-        if ('$_`' == $m[0])  # variable table
-            return $val = '`' . $this->_dd->pref . str_replace('`', '``', trim($val =& $this->in[$this->i++], '`')) . '`';
-        if ('_' == $c2 || ord($c2) > 0x60)
-            return $this->replace_nop($m);
-
-        $val =& $this->in[$this->i++];
-        if ($this->error)
-            return $val = '??'; # run faster
-        if (is_bool($val))
-            return $val = (int)$val;
-
-        $param = 'Parameter N ' . (1 + $this->i) . ' - ';
-        switch ($m[0]) {
-            case '$.': # numbers
-                if (is_num($val))
-                    return $val;
-                $sky->debug ? ($this->error = "$param not numeric") : die;
-            break;
-            case '$+': # string (scalar)
-                if (null === $val)
-                    return $val = 'NULL';
-                if (is_scalar($val))
-                    return $val = is_num($val) ? $val : $this->_dd->escape($val);
-                $sky->debug ? ($this->error = "$param not a scalar") : die;
-            break;
-            case '$`': # column of a table, free to use
-                if (is_string($val))
-                    return $val = '`' . str_replace('`', '``', trim($val, '`')) . '`';
-                $this->error = "$param not a string";
-            break;
-            case '$$': # free to use, parsed sql part
-                # ? $this->mode |= $val->mode;
-                if ($val instanceof SQL)
-                    return $val = (string)$val;
-                if (null === $val)
-                    return $val = 'NULL';
-                if ('' === $val || is_num($val))
-                    return $val;
-                $this->error = "$param is not instanceof SQL";
-            break;
-            case '$@':
-                if (is_array($val) && is_num(key($val)))
-                    return $val = $this->array_join(array_values($val));
-                $sky->debug ? ($this->error = "$param not array or key0 not numeric") : die;
-            break;
-            case '!!': # scalar or array, dangerous, NOT escaped! use it as least as can
-                if (is_scalar($val))
-                    return $val;
-                if ($val instanceof Closure)
-                    return $val($this);
-                # continue, no break
-            case '@@': # array created by programmers, escaped
-                if (null === $val)
-                    return $val = 'NULL';
-                if (is_array($val))
-                    return $val = $this->array_join($val, '@@' == $m[0]);
-                $this->error = "$param not an array or scalar";
-            break;
-        }
-        return $val = '>>' . gettype($val) . '<<';
-    }
-
-    function array_join($ary, $esc = true) {
-        $keys = $vals = [];
-        array_walk($ary, function ($v, $k) use (&$keys, &$vals, $esc) {
-            $param = sprintf('Parameter N %d`%s` - ', 1 + $this->i, $k);
-            $char = (string)@$k[0];
-            $pref = false;
-            if ($char and $pref = (false !== strpos('.+$!`', $char)))
-                $k = substr($k, 1);
-            if (is_bool($v))
-                $v = (int)$v;
-            if ('`' == $char)
-                $pref = false; # do not change $esc
-
-            if (null === $v) {
-                $esc = false;
-                $v = 'NULL';
-            } elseif (!(is_scalar($v) || $v instanceof SQL)) {
-                $this->error = "$param not a scalar";
-            } elseif ('+' == $char) {
-                $esc = true;
-            } elseif ($pref) {
-                $esc = false;
-                if ('.' == $char && !is_num($v))
-                    $this->error = "$param not numeric";
-                if ('$' == $char) {
-                    if ($v instanceof SQL) $v = (string)$v;
-                    elseif ('' !== $v && !ctype_digit((string)$v)) $this->error = "$param not instance of SQL";
-                }
-            }
-            if ($this->error)
-                $v = '>>' . gettype($v) . '<<';
-            $keys[] = '`' == $char ? '`' . str_replace('`', '``', trim($k, '`')) . '`' : $k;
-            if (!$esc && '$now' == $v)
-                $v = $this->_dd->f_dt();
-            $vals[] = !$esc || is_num($v) ? $v : $this->_dd->escape($v);
-        });
-
-        $uir = in_array($char = strtolower($this->qstr[0]), ['i', 'r']); # insert, replace
-        if ($uir && !(self::_UPD & $this->mode))
-            return '(' . implode(', ', $keys) . ') VALUES (' . implode(', ', $vals) . ')';
-        $uir or $uir = 'u' == $char; # update
-        $num_key = is_num($keys[0]) && !(self::_NC & $this->mode);
-
-        $str = implode(
-            $num_key || $uir ? ', ' : (self::_OR & $this->mode ? ' OR ' : ' AND '),
-            array_map(function ($k, $v) use ($uir) {
-                return is_num($k) ? $v : ($uir ? "$k = $v" : $k . $v);
-            }, $keys, $vals)
-        );
-        if ($num_key && false !== strpos($str, '$'))
-            $str = $this->replace_nop(false, $str);
-        
-        return $str;
-    }
-}
-
-function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
-    $str = htmlspecialchars($str, $mode, ENC);
-    return $hide_percent ? str_replace('%', '&#37;', $str) : $str;
-}
-
-function unhtml($str, $mode = ENT_QUOTES) {
-    return html_entity_decode($str, $mode, ENC);
-} # list($month, $day, $year) = sscanf('Январь 01 2000', "%s %d %d");
-
-function escape($in, $reverse = false, $chars = "\\\n") {
-    $src = str_split($chars);
-    $dst = array_map(function($v) use ($src) {
-        return $src[0] . ("\n" == $v ? 'n' : $v);
-    }, $src);
-    return strtr($in, $reverse ? array_combine($dst, $src) : array_combine($src, $dst));
-}
-
-function strand($n = 23) {
-    $str = 'abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679'; # length == 53
-    if ($n != 7) $str .= 'o0Ol1iIB8'; # skip for passwords (9 chars)
-    for ($ret = '', $i = 0; $i < $n; $i++, $ret .= $str[rand(0, 7 == $n ? 52 : 61)]);
-    return $ret;
-}
-
-function unl($str) {
-    return str_replace(["\r\n", "\r"], "\n", $str);
-}
-
-function strcut($str, $n = 300) {
-    $text = mb_substr($str, 0, $n, ENC);
-    return mb_strlen($str, ENC) > $n
-        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', ENC) - mb_strlen($text, ENC), ENC), '.,?!') . '&nbsp;...'
-        : $text;
-}
-
-function array_explode($str, $via1 = ' ', $via2 = "\n") {
-    $ary = explode($via2, $str);
-    $out = [];
-    array_walk($ary, function($item) use (&$out, $via1) {
-        list ($k, $v) = explode($via1, $item, 2);
-        $out[$k] = $v;
-    });
-    return $out;
-}
-
-function array_join($ary, $via1 = ' ', $via2 = "\n") {
-    return implode($via2, array_map(function($k, $v) use ($via1) {
-        return $via1 instanceof Closure ? $via1($k, $v) : $k . $via1 . $v;
-    }, array_keys($ary), $ary));
-}
-
-function array_match($re, $ary, $re_key = false) {
-    if (!is_array($ary))
-        return false;
-    foreach ($ary as $k => $v) {
-        if (!preg_match($re, $v) || !($re_key ? preg_match($re_key, $k) : is_num($k)))
-            return false;
-    }
-    return true;
-}
-
-function is_num($v, $zero = false, $lt = true) {
-    if (is_int($v) && ($lt || $v > 0))
-        return true;
-    return '0' === $v || ctype_digit($v) && ('0' !== $v[0] || $zero);
-}
-
-//////////////////////////////////////////////////////////////////////////
-class Err extends Exception {} # Use when exception is caused by programmer actions. Assume like crash, `throw new Err` should never works!
-class Stop extends Exception {} # Assume like stop and not a crash
-# use exception `Exception`, `die` when exceptional situation is caused by events of the outside world. Configure as crash or not.
-
-//////////////////////////////////////////////////////////////////////////
-class Hook_base { # use it in app/hook.php
-    function __call($name, $args) {
-        global $sky;
-
-        if ('h_' == substr($name, 0, 2) && method_exists($sky, $name))
-            return call_user_func_array([$sky, $name], $args); # call the default processing for the method
-        throw new Err("Hook `$name` not exists");
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////
 class SKY
@@ -544,7 +14,6 @@ class SKY
     public $error_no = 0;
     public $was_error = 0;
     public $cnt_error = 0;
-    public $loaded = false;
     public $cli;
     public $gpc = '';
     public $lg = DEFAULT_LG;
@@ -553,7 +22,8 @@ class SKY
     static $mem = [];
     static $reg = [];
     static $vars = [];
-    static $dd;
+    static $databases;
+    static $dd = false;
 
     protected $ghost = false;
     protected $except = false;
@@ -577,18 +47,17 @@ class SKY
         global $argv;
         if (CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
-        SKY::$dd = SQL::dd_set();
+        SKY::$dd = SQL::open();
         require 'main/app/hook.php';
         call_user_func(['hook', get_class(SKY::$dd)], SKY::$dd);
         if (DEV)
             Ext::init();
-        list($this->imemo, $tmemo) = sqlf('-select imemo, tmemo from $_ where id=3');
+        list($this->imemo, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=3');
         SKY::ghost('s', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=3');
         $this->debug |= (int)$this->s_trace_single;
         if ($this->s_prod_error || $this->debug)
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
-        $this->loaded = true;
     }
 
     function autoload($name) {
@@ -627,19 +96,21 @@ class SKY
 
     function shutdown() {
         chdir(DIR); # restore dir!
-        if ($this->loaded)
-            SQL::dd_set(); # switch main database driver
+        if (SKY::$dd)
+            SQL::open(); # switch main database driver
         foreach ($this->shutdown as $object)
             call_user_func([$object, 'shutdown']);
+
         $e = error_get_last();
         if ($e && $e['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR)) {
             $err = Debug::error_name($e['type']);
             trace("$err: $e[message]", true, $e['line'], $e['file']);
             $this->error_title = "PHP $err";
         }
-        $this->ghost or !$this->loaded or $this->tail_ghost(!$this->cli && !$this->tailed);
+        $this->ghost or !SKY::$dd or $this->tail_ghost(!$this->cli && !$this->tailed);
         if ($this->error_prod) # write error log
-            sqlf('update $_memory set dt=$now, tmemo=substr($cc(%s, tmemo),1,5000) where id=4', $this->error_prod);
+            sqlf('update $_memory set dt=' . SKY::$dd->f_dt()
+                . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
 
         if (!$this->tailed) { # if script exit in advance (with exit() or throw new Err())
             $plus = $this->debug ? "x autotrace\n\n" : '';
@@ -766,7 +237,7 @@ class SKY
         if ($trace_x) {
             if (DEV) {
                 $plus .= Ext::trace();
-               // sqlf('update $_memory d left join $_memory s on (s.id= if(d.id=15, 1, 15)) set d.tmemo=s.tmemo where d.id in (15,16)');
+                SKY::$dd->_xtrace();
             }
             sqlf('update $_memory set tmemo=%s where id=1', $plus);
         }
@@ -813,4 +284,245 @@ class SKY
             'app' => $app,
         ];
     }
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+class Err extends Exception {} # Use when exception is caused by programmer actions. Assume like crash, `throw new Err` should never works!
+class Stop extends Exception {} # Assume like stop and not a crash
+# use exception `Exception`, `die` when exceptional situation is caused by events of the outside world. Configure as crash or not.
+
+//////////////////////////////////////////////////////////////////////////
+class Hook_base { # use it in app/hook.php
+    function __call($name, $args) {
+        global $sky;
+
+        if ('h_' == substr($name, 0, 2) && method_exists($sky, $name))
+            return call_user_func_array([$sky, $name], $args); # call the default processing for the method
+        throw new Err("Hook `$name` not exists");
+    }
+}
+
+
+function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
+    global $sky;
+
+    //if (!isset($sky))        return;
+    if (true === $is_error) {
+        $sky->was_error |= SKY::ERR_DETECT;
+        SKY::$dd or $sky->load();
+        if (++$sky->cnt_error > 99) {
+            $sky->tracing("Error 500", true);
+            throw new Err("500 Internal SKY error");
+        }
+    }
+    if ($sky->debug || $sky->s_prod_error && true === $is_error) {
+        is_string($var) or $var = var_export($var, true);
+        if (is_string($is_error)) {
+            $var = "$is_error: $var";
+            $is_error = false;
+        }
+        if ($has_depth = !$file) {
+            $depth = 1 + $line;
+            $db = debug_backtrace();
+            list ($file, $line) = array_values($db[$line]);
+            if (is_array($line)) { # file-line don't supported
+                list ($file, $line) = array_values($db[$depth - 2]);
+                $depth--;
+                $fln = sprintf(span_r, "<span>$file^$line</span>");
+            }
+        }
+        isset($fln) or $fln = "<span>$file^$line</span>";
+        $error = "$fln\n" . html($var);
+        if ($is_error) {
+            $sky->was_error |= SKY::ERR_SHOW;
+            if ($sky->cli)
+                echo "\n$file^$line\n$var\n\n";
+            if ($sky->s_prod_error) { # collect error log
+                $type = $sky->cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
+                $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
+                if (!$sky->cli)
+                    $sky->error_prod .= ' uri: ' . html(URI);
+                $sky->error_prod .= "\n$error\n\n";
+            }
+        }
+        if (!$sky->debug)
+            return; # else collect tracing
+        if ($is_error) {
+            $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>";
+            ob_start();
+            debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+            $backtrace = html(ob_get_clean());
+            if ($sky->is_front || $sky->ajax) {
+                $sky->error_title or $sky->error_title = 'User Error';
+                $sky->errors .= "<h1>$sky->error_title</h1><pre>$error\n\n$backtrace</pre>";
+                $sky->error_title = '';
+                $str = Debug::context($context, $has_depth ? $depth : 2) and $sky->errors .= "<pre>$str</pre>";
+            } else {
+                $sky->tracing .= "BACKTRACE:\n$backtrace";
+                if (!$sky->cli && !$sky->ajax && !$sky->s_trace_single) {
+                    printf(span_r, "<br /><b>SKY:</b> " . html($var) . " at <b>$file</b> on line <b>$line</b>");
+                }
+            }
+            $sky->tracing .= "\n";
+        } else {
+            $sky->tracing .= "$error\n\n";
+        }
+    }
+}
+
+function sql() {
+    $in = func_get_args();
+    $sql = $in[0] instanceof SQL ? $in[0] : new SQL($in);
+    $qstr = (string)$sql; # build sql string
+    if (SQL::NO_EXEC & $sql->mode)
+        return $qstr;
+    if ($sql->error)
+        return false;
+    if (false !== strpos('+-~>^@%#', $char = $qstr[0])) {
+        $qstr = substr($qstr, 1);
+    } else {
+        $char = '';
+    }
+    if ('^' == $char)
+        return '$q = sql(' . ++$sql->mode . ',' . var_export($qstr, true) . ');' . $sql->_dd->one(null, 'E');
+
+    global $sky;
+    $ts = microtime(true);
+    if ($no = $sql->_dd->query($qstr, $sql->stmt))
+        $sky->was_error |= SKY::ERR_DETECT;
+    if ($sky->debug || $no && $sky->s_prod_error) {
+        $ts = microtime(true) - $ts;
+        SQL::$query_num++;
+        if ($is_error = (bool)$no)
+            $sky->error_title = 'SQL Error';
+        $depth = SQL::NO_TRACE & $sql->mode ? (int)$is_error : 1 + $sql->mode & 7;
+        if ($depth)
+            trace(($is_error ? "ERROR in {$sql->_dd->name} - $no: " . $sql->_dd->error() . "\n" : '') . "SQL: $char$qstr", $is_error, $depth);
+        if (DEV && Ext::cfg('sql'))
+            Ext::ed_sql($qstr, $ts, $depth, $no);
+    }
+
+    if ($no)
+        return false;
+    switch (strtolower(substr($qstr, 0, 6))) {
+        case 'delete': case 'update': case 'replac': return $sql->_dd->affected();
+        case 'insert': return $sql->_dd->insert_id();
+        default: switch ($char) {
+            case '+': return $sql->_dd->one($sql->stmt, 'C', true);
+            case '-': return $sql->_dd->one($sql->stmt, 'R', true);
+            case '~': return $sql->_dd->one($sql->stmt, 'A', true);
+            case '>': return $sql->_dd->one($sql->stmt, 'O', true);
+            case '@': return $sql->all('R', true);
+            case '%': return $sql->all('A', true);
+            case '#': return $sql->all('O', true);
+            case '&': return new eVar(['query' => $sql]);
+        }
+    }
+    return $sql;
+}
+
+function sqlf() { # just more quick parsing, using printf syntax. No SQL injection!
+    //$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);//new Exception();  |DEBUG_BACKTRACE_PROVIDE_OBJECT
+    //$trace = $e->getTrace();
+    //trace($trace[1]);
+
+    $sql = new SQL;
+    $in = func_get_args();
+    if (is_int($sql->qstr = array_shift($in))) {
+        $sql->mode = $sql->qstr;
+        $sql->qstr = array_shift($in);
+    }
+    $sql->mode++; # add 1 depth
+    if (SQL::NO_PARSE & $sql->mode)
+        return sql($sql);
+    if (false !== strpos($sql->qstr, '$'))
+        $sql->qstr = $sql->replace_nop(false, $sql->qstr);
+
+    if ($in) $sql->qstr = vsprintf($sql->qstr, array_map(function ($val) use ($sql) {
+        $sql->i++;
+        return is_array($val)
+            ? $sql->array_join($val)
+            : ($val instanceof Closure
+                ? $val($sql)
+                : (is_num($val) ? $val : $sql->_dd->escape($val)));
+    }, $in));
+
+    return sql($sql);
+}
+
+function table($name = '') {
+
+}
+
+function qp() { # Query Part, Query Parse
+    return new SQL(func_get_args());
+}
+
+
+function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
+    $str = htmlspecialchars($str, $mode, ENC);
+    return $hide_percent ? str_replace('%', '&#37;', $str) : $str;
+}
+
+function unhtml($str, $mode = ENT_QUOTES) {
+    return html_entity_decode($str, $mode, ENC);
+} # list($month, $day, $year) = sscanf('Январь 01 2000', "%s %d %d");
+
+function escape($in, $reverse = false, $chars = "\\\n") {
+    $src = str_split($chars);
+    $dst = array_map(function($v) use ($src) {
+        return $src[0] . ("\n" == $v ? 'n' : $v);
+    }, $src);
+    return strtr($in, $reverse ? array_combine($dst, $src) : array_combine($src, $dst));
+}
+
+function strand($n = 23) {
+    $str = 'abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679'; # length == 53
+    if ($n != 7) $str .= 'o0Ol1iIB8'; # skip for passwords (9 chars)
+    for ($ret = '', $i = 0; $i < $n; $i++, $ret .= $str[rand(0, 7 == $n ? 52 : 61)]);
+    return $ret;
+}
+
+function unl($str) {
+    return str_replace(["\r\n", "\r"], "\n", $str);
+}
+
+function strcut($str, $n = 300) {
+    $text = mb_substr($str, 0, $n, ENC);
+    return mb_strlen($str, ENC) > $n
+        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', ENC) - mb_strlen($text, ENC), ENC), '.,?!') . '&nbsp;...'
+        : $text;
+}
+
+function array_explode($str, $via1 = ' ', $via2 = "\n") {
+    $ary = explode($via2, $str);
+    $out = [];
+    array_walk($ary, function($item) use (&$out, $via1) {
+        list ($k, $v) = explode($via1, $item, 2);
+        $out[$k] = $v;
+    });
+    return $out;
+}
+
+function array_join($ary, $via1 = ' ', $via2 = "\n") {
+    return implode($via2, array_map(function($k, $v) use ($via1) {
+        return $via1 instanceof Closure ? $via1($k, $v) : $k . $via1 . $v;
+    }, array_keys($ary), $ary));
+}
+
+function array_match($re, $ary, $re_key = false) {
+    if (!is_array($ary))
+        return false;
+    foreach ($ary as $k => $v) {
+        if (!preg_match($re, $v) || !($re_key ? preg_match($re_key, $k) : is_num($k)))
+            return false;
+    }
+    return true;
+}
+
+function is_num($v, $zero = false, $lt = true) {
+    if (is_int($v) && ($lt || $v > 0))
+        return true;
+    return '0' === $v || ctype_digit($v) && ('0' !== $v[0] || $zero);
 }

@@ -4,207 +4,6 @@
 # This file designed for 'front' and 'admin' enter points, but not for 'cron'
 # Filename: unique
 
-/* $user->id $user->vid $user->pid $user->gid $user->auth
- *
- */
- 
-//////////////////////////////////////////////////////////////////////////
-class USER
-{
-    public $row = [];
-    public $root = 0;
-    public $jump_n = 0;
-    public $jump_alt = [];
-    public $jump_path = [];
-
-    protected $pretty;
-    const BANNED = 1;
-    #const NOT_TESTED = 2; IP_CHANGED = 2;
-    const NO_ANY_C = 4;
-    const NO_PRETTY = 8;
-    const UA_CHANGED = 16;
-    const NO_C = 32;
-    const NO_JS = 64;
-    const IS_BOT = 128;
-    const NOT_TAILED = 1048576;
-
-    function __get($name) {
-        if ('_' == $name[1] && in_array($char = $name[0], ['v', 'u']))
-            return (string)@SKY::$mem[$char][3][substr($name, 2)];
-        return array_key_exists($name, $this->row) ? $this->row[$name] : '';
-    }
-
-    function __set($name, $value) {
-        if ('_' == $name[1] && in_array($char = $name[0], ['v', 'u']))
-            return SKY::$char(substr($name, 2), $value);
-        $this->row[$name] = $value;
-    }
-
-    function __call($name, $args) {
-        if (!in_array($name, ['login', 'logout', 'register', 'oauth2']))
-            throw new Err("Method USER::$name not exists");
-        if (!$this->pretty)
-            throw new Err('Cookie not set or not pretty');
-        return call_user_func_array(['Rare', $name], $args);
-    }
-
-    function __construct() {
-        global $sky;
-
-        $ua = preg_replace("|[\r\n\t]+|", ' ', @$_SERVER['HTTP_USER_AGENT']);
-        define('IS_BOT', (int)!preg_match("#firefox/|msie \d|opera/|safari/|chrome/#i", $ua));
-        $ip = @$_SERVER['REMOTE_ADDR'];
-        $hash = md5($ip . $ua . @$_SERVER['HTTP_X_FORWARDED_FOR']);
-        $this->pretty = preg_match("/^\w{23}$/", $cookie = (string) @$_COOKIE["$sky->s_c_name"]);
-        $dd = SQL::$dd;
-        $now = $dd->f_dt();
-        if ($this->row = sql('~select !! from $_visitors v left join $_users u on (u.id = abs(v.uid)) where $$ hash=$+', [
-                'v.*',
-                'u.*',
-                'v.id as vid',
-                'ifnull(u.id, 0) as user_id',
-                '$1' => qp($dd->f_dt(false, '-', '$.', 'minute') . ' > v.dt_l as visit', $sky->s_visit),
-                '$now <= ' . $dd->f_dt('v.dt_l', '+', 1, 'second') . ' as flood',
-                '$now > ' . $dd->f_dt('v.dt_l', '+', 1, 'hour') . ' as banend',
-            ], $this->pretty ? qp('sky=$+ or', $cookie) : '', $hash)) {
-
-            $_ = $this->flags & ~self::NOT_TAILED; # reset flag "not tailed" each click
-            if (self::BANNED & $_) {
-                if (!$this->banend)
-                    throw new Stop('403 You are banned'); # hard ban by visitor row
-                $_ &= ~self::BANNED;
-            }
-            $_COOKIE ? ($_ &= ~self::NO_ANY_C) : ($_ |= self::NO_ANY_C);
-            $this->row['v'] = SKY::ghost('v', $this->row['vmemo'], ['vmemo' => "update \$_visitors set @@ where id=$this->vid"]);
-
-            $ary = [
-                '!dt_l'      => $now,
-                '!clk_total' => 'clk_total+1',
-                '!clk_visit' => $this->visit ? 1 : 'clk_visit+1',
-                'uri' => URI,
-            ];
-            if ($_POST || $this->banend) {
-                if ($this->flood && $this->clk_flood > 28) # set hard ban when > 29 flood clicks
-                    $_ &= self::BANNED;
-                $ary['!clk_flood'] = $this->flood ? 'clk_flood+1' : 0;
-            }
-            if ($this->pretty = $this->pretty && $this->sky === $cookie) {
-                null === $this->hash or $ary['hash'] = 'null';
-                $_ &= ~self::NO_PRETTY & ~self::NO_C;
-            } else {
-                $this->visit or $this->cookize($this->sky); # if not new visit
-                $_ |= self::NO_PRETTY | (1 == $this->clk_total ? self::NO_C : 0);
-            }
-            if ($this->visit && $this->uid && !$this->v_mem)
-                $ary['uid'] = $this->row['user_id'] = 0;
-            if ($this->row['id'] = $this->row['user_id'] = $this->pretty ? (int)$this->user_id : 0) {
-                $this->row['auth'] = $this->uid < 0 ? 2 : 1;
-                if (1 == $this->pid) {
-                    $this->root = 1;
-                    if ($sky->s_trace_root && 2 == $this->auth)
-                        $sky->debug = $this->root = 2;
-                }
-            } else {
-                $this->row['pid'] = $this->row['auth'] = 0;
-            }
-            if ($this->visit) $ary += [
-                '!dt_v'      => $now,
-                '!cnt_visit' => 'cnt_visit+1',
-                'sky' => $this->cookize(),
-            ];
-            if ($ip != $this->ip) {
-                $ary['ip'] = $this->ip = $ip;
-            }
-            if ($sky->eref) {
-                $ary['ref'] = $sky->eref;
-            }
-            if ($sky->ajax) {
-                if ($_ & self::NO_JS && $this->clk_total > 1 && $sky->s_j_manda)
-                    $this->js_unlock = true;
-                $_ &= ~self::NO_JS;
-            } elseif (1 == $this->clk_total) { # second click
-                $_ |= self::NO_JS;
-            }
-            if ($ua != $this->v_ua) {
-                $this->v_ua = $ua;
-                $_ |= self::UA_CHANGED | (IS_BOT ? self::IS_BOT : 0);
-            }
-
-            if ($this->v_jump_alt) {
-                $this->jump_alt = unserialize($this->v_jump_alt);
-                $this->jump_n = 1 + array_shift($this->jump_alt);
-                $this->jump_path = array_shift($this->jump_alt);
-                $this->v_jump_alt = null;
-            }
-
-            SKY::v(null, $ary + ['flags' => $_]);
-
-            $this->row['u'] = $this->id ? SKY::ghost('u', $this->row['umemo'], ['umemo' => "update \$_users set @@ where id=$this->id"]) : [];
-
-            if (2 == $this->auth && $sky->is_front && Admin::section($sky->lref))
-                $this->u_uri_admin = $sky->lref;
-
-            $_c = $_ & self::NO_ANY_C && $sky->s_c_manda;
-            $_j = $_ & self::NO_JS    && $sky->s_j_manda;
-            if ($_c || $_j)
-                $sky->error_no = "1$sky->s_c_manda$sky->s_j_manda" . (int)$_c . (int)$_j;
-            if ($_j)
-                $this->v_tz = ''; # for exit from js lock
-
-        } else {
-            if (INPUT_POST == $sky->method)
-                $sky->error_no = 12;
-            $ary = [
-                'sky'   => $this->cookize(),
-                'hash'  => $hash,
-                'ip'    => $ip,
-                'ref'   => $sky->eref,
-                'uri'   => URI,
-                'flags' => (IS_BOT ? self::IS_BOT : 0) | ($_COOKIE ? 0 : self::NO_ANY_C) | ($this->pretty ? 0 : self::NO_PRETTY),
-            ];
-            $lg = DEFAULT_LG;//preg_match("/^ru/i", @$_SERVER['HTTP_ACCEPT_LANGUAGE']) ? 'ru' : 'en';
-            $this->row = $ary + [
-                'vid' => 0,
-                'pid' => 0,
-                'user_id' => 0,
-                'id' => 0,
-                'v' => SKY::ghost('v', "ua $ua\nlg_0 $lg\nlg $lg\ncsrf " . strand(7), $ary + [
-                    '!dt_0'  => $now,
-                    '!dt_l'  => $now,
-                    '!dt_v'  => $now,
-                    'vmemo'  => $sky->error_no ? '' : 'insert into $_visitors @@',
-                ], 7),
-            ];
-        }
-
-        if (DEBUG > 2)
-            trace($this->row, '$user->row');
-    }
-
-    function cookize($cookie = false) {
-        global $sky;
-
-        if (!$cookie) for ($i = 0; sqlf('+select count(1) from $_visitors where sky=%s', $cookie = strand()); )
-            if (++$i > 99) throw new Err(1);
-        $ttl = ceil(START_TS + I_YEAR * 3);
-        $srv = false === strpos(SNAME, '.') || is_num($sky->sname[4]) ? '' : '.' . DOMAIN;
-        if (!setcookie($sky->s_c_name, $cookie, $ttl, PATH, $srv, false))
-            throw new Err(2);
-        return $cookie;
-    }
-
-    function deny() {
-        return !call_user_func_array([$this, 'allow'], func_get_args());
-    }
-
-    function allow() {
-        if (1 == $this->pid) # superuser can full access
-            return true;
-        $args = func_get_args() or $args = [[]];
-        return in_array($this->pid, is_array($args[0]) ? $args[0] : $args);
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////
 class HEAVEN extends SKY
 {
@@ -346,7 +145,7 @@ class HEAVEN extends SKY
     function log($mode, $data) {
         if (!in_array($this->s_test_mode, [$mode, 'all']))
             return;
-        sqlf('update $_memory set dt=' . SQL::$dd('dt') . ', tmemo=substr(' . SQL::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
+        sqlf('update $_memory set dt=' . SKY::$dd('dt') . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
     }
 
     function qs($url) {
@@ -542,7 +341,7 @@ class HEAVEN extends SKY
 
     function shutdown() {
         chdir(DIR); # restore dir!
-        $dd = SQL::dd_set(); # main database driver
+        $dd = SQL::open(); # main database driver
         if (!$this->tailed) {
             global $user;
             if (isset($user)) {
@@ -575,10 +374,11 @@ class HEAVEN extends SKY
         if ($this->jump && $this->debug) {
             $plus = $this->tracing("JUMP[$user->jump_n]: $this->jump\n\n", !$user->jump_n);
             if ($user->jump_n)
-                sqlf('update $_memory set tmemo=' . SQL::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");
+                sqlf('update $_memory set tmemo=' . SKY::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");
         }
     }
 }
+
 
 function jump($uri = '', $code = 302, $exit = true) {
     global $sky, $user;
@@ -614,7 +414,7 @@ function pagination($ipp, $cnt = null, $ipl = 5, $current = null, $throw = true)
             $cnt = sql('+select count(1) $$', $cnt);
         } else {
             is_string($cnt) or $cnt = SQL::onduty();
-            $cnt = SQL::$dd->_rows_count($cnt);
+            $cnt = SQL::$dd->_rows_count($cnt);//////////////////
         }
     }
     $sky->is_front or $throw = false;
