@@ -1,6 +1,6 @@
 <?php
 
-class dd_oci
+class dd_oci implements Database_driver
 {
     public $name = 'Oracle';
     public $quote = '"';

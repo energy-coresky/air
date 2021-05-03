@@ -2,7 +2,7 @@
 
 # For Licence and Disclaimer of this code, see http://coresky.net/license
 
-function view($in, $return = false, $parameter = null) {
+function view($in, $return = false, $param = null) {
     global $sky;
 
     if ($is_top = $in instanceof MVC) {
@@ -12,10 +12,10 @@ function view($in, $return = false, $parameter = null) {
         list($in, $layout) = is_array($in) ? $in : [$in, ''];
         $no_handle = false;
         if (!is_bool($return)) {
-            $no_handle = is_array($parameter = $return);
+            $no_handle = is_array($param = $return);
             $return = true;
         }
-        $mvc = MVC::sub($in, $parameter, $no_handle);
+        $mvc = MVC::sub($in, $param, $no_handle);
     }
     if ('' !== $mvc->echo)
         $mvc->body = '';
@@ -74,8 +74,6 @@ function t() { # situational translation
 //////////////////////////////////////////////////////////////////////////
 abstract class MVC_BASE
 {
-    protected static $stack = [];
-
     function __get($name) {
         global $sky;
         if (in_array(substr($name, 0, 2), ['t_', 'm_'])) switch($name[0]) {
@@ -101,12 +99,19 @@ abstract class Bolt {
 abstract class Model_t extends MVC_BASE
 {
     protected $table;
+    protected $dd;
     protected $list;
     protected $id;
 
     function __construct() {
+        $this->list = 'select $+ from $_ '; ////////////////
         $this->table = substr(get_class($this), 2);
-        $this->list = 'select $+ from $_ '; # ?
+        $this->head_y();
+    }
+
+    # for overload if needed
+    function head_y() {
+        $this->dd = SQL::$dd;
     }
 
     function __toString() {
@@ -201,19 +206,10 @@ abstract class Model_m extends MVC_BASE
 
 class Controller extends MVC_BASE
 {
-    public $_v;
-    private $name;
-
-    function __construct() {
-        $this->name = get_class($this);
-    }
-
     # for overload if needed
     function head_y($action) {
-        if ('common_c' == $this->name || !is_file($fn = 'main/app/common_c.php'))
+        if ('common_c' == get_class($this))
             return;
-        require $fn;
-        MVC::restore(MVC::$cc = new common_c);
         global $sky;
         $sky->ajax or MVC::$layout = $sky->is_mobile ? 'mobile' : 'desktop';
         return MVC::$cc->head_y($action);
@@ -221,35 +217,32 @@ class Controller extends MVC_BASE
 
     # for overload if needed
     function error_y($action) {
-        if ('common_c' != $this->name && MVC::$cc)
-            return MVC::$cc->error_y($action);
+        return 'common_c' == get_class($this) ? null : MVC::$cc->error_y($action);
     }
 
     # for overload if needed
     function tail_y() {
-        if ('common_c' != $this->name && MVC::$cc)
-            return MVC::$cc->tail_y();
+        return 'common_c' == get_class($this) ? null : MVC::$cc->tail_y();
     }
-    
-    # for overload if needed
+
     function __call($name, $args) {
         global $sky;
         if ($sky->debug) {
-            switch ($this->name) {
-            case __CLASS__:
-            case 'default_c':
-                if (DEV && is_file("main/app/c_$sky->_0.php")) {
-                    $sky->s_contr = '';
-                    $sky->ajax or jump(URI);
-                }
-                $x = 1 == $sky->ajax ? 'j' : 'a';
-                $msg = preg_match("/^\w+$/", $sky->_0)
-                    ? "Controller `c_$sky->_0.php` or method `default_c::{$x}_$sky->_0()` not exist"
-                    : "Method `default_c::default_$x()` not exist";
-                trace($msg, (bool)DEV);
-                break;
-            default:
-                trace("Method `{$this->name}::$name()` not exist", (bool)DEV);
+            switch ($class = get_class($this)) {
+                case __CLASS__:
+                case 'default_c':
+                    if (DEV && is_file("main/app/c_$sky->_0.php")) {
+                        $sky->s_contr = '';
+                        $sky->ajax or jump(URI);
+                    }
+                    $x = 1 == $sky->ajax ? 'j' : 'a';
+                    $msg = preg_match("/^\w+$/", $sky->_0)
+                        ? "Controller `c_$sky->_0.php` or method `default_c::{$x}_$sky->_0()` not exist"
+                        : "Method `default_c::default_$x()` not exist";
+                    trace($msg, (bool)DEV);
+                    break;
+                default:
+                    trace("Method `{$class}::$name()` not exist", (bool)DEV);
             }
         }
         return 404; # 1 == $sky->ajax also works via sky.error() and CONTR::error_y()
@@ -258,26 +251,29 @@ class Controller extends MVC_BASE
 
 class MVC extends MVC_BASE
 {
+    const dir_j = 'var/jet/';
+
+    private static $stack = [];
+
     public $_v = []; # body vars
     public $body = '';
     public $echo;
 
-    const dir_j = 'var/jet/';
     static $vars;
     static $_y = []; # layout vars
     static $layout = '';
     static $mc; # main controller
-    static $cc = false; # common controller
+    static $cc; # common controller
     static $tpl = 'default';
     static $cache_filename = '';
 
     function __construct() {
-        self::$stack[] = $this;
+        MVC::$stack[] = $this;
     }
 
     static function instance($level = 0) {
-        self::$stack or new MVC;
-        return self::$stack[$level];
+        MVC::$stack or new MVC;
+        return MVC::$stack[$level];
     }
 
     static function jet($fn) {
@@ -290,7 +286,7 @@ class MVC extends MVC_BASE
     
     static function fn_parsed($layout, $body) {
         global $sky;
-        $p = self::dir_j . (DESIGN ? 'd' : '') . ($sky->is_mobile ? 'm' : '') . '_';
+        $p = MVC::dir_j . (DESIGN ? 'd' : '') . ($sky->is_mobile ? 'm' : '') . '_';
         return "$p{$sky->style}-{$layout}-{$body}.php";
     }
 
@@ -416,67 +412,50 @@ class MVC extends MVC_BASE
         }
     }
 
-    static function restore($obj = false) {
-        if ($obj) {
-            $mvc = end(self::$stack);
-            $obj->_v =& $mvc->_v;
-        } else {
-            array_pop(self::$stack);
-            self::restore(self::$mc);
-            if (self::$cc)
-                self::restore(self::$cc);
-        }
+    static function body($body) {
+        end(MVC::$stack)->body = $body;
     }
 
-    static function handle($name, $par = null) {
-        if (method_exists(self::$mc, $name))
-            return self::$mc->$name($par);
-        if (!self::$cc && is_file($cc = 'main/app/common_c.php')) {
-            require $cc;
-            self::restore(self::$cc = new common_c);
-        }
-        if (self::$cc && method_exists(self::$cc, $name))
-            return self::$cc->$name($par);
+    static function handle($method, $param = null) {
+        if (method_exists(MVC::$mc, $method))
+            return MVC::$mc->$method($param);
+        if (method_exists(MVC::$cc, $method))
+            return MVC::$cc->$method($param);
     }
 
-    static function sub($action, $par = null, $no_handle = false) {
+    static function sub($action, $param = null, $no_handle = false) {
         global $sky;
         $me = new MVC;
-        self::restore(self::$mc);
-        if (self::$cc)
-            self::restore(self::$cc);
-        if (is_string($action) && 'r_' == substr($action, 0, 2) && DEV && $sky->s_red_label) {
-            $me->echo = tag("view($action)", 'class="red_label"'); # show red label
-            self::restore();
-            return $me;
-        }
         ob_start();
-        if ($action instanceof Closure) {
-            $me->set($action($par));
-        } else {
-            if (is_array($action)) {
-                $me->body = self::$tpl . '.' . substr($action[1], 2);
-                $me->set(call_user_func($action, $par));
+        if (is_string($action)) {
+            if (DEV && $sky->s_red_label && 'r_' == substr($action, 0, 2)) {
+                echo tag("view($action)", 'class="red_label"'); # show red label
             } else {
-                list ($tpl, $action) = 2 == count($ary = explode('.', $action)) ? $ary : [self::$tpl, $ary[0]];
+                list ($tpl, $action) = 2 == count($ary = explode('.', $action)) ? $ary : [MVC::$tpl, $ary[0]];
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $me->body = "$tpl." . substr($action, 2);
-                $me->set($no_handle ? $par : self::handle($action, $par));
+                $me->set($no_handle ? $param : MVC::handle($action, $param));
             }
+        } elseif ($action instanceof Closure) {
+            $me->set($action($param));
+        } else { // array /////////////?
+            $me->body = MVC::$tpl . '.' . substr($action[1], 2);
+            $me->set(call_user_func($action, $param));
         }
         $me->echo = ob_get_clean();
-        self::restore();
+        array_pop(MVC::$stack);
         return $me;
     }
 
     private function set($in, $is_common = false) {
         global $sky, $user;
+
         if (is_array($in)) {
-            $is_common ? (self::$_y = $in + self::$_y) : ($this->_v = $in + $this->_v);
+            $is_common ? (MVC::$_y = $in + MVC::$_y) : ($this->_v = $in + $this->_v);
         } elseif (is_string($in)) {
             $this->body = $in;
         } elseif (is_bool($in)) {
-            self::$layout = ''; # if false set to empty layout only
+            MVC::$layout = ''; # if false set to empty layout only
             !$in or $this->body = '';
         } elseif (is_int($in)) { # soft error
             $sky->error_no = $in;
@@ -512,7 +491,7 @@ class MVC extends MVC_BASE
         if (isset($gape->src))
             $real = "c_$gape->src";
         if ($in_a)
-            self::$tpl = substr($real, 2);
+            MVC::$tpl = substr($real, 2);
         return [$class, $action, call_user_func([$gape, $action], $sky, $user), $real];
     }
 
@@ -526,39 +505,41 @@ class MVC extends MVC_BASE
         }
         MVC::$vars = ['sky' => $me = new MVC];
         ob_start();
-        $pars = [];
+        $param = [];
         if ('_' == $sky->_0[0]) {
             require DIR_S . '/w2/standard_c.php';
-            $real = $contr = 'standard_c';
+            $real = $controller = 'standard_c';
             $action = (1 == $sky->ajax ? 'j' : 'a') . $sky->_0;
-            self::$tpl = '_std';
+            MVC::$tpl = '_std';
             $me->body = '_std.' . substr($sky->_0, 1);
         } else {
-            list ($contr, $action, $pars, $real) = $me->gate();
+            list ($controller, $action, $param, $real) = $me->gate();
             switch ($action[0]) {
-                case 'd': $me->body = self::$tpl . ".default"; break; # default_X
-                case 'e': $me->body = self::$tpl . ".empty"; break; # empty_X
-                default:  $me->body = self::$tpl . "." . substr($action, 2); break; # a_.. or j_..
+                case 'd': $me->body = MVC::$tpl . ".default"; break; # default_X
+                case 'e': $me->body = MVC::$tpl . ".empty"; break; # empty_X
+                default:  $me->body = MVC::$tpl . "." . substr($action, 2); break; # a_.. or j_..
             }
         }
-        trace("$contr::$action()" . ($contr == $real ? '' : ' (virtual)'), 'TOP-VIEW');
+        trace("$controller::$action()" . ($controller == $real ? '' : ' (virtual)'), 'TOP-VIEW');
         if (DEFAULT_LG) {
             require 'main/lng/' . LG . '.php';
             SKY::$reg['trans_late'] = isset($lgt) ? $lgt : [];
             SKY::$reg['trans_coll'] = [];
         }
-        self::restore(self::$mc = new $contr);
-        $me->set(self::$mc->head_y($action), true);
+        require 'main/app/common_c.php';
+        MVC::$cc = new common_c;
+        MVC::$mc = new $controller;
+        $me->set(MVC::$mc->head_y($action), true);
         if (DEV && 1 == $sky->error_no && $real) { # gate error
             $me->body = 1 == $sky->ajax ? '' : '_std.lock';
             $sky->ca_path = ['ctrl' => $real, 'func' => $action];
         }
         if (!$sky->error_no || $sky->surl && '_exception' == $sky->surl[0])
-            $me->set(call_user_func_array([self::$mc, $action], (array)$pars));
+            $me->set(call_user_func_array([MVC::$mc, $action], (array)$param));
         if ($sky->error_no > 400 && $sky->error_no < 501)
-            $me->set(self::$mc->error_y($action));
-        is_string($rett = self::$mc->tail_y()) ? (self::$layout = $rett) : $me->set($rett, true);
+            $me->set(MVC::$mc->error_y($action));
+        is_string($rett = MVC::$mc->tail_y()) ? (MVC::$layout = $rett) : $me->set($rett, true);
         $me->echo = ob_get_clean();
-        view($me); # run the top-view
+        view($me); # visualize
     }
 }

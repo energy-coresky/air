@@ -1,6 +1,6 @@
 <?php
 
-class dd_sqlite3
+class dd_sqlite3 implements Database_driver
 {
     public $name = 'SQLite3';
     public $quote = '`';

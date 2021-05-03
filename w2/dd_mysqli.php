@@ -1,6 +1,6 @@
 <?php
 
-class dd_mysqli
+class dd_mysqli implements Database_driver
 {
     public $name = 'MySQLi';
     public $quote = '`';

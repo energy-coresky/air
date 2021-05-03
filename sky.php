@@ -29,75 +29,52 @@ class SKY
     protected $except = false;
 
     function __construct() {
-        if (ob_get_level())
-            ob_end_clean();
+        ob_get_level() && ob_end_clean();
         $this->debug = DEBUG;
         $this->constants();
         $this->cli = CLI;
         date_default_timezone_set(PHP_TZ);
         define('NOW', date(DATE_DT));
         srand((double) microtime() * 1e6);
-        spl_autoload_register([$this, 'autoload']);
-        set_error_handler([$this, 'error']);
-        set_exception_handler([$this, 'exception']);
+
+        spl_autoload_register(function ($name) {
+            trace("autoload($name)");
+            if ('_' == $name[1] && in_array($name[0], ['t', 'm'])) {
+                is_file($file = "main/app/$name.php") ? require $file : eval("class $name extends Model_$name[0] {}");
+            } else {
+                is_file($file = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php') ? require $file : require "main/w3/$name.php";
+            }
+        });
+        set_error_handler(function ($no, $message, $file, $line, $context = null) {
+            if (error_reporting() & $no && ($this->debug || $this->s_prod_error)) {
+                $this->error_title = 'PHP ' . ($err = Debug::error_name($no));
+                trace("$err: $message", true, $line, $file, $context);
+            }
+            return true;
+        });
+        set_exception_handler(function ($e) {
+            preg_match("/^(\d{1,3}) ?(.*)$/", $mess = $e->getMessage(), $m);
+            $this->except = [
+                'name' => $name = get_class($e),
+                'crash' => 'Stop' != $name && ('Exception' != $name || !$this->s_quiet_eerr),
+                'code' => $m ? $m[1] : 0,
+                'mess' => $m ? $m[2] : $mess,
+                'title' => $this->error_title = "Exception $name($mess)",
+            ];
+            if ('Stop' == $name && !$mess)
+                $this->tailed = true;
+            global $user;
+            $etc = $m && 22 == $m[1] ? implode("\n", $user->jump_path) : $e->getTraceAsString();
+            trace("$this->error_title\n$etc", 'Err' == $name, $e->getLine(), $e->getFile());
+            $this->error_title = "Exception $name($mess)";
+        });
         register_shutdown_function([$this, 'shutdown']);
-    }
-
-    function load() {
-        global $argv;
-        if (CLI)
-            $this->gpc = '$argv = ' . html(var_export($argv, true));
-        SKY::$dd = SQL::open();
-        require 'main/app/hook.php';
-        call_user_func(['hook', get_class(SKY::$dd)], SKY::$dd);
-        if (DEV)
-            Ext::init();
-        list($this->imemo, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=3');
-        SKY::ghost('s', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=3');
-        $this->debug |= (int)$this->s_trace_single;
-        if ($this->s_prod_error || $this->debug)
-            ini_set('error_reporting', -1);
-        $this->trace_cli = $this->s_trace_cli;
-    }
-
-    function autoload($name) {
-        trace("autoload($name)");
-        if ('_' == $name[1] && in_array($name[0], ['t', 'm'])) {
-            is_file($file = "main/app/$name.php") ? require $file : eval("class $name extends Model_$name[0] {}");
-        } else {
-            is_file($file = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php') ? require $file : require "main/w3/$name.php";
-        }
-    }
-
-    function error($no, $message, $file, $line, $context = null) { # user_error() not useful due to absent $depth parameter
-        if (error_reporting() & $no && ($this->debug || $this->s_prod_error)) {
-            $this->error_title = 'PHP ' . ($err = Debug::error_name($no));
-            trace("$err: $message", true, $line, $file, $context);
-        }
-        return true;
-    }
-
-    function exception($e) {
-        preg_match("/^(\d{1,3}) ?(.*)$/", $mess = $e->getMessage(), $m);
-        $this->except = [
-            'name' => $name = get_class($e),
-            'crash' => 'Stop' != $name && ('Exception' != $name || !$this->s_quiet_eerr),
-            'code' => $m ? $m[1] : 0,
-            'mess' => $m ? $m[2] : $mess,
-            'title' => $this->error_title = "Exception $name($mess)",
-        ];
-        if ('Stop' == $name && !$mess)
-            $this->tailed = true;
-        global $user;
-        $etc = $m && 22 == $m[1] ? implode("\n", $user->jump_path) : $e->getTraceAsString();
-        trace("$this->error_title\n$etc", 'Err' == $name, $e->getLine(), $e->getFile());
-        $this->error_title = "Exception $name($mess)";
     }
 
     function shutdown() {
         chdir(DIR); # restore dir!
         if (SKY::$dd)
-            SQL::open(); # switch main database driver
+            SQL::$dd = SKY::$dd; # switch main database driver
         foreach ($this->shutdown as $object)
             call_user_func([$object, 'shutdown']);
 
@@ -118,6 +95,24 @@ class SKY
             $this->tailed = true;
         }
         SQL::close();
+    }
+
+    function load() {
+        global $argv;
+        require 'main/app/hook.php';
+        SQL::open('', $hook = new hook);
+        if (CLI)
+            $this->gpc = '$argv = ' . html(var_export($argv, true));
+        if (DEV)
+            Ext::init();
+
+        list($this->imemo, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=3');
+        SKY::ghost('s', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=3');
+        $this->debug |= (int)$this->s_trace_single;
+        if ($this->s_prod_error || $this->debug)
+            ini_set('error_reporting', -1);
+        $this->trace_cli = $this->s_trace_cli;
+        return $hook;
     }
 
     function tail_ghost($alt = false) {
@@ -270,7 +265,7 @@ class SKY
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.112 2021-04-28T08:11:11+03:00 energy';
+    const CORE = '0.113 2021-05-02T23:01:11+03:00 energy';
 
     static function version() {
         global $sky;
@@ -452,7 +447,8 @@ function sqlf() { # just more quick parsing, using printf syntax. No SQL injecti
 }
 
 function table($name = '') {
-
+    $sql = new SQL;
+    return $sql->table($name);
 }
 
 function qp() { # Query Part, Query Parse
@@ -491,7 +487,7 @@ function unl($str) {
 function strcut($str, $n = 300) {
     $text = mb_substr($str, 0, $n, ENC);
     return mb_strlen($str, ENC) > $n
-        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', ENC) - mb_strlen($text, ENC), ENC), '.,?!') . '&nbsp;...'
+        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', 0, ENC) - mb_strlen($text, ENC), ENC), '.,?!') . '&nbsp;...'
         : $text;
 }
 

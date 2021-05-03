@@ -1,6 +1,6 @@
 <?php
 
-class dd_ibase
+class dd_ibase implements Database_driver
 {
     public $name = 'FireBird';
     public $quote = '"';

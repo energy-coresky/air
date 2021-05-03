@@ -1,6 +1,6 @@
 <?php
 
-class dd_pg
+class dd_pg implements Database_driver
 {
     public $name = 'Postgres';
     public $quote = '"';

@@ -56,12 +56,16 @@ class HEAVEN extends SKY
         return false;
     }
 
-    function load($shutdown = false) {
+    function load() {
         header('Content-Type: text/html; charset=' . ENC);
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
+        if (false === $this->method)
+            throw new Err('Unknown method');
+
         define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
         define('SNAME', $_SERVER['SERVER_NAME']);
+
         $re = DEFAULT_LG == 'ru' ? '(www\.|[a-z]{2}\.)?(m\.)?' : '(www\.|[q]{2}\.)?(m\.)?';
         if (!preg_match("/^$re([a-z\d\-\.]+\.([a-z\d]{2,5}))$/", SNAME, $this->sname))
             exit('sname');
@@ -75,12 +79,10 @@ class HEAVEN extends SKY
         define('PROTO', @$_SERVER['HTTPS'] ? 'https' : 'http');
         define('DOMAIN', $this->sname[3]);
 
-        parent::load($shutdown); # database connect & system init start from here
+        $hook = parent::load(); # database connection start from here
 
         $this->ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) ? 2 : 0;
         $this->is_front = true;
-        if (false === $this->method)
-            throw new Err('Unknown method');
         $this->origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : false;
         $this->orientation = 0;
         if (isset($_SERVER['HTTP_X_ORIENTATION'])) {
@@ -97,8 +99,6 @@ class HEAVEN extends SKY
         $this->lref = preg_match("$this->re(.*)$~", $referer, $m) ? $m[3] : false;
         $this->eref = !$m ? $referer : false;
         $ajax_adm = false;
-
-        $hook = new hook;
 
         if ('' !== URI) { # not main page
             $this->surl = explode('/', explode('?', URI)[0]);
@@ -341,7 +341,7 @@ class HEAVEN extends SKY
 
     function shutdown() {
         chdir(DIR); # restore dir!
-        $dd = SQL::open(); # main database driver
+        $dd = SQL::$dd = SKY::$dd; # main database driver
         if (!$this->tailed) {
             global $user;
             if (isset($user)) {

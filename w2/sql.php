@@ -34,7 +34,7 @@ final class SQL
 
     function __construct($in = false) {
         if (is_string($in)) {
-            SQL::open($in, $this); # single query to different connection
+            SQL::open($in, $this); # single query to different connection//////////////////////////////////////////////
         } else {
             $this->_dd = SQL::$dd;
             if ($in)
@@ -60,7 +60,7 @@ final class SQL
         return $this;
     }
 
-    static function open($name = '', $obj = false) {
+    static function open($name = '', $p2 = true) {
         if (isset(SQL::$connections[$name])) {
             $dd = SQL::$connections[$name];
         } else {
@@ -68,8 +68,13 @@ final class SQL
             $driver = "dd_$cfg[driver]";
             $dd = SQL::$connections[$name] = new $driver($cfg['dsn'], $cfg['pref']);
             unset($cfg['dsn']);
+            if ('' === $name)
+                SQL::$dd = SKY::$dd = $dd;
+            static $hook = false;
+            $hook or $hook = $p2; # first call must set hook object
+            $hook->h_dd($name, $dd);
         }
-        return $obj ? ($obj->_dd = $dd) : (SQL::$dd = $dd); # set selected database driver
+        return $p2 ? (SQL::$dd = $dd) : $dd;
     }
 
     static function close($name = false) {
@@ -383,4 +388,29 @@ class eVar implements Iterator
         if (!$this->dd)
             $this->row = $x ? (object)$x : false;
     }
+}
+
+
+interface Database_driver
+{
+    function info();
+    function close();
+    function escape($s, $quote = true);
+    function unescape($s, $quote = true);
+    function error();
+    function query($sql_string, &$q);
+    function one($q, $meth = 'A', $free = false);
+    function num($q, $rows = true);
+    function insert_id();
+    function affected();
+    function free($q);
+    function multi_sql($sql);
+    function _xtrace();
+    function _tables($table = false);
+    function _rows_count($table);
+    function f_cc();
+    function f_dt($column = false, $sign = false, $n = 0, $period = 'day');
+    function build($type);
+    static function begin($lock_table = false);
+    static function end($par = true);
 }
