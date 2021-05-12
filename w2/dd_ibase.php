@@ -2,6 +2,8 @@
 
 class dd_ibase implements Database_driver
 {
+    use SQL_COMMON;
+
     public $name = 'FireBird';
     public $quote = '"';
     public $conn;

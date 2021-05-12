@@ -56,15 +56,16 @@ class USER
         $this->pretty = preg_match("/^\w{23}$/", $cookie = (string) @$_COOKIE["$sky->s_c_name"]);
         $dd = SKY::$dd;
         $now = $dd->f_dt();
-        if ($this->row = sql('~select !! from $_visitors v left join $_users u on (u.id = abs(v.uid)) where $$ hash=$+', [
-                'v.*',
-                'u.*',
-                'v.id as vid',
-                'ifnull(u.id, 0) as user_id',
-                '$1' => qp($dd->f_dt(false, '-', '$.', 'minute') . ' > v.dt_l as visit', $sky->s_visit),
-                $now . ' <= ' . $dd->f_dt('v.dt_l', '+', 1, 'second') . ' as flood',
-                $now . ' > ' . $dd->f_dt('v.dt_l', '+', 1, 'hour') . ' as banend',
+
+        if ($this->row = sql('~select *, id as vid, 0 as user_id, !! from $_visitors where $$ hash=$+', [
+                '$1' => qp($dd->f_dt(false, '-', '$.', 'minute') . ' > dt_l as visit', $sky->s_visit),
+                $now . ' <= ' . $dd->f_dt('dt_l', '+', 1, 'second') . ' as flood',
+                $now . ' > ' . $dd->f_dt('dt_l', '+', 1, 'hour') . ' as banend',
             ], $this->pretty ? qp('sky=$+ or', $cookie) : '', $hash)) {
+
+            $this->uid
+                AND $row = sqlf('~select *, id as user_id from $_users where id=%d', abs($this->uid))
+                AND $this->row = $row + $this->row;
 
             $_ = $this->flags & ~self::NOT_TAILED; # reset flag "not tailed" each click
             if (self::BANNED & $_) {
@@ -173,6 +174,11 @@ class USER
                     'vmemo'  => $sky->error_no ? '' : 'insert into $_visitors @@',
                 ], 7),
             ];
+        }
+        if (START_TS - $sky->s_online_ts > 60) {
+            $query = '+select 1 + count(1) from $_visitors where dt_l > now() - interval %d minute and id<>%d';
+            $sky->s_online = sqlf($query, $sky->s_visit, $this->vid);
+            $sky->s_online_ts = START_TS;
         }
 
         if (DEBUG > 2)

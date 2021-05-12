@@ -2,6 +2,8 @@
 
 class dd_pg implements Database_driver
 {
+    use SQL_COMMON;
+
     public $name = 'Postgres';
     public $quote = '"';
     public $conn;

@@ -2,6 +2,8 @@
 
 class dd_oci implements Database_driver
 {
+    use SQL_COMMON;
+
     public $name = 'Oracle';
     public $quote = '"';
     public $conn;

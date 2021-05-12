@@ -39,7 +39,7 @@ class SKY
 
         spl_autoload_register(function ($name) {
             trace("autoload($name)");
-            if ('_' == $name[1] && in_array($name[0], ['t', 'm'])) {
+            if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
                 is_file($file = "main/app/$name.php") ? require $file : eval("class $name extends Model_$name[0] {}");
             } else {
                 is_file($file = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php') ? require $file : require "main/w3/$name.php";
@@ -84,6 +84,7 @@ class SKY
             trace("$err: $e[message]", true, $e['line'], $e['file']);
             $this->error_title = "PHP $err";
         }
+
         $this->ghost or !SKY::$dd or $this->tail_ghost(!$this->cli && !$this->tailed);
         if ($this->error_prod) # write error log
             sqlf('update $_memory set dt=' . SKY::$dd->f_dt()
@@ -100,7 +101,7 @@ class SKY
     function load() {
         global $argv;
         require 'main/app/hook.php';
-        SQL::open('', $hook = new hook);
+        SKY::$dd = SQL::open('', $hook = new hook);
         if (CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
         if (DEV)
@@ -298,6 +299,93 @@ class Hook_base { # use it in app/hook.php
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+class eVar implements Iterator
+{
+    private $state = 0;
+    private $i = -1;
+    private $max_i = 500; # -1 is infinite
+    private $row;
+    private $e;
+    private $dd = false;
+
+    function __construct(Array $e) {
+        $this->e = $e;
+    }
+
+    function __get($name) {
+        return isset($this->e[$name]) ? $this->e[$name] : null;
+    }
+
+    function rewind() {
+        if (!$this->e)
+            $this->state = 2;
+        if ($this->state)
+            return;
+        $this->row = new stdClass;
+        $this->state++;
+        if (isset($this->e['query'])) {
+            isset($this->e['max_i']) or $this->e['max_i'] = -1;
+            $sql =& $this->e['query'];
+            if (is_string($sql)) {
+                $sql = sql(2, $sql);
+            } elseif (true === $sql->stmt) {     # mean instanceof SQL
+                $sql->mode |= 2 + SQL::NO_PARSE; # already parsed or query builder used
+                $sql = sql($sql); # perform query exec with error's detection
+            }
+            if (!($sql instanceof SQL))
+                return $this->state++;
+            $this->dd = $sql->_dd;
+        }
+        if (isset($this->e['max_i']))
+            $this->max_i = $this->e['max_i'];
+        $this->next();
+    }
+
+    function valid() {
+        if ($this->state > 1)
+            return false;
+        if ($this->row)
+            return true;
+        $this->state++;
+        if (isset($this->e['after_c']))
+            call_user_func($this->e['after_c'], $this->i);
+        return false;
+    }
+
+    function current() {
+        return $this->row;
+    }
+
+    function key() {
+        return $this->i;
+    }
+
+    function next() {
+        $exit = function ($fail) {
+            if ($this->dd)
+                $this->dd->free($this->e['query']->stmt);
+            $this->row = false;
+            if ($fail)
+                throw new Err("eVar cycle error");
+        };
+        do {
+            if ($this->i++ >= $this->max_i && -1 != $this->max_i)
+                return $exit(!isset($this->e['max_i']));
+            if ($this->dd)
+                $this->row = $this->dd->one($this->e['query']->stmt, 'O');
+            $x = false;
+            if (isset($this->e['row_c']) && $this->row) {
+                $this->row->__i = $this->i;
+                $x = call_user_func_array($this->e['row_c'], [&$this->row]);
+                if (false === $x)
+                    return $exit(false);
+            }
+        } while (true === $x);
+        if (!$this->dd)
+            $this->row = $x ? (object)$x : false;
+    }
+}
 
 function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
     global $sky;
@@ -368,52 +456,19 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
 
 function sql() {
     $in = func_get_args();
-    $sql = $in[0] instanceof SQL ? $in[0] : new SQL($in);
-    $qstr = (string)$sql; # build sql string
-    if (SQL::NO_EXEC & $sql->mode)
-        return $qstr;
-    if ($sql->error)
-        return false;
-    if (false !== strpos('+-~>^@%#', $char = $qstr[0])) {
-        $qstr = substr($qstr, 1);
-    } else {
-        $char = '';
-    }
-    if ('^' == $char)
-        return '$q = sql(' . ++$sql->mode . ',' . var_export($qstr, true) . ');' . $sql->_dd->one(null, 'E');
+    $sql = $in[0] instanceof SQL ? $in[0] : new SQL($in, 'parseT');
+    return $sql->exec();
+}
 
-    global $sky;
-    $ts = microtime(true);
-    if ($no = $sql->_dd->query($qstr, $sql->stmt))
-        $sky->was_error |= SKY::ERR_DETECT;
-    if ($sky->debug || $no && $sky->s_prod_error) {
-        $ts = microtime(true) - $ts;
-        SQL::$query_num++;
-        if ($is_error = (bool)$no)
-            $sky->error_title = 'SQL Error';
-        $depth = SQL::NO_TRACE & $sql->mode ? (int)$is_error : 1 + $sql->mode & 7;
-        if ($depth)
-            trace(($is_error ? "ERROR in {$sql->_dd->name} - $no: " . $sql->_dd->error() . "\n" : '') . "SQL: $char$qstr", $is_error, $depth);
-        if (DEV && Ext::cfg('sql'))
-            Ext::ed_sql($qstr, $ts, $depth, $no);
-    }
+function qp() { # Query Part, Query Parse
+    $in = func_get_args() or $in = [''];
+    return new SQL($in, 'parseT');
+}
 
-    if ($no)
-        return false;
-    switch (strtolower(substr($qstr, 0, 6))) {
-        case 'delete': case 'update': case 'replac': return $sql->_dd->affected();
-        case 'insert': return $sql->_dd->insert_id();
-        default: switch ($char) {
-            case '+': return $sql->_dd->one($sql->stmt, 'C', true);
-            case '-': return $sql->_dd->one($sql->stmt, 'R', true);
-            case '~': return $sql->_dd->one($sql->stmt, 'A', true);
-            case '>': return $sql->_dd->one($sql->stmt, 'O', true);
-            case '@': return $sql->all('R', true);
-            case '%': return $sql->all('A', true);
-            case '#': return $sql->all('O', true);
-            case '&': return new eVar(['query' => $sql]);
-        }
-    }
+function table() {
+    $sql = new SQL(func_get_args(), 'init_qb');
+   $sql->table($sql->qstr);
+   $sql->qstr = '';
     return $sql;
 }
 
@@ -422,39 +477,9 @@ function sqlf() { # just more quick parsing, using printf syntax. No SQL injecti
     //$trace = $e->getTrace();
     //trace($trace[1]);
 
-    $sql = new SQL;
-    $in = func_get_args();
-    if (is_int($sql->qstr = array_shift($in))) {
-        $sql->mode = $sql->qstr;
-        $sql->qstr = array_shift($in);
-    }
-    $sql->mode++; # add 1 depth
-    if (SQL::NO_PARSE & $sql->mode)
-        return sql($sql);
-    if (false !== strpos($sql->qstr, '$'))
-        $sql->qstr = $sql->replace_nop(false, $sql->qstr);
-
-    if ($in) $sql->qstr = vsprintf($sql->qstr, array_map(function ($val) use ($sql) {
-        $sql->i++;
-        return is_array($val)
-            ? $sql->array_join($val)
-            : ($val instanceof Closure
-                ? $val($sql)
-                : (is_num($val) ? $val : $sql->_dd->escape($val)));
-    }, $in));
-
-    return sql($sql);
+    $sql = new SQL(func_get_args(), 'parseF');
+    return $sql->exec();
 }
-
-function table($name = '') {
-    $sql = new SQL;
-    return $sql->table($name);
-}
-
-function qp() { # Query Part, Query Parse
-    return new SQL(func_get_args());
-}
-
 
 function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
     $str = htmlspecialchars($str, $mode, ENC);

@@ -76,9 +76,9 @@ abstract class MVC_BASE
 {
     function __get($name) {
         global $sky;
-        if (in_array(substr($name, 0, 2), ['t_', 'm_'])) switch($name[0]) {
-            case 't': SQL::onduty(substr($name, 2));
-            case 'm': isset(SKY::$reg[$name]) && is_a(SKY::$reg[$name], $name) or SKY::$reg[$name] = new $name;
+        if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
+            isset(SKY::$reg[$name]) && is_a(SKY::$reg[$name], $name) or SKY::$reg[$name] = new $name;
+           'm' == $name[0] or SKY::$reg[$name]->dd->onduty(SKY::$reg[$name]->table);/////////
         }
         return $sky->$name;
     }
@@ -96,31 +96,45 @@ abstract class Bolt {
     }
 }
 
-abstract class Model_t extends MVC_BASE
+abstract class Model_m extends MVC_BASE
 {
-    protected $table;
+    use SQL_COMMON;
     protected $dd;
+
+    function __construct() {
+        isset($this->table) or $this->table = substr(get_class($this), 2);
+        $this->dd = $this->head_y();
+    }
+
+    function dd() {
+        return $this->dd;
+    }
+
+    # for overload if needed
+    function head_y() {
+        return SQL::$dd;
+    }
+}
+
+/** Query builder methods */
+abstract class Model_q extends Model_m
+{
+    use QUERY_BUILDER;
+}
+
+/** SQL parser methods */
+abstract class Model_t extends Model_m
+{
     protected $list;
     protected $id;
 
     function __construct() {
         $this->list = 'select $+ from $_ '; ////////////////
-        $this->table = substr(get_class($this), 2);
-        $this->head_y();
-    }
-
-    # for overload if needed
-    function head_y() {
-        $this->dd = SQL::$dd;
-    }
-
-    function __toString() {
-        return $this->table;
+        parent::__construct();
     }
 
     function struct() {
-        SQL::onduty($this->table);
-        $data = sql(1, '@explain $_');
+        $data = $this->sql(1, '@explain $_');
         array_walk($data, function(&$v, $k) {
             $v = is_null($v[3]) ? '' : $v[3]; # default value or empty string
         });
@@ -134,40 +148,39 @@ abstract class Model_t extends MVC_BASE
         }
         if (null === $rule) $rule = $this->id;
         if (is_num($rule))
-            return qp('where id=$.', $rule);
+            return $this->qp('where id=$.', $rule);
         if (is_array($rule)) return is_int(key($rule))
-            ? qp('where id in ($@)', $rule)
-            : qp('where @@', $rule); # dangerous !
+            ? $this->qp('where id in ($@)', $rule)
+            : $this->qp('where @@', $rule); # dangerous !
         return null;
     }
 
     function cnt($rule = '') {
-        return sql(1, '+select count(1) from $_ $$', !$rule ? '' : $this->where($rule));
+        return $this->sql(1, '+select count(1) from $_ $$', !$rule ? '' : $this->where($rule));
     }
 
     function one($rule, $return_array = false) {
         if (0 === $rule)
             return $this->struct();
-        $row = sql(1, ($return_array ? '~' : '>') . 'select * from $_ $$', $this->where($rule));
+        $row = $this->sql(1, ($return_array ? '~' : '>') . 'select * from $_ $$', $this->where($rule));
         if (isset($row->id))
             $this->id = $row->id;
         return $row;
     }
 
     function all($rule = '', $what = '#select *') {
-        return sql(1, $what . ' from $_ $$', $this->where($rule));
+        return $this->sql(1, $what . ' from $_ $$', $this->where($rule));
     }
 
     function insert($ary) {
-        SQL::onduty($this->table);
-        return $this->id = sql(1, 'insert into $_ @@', $ary);
+        return $this->id = $this->sql(1, 'insert into $_ @@', $ary);
     }
 
     function update($what, $rule = null) {
         if (null === $rule) $rule = $this->id;
         if (is_array($what))
-            return sql(1, 'update $_ set @@ $$', $what, $this->where($rule));
-        return sql(1, 'update $_ set $$ $$', $what, $this->where($rule));
+            return $this->sql(1, 'update $_ set @@ $$', $what, $this->where($rule));
+        return $this->sql(1, 'update $_ set $$ $$', $what, $this->where($rule));
     }
 
     function replace(&$id, $validate = true) {
@@ -182,8 +195,8 @@ abstract class Model_t extends MVC_BASE
 
     function delete($rule = null) {
         if (is_array($rule))
-            $rule = qp(SQL::_UPD, 'id in ($@)', $rule);
-        return sql(1, 'delete from $_ $$', $this->where($rule));
+            $rule = $this->qp(SQL::_UPD, 'id in ($@)', $rule);
+        return $this->sql(1, 'delete from $_ $$', $this->where($rule));
     }
 
     function _html($ary) {
@@ -193,15 +206,10 @@ abstract class Model_t extends MVC_BASE
     function _list($ipp = 0) { # items per page
         if ($ipp) {
             list ($limit, $pages, $cnt) = pagination($ipp);
-            return ['query' => sql(1, 'select * from $_ limit $., $.', $limit, $ipp), 'pages' => $pages, 'cnt' => $cnt];
+            return ['query' => $this->sql(1, 'select * from $_ limit $., $.', $limit, $ipp), 'pages' => $pages, 'cnt' => $cnt];
         }
-        return ['query' => $q = sql(1, 'select * from $_'), 'pages' => false, 'cnt' => $q->_dd->_rows_count($this->table)];
+        return ['query' => $q = $this->sql(1, 'select * from $_'), 'pages' => false, 'cnt' => $q->_dd->_rows_count($this->table)];
     }
-}
-
-abstract class Model_m extends MVC_BASE
-{
-    # no code
 }
 
 class Controller extends MVC_BASE

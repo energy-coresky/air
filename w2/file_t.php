@@ -2,7 +2,7 @@
 
 # For Licence and Disclaimer of this code, see http://coresky.net/license
 
-class File_t extends MVC
+class File_t extends MVC_BASE
 {
     private $img_t = [
         IMAGETYPE_JPEG => 'jpg',
@@ -22,7 +22,7 @@ class File_t extends MVC
 
     static function read_f($id, $is_download = false) {
         self::$me or self::$me = new File_t;
-        if (!$row = self::$me->t_file->one(qp(' id=$.', $id)))
+        if (!$row = self::$me->t_file->one((int)$id))
             return;
         $ary = explode(' ', $row->type);
         if ($is_download && false === ($size = @filesize(DIR_U . "$id.$ary[1]")))

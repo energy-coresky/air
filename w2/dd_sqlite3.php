@@ -2,6 +2,8 @@
 
 class dd_sqlite3 implements Database_driver
 {
+    use SQL_COMMON;
+
     public $name = 'SQLite3';
     public $quote = '`';
     public $conn;
@@ -28,6 +30,8 @@ class dd_sqlite3 implements Database_driver
     function escape($s, $quote = true) {
         return $quote ? "'" . $this->conn->escapeString($s) . "'" : $this->conn->escapeString($s);
     }
+
+    function unescape($s, $quote = true) {}
 
     function error() {
         return $this->conn->lastErrorMsg();

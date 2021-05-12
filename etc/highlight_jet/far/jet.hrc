@@ -259,7 +259,7 @@
 
 
         <scheme name="jetPhpInsertion">
-            <block start="/(\{(php)\})/" end="/(\{(\/php)\})/" scheme="jet"
+            <block start="/(@(php))/" end="/(\~(php))/" scheme="jet"
                 priority="low" content-priority="low"
                 region="Insertion"
                 region00="OpenTag"       region10="CloseTag"

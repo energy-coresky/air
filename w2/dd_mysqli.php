@@ -2,6 +2,8 @@
 
 class dd_mysqli implements Database_driver
 {
+    use SQL_COMMON;
+
     public $name = 'MySQLi';
     public $quote = '`';
     public $conn;

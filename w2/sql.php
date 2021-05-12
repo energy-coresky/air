@@ -17,59 +17,77 @@ final class SQL
     public $mode = 0;
     public $error = false;
     public $stmt = true;
-    public $i = 0;
-    public $qstr = false;
-    public $_dd; # database driver for this object
     public $qb_ary = false;
+    public $_dd; # database driver for this object
+
+    private $table; # onduty table for this object
+    private $quote;
 
     static $query_num = 0;
     static $dd;  # selected database driver
 
-    private static $onduty = 'memory'; # table name without prefix
     private static $re_func = '\B\$([a-z]+)([ \t]*)(\(((?>[^()]+)|(?3))*\))?'; // revision later
     private static $connections = [];
 
     private $in;
+    private $i = 0;
+    private $qstr = false;
     private $depth = 3; # for constructor (if parse error to show)
 
-    function __construct($in = false) {
-        if (is_string($in)) {
-            SQL::open($in, $this); # single query to different connection//////////////////////////////////////////////
-        } else {
-            $this->_dd = SQL::$dd;
-            if ($in)
-                $this->parse($in);
+    function __construct($in, $func = false) {
+        $this->_dd = SQL::$dd;
+        $tpl = array_shift($in);
+        $is_dd = $tpl instanceof Database_driver;
+        if ($is_dd || $tpl instanceof MVC_BASE) {
+            $this->_dd = $is_dd ? $tpl : $tpl->dd();
+            $is_dd or $this->table = (string)$tpl;
+            $tpl = array_shift($in);
         }
+        if (is_int($tpl)) {
+            $this->mode = $tpl;
+            $tpl = array_shift($in);
+        }
+        $this->quote = $this->_dd->quote;
+        $this->qstr = $tpl;
+        $this->in   = $in;
+        if ($func)
+      //      $this->$func();
+            call_user_func([$this, $func]);
     }
 
     function __toString() {
         return $this->qstr;
     }
 
+    function build($type, $p2 = false) {
+        trace($type,'qb');
+        trace($this->qb_ary,'qb');
+    }
+
     function __call($name, $args) { # query builder methods
         static $exec = ['insert', 'update', 'delete', 'replace'];
-        if ( in_array($name, $exec))
-            return $this->_dd->build($this, $name);
-
+        if ( in_array($name, $exec)) {
+            $this->qb_ary['columns'] = array_merge($this->qb_ary['columns'], $args);
+            return $this->build($name);
+        }
         static $method =  ['table', 'columns', 'where', 'join', 'group', 'having', 'order', 'limit'];
         if (!in_array($name, $method))
             throw new Err("SQL::$name() - unknown method");
 
         $this->qb_ary or $this->qb_ary = array_combine($method, array_fill(0, count($method), []));
-        $this->qb_ary[$name] = array_merge($this->qb_ary[$name], $args[0]);
+        $this->qb_ary[$name] = array_merge($this->qb_ary[$name], $args);
         return $this;
     }
 
-    static function open($name = '', $p2 = true) {
+    static function open($name = '', $p2 = false) {
         if (isset(SQL::$connections[$name])) {
             $dd = SQL::$connections[$name];
         } else {
             '' === $name ? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
             $driver = "dd_$cfg[driver]";
+            isset($cfg['pref']) or $cfg['pref'] = '';
             $dd = SQL::$connections[$name] = new $driver($cfg['dsn'], $cfg['pref']);
             unset($cfg['dsn']);
-            if ('' === $name)
-                SQL::$dd = SKY::$dd = $dd;
             static $hook = false;
             $hook or $hook = $p2; # first call must set hook object
             $hook->h_dd($name, $dd);
@@ -87,15 +105,13 @@ final class SQL
         }
     }
 
-    static function onduty($table = false) {
-        $t = SQL::$onduty;
-        false === $table or SQL::$onduty = $table;
-        return $t;
+    static function onduty($table) {
+        return SQL::$dd->onduty($table);
     }
 
     function one($meth = 'A', $free = false) {
         if ($this->qb_ary)
-            return $this->_dd->build($this, 'one', $meth);
+            return $this->build('one', $meth);
         if (true !== $this->stmt)
             return $this->_dd->one($this->stmt, $meth, $free);
     }
@@ -122,38 +138,104 @@ final class SQL
         return $ary;
     }
 
+    function exec() {
+        if ($this->error)
+            return false;
+       $qstr = $this->qstr; # build sql string
+        if (SQL::NO_EXEC & $this->mode)
+            return $qstr;
+
+        if (false !== strpos('+-~>^@%#', $char = $qstr[0])) {
+            $qstr = substr($qstr, 1);
+        } else {
+            $char = '';
+        }
+        if ('^' == $char)
+            return '$q = sql(' . ++$this->mode . ',' . var_export($qstr, true) . ');' . $this->_dd->one(null, 'E');
+
+        global $sky;
+        $ts = microtime(true);
+        if ($no = $this->_dd->query($qstr, $this->stmt))
+            $sky->was_error |= SKY::ERR_DETECT;
+        if ($sky->debug || $no && $sky->s_prod_error) {
+            $this->mode++; # add 1 depth
+            $ts = microtime(true) - $ts;
+            SQL::$query_num++;
+            if ($is_error = (bool)$no)
+                $sky->error_title = 'SQL Error';
+            $depth = SQL::NO_TRACE & $this->mode ? (int)$is_error : 1 + $this->mode & 7;
+            if ($depth)
+                trace(($is_error ? "ERROR in {$this->_dd->name} - $no: " . $this->_dd->error() . "\n" : '') . "SQL: $char$qstr", $is_error, $depth);
+            if (DEV && Ext::cfg('sql'))
+                Ext::ed_sql($qstr, $ts, $depth, $no);
+        }
+
+        if ($no)
+            return false;
+        switch (strtolower(substr($qstr, 0, 6))) {
+            case 'delete': case 'update': case 'replac': return $this->_dd->affected();
+            case 'insert': return $this->_dd->insert_id();
+            default: switch ($char) {
+                case '+': return $this->_dd->one($this->stmt, 'C', true);
+                case '-': return $this->_dd->one($this->stmt, 'R', true);
+                case '~': return $this->_dd->one($this->stmt, 'A', true);
+                case '>': return $this->_dd->one($this->stmt, 'O', true);
+                case '@': return $this->all('R', true);
+                case '%': return $this->all('A', true);
+                case '#': return $this->all('O', true);
+                case '&': return new eVar(['query' => $this]);
+            }
+        }
+        return $this;
+    }
+
     function append() {
-        $this->depth = 2;
         $tmp = $this->qstr;
-        $this->qstr = $tmp . $this->parse(func_get_args());
+        $this->qstr = $tmp . $this->parseT(func_get_args());
         return $this;
     }
 
     function prepend() {
-        $this->depth = 2;
         $tmp = $this->qstr;
-        $this->qstr = $this->parse(func_get_args()) . $tmp;
+        $this->qstr = $this->parseT(func_get_args()) . $tmp;
         return $this;
     }
 
-    private function parse($in) {
+    private function parseF() {
+        if (SQL::NO_PARSE & $this->mode)
+            return $this->exec();
+
+        if (false !== strpos($this->qstr, '$'))
+            $this->qstr = $this->replace_nop(false, $this->qstr);
+
+        if ($this->in) $this->qstr = vsprintf($this->qstr, array_map(function ($val) {
+            $this->i++;
+            return is_array($val)
+                ? $this->array_join($val)
+                : ($val instanceof Closure
+                    ? $val($this)
+                    : (is_num($val) ? $val : $this->_dd->escape($val)));
+        }, $this->in));
+    }
+
+    private function parseT($in = false) {
         $this->error = false;
-        if (is_int($this->qstr = array_shift($in))) {
-            $this->mode |= $this->qstr;
+        if ($in) {
+            $this->depth = 2;
             $this->qstr = array_shift($in);
+            $this->in = $in;
         }
-        if ($this->qstr instanceof SQL)
-            $this->qstr = (string)$this->qstr;
-        if (!$in)
+
+        if (!$this->in)
             return (SQL::NO_PARSE & $this->mode) || false === strpos($this->qstr, '$')
                 ? $this->qstr
                 : ($this->qstr = $this->replace_nop(false, $this->qstr));
-        $this->in =& $in;
+
         $this->i = 0;
         $re = '\$_`|\$[@\$\.\+`]|\\\\[1-9]|@@|!!|' . $this->replace_nop();
 
         if ($this->qstr = preg_replace_callback("~$re~u", [$this, 'replace_par'], $this->qstr))
-            count($in) == $this->i or $this->error = 'Placeholder\'s count don\'t match parameters count';
+            count($this->in) == $this->i or $this->error = 'Placeholder\'s count don\'t match parameters count';
     
         if ($this->error) {
             global $sky;
@@ -169,8 +251,9 @@ final class SQL
             if (SQL::$re_func && !(SQL::NO_FUNC & $this->mode))
                 $re .= '|' . SQL::$re_func;
             return $str ? preg_replace_callback("~$re~u", [$this, __FUNCTION__], $str) : $re;
-        } elseif ('_' == $match[0][1]) { # $_ (on-duty table) or $_sometable
-            return '`' . $this->_dd->pref . (2 == strlen($match[0]) ? SQL::onduty() : substr($match[0], 2)) . '`';
+        } elseif ('_' == $match[0][1]) { # $_ (onduty table) or $_sometable
+            $table = 2 == strlen($match[0]) ? ($this->table ? $this->table : (string)$this->_dd) : substr($match[0], 2);
+            return $this->quote . $this->_dd->pref . $table . $this->quote;
         }
         if (isset($match[3]) && strpos($match[3], '$'))
             $match[3] = preg_replace_callback('~' . SQL::$re_func . '~u', [$this, __FUNCTION__], $match[3]);
@@ -181,10 +264,11 @@ final class SQL
         global $sky;
 
         $c2 = $match[0][1];
+        $q = $this->quote;
         if ('\\' == $match[0][0]) # \1..\9 - backlinks
             return $this->in[$c2 - 1];
         if ('$_`' == $match[0])  # variable table
-            return $val = '`' . $this->_dd->pref . str_replace('`', '``', trim($val =& $this->in[$this->i++], '`')) . '`';
+            return $val = $q . $this->_dd->pref . str_replace($q, $q . $q, trim($val =& $this->in[$this->i++], $q)) . $q;
         if ('_' == $c2 || ord($c2) > 0x60)
             return $this->replace_nop($match);
 
@@ -210,7 +294,7 @@ final class SQL
             break;
             case '$`': # column of a table, free to use
                 if (is_string($val))
-                    return $val = '`' . str_replace('`', '``', trim($val, '`')) . '`';
+                    return $val = $q . str_replace($q, $q . $q, trim($val, $q)) . $q;
                 $this->error = "$param not a string";
             break;
             case '$$': # free to use, parsed sql part
@@ -245,7 +329,7 @@ final class SQL
         return $val = '>>' . gettype($val) . '<<';
     }
 
-    function array_join($ary, $esc = true) {
+    function array_join(Array $ary, $esc = true) {
         $keys = $vals = [];
         array_walk($ary, function ($v, $k) use (&$keys, &$vals, $esc) {
             $param = sprintf('Parameter N %d`%s` - ', 1 + $this->i, $k);
@@ -276,7 +360,8 @@ final class SQL
             }
             if ($this->error)
                 $v = '>>' . gettype($v) . '<<';
-            $keys[] = '`' == $char ? '`' . str_replace('`', '``', trim($k, '`')) . '`' : $k;
+            $q = $this->quote;
+            $keys[] = '`' == $char ? $q . str_replace($q, $q . $q, trim($k, $q)) . $q : $k;
             if (!$esc && '$now' == $v)
                 $v = $this->_dd->f_dt();
             $vals[] = !$esc || is_num($v) ? $v : $this->_dd->escape($v);
@@ -301,95 +386,32 @@ final class SQL
     }
 }
 
-
 //////////////////////////////////////////////////////////////////////////
-class eVar implements Iterator
+trait QUERY_BUILDER
 {
-    private $state = 0;
-    private $i = -1;
-    private $max_i = 500; # -1 is infinite
-    private $row;
-    private $e;
-    private $dd = false;
-
-    function __construct(Array $e) {
-        $this->e = $e;
-    }
-
-    function __get($name) {
-        return isset($this->e[$name]) ? $this->e[$name] : null;
-    }
-
-    function rewind() {
-        if (!$this->e)
-            $this->state = 2;
-        if ($this->state)
-            return;
-        $this->row = new stdClass;
-        $this->state++;
-        if (isset($this->e['query'])) {
-            isset($this->e['max_i']) or $this->e['max_i'] = -1;
-            $sql =& $this->e['query'];
-            if (is_string($sql)) {
-                $sql = sql(2, $sql);
-            } elseif (true === $sql->stmt) {     # mean instanceof SQL
-                $sql->mode |= 2 + SQL::NO_PARSE; # already parsed or query builder used
-                $sql = sql($sql); # perform query exec with error's detection
-            }
-            if (!($sql instanceof SQL))
-                return $this->state++;
-            $this->dd = $sql->_dd;
-        }
-        if (isset($this->e['max_i']))
-            $this->max_i = $this->e['max_i'];
-        $this->next();
-    }
-
-    function valid() {
-        if ($this->state > 1)
-            return false;
-        if ($this->row)
-            return true;
-        $this->state++;
-        if (isset($this->e['after_c']))
-            call_user_func($this->e['after_c'], $this->i);
-        return false;
-    }
-
-    function current() {
-        return $this->row;
-    }
-
-    function key() {
-        return $this->i;
-    }
-
-    function next() {
-        $exit = function ($fail) {
-            if ($this->dd)
-                $this->dd->free($this->e['query']->stmt);
-            $this->row = false;
-            if ($fail)
-                throw new Err("eVar cycle error");
-        };
-        do {
-            if ($this->i++ >= $this->max_i && -1 != $this->max_i)
-                return $exit(!isset($this->e['max_i']));
-            if ($this->dd)
-                $this->row = $this->dd->one($this->e['query']->stmt, 'O');
-            $x = false;
-            if (isset($this->e['row_c']) && $this->row) {
-                $this->row->__i = $this->i;
-                $x = call_user_func_array($this->e['row_c'], [&$this->row]);
-                if (false === $x)
-                    return $exit(false);
-            }
-        } while (true === $x);
-        if (!$this->dd)
-            $this->row = $x ? (object)$x : false;
-    }
+    
 }
 
+//////////////////////////////////////////////////////////////////////////
+trait SQL_COMMON
+{
+    protected $table; # for overload in models if needed
+
+    function __call($name, $args) {
+        if (!in_array($name, ['sql', 'sqlf', 'qp', 'table']))
+            throw new Err('Method ' . get_class($this) . "::$name(..) not exists");
+        $mode = $args && is_int($args[0]) ? array_shift($args) : 0;
+        return call_user_func_array($name, [-2 => $this, -1 => 1 + $mode] + $args);
+    }
+
+    function __toString() {
+        return $this->table;
+    }
+
+    function onduty($table) {
+        $this->table = $table;
+    }
+}
 
 interface Database_driver
 {

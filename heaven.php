@@ -413,7 +413,7 @@ function pagination($ipp, $cnt = null, $ipl = 5, $current = null, $throw = true)
         if ($cnt instanceof SQL) {
             $cnt = sql('+select count(1) $$', $cnt);
         } else {
-            is_string($cnt) or $cnt = SQL::onduty();
+            is_string($cnt) or $cnt = (string)(SQL::$dd);
             $cnt = SQL::$dd->_rows_count($cnt);//////////////////
         }
     }
