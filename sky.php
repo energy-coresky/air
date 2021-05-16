@@ -41,10 +41,12 @@ class SKY
             trace("autoload($name)");
             if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
                 is_file($file = "main/app/$name.php") ? require $file : eval("class $name extends Model_$name[0] {}");
-            } else {
-                is_file($file = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php') ? require $file : require "main/w3/$name.php";
-            }
-        });
+            } elseif (is_file($file = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php')) {
+                require $file; # wing2 folder
+            } elseif (false === strpos($name, '\\')) {
+                require "main/w3/$name.php";
+            } # else `vendor` folder
+        }, true, true);
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
             if (error_reporting() & $no && ($this->debug || $this->s_prod_error)) {
                 $this->error_title = 'PHP ' . ($err = Debug::error_name($no));
@@ -266,7 +268,7 @@ class SKY
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.113 2021-05-02T23:01:11+03:00 energy';
+    const CORE = '0.114 2021-05-16T11:01:11+03:00 energy';
 
     static function version() {
         global $sky;
@@ -304,7 +306,7 @@ class eVar implements Iterator
 {
     private $state = 0;
     private $i = -1;
-    private $max_i = 500; # -1 is infinite
+    private $max_i;
     private $row;
     private $e;
     private $dd = false;
@@ -314,7 +316,7 @@ class eVar implements Iterator
     }
 
     function __get($name) {
-        return isset($this->e[$name]) ? $this->e[$name] : null;
+        return $this->e[$name] ?? null;
     }
 
     function rewind() {
@@ -337,8 +339,7 @@ class eVar implements Iterator
                 return $this->state++;
             $this->dd = $sql->_dd;
         }
-        if (isset($this->e['max_i']))
-            $this->max_i = $this->e['max_i'];
+        $this->max_i = $this->e['max_i'] ?? 500; # -1 is infinite
         $this->next();
     }
 

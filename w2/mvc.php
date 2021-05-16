@@ -531,7 +531,7 @@ class MVC extends MVC_BASE
         trace("$controller::$action()" . ($controller == $real ? '' : ' (virtual)'), 'TOP-VIEW');
         if (DEFAULT_LG) {
             require 'main/lng/' . LG . '.php';
-            SKY::$reg['trans_late'] = isset($lgt) ? $lgt : [];
+            SKY::$reg['trans_late'] = $lgt ?? [];
             SKY::$reg['trans_coll'] = [];
         }
         require 'main/app/common_c.php';

@@ -4,7 +4,7 @@
 
 class Gate
 {
-    private $out;
+    private $gate_file;
     private $url = '';
     static $cshow = 0;
     static $contr_ary = false; # not loaded initialy
@@ -146,7 +146,7 @@ class Gate
             self::real_src($real, $fn_src, false);
         $me = new Gate;
         $me->parse($fn_src, self::$contr_ary, $class);
-        file_put_contents($fn_dst, $me->out);
+        file_put_contents($fn_dst, $me->gate_file);
     }
 
     function view_code($ary, $class, $func) {
@@ -302,20 +302,24 @@ class Gate
     }
 
     function parse($fn, $ary = [], $dst_class = false) {
-        $this->out = "<?php\n\nclass Gape extends Bolt\n{";
+        $gape = "class Gape extends Bolt\n{";
         $c = $f = $depth = $found = 0;
         $list = [];
         $class = basename($fn, '.php');
-        $dst_class or $dst_class = $class;
-        if ($virt = $dst_class != $class)
-            $this->out .= "\n\tpublic \$src = '" . substr($class, 2) . "';\n";
+        if (!$dst_class) {
+            $dst_class = $class;
+            $gape .= "\n\tpublic \$src = '" . substr($class, 2) . "';\n";
+        }
         $tpl_class = explode(' ', 'T_OPEN_TAG T_CLASS T_STRING T_EXTENDS T_STRING {');
         $content = file_get_contents($fn);
-        if (!preg_match('/^(<\?(php)?)/', $content, $match))
+        if (!preg_match('/^<\?(php)?(.*?)class ' . $class . ' extends(.+)$/s', $content, $match))
             throw new Err("File `$fn` must start from &lt;?");
+        $start = false;
         foreach (token_get_all($content) as $v) {
             if (is_array($v)) {
-                if (in_array($v[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT])) {
+                if (T_CLASS == $v[0])
+                    $start = true;
+                if (in_array($v[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_USE]) || !$start && $v[0] != T_OPEN_TAG) {
                     continue;
                 }
                 if (T_CURLY_OPEN == $v[0] || T_DOLLAR_OPEN_CURLY_BRACES == $v[0])
@@ -349,7 +353,7 @@ class Gate
                     isset($ary[$name]) or $ary[$name] = [];
                     $php = $this->code($ary[$name], $cmode, false);
                     $php = "\t\t" . str_replace("\n", "\n\t\t", substr($php, 0, -1)) . "\n";
-                    $this->out .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
+                    $gape .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
                     $f = 0;
                     continue;
                 }
@@ -360,9 +364,7 @@ class Gate
                 $func[1] .= $v;
             }
         }
-        if ($virt)
-            $content = preg_replace("/class $class extends/", "class $dst_class extends", $content);
-        $this->out .= '}' . substr($content, strlen($match[1]));
+        $this->gate_file = '<?php' . $match[2] . $gape . "}\n\nclass $dst_class extends" . $match[3];
         return $found ? $list : [];
     }
 

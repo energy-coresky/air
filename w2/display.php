@@ -28,7 +28,7 @@ class Display
         $val = strtr($val, ['=TOP-TITLE=' => '&#61;TOP-TITLE&#61;']);
         $colors = ['' => '', '=' => '', '*' => 'ff7', '+' => 'dfd', '-' => 'fdd', '.' => 'eee'];
         $pad = $c = '';
-        if (!$key) for(; $this->lenb > $key + $this->disp && $this->back{$key + $this->disp} == '.'; $this->disp++)
+        if (!$key) for(; $this->lenb > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++)
             $this->lnum .= "<br>" and $pad .= '<div class="code" style="background:#eee">&nbsp;</div>';
         if ($this->lenb > $key + $this->disp) $c = $colors[$this->back[$key + $this->disp]];
         $key++;
@@ -37,7 +37,7 @@ class Display
         elseif ($val == '</span>') $val = '&nbsp;</span>';
         elseif ($val == '</span></span>') $val = '&nbsp;</span></span>';
         $val = $pad . ($c ? '<div class="code" style="background:'."#$c\">$val</div>" : "$val\n");
-        for (; $this->lenb > $key + $this->disp && $this->back{$key + $this->disp} == '.'; $this->disp++) { # = - + * .
+        for (; $this->lenb > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++) { # = - + * .
             $this->lnum .= "<br>";
             $val .= '<div class="code" style="background:#eee">&nbsp;</div>';
         }

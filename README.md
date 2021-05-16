@@ -1,7 +1,9 @@
 
 # CORESKY is unusual PHP framework
 
-It doesn't follow much of PSRs: namespaces is absent, "global $sky, $user;" used and may be more..
+It doesn't follow much of PSRs: coresky and apps code use global namespace!
+(however you can use `vendor folder classes` from packagist.org or others),
+frequently used "global $sky, $user;" and may be more..
 But this is my favorite "oil painting"! Not finished, but you can use it.
 
 Regards,
@@ -17,3 +19,13 @@ AB (absolute busy) app is product of InfoParc http://absolutebusy.com/ moved to 
 - http://ru.coresky.net/tree?id69 (Ghost SQLs)
 - http://ru.coresky.net/tree?id62 (Parser Jet)
 - http://ru.coresky.net/tree?id67 (Sky Gate)
+
+## TODO
+
+- Moves to PDO SQLs and write query builer
+- Finish SQL functions and drivers
+- Add something like Laravel's middleware
+- Add modules for apps (use global namespace)
+- Add migration for databases
+- Move coresky code to RAM
+- Fix others and prepare production version 1.0
