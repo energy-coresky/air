@@ -93,8 +93,7 @@ class dd_oci implements Database_driver
     static function end($par = true) {
     }
 
-    function f_cc() {
-        $in = func_get_args();
+    function f_cc(...$in) {
         return implode(' || ', $in);
     }
 

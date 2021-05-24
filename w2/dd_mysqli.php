@@ -160,8 +160,7 @@ class dd_mysqli implements Database_driver
         return $row[4];
     }
 
-    function f_cc() {
-        $in = func_get_args();
+    function f_cc(...$in) {
         return 'concat(' . implode(', ', $in) . ')';
     }
 

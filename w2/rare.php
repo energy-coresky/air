@@ -4,7 +4,7 @@
 
 class Rare
 {
-    static public $u_svn_skips = [];
+    static public $u_svn_skips = ['.git', '.svn'];
 
     static function list_path($dir, $func = '', $skip = [], $up = false) {
         if ('/' === $dir)

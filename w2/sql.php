@@ -88,11 +88,11 @@ final class SQL
             isset($cfg['pref']) or $cfg['pref'] = '';
             $dd = SQL::$connections[$name] = new $driver($cfg['dsn'], $cfg['pref']);
             unset($cfg['dsn']);
-            static $hook = false;
-            $hook or $hook = $p2; # first call must set hook object
-            $hook->h_dd($name, $dd);
+            require_once DIR_S . '/w2/mvc.php';
+            require_once 'main/app/common_c.php';
+            common_c::dd_h($name, $dd);
         }
-        return $p2 ? (SQL::$dd = $dd) : $dd;
+        return $p2 || !SQL::$dd ? (SQL::$dd = $dd) : $dd;
     }
 
     static function close($name = false) {
@@ -189,15 +189,15 @@ final class SQL
         return $this;
     }
 
-    function append() {
+    function append(...$in) {
         $tmp = $this->qstr;
-        $this->qstr = $tmp . $this->parseT(func_get_args());
+        $this->qstr = $tmp . $this->parseT($in);
         return $this;
     }
 
-    function prepend() {
+    function prepend(...$in) {
         $tmp = $this->qstr;
-        $this->qstr = $this->parseT(func_get_args()) . $tmp;
+        $this->qstr = $this->parseT($in) . $tmp;
         return $this;
     }
 

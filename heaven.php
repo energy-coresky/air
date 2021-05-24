@@ -7,8 +7,6 @@
 //////////////////////////////////////////////////////////////////////////
 class HEAVEN extends SKY
 {
-    private $referer = [];
-
     public $jump = false;
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
     public $method = false;
@@ -19,12 +17,13 @@ class HEAVEN extends SKY
     public $admins = 1; # root only has admin access or list pids in array
     public $lg = false; # no languages initialy
     public $has_public = true; # web-site or CRM
-    public $adm_able = false;
+    public $page_p = 'p';
+   public $adm_able = false;
     public $ajax = 0;
     public $surl = [];
 
     function __get($name) {
-        if (2 == strlen($name) && '_' == $name[0] && is_num($name[1])) {
+        if ('_' == $name[0] && 2 == strlen($name) && is_num($name[1])) {
             $v = (int)$name[1];
             if ('' === URI)
                 return $v ? '' : 'main';
@@ -58,9 +57,11 @@ class HEAVEN extends SKY
 
     function load() {
         header('Content-Type: text/html; charset=' . ENC);
+       defined('DESIGN') or define('DESIGN', false);
+        define('DIR_V', DESIGN ? WWW . 'view' : 'view');/////////
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
         if (false === $this->method)
-            throw new Err('Unknown method');
+            throw new Err('Unknown request method');
 
         define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
@@ -79,11 +80,12 @@ class HEAVEN extends SKY
         define('PROTO', @$_SERVER['HTTPS'] ? 'https' : 'http');
         define('DOMAIN', $this->sname[3]);
 
-        $hook = parent::load(); # database connection start from here
+        parent::load(); # database connection start from here
 
         $this->ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) ? 2 : 0;
+        //2do: fetch
         $this->is_front = true;
-        $this->origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : false;
+        $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
         $this->orientation = 0;
         if (isset($_SERVER['HTTP_X_ORIENTATION'])) {
             in_array($wo = (int)$_SERVER['HTTP_X_ORIENTATION'], [0, 1, 2]) or $wo = 0;
@@ -94,20 +96,20 @@ class HEAVEN extends SKY
             $this->s_statp = preg_match("/^\d{4}$/", $s) ? $s . 'p' : '1000p';
         }
 
-        $referer = @$_SERVER['HTTP_REFERER'];
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
         $this->re = "~^https?://$re" . preg_quote(DOMAIN . PATH);
         $this->lref = preg_match("$this->re(.*)$~", $referer, $m) ? $m[3] : false;
         $this->eref = !$m ? $referer : false;
-        $ajax_adm = false;
+    //    $ajax_adm = false;
 
         if ('' !== URI) { # not main page
             $this->surl = explode('/', explode('?', URI)[0]);
-            $hook->h_rewrite($cnt_s = count($this->surl));
+            common_c::rewrite_h($cnt_s = count($this->surl));
             if (1 == $cnt_s && '' === $this->surl[0]) {
                 $this->surl = [];
-                if ('AJAX' == key($_GET) && $this->ajax) {
+                if ($this->ajax && 'AJAX' == key($_GET)) {
                     $this->ajax = 1; # j_ template
-                    $ajax_adm = 'adm' == $_GET['AJAX'];
+                    $this->ajaxv = $_GET['AJAX']; // 'adm'
                     array_shift($_GET);
                 }
             }
@@ -116,30 +118,57 @@ class HEAVEN extends SKY
         if ($this->debug)
             $this->gpc = Debug::gpc();
 
-        global $user;
-        $user = new USER;
-        $hook->h_load();
-        if (12 == $this->error_no && !$this->ajax && '' !== URI) // 2do:check for api calls
-            jump();
-        if ($this->error_no && '_exception' != URI)
-            throw new Exception(11);
-
-        $adm = $this->admins && $user->allow($this->admins) ? Admin::access($ajax_adm) : false;
-        $type = in_array($this->_1, ['list', 'edit', 'new']);
-        $fn = ($this->style ? "$this->style/" : '') . ($this->is_mobile ? 'mobile' : 'desktop');
-        $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
+        //if (12 == $this->error_no && !$this->ajax && '' !== URI) // 2do:check for api calls
+        //    jump();
+        //if ($this->error_no && '_exception' != URI)
+        //    throw new Exception(11);
 
         SKY::$vars = [
-            'k_tkd' => [$this->s_title, $this->s_keywords, $this->s_description],
-            'k_type' => $type = $type ? $this->_1 : ($this->_1 && 'p' != $this->_1 ? 'show' : 'list'),
-            'k_list' => 'list' == $type,
-            'k_static' => [[], ["~/$fn.js"], ["~/$fn.css"]], # default app meta_tags, js, css files
-            'k_js'  => "sky.tz=$tz; sky.is_debug=$this->debug; var addr='" . LINK . "';",
+            'k_list' => 'list' == $this->_1 || in_array($this->page_p, [$this->_1, $this->_2, $this->_3]),
+
+ //           'k_js'  => "sky.is_debug=$this->debug; var addr='" . LINK . "';",
         ];
         if (1 == $this->extra)
             is_file($fn = 'var/extra.txt') && in_array($this->fn_extra, array_map('trim', file($fn))) or $this->extra = 2;
+    }
 
-        return $adm;
+    function adm() {
+        return $this->admins && $user->allow($this->admins) ? Admin::access($ajax_adm) : false;
+    }
+
+    function h_load() { # default processing  //////////////////
+        global $user;
+
+        if ($this->is_mobile = $this->sname[2]) {
+            $user->v_mobi or SKY::v('mobi', 1);
+        } else {
+            !$user->v_mobi or 'www.' == $this->sname[1] or SKY::v('mobi');
+        }
+        if (DEFAULT_LG) {
+            define('LG', !$this->sname[1] ? ($user->id && $user->u_lang ? $user->u_lang : $user->v_lg) : substr(SNAME, 0, 2));
+            if (LG != $user->v_lg && !$this->sname[2])
+                $user->v_lg = LG;
+            require 'main/lng/' . LG . '.php';
+            SKY::$reg['trans_late'] = $lgt ?? [];
+            SKY::$reg['trans_coll'] = [];
+        }
+        $link = PROTO . '://' . (DEFAULT_LG ? LG . '.' : '') . ($this->is_mobile ? 'm.' : '') . DOMAIN;
+        define('LINK', $link . PATH);
+
+        if ($csrf = $this->csrf()) {
+            if (1 == $csrf || $csrf != $user->v_csrf)
+                throw new Exception('CSRF protection');
+            if ($this->origin && $this->origin != $link)
+                throw new Exception('Origin not allowed');
+            trace('CSRF checked OK');
+        }
+    }
+
+    function h_rewrite($cnt) {///////////////////////////
+        if (1 == $cnt && 'robots.txt' == $this->surl[0] && !$_GET) {
+            $this->surl = [''];
+            $_GET = ['_etc' => 'robots.txt'];
+        }
     }
 
     function log($mode, $data) {
@@ -157,51 +186,6 @@ class HEAVEN extends SKY
         if ($val == null)
             return $flag ? $storage & $flag : $storage;
         SKY::$char(null, ['flags' => $val ? $flag | $storage : ~$flag & $storage]);
-    }
-
-    function csrf($skip = []) {
-        if (INPUT_POST != $this->method || in_array($this->_0, $skip) || $this->error_no)
-            return false;
-        $csrf = 1;
-        if (isset($_POST['_csrf'])) {
-            $csrf = $_POST['_csrf'];
-            unset($_POST['_csrf']);
-        } elseif (isset($_SERVER['HTTP_X_CSRF_TOKEN'])) {
-            $csrf = $_SERVER['HTTP_X_CSRF_TOKEN'];
-        }
-        return $csrf;
-    }
-
-    function h_load() { # default processing
-        global $user;
-
-        if ($this->is_mobile = $this->sname[2]) {
-            $user->v_mobi or SKY::v('mobi', 1);
-        } else {
-            !$user->v_mobi or 'www.' == $this->sname[1] or SKY::v('mobi');
-        }
-        if (DEFAULT_LG) {
-            define('LG', !$this->sname[1] ? ($user->id && $user->u_lang ? $user->u_lang : $user->v_lg) : substr(SNAME, 0, 2));
-            if (LG != $user->v_lg && !$this->sname[2])
-                $user->v_lg = LG;
-        }
-        $link = PROTO . '://' . (DEFAULT_LG ? LG . '.' : '') . ($this->is_mobile ? 'm.' : '') . DOMAIN;
-        define('LINK', $link . PATH);
-
-        if ($csrf = $this->csrf()) {
-            if (1 == $csrf || $csrf != $user->v_csrf)
-                throw new Exception('CSRF protection');
-            if ($this->origin && $this->origin != $link)
-                throw new Exception('Origin not allowed');
-            trace('CSRF checked OK');
-        }
-    }
-
-    function h_rewrite($cnt) {
-        if (1 == $cnt && 'robots.txt' == $this->surl[0] && !$_GET) {
-            $this->surl = [''];
-            $_GET = ['_etc' => 'robots.txt'];
-        }
     }
 
     function tail_x($plus = '', $stdout = '') {
@@ -341,8 +325,8 @@ class HEAVEN extends SKY
 
     function shutdown() {
         chdir(DIR); # restore dir!
-        $dd = SQL::$dd = SKY::$dd; # main database driver
-        if (!$this->tailed) {
+        $dd = SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
+        if (!$this->tailed) { # possible result of `die` function
             global $user;
             if (isset($user)) {
                 $this->flag(USER::NOT_TAILED, 1);
@@ -419,7 +403,8 @@ function pagination($ipp, $cnt = null, $ipl = 5, $current = null, $throw = true)
     }
     $sky->is_front or $throw = false;
     $e = function ($no) use ($throw, $cnt, $sky) {
-        if ($throw && (404 != $no || $sky->s_error_404)) throw new Exception("pagination error $no");
+        if ($throw && (404 != $no || $sky->s_error_404))
+            throw new Exception("pagination error $no");
         return [0, $no, $cnt];
     };
     if ($cnt <= $ipp) {

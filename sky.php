@@ -12,6 +12,7 @@ class SKY
     public $error_prod = '';
     public $errors = '';
     public $error_no = 0;
+    public $error_last = 0;
     public $was_error = 0;
     public $cnt_error = 0;
     public $cli;
@@ -39,26 +40,32 @@ class SKY
 
         spl_autoload_register(function ($name) {
             trace("autoload($name)");
+            if (strpos($name, '\\')) # `vendor` folder autoloader
+                return;
             if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
                 is_file($file = "main/app/$name.php") ? require $file : eval("class $name extends Model_$name[0] {}");
             } elseif (is_file($file = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php')) {
                 require $file; # wing2 folder
-            } elseif (false === strpos($name, '\\')) {
+            } else {
                 require "main/w3/$name.php";
-            } # else `vendor` folder
+            }
+            return true;
         }, true, true);
+
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
-            if (error_reporting() & $no && ($this->debug || $this->s_prod_error)) {
+            $this->error_last = $no;
+            if (error_reporting() & $no && ($this->debug || !SKY::$dd || $this->s_prod_error)) {
                 $this->error_title = 'PHP ' . ($err = Debug::error_name($no));
                 trace("$err: $message", true, $line, $file, $context);
             }
             return true;
         });
+
         set_exception_handler(function ($e) {
             preg_match("/^(\d{1,3}) ?(.*)$/", $mess = $e->getMessage(), $m);
             $this->except = [
                 'name' => $name = get_class($e),
-                'crash' => 'Stop' != $name && ('Exception' != $name || !$this->s_quiet_eerr),
+                'crash' => $crash = 'Stop' != $name && ('Exception' != $name || !SKY::$dd || !$this->s_quiet_eerr),
                 'code' => $m ? $m[1] : 0,
                 'mess' => $m ? $m[2] : $mess,
                 'title' => $this->error_title = "Exception $name($mess)",
@@ -66,22 +73,28 @@ class SKY
             if ('Stop' == $name && !$mess)
                 $this->tailed = true;
             global $user;
-            $etc = $m && 22 == $m[1] ? implode("\n", $user->jump_path) : $e->getTraceAsString();
-            trace("$this->error_title\n$etc", 'Err' == $name, $e->getLine(), $e->getFile());
+            $etc = $m && 22 == $m[1] ? isset($user) && implode("\n", $user->jump_path) : $e->getTraceAsString();
+            trace("$this->error_title\n$etc", $crash, $e->getLine(), $e->getFile());
             $this->error_title = "Exception $name($mess)";
         });
+
         register_shutdown_function([$this, 'shutdown']);
+    }
+
+    function h_init($vendor = false) {
+        if ($vendor)
+            require 'vendor/autoload.php';
     }
 
     function shutdown() {
         chdir(DIR); # restore dir!
-        if (SKY::$dd)
-            SQL::$dd = SKY::$dd; # switch main database driver
+        SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
         foreach ($this->shutdown as $object)
             call_user_func([$object, 'shutdown']);
 
         $e = error_get_last();
-        if ($e && $e['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR)) {
+        //if ($e && $e['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR)) {
+        if ($e && $e['type'] != $this->error_last) {
             $err = Debug::error_name($e['type']);
             trace("$err: $e[message]", true, $e['line'], $e['file']);
             $this->error_title = "PHP $err";
@@ -102,20 +115,27 @@ class SKY
 
     function load() {
         global $argv;
-        require 'main/app/hook.php';
-        SKY::$dd = SQL::open('', $hook = new hook);
+        SKY::$dd = SQL::open();
         if (CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
         if (DEV)
             Ext::init();
 
-        list($this->imemo, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=3');
-        SKY::ghost('s', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=3');
+        $this->memory(3, 's');
         $this->debug |= (int)$this->s_trace_single;
         if ($this->s_prod_error || $this->debug)
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
-        return $hook;
+    }
+
+    function memory($id = 9, $char = 'n', $table = 'memory') {
+        if (!isset(SKY::$mem[$char])) {
+            SKY::$dd or $this->load();
+            list($dt, $imemo, $tmemo) = sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
+            SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id);
+            if (9 == $id && defined('WWW') && 'n' == $char && 'memory' == $table)
+                Schedule::setWWW($this->n_www);
+        }
     }
 
     function tail_ghost($alt = false) {
@@ -130,20 +150,22 @@ class SKY
 
     function __get($name) {
         $pre = substr($name, 0, 2);
-        if ('s_' == $pre)
-            return array_key_exists($name = substr($name, 2), SKY::$mem['s'][3]) ? SKY::$mem['s'][3][$name] : '';
-        if ('k_' == $pre)
+        if ('k_' == $pre) {
             return array_key_exists($name, SKY::$vars) ? SKY::$vars[$name] : '';
+        } elseif (2 == strlen($pre) && '_' == $pre[1] && isset(SKY::$mem[$char = $pre[0]])) {
+            $name = substr($name, 2);
+            return array_key_exists($name, SKY::$mem[$char][3]) ? SKY::$mem[$char][3][$name] : '';
+        }
         return array_key_exists($name, SKY::$reg) ? SKY::$reg[$name] : '';
     }
 
     function __set($name, $value) {
         $pre = substr($name, 0, 2);
-        if ('s_' == $pre) {
-            SKY::$mem['s'][0] = 1; # sqlf only, flag cannot be =2
-            SKY::$mem['s'][3][substr($name, 2)] = $value;
-        } elseif ('k_' == $pre) {
+        if ('k_' == $pre) {
             SKY::$vars[$name] = $value;
+        } elseif (2 == strlen($pre) && '_' == $pre[1] && isset(SKY::$mem[$char = $pre[0]])) {
+            SKY::$mem[$char][0] = 1; # sqlf only, flag cannot be =2
+            SKY::$mem[$char][3][substr($name, 2)] = $value;
         } else {
             SKY::$reg[$name] = $value;
         }
@@ -268,7 +290,7 @@ class SKY
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.114 2021-05-16T11:01:11+03:00 energy';
+    const CORE = '0.115 2021-05-24T07:01:11+03:00 energy';
 
     static function version() {
         global $sky;
@@ -289,17 +311,6 @@ class SKY
 class Err extends Exception {} # Use when exception is caused by programmer actions. Assume like crash, `throw new Err` should never works!
 class Stop extends Exception {} # Assume like stop and not a crash
 # use exception `Exception`, `die` when exceptional situation is caused by events of the outside world. Configure as crash or not.
-
-//////////////////////////////////////////////////////////////////////////
-class Hook_base { # use it in app/hook.php
-    function __call($name, $args) {
-        global $sky;
-
-        if ('h_' == substr($name, 0, 2) && method_exists($sky, $name))
-            return call_user_func_array([$sky, $name], $args); # call the default processing for the method
-        throw new Err("Hook `$name` not exists");
-    }
-}
 
 //////////////////////////////////////////////////////////////////////////
 class eVar implements Iterator
@@ -455,30 +466,29 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
     }
 }
 
-function sql() {
-    $in = func_get_args();
+function sql(...$in) {
     $sql = $in[0] instanceof SQL ? $in[0] : new SQL($in, 'parseT');
     return $sql->exec();
 }
 
-function qp() { # Query Part, Query Parse
-    $in = func_get_args() or $in = [''];
+function qp(...$in) { # Query Part, Query Parse
+    $in or $in = [''];
     return new SQL($in, 'parseT');
 }
 
-function table() {
-    $sql = new SQL(func_get_args(), 'init_qb');
+function table(...$in) {
+    $sql = new SQL($in, 'init_qb');
    $sql->table($sql->qstr);
    $sql->qstr = '';
     return $sql;
 }
 
-function sqlf() { # just more quick parsing, using printf syntax. No SQL injection!
+function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL injection!
     //$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);//new Exception();  |DEBUG_BACKTRACE_PROVIDE_OBJECT
     //$trace = $e->getTrace();
     //trace($trace[1]);
 
-    $sql = new SQL(func_get_args(), 'parseF');
+    $sql = new SQL($in, 'parseF');
     return $sql->exec();
 }
 

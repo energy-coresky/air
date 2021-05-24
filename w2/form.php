@@ -58,8 +58,7 @@ class Form
         return $me->tag($me->draw_form($row, $me->mk));
     }
 
-    static function X() {
-        $in = func_get_args();
+    static function X(...$in) {
         $cfg = array_shift($in);
         array_walk($in, function(&$ary) {
             is_array($ary) or $ary = [$ary];

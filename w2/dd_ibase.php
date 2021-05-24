@@ -83,8 +83,7 @@ class dd_ibase implements Database_driver
     static function end($par = true) {
     }
 
-    function f_cc() {
-        $in = func_get_args();
+    function f_cc(...$in) {
         return 'concat(' . implode(', ', $in) . ')';
     }
 

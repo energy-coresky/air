@@ -8,19 +8,20 @@ class standard_c extends Controller
     private $_a = '';
 
     function head_y($action) {
-        $production = [
+        $soft = [
+            'a_trace',
+            'j_file',
             'a_exception',
             'j_init',
             'j_crop_code',
             'j_crop',
             'j_file_tmp',
             'j_file_delete',
-            'j_file',
         ];
         if ('a_etc' == $action || DEV && 'a_dev' == $action) # run MVC::$cc !
             return parent::head_y($action);
-        if (in_array($action, $production)) # app's ::head_y() locked !
-            return;
+        if (in_array($action, $soft)) # app's ::head_y() locked !
+            return $this->soft(111);
         if (!DEV)
             return 404;
         global $sky;
@@ -30,8 +31,33 @@ class standard_c extends Controller
         return ['y_1' => $v[0]];
     }
 
-    function a_exception() {
+    private function soft($xxx) {
         global $sky, $user;
+        $user = new USER;
+    }
+
+    function a_trace($id) {
+        global $sky, $user;
+        if (!$user->root && !DEBUG)
+            return 404;
+        $sky->debug = false;
+        echo sqlf('+select tmemo from $_memory where id=%d', $id); # show X-trace
+        throw new Stop;
+    }
+
+    function j_file() {
+        global $user;
+        if (!$user->root && !DEV)
+            return 404;
+        $sky->debug = false;
+        list($file, $line) = explode('^', $_POST['name']);
+        $txt = file_get_contents($file);
+        echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
+        throw new Stop;
+    }
+
+    function a_exception() {
+        global $sky;
         $no = $sky->_1 or $no = $sky->error_no;
         $sky->error_no < 10000 or $no = 11;
         $no or jump();
@@ -99,17 +125,6 @@ class standard_c extends Controller
 
     function j_file_delete() {
         File_t::delete_one();
-    }
-
-    function j_file() {
-        global $user;
-        if (1 != $user->pid && !DEV)
-            return 404;
-        $sky->debug = false;
-        list($file, $line) = explode('^', $_POST['name']);
-        $txt = file_get_contents($file);
-        echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
-        throw new Stop;
     }
 
     # functions below for DEV only

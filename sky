@@ -1,0 +1,49 @@
+#!/usr/bin/env php
+<?php
+
+if (1 == $argc) {
+    echo <<<DOC
+Usage: sky command [param ...]
+Commands are:
+  d - list dirs (from current dir)
+  php - lint PHP files (from current dir)
+  jet - lint Jet files
+  m [id] - read tmemo cell from memory
+  c - Reparse controllers list
+  cache - Drop all cache
+  a - show actions
+
+DOC;
+    exit;
+}
+
+define('DIR_R', getcwd());
+do {
+    $dir = getcwd(); # add this dir to the PATH
+    if ($found = is_file('main/app/gate.php') && is_dir('var'))
+        break;
+    chdir('..');
+} while($dir != getcwd());
+
+$d = 'd' == $argv[1];
+if ($d || 'php' == $argv[1]) {
+    require __DIR__ . '/w2/rare.php';
+    $dirs = Rare::walk_dirs(DIR_R);
+    if ($d) {
+        print_r($dirs);
+    } else foreach($dirs as $dir) {
+        $files = Rare::list_path($dir, 'is_file');
+        foreach($files as $file)
+            system("php -l $file");
+    }
+    exit("\n");
+} if (!$found) {
+    exit("SKY application not found\n");
+}
+
+define('DIR', $dir);
+require 'main/conf.php';
+$sky  = new SKY;
+$sky->load();
+
+new Console($argv[1]);

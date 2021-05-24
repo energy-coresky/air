@@ -39,6 +39,8 @@ class Jet
         }
         if (!self::$directive) {
             MVC::handle('jet_c');
+            if (is_file($fn_jet = 'main/app/jet.php'))
+                require $fn_jet;
             self::$directive = true;
         }
         $this->files[$name] = 1;

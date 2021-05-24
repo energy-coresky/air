@@ -175,6 +175,7 @@ class USER
                 ], 7),
             ];
         }
+
         if (START_TS - $sky->s_online_ts > 60) {
             $query = '+select 1 + count(1) from $_visitors where dt_l > now() - interval %d minute and id<>%d';
             $sky->s_online = sqlf($query, $sky->s_visit, $this->vid);
@@ -199,14 +200,30 @@ class USER
         return $cookie;
     }
 
-    function deny() {
-        return !call_user_func_array([$this, 'allow'], func_get_args());
+    function deny(...$in) {
+        return !call_user_func_array([$this, 'allow'], $in);
     }
 
-    function allow() {
+    function allow(...$in) {
         if (1 == $this->pid) # superuser can full access
             return true;
-        $args = func_get_args() or $args = [[]];
-        return in_array($this->pid, is_array($args[0]) ? $args[0] : $args);
+        $in or $in = [[]];
+        return in_array($this->pid, is_array($in[0]) ? $in[0] : $in);
+    }
+
+    function guard_origin($skip = []) {
+    //      if ($sky->origin && $sky->origin != $link)          throw new Exception('Origin not allowed');
+    }
+
+    function guard_csrf($skip = []) {
+        global $sky;
+        if (INPUT_POST != $sky->method || in_array($sky->_0, $skip) || $sky->error_no)
+            return;
+        $csrf = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? false;
+        unset($_POST['_csrf']);
+        if ($csrf !== $this->v_csrf)
+            throw new Exception('CSRF protection');
+    //      if ($sky->origin && $sky->origin != $link)          throw new Exception('Origin not allowed');
+        trace('CSRF is OK');
     }
 }

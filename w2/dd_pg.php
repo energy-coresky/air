@@ -81,8 +81,8 @@ class dd_pg implements Database_driver
     static function end($par = true) {
     }
 
-    function f_cc() {
-        return implode(' || ', func_get_args());
+    function f_cc(...$in) {
+        return implode(' || ', $in);
     }
 
     function f_dt($column = false, $sign = false, $n = 0, $period = 'day') {

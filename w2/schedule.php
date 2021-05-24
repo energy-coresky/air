@@ -21,32 +21,6 @@ class Schedule
     public $dt;
     public $imemo;
 
-    function &load() {
-        global $sky;
-        SKY::$dd or $sky->load();
-        if (!isset(SKY::$mem['n'])) {
-            list($this->dt, $this->imemo, $tmemo) = sqlf('-select dt, imemo, tmemo from $_memory where id=9');
-            SKY::ghost('n', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=9');
-        }
-        return SKY::$mem['n'][3];
-    }
-
-    function __get($name) {
-        $ary = $this->load();
-        if ('www' == $name) {
-            $ary = explode('~', $ary['www']);
-            return DEV ? $ary[0] . '/' : $ary[1] . '/';
-        }
-        return $ary[substr($name, 2)];
-    }
-
-    function __set($name, $value) {
-        if ('n_' == substr($name, 0, 2)) {
-            $this->load();
-            SKY::n(substr($name, 2), $value);
-        }
-    }
-
     function __construct($debug_level = 1, $single_thread = false) {
         global $argv, $sky;
 
@@ -65,8 +39,36 @@ class Schedule
             $this->single_thread = $sky->cli = true;
         }
         $sky->debug = $debug_level;
-        if (-1 == $this->arg)
+        if (-1 == $this->arg) {
             $sky->shutdown[] = $this;
+            //if ('' == $this->amp)
+                //echo "Multy-threads: " . ($this->single_thread ? "No\n" : "Yes\n"):
+        }
+    }
+
+    function __get($name) {
+        global $sky;
+        $sky->memory();
+        $ary =& SKY::$mem['n'][3];
+        if ('www' == $name) {
+            $ary = explode('~', $ary['www']);
+            return DEV ? $ary[0] . '/' : $ary[1] . '/';
+        }
+        return $ary[substr($name, 2)];
+    }
+
+    function __set($name, $value) {
+        global $sky;
+        if ('n_' == substr($name, 0, 2)) {
+            $sky->memory();
+            SKY::n(substr($name, 2), $value);
+        }
+    }
+
+    static function setWWW($www) {
+        $ary = explode('~', $www);
+        $ary[DEV ? 0 : 1] = rtrim(WWW, '/');
+        SKY::n('www', implode('~', $ary));
     }
 
     function mail_error() {
@@ -150,11 +152,11 @@ class Schedule
         return true;
     }
 
-    function sql() {
+    function sql(...$in) {
         global $sky;
         SKY::$dd or $sky->load();
         $start = microtime(true);
-        $sql = (string)call_user_func_array('qp', func_get_args());
+        $sql = (string)call_user_func_array('qp', $in);
         $n = sql(SQL::NO_PARSE + 1, $sql);
         $this->write(sprintf("%01.3f sec <= %s <= %s", microtime(true) - $start, is_array($n) ? count($n) : $n, $sql));
         return $n;

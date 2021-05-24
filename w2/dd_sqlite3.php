@@ -103,8 +103,8 @@ class dd_sqlite3 implements Database_driver
         return sql('+select count(1) from $_`', $table);
     }
 
-    function f_cc() {
-        return implode(' || ', func_get_args());
+    function f_cc(...$in) {
+        return implode(' || ', $in);
     }
 
     function tz() {
