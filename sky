@@ -20,7 +20,7 @@ DOC;
 
 define('DIR_R', getcwd());
 do {
-    $dir = getcwd(); # add this dir to the PATH
+    $dir = getcwd();
     if ($found = is_file('main/app/gate.php') && is_dir('var'))
         break;
     chdir('..');
@@ -28,7 +28,7 @@ do {
 
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
-    require __DIR__ . '/w2/rare.php';
+    require __DIR__ . '/w2/rare.php'; # add this dir to the PATH
     $dirs = Rare::walk_dirs(DIR_R);
     if ($d) {
         print_r($dirs);
