@@ -5,6 +5,7 @@ if (1 == $argc) {
     echo <<<DOC
 Usage: sky command [param ...]
 Commands are:
+  s - run PHP web-server
   d - list dirs (from current dir)
   php - lint PHP files (from current dir)
   jet - lint Jet files
@@ -37,7 +38,9 @@ if ($d || 'php' == $argv[1]) {
             system("php -l $file");
     }
     exit("\n");
-} if (!$found) {
+} elseif ('s' == $argv[1]) {
+    system("php -S localhost:" . ($argv[2] ?? 8888)); exit;
+} elseif (!$found) {
     exit("SKY application not found\n");
 }
 
