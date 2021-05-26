@@ -51,8 +51,7 @@ final class SQL
         $this->qstr = $tpl;
         $this->in   = $in;
         if ($func)
-      //      $this->$func();
-            call_user_func([$this, $func]);
+            $this->$func();
     }
 
     function __toString() {

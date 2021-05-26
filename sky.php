@@ -81,7 +81,7 @@ class SKY
         register_shutdown_function([$this, 'shutdown']);
     }
 
-    function h_init($vendor = false) {
+    function init_h($vendor = false) {
         if ($vendor)
             require 'vendor/autoload.php';
     }
@@ -184,9 +184,9 @@ class SKY
         $k = $args[0];
         $v = isset($args[1]) ? $args[1] : null;
         $old = isset(SKY::$mem[$char]) or SKY::$mem[$char] = [0, null, $v, []];
-        $ary =& SKY::$mem[$char];    # s - system conf
+        $ary =& SKY::$mem[$char];    # s - system conf (hight load) for `read` usage mainly
         $flag = 1;                   # a - admin conf
-        if (is_array($k)) {          # n - cron conf
+        if (is_array($k)) {          # n - cron conf or low load usage (used in w2/gate.php also)
             $ary[3] = $k + $ary[3];  # v - visitor
         } elseif (is_null($v)) {     # u - user
             unset($ary[3][$k]);      # i,j,k - Language data
@@ -328,6 +328,13 @@ class eVar implements Iterator
 
     function __get($name) {
         return $this->e[$name] ?? null;
+    }
+
+    function row() {
+        if ($this->state > 1)
+            return false;
+        $this->state ? $this->next() : $this->rewind();
+        return $this->valid() ? $this->row : false;
     }
 
     function rewind() {

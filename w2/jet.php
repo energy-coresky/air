@@ -12,10 +12,10 @@ class Jet
     private $div = '<div style="display:none" id="err-top"></div>';
     private $current = '';
     static $directive = false;
-    static $dirs = [];
+    static $custom = [];
 
     static function directive($name, $func = null) {
-        self::$dirs += is_array($name) ? $name : [$name => $func];
+        Jet::$custom += is_array($name) ? $name : [$name => $func];
     }
 
     static function q($pattern, $arg) {
@@ -37,16 +37,17 @@ class Jet
             if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.php"))
                 $name = "b$name";
         }
-        if (!self::$directive) {
+        if (!Jet::$directive) {
             MVC::handle('jet_c');
             if (is_file($fn_jet = 'main/app/jet.php'))
                 require $fn_jet;
-            self::$directive = true;
+            Jet::$directive = true;
         }
         $this->files[$name] = 1;
         $this->parsed = $this->parse($this->current = $name, $part);
         if ($fn) {
-            $prefix = "<?php\n#" . implode(' ', array_keys($this->files)) . "\n?>";
+            $prefix = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n";
+            $prefix .= DEV ? "trace('TPL: $list')?>" : '?>';
             $postfix = DEV && $is_fire && !$layout ? '<?php if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif; ?>' : '';
             file_put_contents($fn, $prefix . $this->parsed . $postfix);
         }
@@ -225,8 +226,8 @@ class Jet
 
             if ($end)
                 return $m[0];
-            if (isset(self::$dirs[$m[1]])) # user defined
-                return call_user_func(self::$dirs[$m[1]], $arg, $this);
+            if (isset(Jet::$custom[$m[1]])) # user defined
+                return call_user_func(Jet::$custom[$m[1]], $arg, $this);
 
             switch ($m[1]) {
                 case 'pdaxt': return sprintf('<?php MVC::pdaxt(%s) ?>', $arg ? $arg : '') . $sp;
@@ -272,8 +273,8 @@ class Jet
             return "<?php $iv = 0; do { ?>";
         }
         array_pop($this->for);
-    //  if (preg_match('/^\s*(\$e_\w+)\s*(\:\s*(\$\w+))?/', $arg, $m)) # $e_.. cycle
-        //  $arg = (isset($m[3]) ? $m[3] : '$row') . " = SQL::row($m[1], $iv)";
+        if (preg_match('/^\s*(\$e_\w+)\s*(\:\s*(\$\w+))?/', $arg, $m)) # $e_.. cycle
+            $arg = (isset($m[3]) ? $m[3] : '$row') . " = $m[1]->row()";
         return "<?php $iv++; } while ($arg); ?>";
     }
 

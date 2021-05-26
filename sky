@@ -18,35 +18,35 @@ DOC;
     exit;
 }
 
-define('DIR_R', getcwd());
-do {
-    $dir = getcwd();
-    if ($found = is_file('main/app/gate.php') && is_dir('var'))
-        break;
-    chdir('..');
-} while($dir != getcwd());
-
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
     require __DIR__ . '/w2/rare.php'; # add this dir to the PATH
-    $dirs = Rare::walk_dirs(DIR_R);
+    $dirs = Rare::walk_dirs('.');
     if ($d) {
         print_r($dirs);
-    } else foreach($dirs as $dir) {
-        $files = Rare::list_path($dir, 'is_file');
-        foreach($files as $file)
-            system("php -l $file");
+    } else foreach($dirs as $one) {
+        $files = Rare::list_path($one, 'is_file');
+        foreach($files as $one)
+            system("php -l $one");
     }
-    exit("\n");
 } elseif ('s' == $argv[1]) {
-    system("php -S localhost:" . ($argv[2] ?? 8888)); exit;
-} elseif (!$found) {
-    exit("SKY application not found\n");
+    system("php -S localhost:" . ($argv[2] ?? 8888));
+} else {
+    define('DIR_R', getcwd());
+    do {
+        $dir = getcwd();
+        if ($found = is_file('main/app/gate.php') && is_dir('var'))
+            break;
+        chdir('..');
+    } while($dir != getcwd());
+
+    if (!$found)
+        exit("SKY application not found\n");
+    define('DIR', $dir);
+    require 'main/conf.php';
+    $sky  = new SKY;
+    $sky->load();
+    new Console($argv[1]);
 }
 
-define('DIR', $dir);
-require 'main/conf.php';
-$sky  = new SKY;
-$sky->load();
-
-new Console($argv[1]);
+echo "\n";

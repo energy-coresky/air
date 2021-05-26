@@ -571,7 +571,7 @@ class MVC extends MVC_BASE
         if (!$sky->error_no || $sky->surl && '_exception' == $sky->surl[0])
             $me->set(call_user_func_array([MVC::$mc, $action], $param));
         if ($sky->error_no > 400 && $sky->error_no < 501)
-            $me->set(MVC::$mc->error_y($action));
+            $me->set(MVC::$mc->error_y($action) + ['class' => $class]);
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);
         $me->echo = ob_get_clean();
         view($me); # visualize

@@ -139,7 +139,7 @@ class Ext
                     $table .= td(array_values($row));
                 }
                 $table .= '</table>';
-                SQL::$dd->free($q);
+                //SQL::$dd->free($q);
             }
         }
         Ext::$sqls[] = [$i++, sprintf('%01.3f sec', $ts), "$file:$line:\n$table"];

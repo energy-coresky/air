@@ -373,6 +373,8 @@ class Gate
                 $func[1] .= $v;
             }
         }
+        if (DEV)
+            $gape = "trace('GATE: $dst_class');\n\n" . $gape;
         $this->gate_file = '<?php' . $match[2] . $gape . "}\n\nclass $dst_class extends" . $match[3];
         return $found ? $list : [];
     }

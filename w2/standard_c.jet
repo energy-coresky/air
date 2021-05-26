@@ -21,7 +21,7 @@
 
 #.404 this template for 404 (or others) error inside app layout
 @php isset($tracing) or $tracing = ''; ~php
-#if(is_file(($sky->style ? DIR_V . "/$sky->style" : DIR_V) . "/error.php"))@inc(error.404)
+#if(is_file(($sky->style ? DIR_V . "/$sky->style" : DIR_V) . "/error.jet"))@inc(error.404)
 #else
     <h1>404 - Page not found</h1>
     <pre>{!$tracing!}</pre>
@@ -41,7 +41,7 @@ $p_prev = $ru ? 'вернуться на предыдущую страницу' 
 $p_main = $ru ? 'открыть главную' : 'open main page';
 isset($error) && $error && $sky->debug or $error = isset($list[$no]) ? $list[$no] : $list[500];
 ~php
-#if(is_file(($sky->style ? DIR_V . "/$sky->style" : DIR_V) . "/error.php"))@inc(error.exception)
+#if(is_file(($sky->style ? DIR_V . "/$sky->style" : DIR_V) . "/error.jet"))@inc(error.exception)
 #else
 <!doctype html><html>
 <head>@head()</head>

@@ -4,7 +4,6 @@ class Console
 {
     function __construct($arg1) {
         $this->{"_$arg1"}();
-        echo "\n";
     }
 
     function __call($name, $args) {
