@@ -32,18 +32,19 @@ class Ext
         if (DEV && !CLI) {
             Ext::$cfg = is_file(Ext::$ini) ? parse_ini_file(Ext::$ini) : parse_ini_string(Ext::$cfg_default);
 
-            $stat = explode(',', Ext::$cfg['static']);
+            $assets = DIR_S . "/assets/sky.css," . DIR_S . "/assets/sky.js";
+            $stat = explode(',', Ext::$cfg['static'] . ',' . $assets);
             $files = [];
             foreach ($stat as $one) {
                 if ('' !== $one && is_dir($path = WWW . $one)) {
                     $files += array_flip(glob("$path/*.css"));
                     $files += array_flip(glob("$path/*.js"));
-                } elseif (is_file($path)) {
-                    $files[$path] = 0;
+                } elseif (is_file($one)) {
+                    $files[$one] = 0;
                 }
             }
             if (isset(Ext::$cfg['files']) && Ext::$cfg['files']) {
-                $saved = array_explode(Ext::$cfg['files'], ':', ',');
+                $saved = array_explode(Ext::$cfg['files'], '#', ',');
                 if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
                     Ext::$static = true;
                 $files = $saved + $files;
@@ -55,7 +56,7 @@ class Ext
                 }
             }
             if (Ext::$static)
-                Ext::save(['files' => array_join($files, ':', ',')]);
+                Ext::save(['files' => array_join($files, '#', ',')]);
         }
     }
 

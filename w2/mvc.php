@@ -266,14 +266,12 @@ abstract class HOOK extends Controller
             return in_array($name, $in);
     }
 
-    //add named limits!!!!!!
+    //add named limits and permission to sky-gate!!!!!!
 
     static function rewrite_h($cnt) {
         global $sky;
-        if (1 == $cnt && 'robots.txt' == $sky->surl[0] && !$_GET) {
-            $sky->surl = [''];
-            $_GET = ['_etc' => 'robots.txt'];
-        }
+        if (1 == $cnt && 'robots.txt' == $sky->surl[0] && !$_GET)
+            array_unshift($sky->surl, '_etc');
     }
 
     static function dd_h($name, $dd) {
@@ -539,7 +537,6 @@ class MVC extends MVC_BASE
         ob_start();
         $param = [];
         if ('_' == $sky->_0[0]) {
-            require DIR_S . '/w2/standard_c.php';//////////delete
             if ($id = array_search(URI, [1 => '_x1', 15 => '_x2', 16 => '_x3'])) {
                 $param = [$id];
                 $sky->surl[0] = '_trace';
@@ -560,6 +557,7 @@ class MVC extends MVC_BASE
         trace("$class::$action()" . ($class == $real ? '' : ' (virtual)'), 'TOP-VIEW');
         MVC::$mc = new $class;
         MVC::$cc = new common_c;
+        SKY::$vars['k_class'] = $class;
         $me->set(MVC::$mc->head_y($action), true);
         if ($gape) {
             $param = (array)call_user_func([$gape, $action], $sky, $user);
@@ -571,7 +569,7 @@ class MVC extends MVC_BASE
         if (!$sky->error_no || $sky->surl && '_exception' == $sky->surl[0])
             $me->set(call_user_func_array([MVC::$mc, $action], $param));
         if ($sky->error_no > 400 && $sky->error_no < 501)
-            $me->set(MVC::$mc->error_y($action) + ['class' => $class]);
+            $me->set(MVC::$mc->error_y($action));
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);
         $me->echo = ob_get_clean();
         view($me); # visualize

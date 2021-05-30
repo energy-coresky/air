@@ -80,7 +80,7 @@ class Admin
         self::$adm['cr'] = $ary;
     }
 
-    static function access($ajax_adm) {
+    static function access() {
         global $sky, $user;
 
         list(, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=8');
@@ -98,27 +98,31 @@ class Admin
 
         $sky->adm_able = true;
         self::$adm['first_page'] = 'adm?' . self::$adm['uris'][current(self::$adm['cr'])];
-        if ($adm_uri = 1 == $sky->ajax ? $ajax_adm : 1 == count($sky->surl) && 'adm' == $sky->surl[0])
-            $sky->is_front = $sky->extra = false;
-        if (!$adm_uri || 2 != $user->auth)
-            return $adm_uri;
+        $sky->is_front = $sky->extra = false;
+        if (2 != $user->auth)
+            return true;
 
         $me = new Admin;
-        $pos = -1;
+        trace(self::$adm);
+        
         if (1 == $sky->ajax) {
             $pos = array_search($sky->_0, $me->files);
-            false !== $pos or $pos = -1;
-        } else {
-            $uri = substr(URI, 4); # cut `adm?`
-            foreach ($me->uris as $p => $u) {
-                if ($u === substr($uri, 0, strlen($u))) {
-                    $pos = $p;
-                    break;
-                }
+            
+        } else foreach ($me->uris as $p => $u) {
+            if ($u === substr(URI, 4, strlen($u))) {////////
+                $pos = $p;
+                break;
             }
         }
-        if ($pos >= 0 && in_array($pos, $me->cr) && is_file($file = 'admin/_' . SQL::onduty($me->files[$pos]) . '.php'))
+        if (!is_int($pos) || !in_array($pos, $me->cr))
+            throw new Err('Admin file not found or access denied');
+        
+        $fn = $me->files[$pos];
+        if (is_file($file = "admin/_$fn.php")) {
+            SQL::onduty($fn);
             $me->_file = $file;
+        }
+        
         if (!$me->_file && $sky->ajax)
             throw new Err('admin ajax, no file: ' . $file);
         $me->_title = $me->_file ? $me->names[$pos] : 'File not found';

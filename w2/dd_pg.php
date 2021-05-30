@@ -45,7 +45,7 @@ class dd_pg implements Database_driver
 
     function one($q, $meth = 'A', $free = false) { # assoc as default
         if ('E' == $meth)
-            return 'if ($r = pg_fetch_assoc($q)) extract($r, EXTR_PREFIX_ALL, "r"); else pg_free_result($q); return $r;';
+            return 'if ($r = pg_fetch_assoc($q->stmt)) extract($r, EXTR_PREFIX_ALL, "r"); else pg_free_result($q->stmt); return $r;';
         if ($q instanceof SQL)
             $q = $q->stmt;
         $row = 'A' == $meth ? pg_fetch_assoc($q) : ('O' == $meth ? pg_fetch_object($q) : pg_fetch_row($q));

@@ -44,7 +44,7 @@ class dd_ibase implements Database_driver
 
     function one($q, $meth = 'A', $free = false) { # assoc as default
         if ('E' == $meth)
-            return 'if ($r = ibase_fetch_assoc($q)) extract($r, EXTR_PREFIX_ALL, "r"); else ibase_free_result($q); return $r;';
+            return 'if ($r = ibase_fetch_assoc($q->stmt)) extract($r, EXTR_PREFIX_ALL, "r"); else ibase_free_result($q->stmt); return $r;';
         if ($q instanceof SQL)
             $q = $q->stmt;
         $row = 'A' == $meth ? ibase_fetch_assoc($q) : ('O' == $meth ? ibase_fetch_object($q) : ibase_fetch_row($q));

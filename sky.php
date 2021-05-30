@@ -330,11 +330,16 @@ class eVar implements Iterator
         return $this->e[$name] ?? null;
     }
 
-    function row() {
+    function one() {
         if ($this->state > 1)
             return false;
         $this->state ? $this->next() : $this->rewind();
         return $this->valid() ? $this->row : false;
+    }
+
+    function all() {
+        for ($all = []; $one = $this->one(); $all[] = $one);
+        return $all;
     }
 
     function rewind() {

@@ -18,6 +18,8 @@ class standard_c extends Controller
             'j_file_tmp',
             'j_file_delete',
         ];
+        if ('a_etc' == $action) # run MVC::$cc !
+            return;
         if ('a_etc' == $action || DEV && 'a_dev' == $action) # run MVC::$cc !
             return parent::head_y($action);
         if (in_array($action, $soft)) # app's ::head_y() locked !
@@ -71,24 +73,28 @@ class standard_c extends Controller
     }
 
     function a_etc() {
-        global $sky, $user;
-        $s = "$sky->_1 $user->vid $user->ip";
-        if (file_exists($fn = WWW . "pub/etc/$sky->_1")) { // 2do: file's cache check!
-            $ext = substr($sky->_1, strrpos($sky->_1, '.') + 1);
-            if ('txt' == $ext)
-                header('Content-Type: text/plain; charset=' . ENC);
-            if ('xml' == $ext)
-                header('Content-Type: application/xml');
-            MVC::last_modified(filemtime($fn), false, function() use($sky, $s) {
-                $sky->log('etc', "304 $s");
+        global $sky;
+        $str = "$sky->_1";
+        $fn = in_array($sky->_1, ['sky.js', 'sky.css'])
+            ? DIR_S . "/assets/$sky->_1"
+            : WWW . "pub/etc/$sky->_1";
+        if (is_file($fn)) { // 2do: file's cache check!
+            switch (substr($sky->_1, strrpos($sky->_1, '.') + 1)) {
+                case 'txt': header('Content-Type: text/plain; charset=' . ENC); break;
+                case 'css': header('Content-Type: text/css'); break;
+                case 'xml': header('Content-Type: application/xml'); break;
+                case 'js': header('Content-Type: application/javascript'); break;
+            }
+            MVC::last_modified(filemtime($fn), false, function() use($sky, $str) {
+                $sky->log('etc', "304 $str");
             });
             header('Content-Length: ' . filesize($fn));
-            $sky->log('etc', "200 $s");
+            $sky->log('etc', "200 $str");
             while (@ob_end_flush());
             readfile($fn);
-            return true;
+            throw new Stop;
         }
-        $sky->log('etc', "404 $s");
+        $sky->log('etc', "404 $str");
         return 404;
     }
 

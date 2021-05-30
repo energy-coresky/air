@@ -109,7 +109,8 @@ class HEAVEN extends SKY
                 $this->surl = [];
                 if ($this->ajax && 'AJAX' == key($_GET)) {
                     $this->ajax = 1; # j_ template
-                    $this->ajaxv = $_GET['AJAX']; // 'adm'
+                    if ('adm' == $_GET['AJAX'])
+                        $this->surl = ['adm'];
                     array_shift($_GET);
                 }
             }
@@ -136,47 +137,6 @@ class HEAVEN extends SKY
         return $this->admins && $user->allow($this->admins) ? Admin::access($ajax_adm) : false;
     }
 
-    function h_load() { # default processing  //////////////////
-        global $user;
-
-        if ($this->is_mobile = $this->sname[2]) {
-            $user->v_mobi or SKY::v('mobi', 1);
-        } else {
-            !$user->v_mobi or 'www.' == $this->sname[1] or SKY::v('mobi');
-        }
-        if (DEFAULT_LG) {
-            define('LG', !$this->sname[1] ? ($user->id && $user->u_lang ? $user->u_lang : $user->v_lg) : substr(SNAME, 0, 2));
-            if (LG != $user->v_lg && !$this->sname[2])
-                $user->v_lg = LG;
-            require 'main/lng/' . LG . '.php';
-            SKY::$reg['trans_late'] = $lgt ?? [];
-            SKY::$reg['trans_coll'] = [];
-        }
-        $link = PROTO . '://' . (DEFAULT_LG ? LG . '.' : '') . ($this->is_mobile ? 'm.' : '') . DOMAIN;
-        define('LINK', $link . PATH);
-
-        if ($csrf = $this->csrf()) {
-            if (1 == $csrf || $csrf != $user->v_csrf)
-                throw new Exception('CSRF protection');
-            if ($this->origin && $this->origin != $link)
-                throw new Exception('Origin not allowed');
-            trace('CSRF checked OK');
-        }
-    }
-
-    function h_rewrite($cnt) {///////////////////////////
-        if (1 == $cnt && 'robots.txt' == $this->surl[0] && !$_GET) {
-            $this->surl = [''];
-            $_GET = ['_etc' => 'robots.txt'];
-        }
-    }
-
-    function log($mode, $data) {
-        if (!in_array($this->s_test_mode, [$mode, 'all']))
-            return;
-        sqlf('update $_memory set dt=' . SKY::$dd('dt') . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
-    }
-
     function qs($url) {
         return preg_match("$this->re(.*)$~", $url, $m) ? $m[3] : false;
     }
@@ -186,6 +146,12 @@ class HEAVEN extends SKY
         if ($val == null)
             return $flag ? $storage & $flag : $storage;
         SKY::$char(null, ['flags' => $val ? $flag | $storage : ~$flag & $storage]);
+    }
+
+    function log($mode, $data) {
+        if (!in_array($this->s_test_mode, [$mode, 'all']))
+            return;
+        sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
     }
 
     function tail_x($plus = '', $stdout = '') {

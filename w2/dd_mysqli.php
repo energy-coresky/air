@@ -50,7 +50,7 @@ class dd_mysqli implements Database_driver
 
     function one($q, $meth = 'A', $free = false) { # assoc as default
         if ('E' == $meth)
-            return 'if ($r = mysqli_fetch_assoc($q)) extract($r, EXTR_PREFIX_ALL, "r"); else mysqli_free_result($q); return $r;';
+            return 'if ($r = mysqli_fetch_assoc($q->stmt)) extract($r, EXTR_PREFIX_ALL, "r"); else mysqli_free_result($q->stmt); return $r;';
         if ($q instanceof SQL)
             $q = $q->stmt;
         $row = 'A' == $meth ? mysqli_fetch_assoc($q) : ('O' == $meth ? mysqli_fetch_object($q) : mysqli_fetch_row($q));

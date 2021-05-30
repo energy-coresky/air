@@ -39,7 +39,7 @@ class Rare
         return $list;
     }
 
-    function cache($name = '', $func = null, $ttl = 0) {
+    static function cache($name = '', $func = null, $ttl = 0) {
         global $sky;
         
         if ($name) { # the begin place
@@ -77,7 +77,7 @@ class Rare
         }
     }
 
-    function label($str) {
+    static function label($str) {
         $ary = [];
         $str = preg_replace_callback("/%(PHP|HTML)_([A-Z\d_]+)%/", function($m) use (&$ary) {
             global $sky;

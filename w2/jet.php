@@ -219,7 +219,7 @@ class Jet
                 case 'php': return $end ? "?>$sp" : "<?php$sp";
                 case 'unless': $arg = "!($arg)";
                 case 'if': return $end ? "<?php endif ?>$sp" : "<?php if ($arg): ?>";
-                case 'cache': return $end ? '<?php cache(); endif ?>' : "<?php if (cache($arg)): ?>";
+                case 'cache': return $end ? '<?php Rare::cache(); endif ?>' : "<?php if (Rare::cache($arg)): ?>";
                 case 'do': return $this->_do($end, $arg); # do { .. } while(..)
                 case 'for': return $this->_for($end, $arg); # for foreach while
             }
@@ -274,7 +274,7 @@ class Jet
         }
         array_pop($this->for);
         if (preg_match('/^\s*(\$e_\w+)\s*(\:\s*(\$\w+))?/', $arg, $m)) # $e_.. cycle
-            $arg = (isset($m[3]) ? $m[3] : '$row') . " = $m[1]->row()";
+            $arg = (isset($m[3]) ? $m[3] : '$row') . " = $m[1]->one()";
         return "<?php $iv++; } while ($arg); ?>";
     }
 

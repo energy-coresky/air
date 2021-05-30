@@ -47,11 +47,11 @@ class dd_oci implements Database_driver
 
     function one($q, $meth = 'A', $free = false) { # assoc as default
         if ('E' == $meth)
-            return 'if ($r = oci_fetch_assoc($q)) {
+            return 'if ($r = oci_fetch_assoc($q->stmt)) {
                         $r = array_change_key_case($r);
                         extract($r, EXTR_PREFIX_ALL, "r");
                     } else {
-                        oci_free_statement($q);
+                        oci_free_statement($q->stmt);
                     }
                     return $r;';
         if ($q instanceof SQL)
