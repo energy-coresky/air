@@ -290,7 +290,7 @@ class SKY
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.115 2021-05-24T07:01:11+03:00 energy';
+    const CORE = '0.116 2021-05-31T07:01:11+03:00 energy';
 
     static function version() {
         global $sky;

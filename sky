@@ -20,7 +20,7 @@ DOC;
 
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
-    require __DIR__ . '/w2/rare.php'; # add this dir to the PATH
+    require __DIR__ . '/w2/rare.php'; # add dir to the PATH where sky.bat placed
     $dirs = Rare::walk_dirs('.');
     if ($d) {
         print_r($dirs);

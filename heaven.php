@@ -1,8 +1,6 @@
 <?php
 
 # For Licence and Disclaimer of this code, see http://coresky.net/license
-# This file designed for 'front' and 'admin' enter points, but not for 'cron'
-# Filename: unique
 
 //////////////////////////////////////////////////////////////////////////
 class HEAVEN extends SKY

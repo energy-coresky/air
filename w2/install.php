@@ -29,8 +29,14 @@ class Install
             fwrite($handle, $head . "\n");
         } else {
             if (!is_file($orig = $fn)) {
-                $w2 = 'main/w2/' == substr($fn, 0, 8);
-                if (!is_file($fn = DIR_S . ($w2 ? '/w2/' : '/') . basename($fn)))
+                $base = basename($fn);
+                $fn = 'main/w2/' == substr($orig, 0, 8)
+                    ? DIR_S . "/w2/$base"
+                    : (WWW == substr($orig, 0, strlen(WWW))
+                        ? DIR_S . "/assets/$base"
+                        : DIR_S . "/$base"
+                    );
+                if (!is_file($fn))
                     throw new Err("Install: file `$orig` not exists");
             }
             $bin = file_get_contents($fn);
@@ -176,6 +182,7 @@ class Install
             $n = $cf = $max = 0;
             $this->fn = 'var/' . $_POST['fn'] . '.sky';
             list(, $exf, $mkdir, $dirs) = $this->get_files(1);
+            array_shift($mkdir); # skip `.`
             foreach ($dirs as $one)
                 foreach ($this->filelist($one) as $fn)
                     isset($exf[$fn]) or $this->skip_file($fn) or $max++;
@@ -184,6 +191,7 @@ class Install
             $head .= "\nversion $_POST[vphp] $and $_POST[vphp2] $_POST[vmysql]\nwww " . WWW;
             $head .= "\ncompiled " . PHP_TZ . ' ' . $sky->s_version;
             $sql = isset($_POST['sql']) ? $this->memo('count_tr', '0.0.') : '0.0.';
+            $max+=2;////// 2 files in /assets/
             $head .= "\nftrd A^$max.$sql" . count($mkdir);
             $head .= "\n\nDIRS: " . strlen($mkdir = implode(' ', $mkdir)) . "\n$mkdir";
             $this->write_sky(false, $head);
@@ -237,6 +245,9 @@ class Install
                 $one = "$path/" . basename($one);
                 in_array($one, $list) or $list[] = $one;
             }
+        } elseif (WWW . 'pub' == $path) {
+            in_array($one = WWW . 'pub/sky.js', $list) or $list[] = $one;///////2do:check all
+            in_array($one = WWW . 'pub/sky.css', $list) or $list[] = $one;
         }
         return $list;
     }
@@ -251,9 +262,10 @@ class Install
         });
         if ($mode) {
             $all = Rare::walk_dirs('.');
-            array_shift($all);
+            //array_shift($all);
             in_array('main/w2', $all) or $all[] = 'main/w2';
             $saved[2] = array_filter($all, function($one) use ($saved) {
+                //if ('.' == $one)                    return false;
                 $ary = explode('/', $one);
                 while ($ary) {
                     $one = implode('/', $ary);
@@ -289,7 +301,7 @@ class Install
             SKY::i('files', implode(' ', $ary));
         }
         $files = Rare::walk_dirs('.');
-        array_shift($files);
+        //array_shift($files);
         $files = array_flip($files);
         array_walk($files, function (&$v, $k) {
             $v = [0, Rare::list_path($k, 'is_file')];
