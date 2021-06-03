@@ -16,7 +16,7 @@ class HEAVEN extends SKY
     public $lg = false; # no languages initialy
     public $has_public = true; # web-site or CRM
     public $page_p = 'p';
-   public $adm_able = false;
+    public $show_pdaxt = false;
     public $ajax = 0;
     public $surl = [];
 
@@ -98,7 +98,6 @@ class HEAVEN extends SKY
         $this->re = "~^https?://$re" . preg_quote(DOMAIN . PATH);
         $this->lref = preg_match("$this->re(.*)$~", $referer, $m) ? $m[3] : false;
         $this->eref = !$m ? $referer : false;
-    //    $ajax_adm = false;
 
         if ('' !== URI) { # not main page
             $this->surl = explode('/', explode('?', URI)[0]);
@@ -124,15 +123,9 @@ class HEAVEN extends SKY
 
         SKY::$vars = [
             'k_list' => 'list' == $this->_1 || in_array($this->page_p, [$this->_1, $this->_2, $this->_3]),
-
- //           'k_js'  => "sky.is_debug=$this->debug; var addr='" . LINK . "';",
         ];
         if (1 == $this->extra)
             is_file($fn = 'var/extra.txt') && in_array($this->fn_extra, array_map('trim', file($fn))) or $this->extra = 2;
-    }
-
-    function adm() {
-        return $this->admins && $user->allow($this->admins) ? Admin::access($ajax_adm) : false;
     }
 
     function qs($url) {

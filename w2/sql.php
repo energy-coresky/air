@@ -82,7 +82,9 @@ final class SQL
         if (isset(SQL::$connections[$name])) {
             $dd = SQL::$connections[$name];
         } else {
-            '' === $name ? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
+            '' === $name && !isset(SKY::$databases[''])
+                ? ($cfg =& SKY::$databases)
+                : ($cfg =& SKY::$databases[$name]);
             $driver = "dd_$cfg[driver]";
             isset($cfg['pref']) or $cfg['pref'] = '';
             $dd = SQL::$connections[$name] = new $driver($cfg['dsn'], $cfg['pref']);

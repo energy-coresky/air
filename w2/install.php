@@ -191,7 +191,6 @@ class Install
             $head .= "\nversion $_POST[vphp] $and $_POST[vphp2] $_POST[vmysql]\nwww " . WWW;
             $head .= "\ncompiled " . PHP_TZ . ' ' . $sky->s_version;
             $sql = isset($_POST['sql']) ? $this->memo('count_tr', '0.0.') : '0.0.';
-            $max+=2;////// 2 files in /assets/
             $head .= "\nftrd A^$max.$sql" . count($mkdir);
             $head .= "\n\nDIRS: " . strlen($mkdir = implode(' ', $mkdir)) . "\n$mkdir";
             $this->write_sky(false, $head);
@@ -262,10 +261,8 @@ class Install
         });
         if ($mode) {
             $all = Rare::walk_dirs('.');
-            //array_shift($all);
             in_array('main/w2', $all) or $all[] = 'main/w2';
             $saved[2] = array_filter($all, function($one) use ($saved) {
-                //if ('.' == $one)                    return false;
                 $ary = explode('/', $one);
                 while ($ary) {
                     $one = implode('/', $ary);
@@ -301,7 +298,6 @@ class Install
             SKY::i('files', implode(' ', $ary));
         }
         $files = Rare::walk_dirs('.');
-        //array_shift($files);
         $files = array_flip($files);
         array_walk($files, function (&$v, $k) {
             $v = [0, Rare::list_path($k, 'is_file')];

@@ -476,7 +476,7 @@ class Gate
 
         $ctrl = $p0 ? $this->span($p0, 2 == $i && !$p1 ? 'green' : 'blue', 2) : '';
         $act = '' === $p1 ? '' : $this->span($p1, $this->_j ? 'red' : 'green', 2);
-        $this->url = $sky->n_sg_prod ? _PUBLIC . '/' : SNAME . PATH;
+        $this->url = $sky->n_sg_prod || !defined('PATH') ? _PUBLIC . '/' : SNAME . PATH;
         $this->ends = [];
         $php = $this->ra = $this->ns = '';
         $this->raw_input = $this->sz_surl = $this->sz_ary = 0;

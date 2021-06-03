@@ -31,7 +31,7 @@ class Root
                     'HTTP server version' => $_SERVER['SERVER_SOFTWARE'],
                     'Visitors online:' => $sky->s_online,
                     'PHP NOW:' => NOW . ' (' . PHP_TZ . '), ' . gmdate(DATE_DT) . ' (GMT)',
-                    'SQL NOW:' => ($t = sql('+select now()')) . ' ' . (NOW == $t ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
+                    'SQL NOW:' => ($t = sql('+select $now')) . ' ' . (NOW == $t ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
                     'Cron layer last tick:' => (new Schedule)->n_cron_dt,
                     'Backup settings:' => sql('+select dt from $_memory where id=7'),
                     'Timestamp NOW:' => time(),

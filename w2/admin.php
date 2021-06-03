@@ -96,7 +96,8 @@ class Admin
         if (!self::$adm['rows'] || !self::$adm['cr'])
             return false;
 
-        $sky->adm_able = true;
+        $sky->show_pdaxt = true;
+
         self::$adm['first_page'] = 'adm?' . self::$adm['uris'][current(self::$adm['cr'])];
         $sky->is_front = $sky->extra = false;
         if (2 != $user->auth)

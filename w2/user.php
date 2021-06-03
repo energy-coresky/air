@@ -161,7 +161,7 @@ class USER
                 'uri'   => URI,
                 'flags' => (IS_BOT ? self::IS_BOT : 0) | ($_COOKIE ? 0 : self::NO_ANY_C) | ($this->pretty ? 0 : self::NO_PRETTY),
             ];
-            $lg = DEFAULT_LG;//preg_match("/^ru/i", @$_SERVER['HTTP_ACCEPT_LANGUAGE']) ? 'ru' : 'en';
+            $lg = common_c::lang_h();
             $this->row = $ary + [
                 'vid' => 0,
                 'pid' => 0,
@@ -177,7 +177,7 @@ class USER
         }
 
         if (START_TS - $sky->s_online_ts > 60) {
-            $query = '+select 1 + count(1) from $_visitors where dt_l > now() - interval %d minute and id<>%d';
+            $query = '+select 1 + count(1) from $_visitors where ' . $now . ' < ' . $dd->f_dt('dt_l', '+', '%d', 'minute') . ' and id<>%d';
             $sky->s_online = sqlf($query, $sky->s_visit, $this->vid);
             $sky->s_online_ts = START_TS;
         }

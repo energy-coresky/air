@@ -274,7 +274,20 @@ abstract class HOOK extends Controller
             array_unshift($sky->surl, '_etc');
     }
 
+    static function lang_h() {
+        global $sky;
+        if (!is_array($sky->lg))
+            return DEFAULT_LG;
+        $locale = Locale::acceptFromHttp($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? DEFAULT_LG);
+        $lg = implode('|', $sky->lg);
+        return preg_match("/^($lg)/", strtolower($locale), $match) ? $match[1] : DEFAULT_LG;
+    }
+
     static function dd_h($name, $dd) {
+        if ('MySQLi' != $dd->name) // dd_sqlite3  dd_mysqli
+            return;
+        mysqli_set_charset($dd->conn, 'utf8') or exit('charset');
+        $dd->sqlf('set time_zone=%s', date('P'));
     }
 }
 
@@ -427,7 +440,7 @@ class MVC extends MVC_BASE
     static function pdaxt($plus = '') {
         global $sky, $user;
 
-        if ($sky->adm_able || DEV) {
+        if ($sky->show_pdaxt || DEV) {
             $link = $user->pid
                 ? ($user->u_uri_admin ? $user->u_uri_admin : Admin::$adm['first_page'])
                 : 'auth';
