@@ -55,8 +55,8 @@ class HEAVEN extends SKY
 
     function load() {
         header('Content-Type: text/html; charset=' . ENC);
-       defined('DESIGN') or define('DESIGN', false);
-        define('DIR_V', DESIGN ? WWW . 'view' : 'view');/////////
+        defined('DESIGN') or define('DESIGN', false);
+        define('DIR_V', DESIGN ? WWW . 'view' : 'view');/////////2do: modules
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
         if (false === $this->method)
             throw new Err('Unknown request method');

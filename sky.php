@@ -2,8 +2,12 @@
 
 # For Licence and Disclaimer of this code, see http://coresky.net/license
 
+interface PARADISE
+{
+}
+
 //////////////////////////////////////////////////////////////////////////
-class SKY
+class SKY implements PARADISE
 {
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
