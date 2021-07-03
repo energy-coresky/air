@@ -215,11 +215,7 @@ class Controller extends MVC_BASE
 {
     # for overload if needed
     function head_y($action) {
-        if ('common_c' == get_class($this))
-            return;
-        global $sky;
-        $sky->ajax or MVC::$layout = $sky->is_mobile ? 'mobile' : 'desktop';
-        return MVC::$cc->head_y($action);
+        return 'common_c' == get_class($this) ? null : MVC::$cc->head_y($action);
     }
 
     # for overload if needed
