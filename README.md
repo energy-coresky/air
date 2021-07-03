@@ -22,7 +22,7 @@ AB (absolute busy) application is product of InfoParc http://absolutebusy.com/ m
 
 ## TODO
 
-- Moves to PDO SQLs and write query builer
+- Move to PDO SQLs and write query builder
 - Finish SQL functions and drivers
 - Add modules for apps (use global namespace)
 - Move coresky code to RAM
