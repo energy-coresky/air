@@ -1,7 +1,6 @@
 
-1. AB.SKY app
+1. AB.SKY application
 -------------
-Download latest AB.SKY app from
-http://ru.coresky.net/download?ab.zip and follow the PDF..
+Download latest "ab.zip" and follow the "use-moon.pdf".
 AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
 After installation and using MySQL database try switch to SQLite (edit main/conf.php)
