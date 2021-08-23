@@ -330,9 +330,14 @@ class MVC extends MVC_BASE
 
     static function fn_tpl($name) {
         global $sky;
-        $std = '__std' == $name;
-        if ($std || '__lng' == $name)
-            return DIR_S . '/w2/' . ($std ? 'standard_c' : 'language') . '.jet';
+        $wing2 = [
+            '__std' => 'standard_c',
+            '__lng' => 'language',
+            '__vis' => 'azure',
+            '__svg' => 'svg',
+        ];
+        if (isset($wing2[$name]))
+            return DIR_S . '/w2/' . $wing2[$name] . '.jet';
         $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
         if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.jet"))
             $name = "b$name";
@@ -418,7 +423,7 @@ class MVC extends MVC_BASE
         $plus = "<title>$sky->k_title</title>$plus";
         $plus .= tag($sky->k_static[0] + ['csrf-token' => $user->v_csrf, 'surl-path' => PATH]); # meta tags
         $plus .= js([-2 => '~/jquery.min.js', -1 => '~/sky.js'] + $sky->k_static[1]);
-        $plus .= css([-1 => '~/sky.css'] + $sky->k_static[2]) . js($sky->k_js);
+        $plus .= css($sky->k_static[2] + [-1 => '~/sky.css']) . js($sky->k_js);
         echo $plus . '<link href="' . PATH . 'favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
     }
 

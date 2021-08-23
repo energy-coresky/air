@@ -206,6 +206,15 @@ class standard_c extends Controller
         return call_user_func([new Language, $this->_c], $this->_a);
     }
 
+    function j_visual() {
+        MVC::body('_vis.' . substr($this->_c, 2));
+        return call_user_func([new Azure, $this->_c], $this->_a);
+    }
+
+    function a_visual() {
+        return Azure::layout();
+    }
+
     function a_api() { # lang auto translations
         # 2do
     }

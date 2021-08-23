@@ -1,0 +1,172 @@
+#.jet core template
+
+#.layout
+<!DOCTYPE html><html>
+<head>@head<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<script>
+$(function() {
+    @if($v_xy)az.switch({{$v_xy}})~if
+});
+</script>
+</head>
+<body class="h-screen" style="overflow:hidden">{- justify-center items-center  -}
+<div id="mov-x"></div>
+<div id="main">
+  <div id="v-head">
+    <a @href(confirm('Are you sure?')) class="mr-3">@inc(__svg.home)</a>
+    <a @href($(this).find('svg').toggle())>@inc(__svg.moonsun)</a>
+    <a @href($(this).find('svg').show()) class="ml-3">@inc(__svg.fileplus)</a>
+    <button class="btn mx-3 f2" onclick="az.switch()">Save - F2</button>
+    <button class="btn mx-3 f4" onclick="az.test()">Load - F4</button>
+    <button class="btn mx-3 f6" onclick="alert()">??? - F6</button>
+    <span class="m1-2" >Frame&nbsp;</span>
+    <select id="fsize" onchange="az.switch(this)">{! $v_fsize !}<option cust>*</option></select>
+    <button class="btn ml-1 f8" onclick="az.switch()">Switch - F8</button>
+    <button class="btn ml-1" onclick="az.mm(-1)">Min</button>
+    <button class="btn ml-1" onclick="az.mm(1)">Max</button>
+    <a @href($(this).find('svg').toggle()) class="">@inc(__svg.mobile)</a>
+    <button class="btn ml-3 mr-5 f10" onclick="az.swap()">Next - F10</button>
+    <a @href($(this).find('svg').toggle(); az.bg()) class="">@inc(__svg.screen)</a>
+
+    <span class="absolute right-20">@pdaxt</span>
+    <a @href(ajax('settings.zz', box)) class=" absolute right-8">@inc(__svg.settings)</a>
+  </div>
+  <div id="v-menu">@inc(.menu)</div>
+  <div id="v-main">
+    <div id="sw-icon"><a @href(az.swap()) title="Swap panels - F9">@inc(__svg.arrows)</a></div>
+    <div style="display:none" id="err-top"></div>{! $v_frame !}
+  </div>
+  <div id="v-right"></div>
+  <div id="v-tail">@inc(.tail)</div>
+</div>
+@tail</body></html>
+#.layout
+
+#.menu
+<div class="fixed bg-white pt-2" style="width:125px;">
+  <select class="py-0 px-1">{! $v_sections !}</select>
+</div>
+<ul class="mt-10">
+  <li><a @href(ajax('colors',az.colors))>Colors</a></li>
+  <li><a @href(ajax('icons',az.icons))>Icons</a></li>
+  <li><a @href(az.css(document.body))>CSS Styles</a></li>{- $('div:eq(0)')[0] -}
+  @for($v_menu as $name => $sub)
+    <li>{{$name}}</li>
+    @for($sub as $sn => $qc)
+      <li class="ml-3"><a @href({!$qc!})>{{$sn}}</a></li>
+    ~for
+  ~for
+</ul>
+#.menu
+
+#.tail
+<div id="info">
+  <span class="relative" style="right:calc(-100% + 15px); width:75px; margin-left:-75px">cursor pos</span>
+  <span class="ml-3">111</span>
+  <span class="ml-3">333</span>
+</div>
+<div id="mov-y"></div>
+<div id="tail"></div>
+#.tail
+
+#.settings
+<div class="m-3">
+  <h1>Settings</h1>
+  <p class="text-2xl">App hot keys</p>
+  <p>ESC - ...</p>
+  <p>F2 - Save file</p>
+  <p>F4 - </p>
+  <p>F6 - </p>
+  <p>F8 - Switch IFRAME size</p>
+  <p>F9 - Swap panels</p>
+  <p>F10 - </p>
+  <p class="text-2xl">Browser hot keys</p>
+  <p>F3 - Search on the page</p>
+  <p>F5 - Refresh the page</p>
+  <p>F11 - Full screen mode</p>
+  <p>F12 - On/Off - Chrome DEV tools</p>
+</div>
+#.settings
+
+#.code
+<p id="code-head" class="header fixed pl-12" style="">
+  Filename:
+</p>
+<div class="flex mt-6">
+  <pre class="px-1" style="text-align:right; background-color:#f1f3f4; color:#9d174d;">{!$v_lines!}</pre>
+  <pre class="pl-1" style="border-left:0px solid #ccc">{!$v_code!}</pre>
+</div>
+#.code
+
+#.colors
+<div class="tool" id="t-colors" style="min-width:450px">
+<p class="t-head inline-flex" style="align-items:center;">
+  <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
+  Colors: &nbsp;
+  <label><input type="radio" name="t" value="0" checked> Background</label>
+  <label><input type="radio" name="t" value="1"> Font</label>
+  <label><input type="radio" name="t" value="2"> Border</label>
+</p>
+<div class="pt-7 px-3">
+<table class="my-1" style="width:368px" id="colors">
+@for($a < 10)
+@if(!$a)
+<tr>
+  @for($v_list as $col)<th class="text-xs">{{$col}}</th>~for
+</tr><tr>
+  <td class="bg-black py-1 text-center text-white">black</td>
+  <td class="bg-white py-1 px-2 border">white</td>
+  <td colspan="2" class="py-1 pl-2 border font-mono"></td>
+  <td colspan="{{count($v_list) - 4}}" class="py-1 pl-2 border font-mono"></td>
+</tr>
+~if
+<tr>
+  @for($v_list as $col)
+    <td class="bg-{{$col}}-{{$a ? $a*100 : 50}} w-12 h-12 text-center {{$a > 4 ? 'text-white' : 'text-black'}}">{{$a ? $a*100 : 50}}</td>
+  ~for
+</tr>
+~for
+</table><script>az.init('#colors');</script>
+<button class="btn mx-3 f2" onclick="az.switch()">Current Color</button>
+<button class="btn mx-3 f2" onclick="az.switch()">Transparent Color</button>
+<button class="btn mx-3 f2" onclick="az.switch()">Delete Class</button>
+</div>
+</div>
+#.colors
+
+#.text
+<div class="tool" id="t-text" style="min-width:450px">
+<p class="t-head inline-flex" style="align-items: center;">
+  <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
+  Font: &nbsp;
+  <label><input type="radio" name="f" value="0"> Family</label>
+  <label><input type="radio" name="f" value="1" checked> Size</label>
+  <label><input type="radio" name="f" value="2"> Weight</label>
+  <label><input type="radio" name="f" value="3"> Letter Spacing</label>
+  <label><input type="radio" name="f" value="4"> Line Height</label>
+</p>
+<div class="pt-7 px-3">
+  @for($v_sizes as $size)
+  <p class="text-{{$size}}"><u>{{$size}}:</u> The quick@if($a < 10) brown fox~if@if($a < 7) jumped over the lazy dog~if.</p>
+  ~for
+</div>
+</div>
+#.text
+
+#.icons
+<div class="tool" id="t-icons" style="min-width:45px; margin-bottom:12px">
+<p class="t-head inline-flex" style="align-items: center;">
+  <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
+  Icons
+</p>
+<div style="padding:0 0 0 5px; ">
+@for($v_list as $fn => $icon)
+  <div class="w-32 h-12 fl" style="border-right:1px solid #ccc; border-bottom:1px solid #ccc;">
+    <div style="margin:2px 5px">{! $icon !}</div>
+    <p class="text-xs">{{$fn}}</p>
+  </div>
+~for
+</div>
+<div style="clear:both"></div>
+</div>
+#.icons

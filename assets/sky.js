@@ -431,7 +431,7 @@ function ajax(j_, postfields, func, c_) {
         }
         else if ('function' == typeof func) func(r);
         else if ('string' == typeof func) $('#' + func).html(r);
-        else if ('object' == typeof func) func.html(r);
+        else if ('object' == typeof func && func) func.html(r); // null is object
         else if (r) sky.err(r);
     });
 }
