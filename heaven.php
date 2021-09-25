@@ -59,7 +59,7 @@ class HEAVEN extends SKY
         define('DIR_V', DESIGN ? WWW . 'view' : 'view');/////////2do: modules
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
         if (false === $this->method)
-            throw new Err('Unknown request method');
+            throw new Error('Unknown request method');
 
         define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
@@ -203,7 +203,7 @@ class HEAVEN extends SKY
                     if (!$this->is_front && (DEV || 1 == $user->pid)) {
                         echo a('see tracing', ['sky.trace()']) . ' + ' . a('X', ['sky.trace(1)']);
                     }
-                    echo $this->was_error == self::ERR_SHOW
+                    echo $this->was_error == SKY::ERR_SHOW
                         ? $this->check_other() . tag($this->tracing(), 'id="trace"', 'pre') . js("$('div.error')[0].scrollIntoView();")
                         : tag($this->tracing(), 'style="display:none" id="trace"', 'pre');
                 }
@@ -334,7 +334,7 @@ function jump($uri = '', $code = 302, $exit = true) {
     if ($user->jump_n > 7) {
         $user->jump_alt = []; # no more jumps
         if ($exit && !$sky->alt_jump)
-            throw new Err('22 Too much jumps');
+            throw new Error('22 Too much jumps');
         trace("Too much jumps:\n" . implode("\n", $user->jump_path), true);
         return;
     }

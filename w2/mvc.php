@@ -41,7 +41,7 @@ function view($in, $return = false, $param = null) {
     if ($sky->ajax || !$layout)
         $sky->tail_x('', $mvc->echo); # tail_x ended with exit()
     if (!$sky->tailed)
-        throw new Err('MVC::tail() must used in the layout');
+        throw new Error('MVC::tail() must used in the layout');
     if (1 == $sky->extra) # save extra cache
         file_put_contents("var/extra/$sky->fn_extra", ($sky->s_extra_ttl ? time() + $sky->s_extra_ttl : 0) . "\n<!-- E -->$mvc->echo");
     echo $mvc->echo;
@@ -85,7 +85,7 @@ abstract class MVC_BASE
     function __set($name, $value) {
         global $sky;
         if ($sky->in_tpl)
-            throw new Err("Cannot set \$sky->$name property from the templates");
+            throw new Error("Cannot set \$sky->$name property from the templates");
         $sky->$name = $value;
     }
 }
@@ -378,7 +378,7 @@ class MVC extends MVC_BASE
                 if ('a_' != substr($k = substr($k, 2), 0, 2))
                     break;
             case 'a'://////////////////       _ !!!
-                throw new Err('Cannot use variables with `a_` prefix');
+                throw new Error('Cannot use variables with `a_` prefix');
             case 'k':
                 SKY::$vars[$k] = $v;
         }
@@ -523,11 +523,12 @@ class MVC extends MVC_BASE
         $in_a = '*' !== $_0 && in_array($_0, $list, true);
         $class = $real = $in_a ? 'c_' . $_0 : 'default_c';
         $dst = is_file($fn_dst = "var/gate/$class.php");
+        $recompile = false;
         if (!$dst || DEV) {
             $src = is_file($fn_src = "main/app/$class.php") or !$in_a or $src = Gate::real_src($real, $fn_src);
             if (!$src)
                 return $ex || !$in_a ? ['Controller', '_', false, ''] : $this->gate(true);
-            if (!$dst || filemtime($fn_src) > filemtime($fn_dst))
+            if ($recompile = !$dst || filemtime($fn_src) > filemtime($fn_dst))
                 Gate::put_cache($class, $fn_src, $fn_dst);
         }
         $is_j = 1 == $sky->ajax;
@@ -538,7 +539,7 @@ class MVC extends MVC_BASE
         if (!method_exists($gape = new Gape, $action))
             $action = $is_j ? 'default_j' : 'default_a';
         if (isset($gape->src))
-            $real = "c_$gape->src";
+            $real = $gape->src;
         if ($in_a)
             MVC::$tpl = substr($real, 2);
         return [$class, $action, $gape, $real];
@@ -569,7 +570,7 @@ class MVC extends MVC_BASE
             }
         }
         trace("$class::$action()" . ($class == $real ? '' : ' (virtual)'), 'TOP-VIEW');
-        MVC::$mc = new $class;
+        MVC::$mc = new ($gape ? $class . "_cached" : $class);
         MVC::$cc = new common_c;
         SKY::$vars['k_class'] = $class;
         $me->set(MVC::$mc->head_y($action), true);

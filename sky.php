@@ -109,7 +109,7 @@ class SKY implements PARADISE
             sqlf('update $_memory set dt=' . SKY::$dd->f_dt()
                 . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
 
-        if (!$this->tailed) { # if script exit in advance (with exit() or throw new Err())
+        if (!$this->tailed) { # if script exit in advance (with exit() or throw new Error())
             $plus = $this->debug ? "x autotrace\n\n" : '';
             $this->cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
             $this->tailed = true;
@@ -175,9 +175,8 @@ class SKY implements PARADISE
         }
     }
 
-    function __call($name, $args) {
-        is_object($this->extend) or trace("Method \$sky->$name not found", true, 1);
-        return call_user_func_array([$this->extend, $name], $args);
+    function __call($char, $args) {
+        SKY::__callStatic($char, $args);
     }
 
     static function __callStatic($char, $args) {
@@ -312,8 +311,13 @@ class SKY implements PARADISE
 
 
 //////////////////////////////////////////////////////////////////////////
-class Err extends Exception {} # Use when exception is caused by programmer actions. Assume like crash, `throw new Err` should never works!
-class Stop extends Exception {} # Assume like stop and not a crash
+if (!class_exists('Error')) {
+    # Use when exception is caused by programmer actions. Assume like crash, `throw new Error` should never works!
+    class Error extends Exception {}
+}
+# Assume like stop and not a crash
+class Stop extends Exception {}
+
 # use exception `Exception`, `die` when exceptional situation is caused by events of the outside world. Configure as crash or not.
 
 //////////////////////////////////////////////////////////////////////////
@@ -395,7 +399,7 @@ class eVar implements Iterator
                 $this->dd->free($this->e['query']->stmt);
             $this->row = false;
             if ($fail)
-                throw new Err("eVar cycle error");
+                throw new Error("eVar cycle error");
         };
         do {
             if ($this->i++ >= $this->max_i && -1 != $this->max_i)
@@ -424,7 +428,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
         SKY::$dd or $sky->load();
         if (++$sky->cnt_error > 99) {
             $sky->tracing("Error 500", true);
-            throw new Err("500 Internal SKY error");
+            throw new Error("500 Internal SKY error");
         }
     }
     if ($sky->debug || $sky->s_prod_error && true === $is_error) {

@@ -23,7 +23,7 @@ class standard_c extends Controller
         if ('a_etc' == $action || DEV && 'a_dev' == $action) # run MVC::$cc !
             return parent::head_y($action);
         if (in_array($action, $soft)) # app's ::head_y() locked !
-            return $this->soft(111);
+            return $this->soft(3);
         if (!DEV)
             return 404;
         global $sky;
@@ -33,7 +33,7 @@ class standard_c extends Controller
         return ['y_1' => $v[0]];
     }
 
-    private function soft($xxx) {
+    private function soft($x) {
         global $sky, $user;
         $user = new USER;
     }
@@ -48,12 +48,12 @@ class standard_c extends Controller
     }
 
     function j_file() {
-        global $user;
+        global $sky, $user;
         if (!$user->root && !DEV)
             return 404;
         $sky->debug = false;
         list($file, $line) = explode('^', $_POST['name']);
-        $txt = file_get_contents($file);
+        $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
         echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
         throw new Stop;
     }
@@ -74,27 +74,28 @@ class standard_c extends Controller
 
     function a_etc() {
         global $sky;
-        $str = "$sky->_1";
-        $fn = in_array($sky->_1, ['sky.js', 'sky.css'])
-            ? DIR_S . "/assets/$sky->_1"
-            : WWW . "pub/etc/$sky->_1";
-        if (is_file($fn)) { // 2do: file's cache check!
-            switch (substr($sky->_1, strrpos($sky->_1, '.') + 1)) {
+        $_1 = $sky->_1;
+        $ext = '';
+        if ($pos = strrpos($_1, '.'))
+            $ext = substr($_1, $pos + 1);
+        $fn = DEV && in_array($ext, ['js', 'css']) ? DIR_S . "/assets/$_1" : WWW . "pub/etc/$_1";
+        if (is_file($fn)) {
+            switch ($ext) {
                 case 'txt': header('Content-Type: text/plain; charset=' . ENC); break;
                 case 'css': header('Content-Type: text/css'); break;
                 case 'xml': header('Content-Type: application/xml'); break;
                 case 'js': header('Content-Type: application/javascript'); break;
             }
-            MVC::last_modified(filemtime($fn), false, function() use($sky, $str) {
-                $sky->log('etc', "304 $str");
+            MVC::last_modified(filemtime($fn), false, function() use($sky, $_1) {
+                $sky->log('etc', "304 $_1");
             });
             header('Content-Length: ' . filesize($fn));
-            $sky->log('etc', "200 $str");
+            $sky->log('etc', "200 $_1");
             while (@ob_end_flush());
             readfile($fn);
             throw new Stop;
         }
-        $sky->log('etc', "404 $str");
+        $sky->log('etc', "404 $_1");
         return 404;
     }
 

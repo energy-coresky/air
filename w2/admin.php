@@ -116,7 +116,7 @@ class Admin
             }
         }
         if (!is_int($pos) || !in_array($pos, $me->cr))
-            throw new Err('Admin file not found or access denied');
+            throw new Error('Admin file not found or access denied');
         
         $fn = $me->files[$pos];
         if (is_file($file = "admin/_$fn.php")) {
@@ -125,7 +125,7 @@ class Admin
         }
         
         if (!$me->_file && $sky->ajax)
-            throw new Err('admin ajax, no file: ' . $file);
+            throw new Error('admin ajax, no file: ' . $file);
         $me->_title = $me->_file ? $me->names[$pos] : 'File not found';
         return $me;
     }

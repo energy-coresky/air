@@ -2,13 +2,14 @@
 
 class Display
 {
-    static $me;
+    static $me = false;
     const lay_l = '<table cellpadding="0" cellspacing="0" style="font-size:14px"><tr><td class="tdlnum mono">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
 
     static function php($str, $bc = '') {
-        $me = empty(self::$me) ? new Display : self::$me;
+        self::$me or self::$me = new Display;
+        $me = self::$me;
         if ($str === -1)
             return '';
         $me->lnum = '';

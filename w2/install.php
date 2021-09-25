@@ -37,7 +37,7 @@ class Install
                         : DIR_S . "/$base"
                     );
                 if (!is_file($fn))
-                    throw new Err("Install: file `$orig` not exists");
+                    throw new Error("Install: file `$orig` not exists");
             }
             $bin = file_get_contents($fn);
             if ('main/conf.php' == $fn) {

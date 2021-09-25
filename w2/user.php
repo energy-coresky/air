@@ -40,9 +40,9 @@ class USER
 
     function __call($name, $args) {
         if (!in_array($name, ['login', 'logout', 'register', 'oauth2']))
-            throw new Err("Method USER::$name not exists");
+            throw new Error("Method USER::$name not exists");
         if (!$this->pretty)
-            throw new Err('Cookie not set or not pretty');
+            throw new Error('Cookie not set or not pretty');
         return call_user_func_array(['Rare', $name], $args);
     }
 
@@ -192,11 +192,11 @@ class USER
         if (!$cookie)
             for ($i = 0; sqlf('+select count(1) from $_visitors where sky=%s', $cookie = strand()); )
                 if (++$i > 99)
-                    throw new Err(1);
+                    throw new Error(1);
         $ttl = ceil(START_TS + I_YEAR * 3);
         $srv = false === strpos(SNAME, '.') || is_num($sky->sname[4]) ? '' : '.' . DOMAIN;
         if (!setcookie($sky->s_c_name, $cookie, $ttl, PATH, $srv, false))
-            throw new Err(2);
+            throw new Error(2);
         return $cookie;
     }
 

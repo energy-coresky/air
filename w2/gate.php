@@ -13,9 +13,8 @@ class Gate
     const OBJ_PFS    = 64;
 
     static $cshow = 0;
-    static $contr_ary = false; # not loaded initialy
+    static $controller_data = false; # not loaded initialy
 
-    private $gate_file;
     private $url = '';
 
     function __construct() {
@@ -140,8 +139,8 @@ class Gate
         if (!$set && $test)
             return false;
         $set or $sky_gate[$class] = [];
-        if (is_string(Gate::$contr_ary = $sky_gate[$class])) {
-            Gate::$contr_ary = $sky_gate[$class = Gate::$contr_ary];
+        if (is_string(Gate::$controller_data = $sky_gate[$class])) {
+            Gate::$controller_data = $sky_gate[$class = Gate::$controller_data];
         } elseif ($test) {
             return false;
         }
@@ -151,11 +150,9 @@ class Gate
 
     static function put_cache($class, $fn_src, $fn_dst) {
         $real = $class;
-        if (false === Gate::$contr_ary)
+        if (false === Gate::$controller_data)
             Gate::real_src($real, $fn_src, false);
-        $me = Gate::instance();
-        $me->parse($fn_src, Gate::$contr_ary, $class);
-        file_put_contents($fn_dst, $me->gate_file);
+        file_put_contents($fn_dst, Gate::instance()->parse($fn_src, $class));
     }
 
     function view_code($ary, $class, $func) {
@@ -185,7 +182,7 @@ class Gate
     static function view($class, $func = null, $is_edit = true) {
         list($real, $ary) = Gate::load_array($class); # virt class return real
         if ($real != $class)
-            throw new Err("Cannot open virtual controller `$class`");
+            throw new Error("Cannot open virtual controller `$class`");
         $me = Gate::instance();
         $src = is_file($fn = "main/app/$class.php") ? $me->parse($fn) : [];
         if ($diff = array_diff_key($ary, $src))
@@ -310,73 +307,43 @@ class Gate
                 $this->arg_c++;
     }
 
-    function parse($fn, $ary = [], $dst_class = false) {
-        $gape = "class Gape extends Bolt\n{";
-        $c = $f = $depth = $found = 0;
+    function parse($src_fn, $dst_class = false) {
+        require $src_fn;
+        $reflect = new ReflectionClass($src_class = basename($src_fn, '.php'));
+        $methods = array_filter(
+            $reflect->getMethods(ReflectionMethod::IS_PUBLIC),
+            function ($v) {
+                return in_array(substr($v->name, 0, 2), ['j_', 'a_'])
+                    || in_array(substr($v->name, -2), ['_j', '_a']);
+            }
+        );
         $list = [];
-        $class = basename($fn, '.php');
-        if (!$dst_class) {
-            $dst_class = $class;
-            $gape .= "\n\tpublic \$src = '" . substr($class, 2) . "';\n";
+        foreach ($methods as $method) {
+            $list[$method->name] = '(' . implode(', ', array_map(function ($v) {
+                return '$' . $v->name;
+            }, $reflect->getMethod($method->name)->getParameters())) . ')';
         }
-        $tpl_class = explode(' ', 'T_OPEN_TAG T_CLASS T_STRING T_EXTENDS T_STRING {');
-        $content = file_get_contents($fn);
-        if (!preg_match('/^<\?(php)?(.*?)class ' . $class . ' extends(.+)$/s', $content, $match))
-            throw new Err("File `$fn` must start from &lt;?");
-        $start = false;
-        foreach (token_get_all($content) as $v) {
-            if (is_array($v)) {
-                if (T_CLASS == $v[0])
-                    $start = true;
-                if (in_array($v[0], [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT, T_USE]) || !$start && $v[0] != T_OPEN_TAG) {
-                    continue;
-                }
-                if (T_CURLY_OPEN == $v[0] || T_DOLLAR_OPEN_CURLY_BRACES == $v[0])
-                    $depth++;
-                if (7 != $c) {
-                    if ($v[0] != constant($tpl_class[$c++]) || 5 == $c && 'Controller' != $v[1]) {
-                        $c = 0;
-                    } elseif (3 == $c) {
-                        $v[1] == $class and $found = 1 or $c = 0;
-                    }
-                } elseif (1 == $f) {
-                    if (T_STRING == $v[0] && ($cmode = $this->contr_mode($dst_class, $v[1]))) {
-                        $f++;
-                        $func = [$v[1], ''];
-                    } else {
-                        $f = 0;
-                    }
-                } elseif (!$f && T_FUNCTION == $v[0]) {
-                    $f = 1;
-                } elseif (2 == $f) {
-                    $func[1] .= $v[1];
-                }
-                continue;
-            }
-            if ('{' == $v) {
-                if (!$depth++ && 5 == $c)
-                    $c = 7; # in class
-                if (2 == $depth && 2 == $f) {
-                    $list[$name = $func[0]] = $func[1];
-                    $this->argc($func[1]);
-                    isset($ary[$name]) or $ary[$name] = [];
-                    $php = $this->code($ary[$name], $cmode, false);
-                    $php = "\t\t" . str_replace("\n", "\n\t\t", substr($php, 0, -1)) . "\n";
-                    $gape .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
-                    $f = 0;
-                    continue;
-                }
-            } elseif ('}' == $v) {
-                !--$depth and $c = 0; # out of class
-                1 == $depth and $f = 0; # out of func
-            } elseif (2 == $f) {
-                $func[1] .= $v;
-            }
+        if (!$dst_class)
+            return $list;
+
+        $gape = DEV ? "trace('GATE: $dst_class, ' . (\$recompile ? 'recompiled' : 'used cached'));\n\n" : '';
+        $gape .= "class Gape extends Bolt\n{";
+        if ($dst_class != $src_class)
+            $gape .= "\n\tpublic \$src = '$src_class';\n"; // virtual controller
+
+        foreach ($list as $name => $pars) {
+            $this->argc($pars);
+            isset(Gate::$controller_data[$name]) or Gate::$controller_data[$name] = [];
+            $cmode = $this->contr_mode($dst_class, $name);
+            $php = $this->code(Gate::$controller_data[$name], $cmode, false);
+            $php = "\t\t" . str_replace("\n", "\n\t\t", substr($php, 0, -1)) . "\n";
+            $gape .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
         }
-        if (DEV)
-            $gape = "trace('GATE: $dst_class');\n\n" . $gape;
-        $this->gate_file = '<?php' . $match[2] . $gape . "}\n\nclass $dst_class extends" . $match[3];
-        return $found ? $list : [];
+
+        $content = file_get_contents($src_fn);
+        if (!preg_match("/^<\?(php)?(.*?)class $src_class extends(.+)$/s", $content, $match))
+            throw new Error("File `$src_fn` must start from &lt;?");
+        return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_cached extends" . $match[3];
     }
 
     function contr_mode($class, $func) {

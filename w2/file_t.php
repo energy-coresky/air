@@ -70,7 +70,7 @@ class File_t extends MVC_BASE
 
     static function read_len($fn, $len = 1e4) {
         if (!$handle = fopen($fn, "rb"))
-            throw new Err("Cannot open file `$fn` for reading");
+            throw new Error("Cannot open file `$fn` for reading");
         $bin = fread($handle, $len);
         fclose($handle);
         return mb_strcut($bin, 0, $len);

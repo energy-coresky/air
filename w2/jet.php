@@ -59,7 +59,7 @@ class Jet
             $ary = preg_split("/([\r\n]+|\A)\s*\#[\.\w+]*?\.{$part}[\.\w+]*?( .*?)?([\r\n]+|\z)/s", $in, 3);
             $in = '';
             if (count($ary) != 3)
-                throw new Err("Jet: cannot find `$name.$part`");
+                throw new Error("Jet: cannot find `$name.$part`");
             else
                 $in = $ary[1];
         }
@@ -101,7 +101,7 @@ class Jet
                     return $a_label;
                 case 'if':
                     if ($a_i > 1)
-                        throw new Err("Jet preprocessor: cannot use nested #if..");
+                        throw new Error("Jet preprocessor: cannot use nested #if..");
                 case 'elseif':
                     if (!isset($a_match[3]))
                         return $a_match[0];
@@ -239,15 +239,14 @@ class Jet
                 case 'break': return $arg ? "<?php if ($arg): break; endif ?>" : '<?php break ?>' . $sp;
                 case 'view': return Jet::q('view(%s)', $arg);
                 case 'require':
-                case 'inc': return $this->_file($arg, 'inc' == $m[1]);
-                case 'body': return $this->_file('*', $arg == 'true');
+                case 'inc': return $this->_file('' === $arg ? '*' : $arg, 'inc' == $m[1]);
                 case 'dump': return "<?php echo '<pre>' . html(print_r($arg, true)) . '</pre>' ?>";
                 case 'mime':
                     $this->div = '';
                     return Jet::q('MVC::doctype(%s)', $arg);
                 case 'empty':
                     if ('do' == end($this->for))
-                        throw new Err('Jet: no @empty statement for @do');
+                        throw new Error('Jet: no @empty statement for @do');
                     $this->empty[] = $i = count($this->for) - 1;
                     return $this->_for(true, '') . '<?php if (!' . $this->auto_a($i) . '): ?>';
                 case 'head': return "<?php MVC::head($arg) ?>";
@@ -315,7 +314,7 @@ class Jet
         }
         if ('.' == $name[0])
             $name = $this->current . $name;
-        if ($is_inc) { # 2do: throw new Err('Jet: cycled @inc()');
+        if ($is_inc) { # 2do: throw new Error('Jet: cycled @inc()');
             $lab = "%__inc_{$name}__%";
             if (isset($this->replace[$lab]))
                 return $div . $lab;

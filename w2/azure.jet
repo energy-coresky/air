@@ -2,21 +2,19 @@
 
 #.layout
 <!DOCTYPE html><html>
-<head>@head<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>@head<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
-$(function() {
-    @if($v_xy)az.switch({{$v_xy}})~if
-});
+
 </script>
 </head>
 <body class="h-screen" style="overflow:hidden">{- justify-center items-center  -}
 <div id="mov-x"></div>
 <div id="main">
   <div id="v-head">
-    <a @href(confirm('Are you sure?')) class="mr-3">@inc(__svg.home)</a>
-    <a @href($(this).find('svg').toggle())>@inc(__svg.moonsun)</a>
-    <a @href($(this).find('svg').show()) class="ml-3">@inc(__svg.fileplus)</a>
-    <button class="btn mx-3 f2" onclick="az.switch()">Save - F2</button>
+    <a href="{{LINK}}" class="az-ic mr-3">@inc(__svg.home)</a>
+    <a @href($(this).find('svg').toggle()) class="az-ic">@inc(__svg.moonsun)</a>
+    <a @href($(this).find('svg').show()) class="az-ic ml-3">@inc(__svg.fileplus)</a>
+    <button class="btn mx-3 f2" onclick="az.save()">Save - F2</button>
     <button class="btn mx-3 f4" onclick="az.test()">Load - F4</button>
     <button class="btn mx-3 f6" onclick="alert()">??? - F6</button>
     <span class="m1-2" >Frame&nbsp;</span>
@@ -27,12 +25,21 @@ $(function() {
     <a @href($(this).find('svg').toggle()) class="">@inc(__svg.mobile)</a>
     <button class="btn ml-3 mr-5 f10" onclick="az.swap()">Next - F10</button>
     <a @href($(this).find('svg').toggle(); az.bg()) class="">@inc(__svg.screen)</a>
-
+    <!-- from right -->
     <span class="absolute right-20">@pdaxt</span>
-    <a @href(ajax('settings.zz', box)) class=" absolute right-8">@inc(__svg.settings)</a>
+    <a @href(ajax('settings.zz', box)) class="az-ic absolute right-8">@inc(__svg.settings)</a>
   </div>
-  <div id="v-menu">@inc(.menu)</div>
-  <div id="v-main">
+  <div id="v-menu">
+    <div class="fixed bg-white pt-2" style="width:125px;">
+      <select style="padding:0 5px; width:100%" onchange="az.menu(this.value)">
+        <option value="t">Tailwind</option>
+        <option value="h">HTML</option>
+        <option value="i">Icons</option>
+      </select>
+    </div>
+    <ul class="mt-10"></ul>
+  </div>
+  <div id="v-main" style=""> <!-- resize:both; overflow:auto; -->
     <div id="sw-icon"><a @href(az.swap()) title="Swap panels - F9">@inc(__svg.arrows)</a></div>
     <div style="display:none" id="err-top"></div>{! $v_frame !}
   </div>
@@ -42,32 +49,83 @@ $(function() {
 @tail</body></html>
 #.layout
 
-#.menu
-<div class="fixed bg-white pt-2" style="width:125px;">
-  <select class="py-0 px-1">{! $v_sections !}</select>
-</div>
-<ul class="mt-10">
-  <li><a @href(ajax('colors',az.colors))>Colors</a></li>
-  <li><a @href(ajax('icons',az.icons))>Icons</a></li>
-  <li><a @href(az.css(document.body))>CSS Styles</a></li>{- $('div:eq(0)')[0] -}
-  @for($v_menu as $name => $sub)
-    <li>{{$name}}</li>
-    @for($sub as $sn => $qc)
-      <li class="ml-3"><a @href({!$qc!})>{{$sn}}</a></li>
-    ~for
-  ~for
-</ul>
-#.menu
-
 #.tail
 <div id="info">
   <span class="relative" style="right:calc(-100% + 15px); width:75px; margin-left:-75px">cursor pos</span>
-  <span class="ml-3">111</span>
-  <span class="ml-3">333</span>
+  <span class="ml-3">-</span>
+  <span class="ml-3"></span>
 </div>
 <div id="mov-y"></div>
-<div id="tail"></div>
+<div id="tail">
+  <p id="code-head" class="header fixed pl-8" style="height:22px; align-items:center; display:inline-flex; overflow:hidden; white-space:nowrap;">
+    Filename &nbsp;<b></b>
+    <!-- &nbsp; &nbsp;<button class="btn mx-3" onclick="az.swap()">Delete file</button> -->
+    &nbsp; &nbsp;Project files &nbsp;
+    <a class="az-mono az-ic" style="font-size:16px" @href(az.m_clk('#popup',1))>▼</a>
+    &nbsp; &nbsp; &nbsp; &nbsp;<label><input type="checkbox" checked> &nbsp;Tidy</label>
+    &nbsp; &nbsp;<label><input type="checkbox" checked> &nbsp;Comments</label>
+    &nbsp; &nbsp;<label><input type="checkbox" checked> &nbsp;Scripts</label>
+    &nbsp; &nbsp;<label><input type="checkbox" checked> &nbsp;CSS</label>
+    &nbsp; &nbsp;<label><input type="checkbox"> &nbsp;Re-format &lt;PRE&gt;</label>
+    &nbsp; &nbsp;<label><input type="checkbox"> &nbsp;Limit length of the lines</label>
+  </p><div id="project-list"></div>
+  <div id="code-body" class="flex" style="margin-top:22px;">
+    <pre style="padding:0 1px; text-align:right; background-color:#f1f3f4; color:#9d174d;" class=""></pre>
+    <pre style="padding-left:1px; margin-left:0px; border-left:0px solid #ccc; min-width:calc(100% - 24px)"
+      contenteditable="true"></pre>
+  </div>
+</div>
 #.tail
+
+#.menu
+  @for($v_menu as $name => $val)
+    @if(is_array($val))
+      <li>{{$name}}</li>
+      @for($val as $subname => $call)
+      <li class="ml-3"><a @href({!$call!})>{{$subname}}</a></li>
+      ~for
+    @else
+      <li><a @href({!$val!})>{{$name}}</a></li>
+    ~if
+  ~for
+#.menu
+
+#.popup
+<div class="absolute inline-block">
+  <div id="popup" style="display:none; width:225px; left:30px;top:22px;"
+       class="absolute w-56 rounded-sm shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none">
+    <div class="py-1" role="none">
+      <a href="#" class="menu" onmouseenter="az.m_clk('#sub',0)">
+        Add new file <span class="float-right">Alt + N</span>
+      </a>
+      <a href="#" class="menu" onmouseenter="az.m_clk('#sub',0)">
+        Add new component <span class="float-right">Alt + C</span>
+      </a>
+      <a href="#" class="menu" onmouseenter="az.m_clk('#sub',1)">
+        Components <span class="float-right font-mono">▶</span>
+      </a>
+      <div class="absolute inline-block">
+        <div id="sub" style="display:none; width:225px; left:160px;top:-5px;"
+          class="absolute w-56 rounded-sm shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none">
+          <div class="py-1" role="none">
+            @for($v_components as $name => $val)
+              <a @href({!$val!}) class="menu">{{$name}}</a>
+            ~for
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="py-1" role="none">
+      <a href="#" class="menu" onmouseenter="az.m_clk('#sub',0)">Delete current file/component</a>
+    </div>
+    <div class="py-1" role="none">
+      @for($v_files as $name => $val)
+        <a @href({!$val!}) class="menu" onmouseenter="az.m_clk('#sub',0)">{{$name}}</a>
+      ~for
+    </div>
+  </div>
+</div>
+#.popup
 
 #.settings
 <div class="m-3">
@@ -84,19 +142,10 @@ $(function() {
   <p>F3 - Search on the page</p>
   <p>F5 - Refresh the page</p>
   <p>F11 - Full screen mode</p>
-  <p>F12 - On/Off - Chrome DEV tools</p>
+  <p>F12 - On/Off - Chrome DEV tools<button onclick="ajax('settings.zz', {s:$('textarea').val()}, box)" class="btn-blue">Save</button></p>
+  <textarea class="w-full" rows="28">{{$v_ta}}</textarea>
 </div>
 #.settings
-
-#.code
-<p id="code-head" class="header fixed pl-12" style="">
-  Filename:
-</p>
-<div class="flex mt-6">
-  <pre class="px-1" style="text-align:right; background-color:#f1f3f4; color:#9d174d;">{!$v_lines!}</pre>
-  <pre class="pl-1" style="border-left:0px solid #ccc">{!$v_code!}</pre>
-</div>
-#.code
 
 #.colors
 <div class="tool" id="t-colors" style="min-width:450px">
@@ -133,6 +182,28 @@ $(function() {
 </div>
 </div>
 #.colors
+
+#.htmlcolors.sortcolors
+<div class="tool" id="t-htmlcolors" style="min-width:450px">
+<p class="t-head inline-flex" style="align-items:center;">
+  <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
+  HTML Colors: &nbsp;
+  <button class="btn mx-3 f2" onclick="ajax('sortcolors',az.htmlcolors)">Sort by name</button>
+  <button class="btn mx-3 f2" onclick="ajax('htmlcolors',az.htmlcolors)">Sort by color</button>
+</p>
+<div class="pt-7 px-3">
+<table class="my-1" style="width:500px; table-layout:fixed" id="htmlcolors">
+@for($a < 28)
+  <tr>
+  @for($a_2 < 5)@php $c = $v_list[$i = $a * 5 + $a_2]; ~php
+    <td bgcolor={{$c}} style="background-color:{{$c}}; color: {{$i < 56 || 99 == $i ? 'white' : 'black'}}">{{$c}}</td>
+  ~for
+  </tr>
+~for
+</table>
+</div>
+</div>
+#.htmlcolors.sortcolors
 
 #.text
 <div class="tool" id="t-text" style="min-width:450px">

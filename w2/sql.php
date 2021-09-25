@@ -71,7 +71,7 @@ final class SQL
         }
         static $method =  ['table', 'columns', 'where', 'join', 'group', 'having', 'order', 'limit'];
         if (!in_array($name, $method))
-            throw new Err("SQL::$name() - unknown method");
+            throw new Error("SQL::$name() - unknown method");
 
         $this->qb_ary or $this->qb_ary = array_combine($method, array_fill(0, count($method), []));
         $this->qb_ary[$name] = array_merge($this->qb_ary[$name], $args);
@@ -400,7 +400,7 @@ trait SQL_COMMON
 
     function __call($name, $args) {
         if (!in_array($name, ['sql', 'sqlf', 'qp', 'table']))
-            throw new Err('Method ' . get_class($this) . "::$name(..) not exists");
+            throw new Error('Method ' . get_class($this) . "::$name(..) not exists");
         $mode = $args && is_int($args[0]) ? array_shift($args) : 0;
         return call_user_func_array($name, [-2 => $this, -1 => 1 + $mode] + $args);
     }

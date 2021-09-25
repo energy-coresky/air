@@ -448,7 +448,7 @@ class Form
                 return '';
             isset($ary[1]) && $ary[1] or $ary[1] = 'text';
             if (!isset($_POST[$name]))
-                throw new Err("Form::draw_ary err: not set \$_POST[$name]");
+                throw new Error("Form::draw_ary err: not set \$_POST[$name]");
             $val = $_POST[$name];
             if ('' !== $val) switch ($ary[1]) {
                 case 'select':
