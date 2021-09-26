@@ -8,7 +8,7 @@ class Jet
     private $replace = [];
     private $files = [];
     private $empty = [];
-    private $for = [];
+    private $loop = [];
     private $div = '<div style="display:none" id="err-top"></div>';
     private $current = '';
     static $directive = false;
@@ -220,8 +220,7 @@ class Jet
                 case 'unless': $arg = "!($arg)";
                 case 'if': return $end ? "<?php endif ?>$sp" : "<?php if ($arg): ?>";
                 case 'cache': return $end ? '<?php Rare::cache(); endif ?>' : "<?php if (Rare::cache($arg)): ?>";
-                case 'do': return $this->_do($end, $arg); # do { .. } while(..)
-                case 'for': return $this->_for($end, $arg); # for foreach while
+                case 'loop': return $this->_loop($end, $arg); # for, foreach, while, do { .. } while(..)
             }
 
             if ($end)
@@ -235,8 +234,6 @@ class Jet
                 case 'elseif': return "<?php elseif ($arg): ?>";
                 case 't': return Jet::q('echo t(%s)', $arg);
                 case 'p': return Jet::q('echo \'"\' . PATH . %s . \'"\'', $arg);
-                case 'continue': return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>' . $sp;
-                case 'break': return $arg ? "<?php if ($arg): break; endif ?>" : '<?php break ?>' . $sp;
                 case 'view': return Jet::q('view(%s)', $arg);
                 case 'require':
                 case 'inc': return $this->_file('' === $arg ? '*' : $arg, 'inc' == $m[1]);
@@ -244,59 +241,52 @@ class Jet
                 case 'mime':
                     $this->div = '';
                     return Jet::q('MVC::doctype(%s)', $arg);
-                case 'empty':
-                    if ('do' == end($this->for))
-                        throw new Error('Jet: no @empty statement for @do');
-                    $this->empty[] = $i = count($this->for) - 1;
-                    return $this->_for(true, '') . '<?php if (!' . $this->auto_a($i) . '): ?>';
                 case 'head': return "<?php MVC::head($arg) ?>";
                 case 'tail':
                     $ed_var = DEV ? ' if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif;' : '';
                     return "<?php$ed_var MVC::tail($arg) ?>";
                 case 'href': return 'href="javascript:;" onclick="' . $arg . '"';
                 case 'csrf': return '<?php echo hidden() ?>' . $sp;
+                case 'continue': return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>' . $sp;
+                case 'break': return $arg ? "<?php if ($arg): break; endif ?>" : '<?php break ?>' . $sp;
+                case 'empty':
+                    if ('do' == end($this->loop))
+                        throw new Error('Jet: no @empty statement for `do-while`');
+                    $this->empty[] = $i = count($this->loop) - 1;
+                    return $this->_loop(true, '') . '<?php if (!' . ($i ? '$a_' . (1 + $i) : '$a') . '): ?>';
             }
             return $m[0];
         }, $str);
     }
 
-    function auto_a($i) {
-        return $i ? '$a_' . (1 + $i) : '$a';
-    }
-
-    function _do($end, $arg) {
-        $cnt = count($this->for);
-        $iv = $this->auto_a($end ? $cnt - 1 : $cnt);
-        if (!$end) {
-            $this->for[] = 'do';
-            return "<?php $iv = 0; do { ?>";
-        }
-        array_pop($this->for);
-        if (preg_match('/^\s*(\$e_\w+)\s*(\:\s*(\$\w+))?/', $arg, $m)) # $e_.. cycle
-            $arg = (isset($m[3]) ? $m[3] : '$row') . " = $m[1]->one()";
-        return "<?php $iv++; } while ($arg); ?>";
-    }
-
-    function _for($end, $arg) {
-        $cnt = count($this->for);
+    function _loop($end, $arg) {
+        $cnt = count($this->loop);
         if ($end) {
-            if (end($this->empty) == $cnt) {
+            $iv = $cnt - 1 ? '$a_' . $cnt : '$a';
+            if ($arg) { # do-while
+                array_pop($this->loop);
+                return sprintf("<?php $iv++; } while (%s); ?>", preg_match('/^\$e_\w+$/', $arg) ? "\$row = $arg->one()" : $arg);
+            } elseif (end($this->empty) == $cnt) {
                 array_pop($this->empty);
                 return '<?php endif ?>';
             }
-            return sprintf('<?php %s++; end%s ?>', $this->auto_a($cnt - 1), array_pop($this->for));
+            return sprintf('<?php %s++; end%s ?>', $iv, array_pop($this->loop));
         }
-        $iv = $this->auto_a($cnt);
-        if (preg_match('/^\s*(\$e_\w+)\s*(\:\s*(\$\w+))?/', $arg, $m)) { # $e_.. cycle
-            $this->for[] = 'foreach';
-            return sprintf("<?php $iv = 0; foreach ($m[1] as %s): ?>", isset($m[3]) ? $m[3] : '$row');
+
+        $iv = $cnt ? '$a_' . (1 + $cnt) : '$a';
+        if (!$arg) { # do-while
+            $this->loop[] = 'do';
+            return "<?php $iv = 0; do { ?>";
+        } elseif (preg_match('/^\$e_\w+$/', $arg)) { # eVar style cycle
+            $this->loop[] = 'foreach';
+            return "<?php $iv = 0; foreach ($arg as \$row): ?>";
         }
         $is_for = $is_foreach = false;
         foreach (token_get_all("<?php $arg") as $t) {
             $is_for |= is_string($t) && ';' == $t;
             $is_foreach |= is_array($t) && T_AS == $t[0];
         }
-        $this->for[] = ($for = $is_foreach ? 'foreach' : ($is_for ? 'for' : 'while'));
+        $this->loop[] = ($for = $is_foreach ? 'foreach' : ($is_for ? 'for' : 'while'));
         return "<?php $iv = 0; $for ($arg): ?>";
     }
 

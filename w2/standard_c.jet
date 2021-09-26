@@ -128,31 +128,31 @@ sky.g.save = function(el) {
 <tr><th>Tables</th><th>Create table</th><th>Insert rows</th></tr>
 <tr><td></td><td><a @href($('#inst input.c').prop('checked',c_=!c_))>[un]check all</a></td>
 <td><a @href($('#inst input.r').prop('checked',r_=!r_))>[un]check all</a></td></tr>
-@for($v_tables as $one)
+@loop($v_tables as $one)
     <tr><td>{{$one}}</td>
     <td><input type="checkbox" class="c" name="c_{{$one}}"{{in_array("c_$one", $v_mem) ? ' checked' : ''}}></td>
     <td><input type="checkbox" class="r" name="r_{{$one}}"{{in_array("r_$one", $v_mem) ? ' checked' : ''}}></td></tr>
-~for
+~loop
 </table>
 #.database
 
 #.files
 <a @href(sky.g.walk(1))>expand all</a>@php $cnt = 0; ~php
 <p>
-@for($v_files as $one => $ary)
+@loop($v_files as $one => $ary)
     <div class="md">
         <a @href(sky.g.files(this, 2))>{!$one!}</a>
         <input type="hidden" name="{!$one!}" value="{{$v_exd[$one] or 0}}"> <span class="md-span"></span>
         <a @href(sky.toggle(this))>&gt;&gt;&gt;</a>
         <div style="display:none; min-height:10px;">@php $cnt += count($ary[1]); ~php
-        @for($ary[1] as $file)
+        @loop($ary[1] as $file)
             <div style="margin-left:20px">
                 <label><input type="checkbox" name="{{$file}}"{{isset($v_exf[$file]) ? ' checked' : ''}}> {{$file}}</label>
             </div>
-        ~for
+        ~loop
         </div>
     </div>
-~for
+~loop
 <p>
 When load: dirs-files &nbsp; Total {{count($v_files)}}-{{$cnt}}
 <script>
@@ -218,14 +218,14 @@ sky.g.files = function(fn, dir) {
 <p>SQL compiled {{date(DATE_DT, $row->ts_sql)}} ^<b>TR:</b> {{$row->count_tr}}
 &nbsp; &nbsp; <label><input checked type="checkbox" name="sql"> include</label>
 <fieldset><legend><small>check required modules</small></legend>
-@for($v_modules as $one)
+@loop($v_modules as $one)
     @if('Core'!==($name=$one))
         @if('apache2handler'===$one) @php $name="<small>$name</small>" ~php ~if
         <div class="mod"><label>
             <input type="checkbox" name="m_{{$one}}"{{in_array($one, $v_mem) ? ' checked' : ''}}> {!$name!}
         </label></div>
     ~if
-~for
+~loop
 </fieldset>
 <p>
 PHP version &gt;= <input name="vphp" value="{{$row->vphp or PHP_VERSION}}" size="5">
@@ -263,10 +263,10 @@ sky.g.show = function() {
 <div id="gate">
 @if($v_error){!$v_error!}~if
 <fieldset id="contr"><legend>Controllers</legend>
-@for($v_list as $one => $ex)
+@loop($v_list as $one => $ex)
     <input style="{!$one==$y_1 and 'color:green;'!}{!is_int($ex)?($ex?'':'background:#fcc'):'background:#ffc'!}"
         value="{!$one!}" type="button" onclick="ajax('{!is_int($ex)?$one:$ex!}',box)">
-~for
+~loop
 </fieldset>
 @if($y_1)
     <h1 style="margin-top:15px">Controller
@@ -286,7 +286,7 @@ sky.g.show = function() {
         Show code <input type="checkbox"{{$v_cshow}} onchange="ajax('{!$y_1!}',{s:this.checked},box)"/>
     </label><br><br>
     <div style="display:none" id="c23-tpl">@view(c23_edit)</div>
-    @for($e_func)
+    @loop($e_func)
     <fieldset>
         @if($row->delete)
             <legend style="background:pink;color:#000">{{$row->func}}</legend>
@@ -303,7 +303,7 @@ sky.g.show = function() {
             <div class="function">@inc(.edit)</div>
         ~if
     </fieldset>
-    ~for
+    ~loop
 @else
     <h1><u>Sky Gate</u>: No controllers</h1>
 ~if

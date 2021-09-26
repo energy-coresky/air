@@ -13,7 +13,7 @@
             <Keywords name="Numbers, suffix1"></Keywords>
             <Keywords name="Numbers, suffix2"></Keywords>
             <Keywords name="Numbers, range"></Keywords>
-            <Keywords name="Operators1">@view @if @elseif @else ~if @for ~for @empty @break @continue @do ~do @inc @require @body @pdaxt @head @tail @t @href @dump @mime @csrf</Keywords>
+            <Keywords name="Operators1">@view @if @elseif @else ~if @loop ~loop @empty @break @continue @inc @require @body @pdaxt @head @tail @t @href @dump @mime @csrf</Keywords>
             <Keywords name="Operators2"></Keywords>
             <Keywords name="Folders in code1, open">#if</Keywords>
             <Keywords name="Folders in code1, middle">#else #elseif</Keywords>

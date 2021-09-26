@@ -35,10 +35,10 @@ formal tpl
     <input value="Yes!" type="button" onclick="ajax('fix',{sql:$(this).prev().text()},box)"/>
 @else
     <fieldset><legend>Languages</legend>
-    @for($obj->list as $one)
+    @loop($obj->list as $one)
         <input style="{!$one==DEFAULT_LG and 'text-transform:uppercase;'!}{!$one==$obj->lg and 'background:#afa;'!}"
             value="{{$one}}" type="button" onclick="ajax('list.{{$one}}',box)"/>
-    ~for
+    ~loop
         sorted: <b><u>{{$obj->nsort?'no':'yes'}}</u></b>, sync: <b><u id="sync">{{$obj->nsync?'no':'yes'}}</u></b>
     <div class="fr">Legend:
         <table style="display:inline-table">
@@ -72,7 +72,7 @@ formal tpl
         <th width="37%">{{$obj->lg}}</th>
         <th width="14%">KEY</th>
         </tr>
-        @for($e_list)
+        @loop($e_list)
             @if($row->char)
                 <tr>
                 <td colspan="2"></td>
@@ -89,7 +89,7 @@ formal tpl
             <td>{{$row->val2}}</td>
             <td><a @href(sky.g.const(this,{{$row->id}}))><img src="img/a_upd.gif"/></a> {{$row->key}}</td>
             </tr>
-        ~for
+        ~loop
         </table>
         Items: {{$e_list->cnt}}
     ~if
@@ -115,7 +115,7 @@ formal tpl
 #.all /////////////////////////////////////////////////////////////////////////
 <td colspan="7">
 <form id="all-edit">
-@for($e_list)
+@loop($e_list)
     @if(1==$a)
         <dl><dt><u>const</u>:</dt>
         <dd>
@@ -135,7 +135,7 @@ formal tpl
         ~if
     </dd>
     </dl>
-~for
+~loop
 <dl><dt>&nbsp;</dt>
 <dd>
     <input onclick="sky.g.cancel()" type="button" value="cancel"/>

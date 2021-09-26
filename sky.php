@@ -311,7 +311,7 @@ class SKY implements PARADISE
 
 
 //////////////////////////////////////////////////////////////////////////
-if (!class_exists('Error')) {
+if (!class_exists('Error', false)) {
     # Use when exception is caused by programmer actions. Assume like crash, `throw new Error` should never works!
     class Error extends Exception {}
 }
@@ -346,8 +346,7 @@ class eVar implements Iterator
     }
 
     function all() {
-        for ($all = []; $one = $this->one(); $all[] = $one);
-        return $all;
+        return iterator_to_array($this, false);
     }
 
     function rewind() {

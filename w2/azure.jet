@@ -78,16 +78,16 @@
 #.tail
 
 #.menu
-  @for($v_menu as $name => $val)
+  @loop($v_menu as $name => $val)
     @if(is_array($val))
       <li>{{$name}}</li>
-      @for($val as $subname => $call)
+      @loop($val as $subname => $call)
       <li class="ml-3"><a @href({!$call!})>{{$subname}}</a></li>
-      ~for
+      ~loop
     @else
       <li><a @href({!$val!})>{{$name}}</a></li>
     ~if
-  ~for
+  ~loop
 #.menu
 
 #.popup
@@ -108,9 +108,9 @@
         <div id="sub" style="display:none; width:225px; left:160px;top:-5px;"
           class="absolute w-56 rounded-sm shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none">
           <div class="py-1" role="none">
-            @for($v_components as $name => $val)
+            @loop($v_components as $name => $val)
               <a @href({!$val!}) class="menu">{{$name}}</a>
-            ~for
+            ~loop
           </div>
         </div>
       </div>
@@ -119,9 +119,9 @@
       <a href="#" class="menu" onmouseenter="az.m_clk('#sub',0)">Delete current file/component</a>
     </div>
     <div class="py-1" role="none">
-      @for($v_files as $name => $val)
+      @loop($v_files as $name => $val)
         <a @href({!$val!}) class="menu" onmouseenter="az.m_clk('#sub',0)">{{$name}}</a>
-      ~for
+      ~loop
     </div>
   </div>
 </div>
@@ -158,10 +158,10 @@
 </p>
 <div class="pt-7 px-3">
 <table class="my-1" style="width:368px" id="colors">
-@for($a < 10)
+@loop($a < 10)
 @if(!$a)
 <tr>
-  @for($v_list as $col)<th class="text-xs">{{$col}}</th>~for
+  @loop($v_list as $col)<th class="text-xs">{{$col}}</th>~loop
 </tr><tr>
   <td class="bg-black py-1 text-center text-white">black</td>
   <td class="bg-white py-1 px-2 border">white</td>
@@ -170,11 +170,11 @@
 </tr>
 ~if
 <tr>
-  @for($v_list as $col)
+  @loop($v_list as $col)
     <td class="bg-{{$col}}-{{$a ? $a*100 : 50}} w-12 h-12 text-center {{$a > 4 ? 'text-white' : 'text-black'}}">{{$a ? $a*100 : 50}}</td>
-  ~for
+  ~loop
 </tr>
-~for
+~loop
 </table><script>az.init('#colors');</script>
 <button class="btn mx-3 f2" onclick="az.switch()">Current Color</button>
 <button class="btn mx-3 f2" onclick="az.switch()">Transparent Color</button>
@@ -193,13 +193,13 @@
 </p>
 <div class="pt-7 px-3">
 <table class="my-1" style="width:500px; table-layout:fixed" id="htmlcolors">
-@for($a < 28)
+@loop($a < 28)
   <tr>
-  @for($a_2 < 5)@php $c = $v_list[$i = $a * 5 + $a_2]; ~php
+  @loop($a_2 < 5)@php $c = $v_list[$i = $a * 5 + $a_2]; ~php
     <td bgcolor={{$c}} style="background-color:{{$c}}; color: {{$i < 56 || 99 == $i ? 'white' : 'black'}}">{{$c}}</td>
-  ~for
+  ~loop
   </tr>
-~for
+~loop
 </table>
 </div>
 </div>
@@ -217,9 +217,9 @@
   <label><input type="radio" name="f" value="4"> Line Height</label>
 </p>
 <div class="pt-7 px-3">
-  @for($v_sizes as $size)
+  @loop($v_sizes as $size)
   <p class="text-{{$size}}"><u>{{$size}}:</u> The quick@if($a < 10) brown fox~if@if($a < 7) jumped over the lazy dog~if.</p>
-  ~for
+  ~loop
 </div>
 </div>
 #.text
@@ -231,12 +231,12 @@
   Icons
 </p>
 <div style="padding:0 0 0 5px; ">
-@for($v_list as $fn => $icon)
+@loop($v_list as $fn => $icon)
   <div class="w-32 h-12 fl" style="border-right:1px solid #ccc; border-bottom:1px solid #ccc;">
     <div style="margin:2px 5px">{! $icon !}</div>
     <p class="text-xs">{{$fn}}</p>
   </div>
-~for
+~loop
 </div>
 <div style="clear:both"></div>
 </div>
