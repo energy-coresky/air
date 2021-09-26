@@ -1,6 +1,6 @@
 #.jet core template
 
-#.layout
+#.layout //////////////////////////////////////////////////////////////////////////////
 <!DOCTYPE html><html>
 <head>@head<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script>
@@ -49,7 +49,7 @@
 @tail</body></html>
 #.layout
 
-#.tail
+#.tail //////////////////////////////////////////////////////////////////////////////
 <div id="info">
   <span class="relative" style="right:calc(-100% + 15px); width:75px; margin-left:-75px">cursor pos</span>
   <span class="ml-3">-</span>
@@ -77,7 +77,7 @@
 </div>
 #.tail
 
-#.menu
+#.menu //////////////////////////////////////////////////////////////////////////////
   @loop($v_menu as $name => $val)
     @if(is_array($val))
       <li>{{$name}}</li>
@@ -90,7 +90,7 @@
   ~loop
 #.menu
 
-#.popup
+#.popup //////////////////////////////////////////////////////////////////////////////
 <div class="absolute inline-block">
   <div id="popup" style="display:none; width:225px; left:30px;top:22px;"
        class="absolute w-56 rounded-sm shadow-lg bg-white ring-1 ring-black ring-opacity-5 divide-y divide-gray-100 focus:outline-none">
@@ -127,7 +127,7 @@
 </div>
 #.popup
 
-#.settings
+#.settings //////////////////////////////////////////////////////////////////////////////
 <div class="m-3">
   <h1>Settings</h1>
   <p class="text-2xl">App hot keys</p>
@@ -147,7 +147,7 @@
 </div>
 #.settings
 
-#.colors
+#.colors //////////////////////////////////////////////////////////////////////////////
 <div class="tool" id="t-colors" style="min-width:450px">
 <p class="t-head inline-flex" style="align-items:center;">
   <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
@@ -183,7 +183,7 @@
 </div>
 #.colors
 
-#.htmlcolors.sortcolors
+#.htmlcolors.sortcolors //////////////////////////////////////////////////////////////////////////////
 <div class="tool" id="t-htmlcolors" style="min-width:450px">
 <p class="t-head inline-flex" style="align-items:center;">
   <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
@@ -205,7 +205,7 @@
 </div>
 #.htmlcolors.sortcolors
 
-#.text
+#.text //////////////////////////////////////////////////////////////////////////////
 <div class="tool" id="t-text" style="min-width:450px">
 <p class="t-head inline-flex" style="align-items: center;">
   <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
@@ -224,7 +224,7 @@
 </div>
 #.text
 
-#.icons
+#.icons //////////////////////////////////////////////////////////////////////////////
 <div class="tool" id="t-icons" style="min-width:45px; margin-bottom:12px">
 <p class="t-head inline-flex" style="align-items: center;">
   <a @href($(this).parents('.tool').remove()) class="x">@inc(__svg.x)</a>
