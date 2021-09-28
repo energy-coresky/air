@@ -99,15 +99,15 @@ formal tpl
 #.list.fix.store
 
 #.const /////////////////////////////////////////////////////////////////////////
-<input type="hidden" name="const-prev" value="{{$v_val}}"/>
-<input id="tr-textarea" value="{{$v_val}}"/>
+<input type="hidden" name="const-prev" value="{{$val}}"/>
+<input id="tr-textarea" value="{{$val}}"/>
 <a @href($(this).prev().val(''))><img src="img/a_del.gif"/></a>
 <input onclick="sky.g.cancel()" type="button" value="cancel"/>
 <input onclick="sky.g.save({{$_POST['id']}}, 1)" type="button" value="OK"/>
 #.const
 
 #.edit /////////////////////////////////////////////////////////////////////////
-<textarea id="tr-textarea" rows="2" cols="40">{{$v_val}}</textarea><br/>
+<textarea id="tr-textarea" rows="2" cols="40">{{$val}}</textarea><br/>
 <input onclick="sky.g.cancel()" type="button" value="cancel"/>
 <input onclick="sky.g.save({{$_POST['id']}}, 0)" type="button" value="OK"/>
 #.edit
@@ -116,7 +116,7 @@ formal tpl
 <td colspan="7">
 <form id="all-edit">
 @loop($e_list)
-    @if(1==$a)
+    @if(1==$_)
         <dl><dt><u>const</u>:</dt>
         <dd>
             <input type="hidden" name="const-prev" value="{{$row->const}}"/>
@@ -139,7 +139,7 @@ formal tpl
 <dl><dt>&nbsp;</dt>
 <dd>
     <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.all(this, {{$v_id}}, 1)" type="button" value="save"/>
+    <input onclick="sky.g.all(this, {{$id}}, 1)" type="button" value="save"/>
 </dd>
 </dl>
 </form>

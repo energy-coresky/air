@@ -11,6 +11,7 @@ class Jet
     private $loop = [];
     private $div = '<div style="display:none" id="err-top"></div>';
     private $current = '';
+    private static $vars = [];
     static $directive = false;
     static $custom = [];
 
@@ -23,10 +24,12 @@ class Jet
         return sprintf("<?php $pattern ?>", $arg);
     }
     
-    function __construct($layout, $name, $fn = false, $is_fire = false) {
+    function __construct($layout, $name, $fn = false, $vars = null) {
         global $sky;
 
         $this->body = $name;
+        if (null !== $vars)
+            Jet::$vars = $vars;
         $part = '';
         if ($layout) {
             $name = "y_$layout";
@@ -46,10 +49,11 @@ class Jet
         $this->files[$name] = 1;
         $this->parsed = $this->parse($this->current = $name, $part);
         if ($fn) {
-            $prefix = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n";
-            $prefix .= DEV ? "trace('TPL: $list')?>" : '?>';
-            $postfix = DEV && $is_fire && !$layout ? '<?php if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif; ?>' : '';
-            file_put_contents($fn, $prefix . $this->parsed . $postfix);
+            $out = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n";
+            $out .= (DEV ? "trace('TPL: $list')?>" : '?>') . $this->parsed;
+            if (DEV && $vars && !$layout)
+                $out .= '<?php if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif; ?>';
+            file_put_contents($fn, $out);
         }
     }
     
@@ -88,32 +92,32 @@ class Jet
     }
 
     private function preprocessor(&$in) {
-        $a_i = $a_u = 0;
+        $_i = $_u = 0;
         $re = '/\B\#(end|if|elseif|else)([ \t]*)(\( ( (?>[^()]+) | (?3) )* \))?/x';
-        $in = preg_replace_callback($re, function ($a_match) use (&$a_i, &$a_u) {
-            if ($a_u < 0)
-                return $a_match[0];
-            extract(MVC::$vars, EXTR_REFS);
-            $a_label = '%__ife_' . ++$a_i . '__%';
-            switch ($a_match[1]) {
+        $in = preg_replace_callback($re, function ($_match) use (&$_i, &$_u) {
+            if ($_u < 0)
+                return $_match[0];
+            extract(Jet::$vars, EXTR_REFS);
+            $_label = '%__ife_' . ++$_i . '__%';
+            switch ($_match[1]) {
                 case 'end':
-                    $a_u = $a_u ? -$a_u : -99;
-                    return $a_label;
+                    $_u = $_u ? -$_u : -99;
+                    return $_label;
                 case 'if':
-                    if ($a_i > 1)
+                    if ($_i > 1)
                         throw new Error("Jet preprocessor: cannot use nested #if..");
                 case 'elseif':
-                    if (!isset($a_match[3]))
-                        return $a_match[0];
-                    $a_u or !eval("return $a_match[3];") or $a_u = $a_i;
-                    return $a_label;
+                    if (!isset($_match[3]))
+                        return $_match[0];
+                    $_u or !eval("return $_match[3];") or $_u = $_i;
+                    return $_label;
                 case 'else':
-                    $a_u or $a_u = $a_i;
-                    return $a_label;
+                    $_u or $_u = $_i;
+                    return $_label;
             }
         }, $in);
-        if ($a_i) {
-            for ($ok = false, $prv = $i = 1; $i <= $a_i; $i++, $prv = $pos) {
+        if ($_i) {
+            for ($ok = false, $prv = $i = 1; $i <= $_i; $i++, $prv = $pos) {
                 $pos = strpos($in, "%__ife_{$i}__%");
                 if ($i > 1) { # from second step
                     $size = $ok ? ($i > 10 ? 12 : 11) : $pos - $prv;
@@ -121,13 +125,13 @@ class Jet
                     $in = substr($in, 0, $prv) . substr($in, $prv + $size);
                     $ok = false;
                 }
-                if ($i == -$a_u)
+                if ($i == -$_u)
                     $ok = true;
-                if ($i == $a_i) # last cycle
+                if ($i == $_i) # last cycle
                     $in = str_replace("%__ife_{$i}__%", '', $in);
             }
         }
-        return $a_i;
+        return $_i;
     }
 
     /* delete `<?php  ?>` and merge `?><?php` in parsed templates */
@@ -229,31 +233,28 @@ class Jet
                 return call_user_func(Jet::$custom[$m[1]], $arg, $this);
 
             switch ($m[1]) {
+                case 'inc': return $this->_file('' === $arg ? '*' : $arg);
+                case 'view': return Jet::q('view(%s)', $arg);
                 case 'pdaxt': return sprintf('<?php MVC::pdaxt(%s) ?>', $arg ? $arg : '') . $sp;
                 case 'else': return '<?php else: ?>' . $sp;
                 case 'elseif': return "<?php elseif ($arg): ?>";
                 case 't': return Jet::q('echo t(%s)', $arg);
                 case 'p': return Jet::q('echo \'"\' . PATH . %s . \'"\'', $arg);
-                case 'view': return Jet::q('view(%s)', $arg);
-                case 'require':
-                case 'inc': return $this->_file('' === $arg ? '*' : $arg, 'inc' == $m[1]);
                 case 'dump': return "<?php echo '<pre>' . html(print_r($arg, true)) . '</pre>' ?>";
-                case 'mime':
-                    $this->div = '';
-                    return Jet::q('MVC::doctype(%s)', $arg);
+                case 'mime': $this->div = ''; return Jet::q('MVC::doctype(%s)', $arg);
+                case 'href': return 'href="javascript:;" onclick="' . $arg . '"';
+                case 'csrf': return '<?php echo hidden() ?>' . $sp;
                 case 'head': return "<?php MVC::head($arg) ?>";
                 case 'tail':
                     $ed_var = DEV ? ' if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif;' : '';
                     return "<?php$ed_var MVC::tail($arg) ?>";
-                case 'href': return 'href="javascript:;" onclick="' . $arg . '"';
-                case 'csrf': return '<?php echo hidden() ?>' . $sp;
                 case 'continue': return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>' . $sp;
                 case 'break': return $arg ? "<?php if ($arg): break; endif ?>" : '<?php break ?>' . $sp;
                 case 'empty':
                     if ('do' == end($this->loop))
                         throw new Error('Jet: no @empty statement for `do-while`');
                     $this->empty[] = $i = count($this->loop) - 1;
-                    return $this->_loop(true, '') . '<?php if (!' . ($i ? '$a_' . (1 + $i) : '$a') . '): ?>';
+                    return $this->_loop(true, '') . '<?php if (!' . ($i ? '$_' . (1 + $i) : '$_') . '): ?>';
             }
             return $m[0];
         }, $str);
@@ -262,7 +263,7 @@ class Jet
     function _loop($end, $arg) {
         $cnt = count($this->loop);
         if ($end) {
-            $iv = $cnt - 1 ? '$a_' . $cnt : '$a';
+            $iv = $cnt - 1 ? '$_' . $cnt : '$_';
             if ($arg) { # do-while
                 array_pop($this->loop);
                 return sprintf("<?php $iv++; } while (%s); ?>", preg_match('/^\$e_\w+$/', $arg) ? "\$row = $arg->one()" : $arg);
@@ -273,7 +274,7 @@ class Jet
             return sprintf('<?php %s++; end%s ?>', $iv, array_pop($this->loop));
         }
 
-        $iv = $cnt ? '$a_' . (1 + $cnt) : '$a';
+        $iv = $cnt ? '$_' . (1 + $cnt) : '$_';
         if (!$arg) { # do-while
             $this->loop[] = 'do';
             return "<?php $iv = 0; do { ?>";
@@ -290,32 +291,28 @@ class Jet
         return "<?php $iv = 0; $for ($arg): ?>";
     }
 
-    function _file($name, $is_inc) {
+    function _file($name) {
         $red = '%s';
         $div = '';
         if ('*' == $name) {
             $div = $this->div;
             if ('_' === $this->body)
-                return $div . '<?php echo $a_stdout ?>';
+                return $div . '<?php echo $_stdout ?>';
             $name = $this->body;
-        } elseif ('r_' == substr($name, 0, 2) && DEV) { # red label
-            $red = '<?php if ($sky->s_red_label): ?>' . tag(($is_inc ? '@inc' : '@require') . "($name)", 'class="red_label"')
+        } elseif (DEV && 'r_' == substr($name, 0, 2)) { # red label
+            $red = '<?php if ($sky->s_red_label): ?>'
+                . tag("@inc($name)", 'class="red_label"')
                 . "<?php else: ?>%s<?php endif ?>";
         }
         if ('.' == $name[0])
             $name = $this->current . $name;
-        if ($is_inc) { # 2do: throw new Error('Jet: cycled @inc()');
-            $lab = "%__inc_{$name}__%";
-            if (isset($this->replace[$lab]))
-                return $div . $lab;
-            $me = new Jet('', $name);
-            $this->replace[$lab] = sprintf($red, $me->parsed);
-            $this->files += $me->files;
+        # 2do: throw new Error('Jet: cycled @inc()');
+        $lab = "%__inc_{$name}__%";
+        if (isset($this->replace[$lab]))
             return $div . $lab;
-        } else { # require
-            $me = new Jet('', $name, $fn = MVC::fn_parsed('', $name));
-            $this->files += $me->files;
-            return $div . sprintf($red, "<?php require MVC::jet('$fn'); ?>");
-        }
+        $me = new Jet('', $name);
+        $this->replace[$lab] = sprintf($red, $me->parsed);
+        $this->files += $me->files;
+        return $div . $lab;
     }
 }

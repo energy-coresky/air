@@ -256,7 +256,7 @@ class HEAVEN extends SKY
         }
         $this->k_static = [[], [], []]; # skip app css and js files
         $this->in_tpl = true;
-        require MVC::recompile('', '__std.exception');
+        require MVC::recompile('__std.exception')['_parsed'];
     }
 
     function tracing($plus = '', $trace_x = false) {
