@@ -222,7 +222,7 @@ class Gate
                 ];
             },
         ];
-        return $has_func ? ['d_row' => (object)($return['row_c']())] : $return;
+        return $has_func ? ['row' => (object)($return['row_c']())] : $return;
     }
 
     function view_c1($flag, $meth, $is_j) {

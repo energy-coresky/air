@@ -66,9 +66,9 @@ class standard_c extends Controller
         $sky->k_static = [[], [], []];
         MVC::$layout = '';
         return [
-            'd_ky' => $sky->error_no,
-            'd_no' => $no,
-            'd_tracing' => '',
+            'ky' => $sky->error_no,
+            'no' => $no,
+            'tracing' => '',
         ];
     }
 

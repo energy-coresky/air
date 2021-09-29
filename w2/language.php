@@ -36,7 +36,7 @@ class Language
         global $sky;
         $err = $this->error || 'list' == $sky->_1 && $this->fail_rows();
         return [
-            'd_obj' => $this,
+            'obj' => $this,
             'e_list' => ($this->lg = $lg) && !$err ? $this->listing($lg) : [],
         ];
     }
