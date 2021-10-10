@@ -156,7 +156,7 @@ class Install
             'modules' => get_loaded_extensions(),
             'mem' => $this->memo('modules', []),
             'and' => $this->memo('and', 0),
-            'mysql' => mysqli_get_client_version(SQL::$dd->conn),//mysqli_get_server_info
+            'mysql' => mysqli_get_client_version(),//mysqli_get_server_info
             'row' => (object)$this->memo(),
             'vapp' => SKY::version()['app'][2] + 0.0001,
             'vcore' => SKY::version()['core'][0],

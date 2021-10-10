@@ -213,7 +213,8 @@ class Moon
         }
         define('DEV', 0);
         eval("$s[1];");
-        $databases['dsn']  = "$_POST[name] $_POST[host] $_POST[user] $_POST[password]";
+        $port = $_POST['port'] && 3306 != $_POST['port'] ? ":$_POST[port]" : '';
+        $databases['dsn']  = "$_POST[name] $_POST[host]$port $_POST[user] $_POST[password]";
         $databases['pref'] = $_POST['prefix'];
         $s[1] = '$databases = ' . var_export($databases, true);
         $data = implode('', $s);

@@ -161,7 +161,7 @@ class USER
                 'uri'   => URI,
                 'flags' => (IS_BOT ? self::IS_BOT : 0) | ($_COOKIE ? 0 : self::NO_ANY_C) | ($this->pretty ? 0 : self::NO_PRETTY),
             ];
-            $lg = common_c::lang_h();
+            $lg = common_c::getLG_h();
             $this->row = $ary + [
                 'vid' => 0,
                 'pid' => 0,
@@ -194,7 +194,7 @@ class USER
                 if (++$i > 99)
                     throw new Error(1);
         $ttl = ceil(START_TS + I_YEAR * 3);
-        $srv = false === strpos(SNAME, '.') || is_num($sky->sname[4]) ? '' : '.' . DOMAIN;
+        $srv = !$sky->sname[1] && !$sky->sname[2] ? '' : '.' . DOMAIN;
         if (!setcookie($sky->s_c_name, $cookie, $ttl, PATH, $srv, false))
             throw new Error(2);
         return $cookie;

@@ -18,7 +18,7 @@ class standard_c extends Controller
             'j_file_tmp',
             'j_file_delete',
         ];
-        if ('a_etc' == $action) # run MVC::$cc !
+        if ('a_etc' == $action)
             return;
         if ('a_etc' == $action || DEV && 'a_dev' == $action) # run MVC::$cc !
             return parent::head_y($action);

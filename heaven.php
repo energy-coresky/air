@@ -37,10 +37,10 @@ class HEAVEN extends SKY
         return parent::__get($name);
     }
 
-    private function extra_file($sn) {
+    private function extra_file($sname) {
         if (!EXTRA || 1 != $this->method) # GET only
             return $this->extra = 0;
-        $this->fn_extra = "$sn[1]$sn[2]$sn[3]" . str_replace('/', '.', PATH . URI) . '.php';
+        $this->fn_extra = "$sname[1]$sname[2]$sname[3]" . str_replace('/', '.', PATH . URI) . '.php';
 
         if (is_file($fn = "var/extra/$this->fn_extra") && ($fh = @fopen($fn, 'r'))) {
             $ts = fgets($fh);
@@ -65,8 +65,8 @@ class HEAVEN extends SKY
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
         define('SNAME', $_SERVER['SERVER_NAME']);
 
-        $re = DEFAULT_LG == 'ru' ? '(www\.|[a-z]{2}\.)?(m\.)?' : '(www\.|[q]{2}\.)?(m\.)?';
-        if (!preg_match("/^$re([a-z\d\-\.]+\.([a-z\d]{2,5}))$/", SNAME, $this->sname))
+        $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
+        if (!preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname))
             exit('sname');
         $this->extra = EXTRA;
         if ($fh = $this->extra_file($this->sname)) {
@@ -95,7 +95,7 @@ class HEAVEN extends SKY
         }
 
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
-        $this->re = "~^https?://$re" . preg_quote(DOMAIN . PATH);
+        $this->re = "~^https?://$pref_lg_m" . preg_quote(DOMAIN . PATH);
         $this->lref = preg_match("$this->re(.*)$~", $referer, $m) ? $m[3] : false;
         $this->eref = !$m ? $referer : false;
 

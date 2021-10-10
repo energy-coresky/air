@@ -266,7 +266,11 @@ abstract class HOOK extends Controller
             array_unshift($sky->surl, '_etc');
     }
 
-    static function lang_h() {
+    function setLG_h() {
+        return [];
+    }
+
+    static function getLG_h() {
         global $sky;
         if (!is_array($sky->lg))
             return DEFAULT_LG;

@@ -26,9 +26,9 @@ class Language
     }
 
     function __construct() {
-        global $sky;
+        $lg = MVC::$cc->setLG_h();
         if (!$this->error = (int)(1 !== DEBUG))
-            $sky->lg && ($this->list = $sky->lg) or $this->error = 2;
+            $lg && ($this->list = $lg) or $this->error = 2;
         $this->error or DEFAULT_LG && in_array(DEFAULT_LG, $this->list) or $this->error = 3;
     }
 
