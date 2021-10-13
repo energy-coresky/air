@@ -22,7 +22,7 @@ function view($in, $return = false, $param = null) {
     trace("$layout^$mvc->body", 'LAYOUT^BODY', 1);
 
     if ($layout || $mvc->body) {
-        $_vars =& MVC::recompile($mvc, $layout);
+        $_vars =& MVC::fire($mvc, $layout);
         ob_start();
         $sky->in_tpl = true;
         call_user_func(function() use (&$_vars) {
@@ -338,7 +338,7 @@ class MVC extends MVC_BASE
         return "$dir/$name.jet";
     }
 
-    static function &recompile($mvc, $layout = '') {
+    static function &fire($mvc, $layout = '') {
         global $sky;
         $vars = SKY::$vars;
         if (is_string($mvc)) {
