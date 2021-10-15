@@ -567,7 +567,9 @@ class MVC extends MVC_BASE
             }
         }
         trace("$class::$action()" . ($class == $real ? '' : ' (virtual)'), 'TOP-VIEW');
-        MVC::$mc = new ($gape ? $class . "_cached" : $class);
+        if ($gape)
+            $class .= '_cached';
+        MVC::$mc = new $class;
         MVC::$cc = new common_c;
         SKY::$vars['k_class'] = $class;
         $me->set(MVC::$mc->head_y($action), true);
