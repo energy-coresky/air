@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see http://coresky.net/license
-
 class Debug
 {
     static function start() {
