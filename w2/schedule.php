@@ -4,7 +4,9 @@
 
 class Schedule
 {
-    private $single_thread = false; # POpen Disabled by security reasons, exec all in one process
+    private $single_thread; # function popen() disabled by security reasons, exec all in one process
+    private $max_exec_sec;
+    private $is_off = false;
     private $started = 0;
     private $arg = -1;
     private $amp = '';
@@ -12,20 +14,17 @@ class Schedule
     private $func   = [];
     private $handle = [];
     private $stdout = [];
-    private $now    = [];
     private $php    = 'php';
 
     const TPL = '%s, execution time: %01.3f sec, SQL nums in cron tasks: %d';
-    const UPD = 'update $_memory set tmemo=substr(concat(%s,%s,tmemo),1,10000) where id=%d';
+    const UPD = 'update $_memory set tmemo=substr($cc(%s,%s,tmemo),1,10000) where id=%d';
 
-    public $dt;
-    public $imemo;
-
-    function __construct($debug_level = 1, $single_thread = false) {
+    function __construct($max_exec_minutes = 10, $debug_level = 1, $single_thread = false) {
         global $argv, $sky;
 
         'WINNT' == PHP_OS or $this->php = PHP_BINDIR . '/php';
         $this->single_thread = !function_exists('popen') || $single_thread;
+        $this->max_exec_sec = 60 * $max_exec_minutes;
 
         if (isset($argv[1])) {
             if ('@' == $argv[1][0]) {
@@ -91,19 +90,36 @@ class Schedule
         return $ip == gethostbyname($host);
     }
 
+    function turn($rule, $func) { # $rule == on | off
+        $this->is_off = $func();
+        'off' == $rule or $this->is_off = !$this->is_off;
+        return $this;
+    }
+
     function at($schedule, $load_sky = true, $func = null) {
         # Minutes Hours Days Months WeekDays-0=sunday  *   or  12   or  */3   or   1,2,3
         global $argv, $sky;
 
+        if ($this->is_off) {
+            $this->i++;
+            return $this;
+        }
+            
         if (is_callable($load_sky))
             $func = $load_sky;
 
         if (-1 == $this->arg) {
             if ($this->ok($schedule)) {
+                if ($load_sky && !SKY::$dd)
+                    $sky->load();
                 if ($this->single_thread) {
-                    if ($load_sky && !SKY::$dd)
-                        $sky->load();
+                    $sec = time();
                     $func();
+                    if (is_file($fn = "var/cron/task_$this->i"))
+                        unlink($fn);
+                    $sec = time() - $sec;
+                    if ($sec > $this->max_exec_sec)
+                        $this->write("Exec time: $sec seconds", "single/$this->i", true);
                 } else {
                     $this->handle[$this->i] = popen("$this->php $argv[0] $this->amp$this->i 2>&1", 'r');
                     $this->stdout[$this->i] = '';
@@ -122,33 +138,45 @@ class Schedule
     }
 
     function ok($schedule = '') {
-        if (!$this->now) {
-            $ary = getdate();
-            $this->now = [$ary['minutes'], $ary['hours'], $ary['mday'], $ary['mon'], $ary['wday']];
+        static $now = false;
+        if (!$now) {
+            $now = getdate();
+            $now = [$now['minutes'], $now['hours'], $now['mday'], $now['mon'], $now['wday']];
+        }
+
+        if ($flock = 'f' == @$schedule[0]) {
+            $schedule = trim(substr($schedule, 1));
+            if (is_file($fn = "var/cron/task_$this->i")) {
+                $sec = time() - filemtime($fn);
+                if ($sec > $this->max_exec_sec)
+                    $this->write("Exec time: $sec seconds", $fn, true);
+                return false;
+            }
         }
         if ('-' == @$schedule[0])
             return false;
-        if ('+' == @$schedule[0])
-            return true;
-
-        $in = preg_split("/\s+/", $schedule);
-        for ($i = 0; $i < 5; $i++) {
-            if (!isset($in[$i]) || $in[$i] === '*' || $in[$i] === '')
-                continue;
-
-            if (isset($in[$i][1]) && $in[$i][1] == '/') {
-                if ($this->now[$i] % substr($in[$i], 2) == 0)
+        if ('+' != @$schedule[0]) {
+            $in = preg_split("/\s+/", $schedule);
+            for ($i = 0; $i < 5; $i++) {
+                if (!isset($in[$i]) || $in[$i] === '*' || $in[$i] === '')
                     continue;
-                return false;
+
+                if (isset($in[$i][1]) && $in[$i][1] == '/') {
+                    if ($now[$i] % substr($in[$i], 2) == 0)
+                        continue;
+                    return false;
+                }
+                $ret = false;
+                foreach (explode(',', $in[$i]) as $d) {
+                    if ($d == $now[$i])
+                        $ret = true;
+                }
+                if (!$ret)
+                    return false;
             }
-            $ret = false;
-            foreach (explode(',', $in[$i]) as $d) {
-                if ($d == $this->now[$i])
-                    $ret = true;
-            }
-            if (!$ret)
-                return false;
         }
+        if ($flock)
+            file_put_contents($fn, time());
         return true;
     }
 
@@ -182,6 +210,7 @@ class Schedule
     function shutdown() { # 2do: resolve if a task longer then 60 sec
         $write = $except = NULL;
         $finished = $time = 0;
+        $tasks = array_keys($this->handle);
         while ($this->handle) {
             $read = [];
             foreach ($this->handle as &$one)
@@ -213,7 +242,7 @@ class Schedule
             foreach ($eof as $i => &$hdl) {
                 if (feof($hdl)) {
                     if ('' !== $this->stdout[$i])
-                        $this->write($this->stdout[$i], $i, true);
+                        $this->write($this->stdout[$i], $i);
                     pclose($this->handle[$i]);
                     $finished++;
                     unset($this->handle[$i]);
@@ -222,10 +251,16 @@ class Schedule
             if ($this->started == $finished)
                 break; # the end
         }
+        foreach ($tasks as $i)
+            if (is_file($fn = "var/cron/task_$i"))
+                unlink($fn);
+        $sec = microtime(true) - START_TS;
+        if ($sec > $this->max_exec_sec)
+            $this->write("Exec time: $sec seconds", 'ALL', true);
 
         global $sky;// $sky->was_error=1;
         $sky->was_error or $sky->debug = false;
         if ($this->started && $this->single_thread && SKY::$dd)
-            $this->n_cron_dt = sprintf(self::TPL, NOW, microtime(true) - START_TS, SQL::$query_num);
+            $this->n_cron_dt = sprintf(self::TPL, NOW, $sec, SQL::$query_num);
     }
 }

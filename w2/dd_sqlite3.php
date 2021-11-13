@@ -89,7 +89,8 @@ class dd_sqlite3 implements Database_driver
     }
 
     function _xtrace() {
-        ; #2do
+        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=15) where id=16');
+        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=1) where id=15');
     }
 
     function _tables($table = false) {
