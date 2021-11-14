@@ -163,7 +163,7 @@ class Schedule
             }
         }
         if ($flock)
-            file_put_contents($fn, time());
+            file_put_contents($fn, 'Start at ' . date(DATE_DT));
         return true;
     }
 
