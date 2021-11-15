@@ -12,15 +12,13 @@ class Schedule
     private $arg = 0;
     private $handle = [];
     private $stdout = [];
-    private $php    = 'php';
-
-    const TPL = '%s, execution time: %01.3f sec, SQL nums in cron tasks: %d';
-    const UPD = 'update $_memory set tmemo=substr($cc(%s,%s,tmemo),1,10000) where id=%d';
+    private $script = 'php ';
 
     function __construct($max_exec_minutes = 10, $debug_level = 1, $single_thread = false) {
         global $argv, $sky;
 
-        'WINNT' == PHP_OS or $this->php = PHP_BINDIR . '/php';
+        'WINNT' == PHP_OS or $this->script = PHP_BINDIR . '/php ';
+        $this->script .= $argv[0];
         $this->single_thread = !function_exists('popen') || $single_thread;
         $this->max_exec_sec = 60 * $max_exec_minutes;
 
@@ -85,6 +83,13 @@ class Schedule
         return $ip == gethostbyname($host);
     }
 
+    function database($rule = true) {
+        global $sky;
+        if ($rule && !SKY::$dd)
+            $sky->load();
+        SQL::$dd = SKY::$dd;
+    }
+
     function turn($func) {
         $this->is_on = $func();
         return $this;
@@ -92,8 +97,6 @@ class Schedule
 
     function at($schedule, $load_sky = true, $func = null) {
         # Minutes Hours Days Months WeekDays-0=sunday  *   or  12   or  */3   or   1,2,3
-        global $argv;
-
         $this->task++;
         if (!$this->is_on)
             return $this;
@@ -113,7 +116,7 @@ class Schedule
                     if ($sec > $this->max_exec_sec)
                         $this->write("Exec time: $sec seconds", "single/$this->task", true);
                 } else {
-                    $this->handle[$this->task] = popen("$this->php $argv[0] $this->amp$this->task 2>&1", 'r');
+                    $this->handle[$this->task] = popen("$this->script $this->amp$this->task 2>&1", 'r');
                     $this->stdout[$this->task] = '';
                 }
             }
@@ -136,7 +139,7 @@ class Schedule
             if (is_file($fn = "var/cron/task_$this->task")) {
                 $sec = time() - filemtime($fn);
                 if ($sec > $this->max_exec_sec)
-                    $this->write("Exec time: $sec seconds", $fn, true);
+                    $this->write("Exec time: $sec seconds", basename($fn), true);
                 return false;
             }
         }
@@ -177,44 +180,34 @@ class Schedule
     }
 
     function write($str, $task = 0, $is_error = false) {
-        if ($unk = !$task)
-            $task = $this->single_thread ? $this->task : $this->arg;
+        $task or $task = $this->task;
         $date = date(DATE_DT);
-        if (!$this->amp || !SKY::$dd) {
-            echo $unk ? "$str\n" : "$date [$task] $str\n";
-            return;
-        }
-        if ($is_error) {
+        $this->database($this->amp);
+        $tpl = 'update $_memory set tmemo=substr($cc(%s,%s,tmemo),1,10000) where id=%d';
+        if (!SKY::$dd) {
+            echo "$date [$task] $str\n";
+        } elseif ($is_error) {
             $time = sprintf("$date %01.3fs - cron task #$task:", microtime(true) - START_TS);
-            sqlf(self::UPD, sprintf(span_b, "<b>$time</b>\n"), html("$str\n\n"), 4);
+            sqlf($tpl, sprintf(span_b, "<b>$time</b>\n"), html("$str\n\n"), 4);
         } else {
-            sqlf(self::UPD, "$date [$task] ", html("$str\n"), 2);
+            sqlf($tpl, "$date [$task] ", html("$str\n"), 2);
         }
-    }
-
-    function database($rule = true) {
-        global $sky;
-        if ($rule && !SKY::$dd)
-            $sky->load();
-        SQL::$dd = SKY::$dd;
     }
 
     function shutdown() {
         $sec = microtime(true) - START_TS;
 
         if ($this->arg) { # popen process
-            global $sky;
             if (is_file($fn = "var/cron/task_$this->arg"))
                 unlink($fn);
-            $error = $sec > $this->max_exec_sec;
-            $this->database($sky->was_error || $error);
-            if ($error)
+            if ($sec > $this->max_exec_sec)
                 $this->write("Exec time: $sec seconds", $this->arg, true);
         }
 
         if ($this->arg || $this->single_thread) {
+            $tpl = '%s, execution time: %01.3f sec, SQL nums in cron tasks: %d';
             if (SKY::$dd)
-                $this->n_cron_dt = sprintf(self::TPL, NOW, $sec, SQL::$query_num);
+                $this->n_cron_dt = sprintf($tpl, NOW, $sec, SQL::$query_num);
             return;
         }
 
