@@ -20,10 +20,10 @@ class Jet
     }
 
     static function q($pattern, $arg) {
-        $arg = in_array(@$arg[0], [false, "'", '"']) ? $arg : '"' . escape($arg, false, '\\"') . '"';
+        $arg = in_array(@$arg[0], [false, "'", '"']) ? $arg : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"';
         return sprintf("<?php $pattern ?>", $arg);
     }
-    
+
     function __construct($layout, $name, $fn = false, $vars = null) {
         global $sky;
 

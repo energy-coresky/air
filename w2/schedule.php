@@ -36,7 +36,7 @@ class Schedule
         $sky->debug = $debug_level;
         $sky->shutdown[] = $this;
         if (!$this->arg && !$this->amp)
-            echo "Multy-threads: " . ($this->single_thread ? "No\n" : "Yes\n"):
+            echo "Multy-threads: " . ($this->single_thread ? "No\n" : "Yes\n");
     }
 
     function __get($name) {

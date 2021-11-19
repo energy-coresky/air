@@ -5,12 +5,13 @@ class dd_sqlite3 implements Database_driver
     use SQL_COMMON;
 
     public $name = 'SQLite3';
-    public $quote = '`';
+    public $quote = '"'; # no: `switch.sqlite3`.`memory` yes: `memory` yes: "memory" yes: 'memory'
     public $conn;
     public $pref;
 
     function __construct($filename, $pref) {
         $this->conn = new SQLite3($filename) or exit('connect');
+        $this->conn->busyTimeout(30000); # 30 secs
         $this->pref = $pref;
     }
 
@@ -28,10 +29,12 @@ class dd_sqlite3 implements Database_driver
     }
 
     function escape($s, $quote = true) {
-        return $quote ? "'" . $this->conn->escapeString($s) . "'" : $this->conn->escapeString($s);
+        return $quote ? "'" . SQLite3::escapeString($s) . "'" : SQLite3::escapeString($s);
     }
 
-    function unescape($s, $quote = true) {}
+    function unescape($s, $quote = true) {
+        return $quote ? str_replace("''", "'", substr($s, 1, -1)) : str_replace("''", "'", $s);
+    }
 
     function error() {
         return $this->conn->lastErrorMsg();

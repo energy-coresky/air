@@ -149,7 +149,7 @@ class SKY implements PARADISE
             $this->s_trace_single = 0; # single click done
         foreach (SKY::$mem as $char => &$v)
             $v[0] && $v[2] && SKY::sql($char);
-        $this->ghost = true;
+        $this->ghost = true; // version contr c_name statp visit online_ts
     }
 
     function __get($name) {
@@ -222,7 +222,7 @@ class SKY implements PARADISE
             $new = array_join($x[3], function($k, $v) {
                 return "$k " . escape($v);
             });
-            if ($new === $x[1]) $f1 = 0; else $x[1] = $new;
+            $new === $x[1] ? ($f1 = 0) : ($x[1] = $new);
         }
         if ($f2 = is_array($x[2])) {
             if (!$f2 = $flags & 2 | $f1)
@@ -520,12 +520,9 @@ function unhtml($str, $mode = ENT_QUOTES) {
     return html_entity_decode($str, $mode, ENC);
 } # list($month, $day, $year) = sscanf('Январь 01 2000', "%s %d %d");
 
-function escape($in, $reverse = false, $chars = "\\\n") {
-    $src = str_split($chars);
-    $dst = array_map(function($v) use ($src) {
-        return $src[0] . ("\n" == $v ? 'n' : $v);
-    }, $src);
-    return strtr($in, $reverse ? array_combine($dst, $src) : array_combine($src, $dst));
+function escape($in, $reverse = false) {
+    $ary = ["\\" => "\\\\", "\r" => "\\r", "\n" => "\\n"];
+    return strtr($in, $reverse ? array_flip($ary) : $ary);
 }
 
 function strand($n = 23) {

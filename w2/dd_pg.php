@@ -34,6 +34,12 @@ class dd_pg implements Database_driver
         return $quote ? "'" . pg_escape_string($this->conn, $s) . "'" : pg_escape_string($this->conn, $s);
     }
 
+    function unescape($s, $quote = true) {
+        if ($quote)
+            $s = substr($s, 1, -1);
+        return strtr($s, ['\0' => "\x00", '\n' => "\n", '\r' => "\r", '\\\\' => "\\", '\\\'' => "'", '\"' => '"', '\Z' => "\x1a"]);
+    }
+
     function error() {
         return $this->error_str;
     }
@@ -52,7 +58,7 @@ class dd_pg implements Database_driver
         if ($row && 'C' == $meth)
             $row = $row[0];
         if ($free || !$row)
-            mysqli_free_result($q);
+            pg_free_result($q);
         return $row;
     }
 
@@ -79,6 +85,21 @@ class dd_pg implements Database_driver
     }
 
     static function end($par = true) {
+    }
+
+    function _xtrace() {
+        sqlf('update $_memory d left join $_memory s on (s.id= if(d.id=15, 1, 15)) set d.tmemo=s.tmemo where d.id in (15, 16)');
+    }
+
+    function _tables($table = false) {
+        if ($table)
+            return (bool)sqlf('+show tables like %s', $this->pref . $table);
+        return sqlf('@show tables');
+    }
+
+    function _rows_count($table) {
+        $row = sqlf("-show table status like %s", $this->pref . $table);
+        return $row[4];
     }
 
     function f_cc(...$in) {
