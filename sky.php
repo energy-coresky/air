@@ -58,6 +58,7 @@ class SKY implements PARADISE
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
             $this->error_last = $no;
+            $this->was_error |= SKY::ERR_DETECT;
             if (error_reporting() & $no && ($this->debug || !SKY::$dd || $this->s_prod_error)) {
                 $this->error_title = 'PHP ' . ($err = Debug::error_name($no));
                 trace("$err: $message", true, $line, $file, $context);
@@ -187,21 +188,20 @@ class SKY implements PARADISE
         $k = $args[0];
         $v = isset($args[1]) ? $args[1] : null;
         $old = isset(SKY::$mem[$char]) or SKY::$mem[$char] = [0, null, $v, []];
-        $ary =& SKY::$mem[$char];    # s - system conf (hight load) for `read` usage mainly
-        $flag = 1;                   # a - admin conf
-        if (is_array($k)) {          # n - cron conf or low load usage (used in w2/gate.php also)
-            $ary[3] = $k + $ary[3];  # v - visitor
-        } elseif (is_null($v)) {     # u - user
-            unset($ary[3][$k]);      # i,j,k - Language data
+        $x =& SKY::$mem[$char];    # s - system conf (hight load) for `read` usage mainly
+        $flag = 1;                 # a - admin conf
+        if (is_array($k)) {        # n - cron conf or low load usage (used in w2/gate.php also)
+            $x[3] = $k + $x[3];    # v - visitor
+        } elseif (is_null($v)) {   # u - user
+            unset($x[3][$k]);      # i,j,k - Language data
         } elseif (is_null($k)) {
-            if ($old) {
-                if (is_array($v)) $ary[2] = $v + $ary[2]; else unset(SKY::$mem[$char][2][$v]);
-            }
+            if ($old)
+                if (is_array($v)) $x[2] = $v + $x[2]; else unset($x[2][$v]);
             $flag = 2;
         } else {
-            $ary[3][$k] = $v;
+            $x[3][$k] = $v;
         }
-        return $ary[0] |= $flag;
+        return $x[0] |= $flag;
     }
 
     static function &ghost($char, $original, $tpl = '', $flag = 0) {
@@ -217,6 +217,8 @@ class SKY implements PARADISE
 
     static function sql($char, $return = false) {
         $x =& SKY::$mem[$char];
+        if ('s' == $char && !$x[1]) # protect if SQL select failed
+            return false;
         $flags =& $x[0];
         if ($f1 = $flags & 1) {
             $new = array_join($x[3], function($k, $v) {
@@ -306,6 +308,12 @@ class SKY implements PARADISE
             'core' => $core,
             'app' => $app,
         ];
+    }
+
+    function log($mode, $data) {
+        if (!in_array($this->s_test_mode, [$mode, 'all']))
+            return;
+        sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
     }
 }
 

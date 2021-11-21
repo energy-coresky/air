@@ -37,6 +37,21 @@ class HEAVEN extends SKY
         return parent::__get($name);
     }
 
+    function __construct() {
+        parent::__construct();
+
+        header('Content-Type: text/html; charset=' . ENC);
+        defined('DESIGN') or define('DESIGN', false);
+        define('DIR_V', DESIGN ? WWW . 'view' : 'view');
+        $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
+        if (false === $this->method)
+            throw new Error('Unknown request method');
+
+        define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
+        define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
+        define('SNAME', $_SERVER['SERVER_NAME']);
+    }
+
     private function extra_file($sname) {
         if (!EXTRA || 1 != $this->method) # GET only
             return $this->extra = 0;
@@ -54,16 +69,6 @@ class HEAVEN extends SKY
     }
 
     function load() {
-        header('Content-Type: text/html; charset=' . ENC);
-        defined('DESIGN') or define('DESIGN', false);
-        define('DIR_V', DESIGN ? WWW . 'view' : 'view');/////////2do: modules
-        $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
-        if (false === $this->method)
-            throw new Error('Unknown request method');
-
-        define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
-        define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
-        define('SNAME', $_SERVER['SERVER_NAME']);
 
         $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
         if (!preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname))
@@ -137,12 +142,6 @@ class HEAVEN extends SKY
         if ($val == null)
             return $flag ? $storage & $flag : $storage;
         SKY::$char(null, ['flags' => $val ? $flag | $storage : ~$flag & $storage]);
-    }
-
-    function log($mode, $data) {
-        if (!in_array($this->s_test_mode, [$mode, 'all']))
-            return;
-        sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
     }
 
     function tail_x($plus = '', $stdout = '') {

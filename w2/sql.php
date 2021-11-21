@@ -15,7 +15,7 @@ final class SQL
     const NO_FUNC = 1024;
 
     public $mode = 0;
-    public $error = false;
+    public $parse_error = false;
     public $stmt = true;
     public $qb_ary = false;
     public $_dd; # database driver for this object
@@ -23,6 +23,7 @@ final class SQL
     private $table; # onduty table for this object
     private $quote;
 
+    static $last_error = 0;
     static $query_num = 0;
     static $dd;  # selected database driver
 
@@ -140,7 +141,7 @@ final class SQL
     }
 
     function exec() {
-        if ($this->error)
+        if ($this->parse_error)
             return false;
        $qstr = $this->qstr; # build sql string
         if (SQL::NO_EXEC & $this->mode)
@@ -156,7 +157,7 @@ final class SQL
 
         global $sky;
         $ts = microtime(true);
-        if ($no = $this->_dd->query($qstr, $this->stmt))
+        if ($no = SQL::$last_error = $this->_dd->query($qstr, $this->stmt))
             $sky->was_error |= SKY::ERR_DETECT;
         if ($sky->debug || $no && $sky->s_prod_error) {
             $this->mode++; # add 1 depth
@@ -220,7 +221,7 @@ final class SQL
     }
 
     private function parseT($in = false) {
-        $this->error = false;
+        $this->parse_error = false;
         if ($in) {
             $this->depth = 2;
             $this->qstr = array_shift($in);
@@ -236,12 +237,12 @@ final class SQL
         $re = '\$_`|\$[@\$\.\+`]|\\\\[1-9]|@@|!!|' . $this->replace_nop();
 
         if ($this->qstr = preg_replace_callback("~$re~u", [$this, 'replace_par'], $this->qstr))
-            count($this->in) == $this->i or $this->error = 'Placeholder\'s count don\'t match parameters count';
+            count($this->in) == $this->i or $this->parse_error = 'Placeholder\'s count don\'t match parameters count';
     
-        if ($this->error) {
+        if ($this->parse_error) {
             global $sky;
             $sky->error_title = 'SQL parse Error';
-            trace("$this->error\nSQL-x: $this->qstr", true, $this->depth + ($this->mode & 7));
+            trace("$this->parse_error\nSQL-x: $this->qstr", true, $this->depth + ($this->mode & 7));
         }
         return $this->qstr;
     }
@@ -274,7 +275,7 @@ final class SQL
             return $this->replace_nop($match);
 
         $val =& $this->in[$this->i++];
-        if ($this->error)
+        if ($this->parse_error)
             return $val = '??'; # run faster
         if (is_bool($val))
             return $val = (int)$val;
@@ -284,19 +285,19 @@ final class SQL
             case '$.': # numbers
                 if (is_num($val))
                     return $val;
-                $sky->debug ? ($this->error = "$param not numeric") : die;
+                $sky->debug ? ($this->parse_error = "$param not numeric") : die;
             break;
             case '$+': # string (scalar)
                 if (null === $val)
                     return $val = 'NULL';
                 if (is_scalar($val))
                     return $val = is_num($val) ? $val : $this->_dd->escape($val);
-                $sky->debug ? ($this->error = "$param not a scalar") : die;
+                $sky->debug ? ($this->parse_error = "$param not a scalar") : die;
             break;
             case '$`': # column of a table, free to use
                 if (is_string($val))
                     return $val = $q . str_replace($q, $q . $q, trim($val, $q)) . $q;
-                $this->error = "$param not a string";
+                $this->parse_error = "$param not a string";
             break;
             case '$$': # free to use, parsed sql part
                 # ? $this->mode |= $val->mode;
@@ -306,12 +307,12 @@ final class SQL
                     return $val = 'NULL';
                 if ('' === $val || is_num($val))
                     return $val;
-                $this->error = "$param is not instanceof SQL";
+                $this->parse_error = "$param is not instanceof SQL";
             break;
             case '$@':
                 if (is_array($val) && is_num(key($val)))
                     return $val = $this->array_join(array_values($val));
-                $sky->debug ? ($this->error = "$param not array or key0 not numeric") : die;
+                $sky->debug ? ($this->parse_error = "$param not array or key0 not numeric") : die;
             break;
             case '!!': # scalar or array, dangerous, NOT escaped! use it as least as can
                 if (is_scalar($val))
@@ -324,7 +325,7 @@ final class SQL
                     return $val = 'NULL';
                 if (is_array($val))
                     return $val = $this->array_join($val, '@@' == $match[0]);
-                $this->error = "$param not an array or scalar";
+                $this->parse_error = "$param not an array or scalar";
             break;
         }
         return $val = '>>' . gettype($val) . '<<';
@@ -347,19 +348,19 @@ final class SQL
                 $esc = false;
                 $v = 'NULL';
             } elseif (!(is_scalar($v) || $v instanceof SQL)) {
-                $this->error = "$param not a scalar";
+                $this->parse_error = "$param not a scalar";
             } elseif ('+' == $char) {
                 $esc = true;
             } elseif ($pref) {
                 $esc = false;
                 if ('.' == $char && !is_num($v))
-                    $this->error = "$param not numeric";
+                    $this->parse_error = "$param not numeric";
                 if ('$' == $char) {
                     if ($v instanceof SQL) $v = (string)$v;
-                    elseif ('' !== $v && !ctype_digit((string)$v)) $this->error = "$param not instance of SQL";
+                    elseif ('' !== $v && !ctype_digit((string)$v)) $this->parse_error = "$param not instance of SQL";
                 }
             }
-            if ($this->error)
+            if ($this->parse_error)
                 $v = '>>' . gettype($v) . '<<';
             $q = $this->quote;
             $keys[] = '`' == $char ? $q . str_replace($q, $q . $q, trim($k, $q)) . $q : $k;
