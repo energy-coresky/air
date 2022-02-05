@@ -329,6 +329,7 @@ class MVC extends MVC_BASE
             '__lng' => 'language',
             '__vis' => 'azure',
             '__svg' => 'svg',
+            '__glb' => 'globals',
         ];
         if (isset($wing2[$name]))
             return DIR_S . '/w2/' . $wing2[$name] . '.jet';

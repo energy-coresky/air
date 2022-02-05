@@ -1,7 +1,7 @@
 #.jet core template
 
 #.dev //////////////////////////////////////////////////////////////////////////////
-~{- this jet template used by `standard_c` class -}
+~{- this jet template used by `standard_c` & Install class -}
 
 <h1><u>DEV instance only</u> configuration and information</h1>
 <fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
@@ -11,6 +11,7 @@
     <div><a @href(sky.g.box()))>Open SkyGate</a></div>
     <div><a @href(ajax(['_lang','list'],box))>Open SkyLang</a></div>
     <div><a @href(ajax(['_inst','database'],box))>Prepare Install</a></div>
+    <div><a @href(ajax(['_glob','dirs'],box))>Globals report</a></div>
     <div><a href="_visual">Open Visual</a></div>
     <div><a @href(ajax('',alert,'_drop'))>Drop All Cache</a></div>
     @if('WINNT'==PHP_OS)<div><a href="adm?get_dev">Open DEV.SKY.</a></div>~if

@@ -18,11 +18,11 @@ class Schedule
         global $argv, $sky;
 
         'WINNT' == PHP_OS or $this->script = PHP_BINDIR . '/php ';
-        $this->script .= $argv[0];
         $this->single_thread = !function_exists('popen') || $single_thread;
         $this->max_exec_sec = 60 * $max_exec_minutes;
 
         if (isset($argv[1])) {
+            $this->script .= $argv[0];
             if ('@' == $argv[1][0]) {
                 $this->amp = '@';
                 $argv[1] = substr($argv[1], 1);
@@ -30,6 +30,7 @@ class Schedule
             if (strlen($argv[1]))
                 $this->arg = (int)$argv[1];
         } elseif ('cli' != PHP_SAPI) { # you can use: * * * * * curl http://addr/cron.php
+            $this->script .= DIR . '/main/cron.php';
             $this->amp = '@';
             $this->single_thread = $sky->cli = true;
         }

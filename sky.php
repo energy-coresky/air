@@ -295,7 +295,7 @@ class SKY implements PARADISE
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.120 2021-11-15T00:03:00+02:00 energy';
+    const CORE = '0.121 2022-02-05T08:41:00+02:00 energy';
 
     static function version() {
         global $sky;
@@ -345,6 +345,17 @@ class eVar implements Iterator
     function __get($name) {
         return $this->e[$name] ?? null;
     }
+
+    function __call($name, $args) {
+        return isset($this->e[$name]) ? call_user_func_array($this->e[$name], $args) : null;
+    }
+
+	function __invoke($in) {
+		call_user_func($this->e['row_c'], $in, $this);
+		$this->state = 0;
+		$this->i = -1;
+		return $this;
+	}
 
     function one() {
         if ($this->state > 1)

@@ -1,0 +1,43 @@
+
+#.dirs
+<div style="margin:0 10px 10px 10px">
+<h1>PHP Version: {{PHP_VERSION}}, Time now: {{NOW}}<br>
+Used CoreSky Version: {{SKY::version()['app'][1]}}<br>
+App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}</h1>
+<h2>Modules: {{$modules}}</h2>
+<button onclick="sky.g.save()">Save report</button>
+@loop($defs as $key => $ary)
+  <h2>{{$key}}</h2>
+  <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
+    @loop($ary as $ident => $list)
+      @loop($e_idents($list))
+      <tr class="{{$row->class}}">
+        <td width="33%">{{$ident}}</td>
+        <td width="33%"><span>{{$row->pos}}</span></td>
+        <td width="34%">{{$row->desc}}</td>
+      </tr>
+      ~loop
+      @empty
+      <tr>
+        <td style="background: #dfd; padding:33px;">{{$key}} definitions not found</td>
+      </tr>
+    ~loop
+  </table>
+~loop
+</div>
+@inc(.jscss)
+#.dirs
+
+#.jscss
+<style>
+.redy {background:pink}
+.norm {border-top:1px solid silver}
+</style>
+<script>
+sky.set_file_clk('#box-in');
+sky.g.save = function() {
+	let html = $('#box-in').html();
+	ajax('save', {html:html}, alert);
+}
+</script>
+#.jscss

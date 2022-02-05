@@ -56,6 +56,10 @@ class Jet
             file_put_contents($fn, $out);
         }
     }
+
+    static function warm_all() {
+        //2do
+    }
     
     private function parse($name, $part = '') {
         $in = file_get_contents(MVC::fn_tpl($name));
@@ -278,14 +282,15 @@ class Jet
         if (!$arg) { # do-while
             $this->loop[] = 'do';
             return "<?php $iv = 0; do { ?>";
-        } elseif (preg_match('/^\$e_\w+$/', $arg)) { # eVar style cycle
-            $this->loop[] = 'foreach';
-            return "<?php $iv = 0; foreach ($arg as \$row): ?>";
         }
         $is_for = $is_foreach = false;
         foreach (token_get_all("<?php $arg") as $t) {
             $is_for |= is_string($t) && ';' == $t;
             $is_foreach |= is_array($t) && T_AS == $t[0];
+        }
+        if (!$is_foreach && '$e_' == substr($arg, 0, 3)) {
+            $is_foreach = true;
+            $arg .= ' as $row'; # eVar style cycle
         }
         $this->loop[] = ($for = $is_foreach ? 'foreach' : ($is_for ? 'for' : 'while'));
         return "<?php $iv = 0; $for ($arg): ?>";

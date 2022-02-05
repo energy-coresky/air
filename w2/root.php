@@ -245,8 +245,8 @@ class Root
             break;
             case 4:
                 if ($_POST) {
-                    $s = $sky->s_statp + 1;
-                    $sky->s_statp = preg_match("/^\d{4}$/", $s) ? $s . 'p' : '1000p';
+                    $s = substr($sky->s_statp, 0, -1) + 1;
+                    $sky->s_statp = $s > 9999 ? '1000p' : $s . 'p';
                     jump(URI);
                 }
                 echo Form::A(['pre' => "$sky->s_statp/*.js |.css"], [

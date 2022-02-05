@@ -95,8 +95,8 @@ class HEAVEN extends SKY
             $this->orientation = $wo;
         }
         if (DEV && Ext::$static) {
-            $s = (int)$this->s_statp + 1;
-            $this->s_statp = preg_match("/^\d{4}$/", $s) ? $s . 'p' : '1000p';
+            $s = substr($this->s_statp, 0, -1) + 1;
+            $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
         }
 
         $referer = $_SERVER['HTTP_REFERER'] ?? '';

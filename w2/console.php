@@ -2,8 +2,8 @@
 
 class Console
 {
-    function __construct($arg1) {
-        $this->{"_$arg1"}();
+    function __construct($argv) {
+        call_user_func_array([$this, "_$argv[1]"], array_slice($argv, 2));
     }
 
     function __call($name, $args) {
@@ -15,6 +15,10 @@ class Console
         echo sqlf('+select tmemo from $_memory where id=%d', $argv[2] ?? 1);
     }
 
+    function _g() {
+        (new Globals)->dirs();
+    }
+
     function _c() {
         $list = Gate::controllers();
         echo "Reparsed:\n" . implode(' ', $list);
@@ -22,6 +26,11 @@ class Console
 
     function _cache() {
         echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
+    }
+
+    function _sql($sql) {
+        $r = sqlf($sql);
+        echo 'result: ' . print_r($r, 1);
     }
 
     function _jet() {

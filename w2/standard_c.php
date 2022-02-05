@@ -207,6 +207,11 @@ class standard_c extends Controller
         return call_user_func([new Language, $this->_c], $this->_a);
     }
 
+    function j_glob() {
+        MVC::body('_glb.' . substr($this->_c, 2));
+        return call_user_func([new Globals, $this->_c], $this->_a);
+    }
+
     function j_visual() {
         MVC::body('_vis.' . substr($this->_c, 2));
         return call_user_func([new Azure, $this->_c], $this->_a);

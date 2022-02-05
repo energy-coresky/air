@@ -97,10 +97,10 @@ div#box div#box-in {
     background-color: rgba(255,255,255, 1);
     overflow: auto;
 }
-#box-in pre span:hover, #err-top pre span:hover {
+#box-in pre span:hover, #box-in td span:hover, #err-top pre span:hover {
     color: red;
 }
-#box-in pre span, #err-top pre span {
+#box-in pre span, #box-in td span, #err-top pre span {
     cursor:default;
 }
 .esc {

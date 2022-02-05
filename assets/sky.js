@@ -343,7 +343,7 @@ var sky = {
         }
     },
     set_file_clk: function(id) {
-        $(id + ' pre span').each(function() {
+        $(id + ' pre span, ' + id + ' td span').each(function() {
             $(this).click(function() {
                 if (!$(this).attr('style'))
                 ajax('', {name:$(this).html(), c:$(this).next().hasClass('error')}, function(r) {
