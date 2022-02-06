@@ -11,7 +11,6 @@ Energy
 
 ## Samples? Check `apps` dir
 
-Also may work AB.SKY live demo: http://csky.mipropia.com/web/
 AB (absolute busy) application is product of InfoParc http://absolutebusy.com/ moved to SKY.
 
 ## Documentation (russian only):
