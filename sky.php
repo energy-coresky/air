@@ -350,12 +350,11 @@ class eVar implements Iterator
         return isset($this->e[$name]) ? call_user_func_array($this->e[$name], $args) : null;
     }
 
-	function __invoke($in) {
-		call_user_func($this->e['row_c'], $in, $this);
-		$this->state = 0;
-		$this->i = -1;
-		return $this;
-	}
+    function __invoke($in) {
+        call_user_func($this->e['row_c'], $in, $this);
+        $this->state = 0;
+        return $this;
+    }
 
     function one() {
         if ($this->state > 1)
@@ -413,9 +412,10 @@ class eVar implements Iterator
 
     function next() {
         $exit = function ($fail) {
+            $this->row = false;
+            $this->i--;
             if ($this->dd)
                 $this->dd->free($this->e['query']->stmt);
-            $this->row = false;
             if ($fail)
                 throw new Error("eVar cycle error");
         };

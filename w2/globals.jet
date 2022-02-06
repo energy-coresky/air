@@ -1,20 +1,37 @@
+#.jet core template
 
-#.dirs
-<div style="margin:0 10px 10px 10px">
+#.form ==========================================================================================================
+<h2>{{$ident}}</h2>
+Comment: <input value="Not a problem" size="100">
+<button onclick="sky.g.mark(this,'{{$ident}}')">Mark</button>
+#.form
+
+#.report.mark ==========================================================================================================
+<div style="margin:0 10px 10px 10px" id="report-inner">
+#.save
 <h1>PHP Version: {{PHP_VERSION}}, Time now: {{NOW}}<br>
 Used CoreSky Version: {{SKY::version()['app'][1]}}<br>
 App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}</h1>
 <h2>Modules: {{$modules}}</h2>
 <button onclick="sky.g.save()">Save report</button>
 @loop($defs as $key => $ary)
-  <h2>{{$key}}</h2>
+  @if('VAR'==$key)<h2>VARS ASSIGNING IN THE GLOBAL NAMESPACE</h2>
+  @else<h2>{{$key}}</h2>
+  ~if
   <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
     @loop($ary as $ident => $list)
-      @loop($e_idents($list))
+      @loop($e_idents([$list, "$key.$ident"]))
       <tr class="{{$row->class}}">
-        <td width="33%">{{$ident}}</td>
-        <td width="33%"><span>{{$row->pos}}</span></td>
-        <td width="34%">{{$row->desc}}</td>
+        <td width="5%">{{$row->num}}</td>
+        <td width="20%">{{$ident}}</td>
+        <td width="25%"><span>{{$row->pos}}</span></td>
+        <td width="35%">{{$row->desc}}</td>
+        <td width="15%" align="right">
+          @if($row->nap){{$row->nap}}
+          @elseif('redy'==$row->class)
+            <a @href(sky.g.form('{{$key}}.{{$ident}}'))>mark OK</a>
+          ~if
+        </td>
       </tr>
       ~loop
       @empty
@@ -24,20 +41,31 @@ App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::vers
     ~loop
   </table>
 ~loop
+Total {{1 + $e_idents->key()}} elements found
+#.save
 </div>
 @inc(.jscss)
-#.dirs
+#.report.mark
 
-#.jscss
+#.jscss ==========================================================================================================
 <style>
 .redy {background:pink}
-.norm {border-top:1px solid silver}
+.norm {}
+.blue-ok {background:#ddf}
+.check-ok {background:#ffd}
 </style>
 <script>
 sky.set_file_clk('#box-in');
 sky.g.save = function() {
-	let html = $('#box-in').html();
-	ajax('save', {html:html}, alert);
+    $('#box-in a, #box-in button').remove();
+    let html = $('#box-in').html();
+    ajax('save', {html:html}, 'report-inner');
+}
+sky.g.form = function(s) {
+    ajax('form', {ident:s}, box);
+}
+sky.g.mark = function(el, s) {
+    ajax('mark', {ident:s, desc:$(el).prev().val()}, box);
 }
 </script>
 #.jscss

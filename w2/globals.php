@@ -67,7 +67,8 @@ class Globals
                         ++$braces;
                         break;
                     case T_EVAL:
-                        $this->push('EVAL', $str);
+                        static $n = 1;
+                        $this->push('EVAL', $n++ . ".$this->pos");
                         break;
                     case T_GLOBAL:
                         $glob_list = 1;
@@ -155,33 +156,31 @@ class Globals
                 break;
             case 'VAR':
                 if ('$GLOBALS' == $ident) {
-                    $assign($place, $ident, 'Do not use $GLOBALS');
+                    $assign($place, $ident, '-Do not use $GLOBALS');
                 } else {
                     $assign($place, $ident);
                 }
                 break;
             case 'FUNCTION':
-                $is_lc ? $assign($place, $ident, "Identifier in usage") : $assign($place, $ident);
+                isset($this->functions[$lc]) ? $assign($place, $ident, "Internal function name used") : $assign($place, $ident);
                 break;
             case 'CONST':
-                $is_lc ? $assign($place, $ident, "Identifier in usage") : $assign($place, $ident);
-                break;
             case 'DEFINE':
-                $is_lc ? $assign($place, $ident, "Identifier in usage") : $assign($place, $ident);
+                isset($this->constants[$ident]) ? $assign($place, $ident, "Internal constant name used") : $assign($place, $ident);
                 break;
             case 'EVAL':
                 $assign($place, $ident, 'Dangerous code');
                 break;
         }
 
-        $this->all_lc[$lc] = $is_lc ? 1 + $this->all_lc[$lc] : 1;
+        //$this->all_lc[$lc] = $is_lc ? 1 + $this->all_lc[$lc] : 1;
         return '';
     }
 
-    function c_dirs() {
+    function c_report() {
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $functions = get_defined_functions();
-        $this->functions = array_flip($functions['internal']);
+        $this->functions = array_change_key_case(array_flip($functions['internal']));
         foreach (get_defined_constants(true) as $k => $v) {
             if ('user' == $k)
                 continue;
@@ -194,7 +193,7 @@ class Globals
         $this->traits = array_flip(get_declared_traits());
         $this->vars = []; //array_flip(array_keys(get_defined_vars())); // [functions] => 1    [v] => 1    [k] => 1
 
-        $all = $this->functions + $this->constants + $this->interfaces + $this->classes + $this->traits;
+        $all = $this->constants + $this->interfaces + $this->classes + $this->traits;
         $this->all = array_fill_keys(array_keys($all), 0);
         $this->all_lc = array_change_key_case($this->all);
 
@@ -215,31 +214,59 @@ class Globals
         }
 
         foreach ($this->definitions as &$definition)
-      #      natcasesort($definition);
-            ksort($definition);
+            ksort($definition); # natcasesort($definition);
+
+        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []);
 
         return [
             'defs' => $this->definitions,
             'e_idents' => [
-                'row_c' => function($in, $evar = false) {
-                    static $ary, $gt;
-                    if ($evar)
-                        $gt = count($ary = $in) > 1;
+                'max_i' => -1, // infinite
+                'row_c' => function($in, $evar = false) use ($nap) {
+                    static $ary, $gt, $id, $num, $err_msg, $def_prev = '';
+                    if ($evar) {
+                        $gt = count($ary = $in[0]) > 1;
+                        $id = $in[1];
+                        list ($def) = explode('.', $id);
+                        if ($def_prev != $def)
+                            $num = 1;
+                        $def_prev = $def;
+                        $err_msg = 'VAR' == $def ? 'Twice assigning' : 'Duplicated definition';
+                    }
                     if ($evar || !$ary)
                         return false;
+
                     $c = explode(' ', array_shift($ary), 3);
+                    $x = $c[2] ? $c[2] : ($gt ? $err_msg : '');
+                    if ($x && $x[0] == '-')
+                         $x = substr($x, 1);
+                    $ok = isset($nap[$id]);
                     return [
-                        'class' => $c[2] || $gt ? 'redy' : 'norm',
+                        'class' => $c[2] || $gt ? ($ok ? 'check-ok' : 'redy') : 'norm', //blue-ok
                         'pos' => "$c[0]^$c[1]",
-                        'desc' => $gt ? 'Duplicated definition' : ($c[2] ? $c[2] : ''),
+                        'desc' => $x,
+                        'nap' => $ok ? $nap[$id] : '',
+                        'num' => $num++,
                     ];
                 },
             ],
-			'modules' => implode(' ', get_loaded_extensions()),
+		    'modules' => implode(' ', get_loaded_extensions()),
         ];
     }
 
+    function c_form() {
+        return ['ident' => $_POST['ident']];
+    }
+
+    function c_mark() {
+        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []);
+        $nap[$_POST['ident']] = $_POST['desc'];
+        file_put_contents($fn, "<?php \$nap = " . var_export($nap, 1) . ';');
+        return $this->c_report();
+    }
+
     function c_save() {
-        echo file_put_contents('var/report.html', $_POST['html']) ? 'Saved' : 'Error';
+        file_put_contents('var/report.html', $_POST['html']) ? 'Saved' : 'Error';
+        return $this->c_report();
     }
 }
