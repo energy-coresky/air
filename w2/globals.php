@@ -4,7 +4,7 @@ class Globals
 {
     private $exts = ['php'];//, 'jet'
     private $ext;
-    private $dirs_skip = ['_arch', 'vendor', 'main/lng', 'var/upload'];
+    private $cnt = [0, 0];
     private $definitions = [
         'NAMESPACE' => [],
         'INTERFACE' => [],
@@ -47,6 +47,7 @@ class Globals
     }
 
     function parse($fn, $line_start = 1, $str = false) {
+        $this->cnt[0]++;
         $php = $str ? $str : file_get_contents($fn);
         $line = $line_start;
         $braces = $glob_list = 0;
@@ -177,7 +178,47 @@ class Globals
         return '';
     }
 
+    function exclude_dirs($dir = false) {
+        static $dirs;
+        if (null === $dirs) {
+            $tmemo = sqlf('+select tmemo from $_memory where id=6');
+            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=now(), tmemo=%s where id=6');
+            $dirs = isset($mem['gr_dirs']) ? explode(' ', $mem['gr_dirs']) : [];
+        }
+        if ($dir) {
+            ($offset = array_search($dir, $dirs)) !== false ? array_splice($dirs, $offset, 1) : ($dirs[] = $dir);
+            SKY::i('gr_dirs', implode(' ', $dirs));
+        }
+        trace($dirs);
+        return $dirs;
+    }
+
+    function c_dirs() {
+        $dirs = Rare::walk_dirs('.');
+        if ('c:/web/air' == DIR_S)
+            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
+        SKY::s('gr_start', 0);
+        return [
+            'dirs' => $dirs,
+            'continue' => function ($dir) {
+                static $red = false, $dirs;
+                is_array($dirs) or $dirs = $this->exclude_dirs();
+                if (in_array($dir, $dirs)) {
+                    $red = $dir;
+                    return 0;
+                }
+                return $red && $red == substr($dir, 0, strlen($red));
+            },
+        ];
+    }
+
+    function c_skip() {
+        $this->exclude_dirs($_POST['dir']);
+        return $this->c_dirs();
+    }
+
     function c_report() {
+        SKY::s('gr_start', 1);
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $functions = get_defined_functions();
         $this->functions = array_change_key_case(array_flip($functions['internal']));
@@ -197,11 +238,12 @@ class Globals
         $this->all = array_fill_keys(array_keys($all), 0);
         $this->all_lc = array_change_key_case($this->all);
 
-        $dirs = Rare::walk_dirs('.', $this->dirs_skip);
+        $dirs = Rare::walk_dirs('.', $this->exclude_dirs());
         if ('c:/web/air' == DIR_S)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
 
         foreach ($dirs as $dir) {
+            $this->cnt[1]++;
             foreach (Rare::list_path($dir, 'is_file') as $fn) {
                 list (,$this->ext) = explode('.', $fn) + [1 => ''];
                 if (in_array($this->ext, $this->exts))
@@ -250,7 +292,8 @@ class Globals
                     ];
                 },
             ],
-		    'modules' => implode(' ', get_loaded_extensions()),
+            'modules' => implode(' ', get_loaded_extensions()),
+            'cnt' => $this->cnt,
         ];
     }
 

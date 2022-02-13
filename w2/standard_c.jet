@@ -11,7 +11,7 @@
     <div><a @href(sky.g.box()))>Open SkyGate</a></div>
     <div><a @href(ajax(['_lang','list'],box))>Open SkyLang</a></div>
     <div><a @href(ajax(['_inst','database'],box))>Prepare Install</a></div>
-    <div><a @href(ajax(['_glob','report'],box))>Globals report</a></div>
+    <div><a @href(ajax(['_glob','{{$sky->s_gr_start?'report':'dirs'}}'],box))>Globals report</a></div>
     <div><a href="_visual">Open Visual</a></div>
     <div><a @href(ajax('',alert,'_drop'))>Drop All Cache</a></div>
     @if('WINNT'==PHP_OS)<div><a href="adm?get_dev">Open DEV.SKY.</a></div>~if

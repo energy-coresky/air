@@ -1,10 +1,34 @@
 #.jet core template
 
 #.form ==========================================================================================================
-<h2>{{$ident}}</h2>
-Comment: <input value="Not a problem" size="100">
-<button onclick="sky.g.mark(this,'{{$ident}}')">Mark</button>
+<div style="margin:0 10px 10px 10px">
+  <h2>Mark `{{$ident}}`</h2>
+  Comment: <input value="Not a problem" size="100">
+  <button onclick="sky.g.mark(this,'{{$ident}}')">Mark</button>
+  <br><br>
+  <button onclick="ajax(['_glob','report'],box)">&lt;&lt; Back</button>
+</div>
 #.form
+
+#.dirs.skip ==========================================================================================================
+<div style="margin:0 10px 10px 10px">
+  <h2>Directories for Globals report</h2>
+  <p>
+  @loop($dirs as $one)
+    @continue($red = $continue($one))
+    <div class="md">
+      @if('.' == $one)
+        <span style="background:#dfd">--root-project-directory--</span>
+        <button onclick="ajax(['_glob','report'],box)">Scan globals</button>
+      @else
+        <a @href(sky.g.dir(this))@if(0 === $red) style="color:red;text-decoration:line-through"~if>{!$one!}</a>
+        <input type="hidden" name="{!$one!}" value="{-{$exd[$one] or 0}-}"> <span class="md-span"></span>
+      ~if
+    </div>
+  ~loop
+@inc(.jscss)
+</div>
+#.dirs.skip
 
 #.report.mark ==========================================================================================================
 <div style="margin:0 10px 10px 10px" id="report-inner">
@@ -14,6 +38,8 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}<br>
 App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}</h1>
 <h2>Modules: {{$modules}}</h2>
 <button onclick="sky.g.save()">Save report</button>
+<button onclick="ajax(['_glob','report'],box)">Re-scan</button>
+<button onclick="ajax(['_glob','dirs'],box)">Directories</button>
 @loop($defs as $key => $ary)
   @if('VAR'==$key)<h2>VARS ASSIGNING IN THE GLOBAL NAMESPACE</h2>
   @else<h2>{{$key}}</h2>
@@ -41,7 +67,8 @@ App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::vers
     ~loop
   </table>
 ~loop
-Total {{1 + $e_idents->key()}} elements found
+<br>
+Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$cnt[1]}} directories
 #.save
 </div>
 @inc(.jscss)
@@ -66,6 +93,9 @@ sky.g.form = function(s) {
 }
 sky.g.mark = function(el, s) {
     ajax('mark', {ident:s, desc:$(el).prev().val()}, box);
+}
+sky.g.dir = function(el) {
+    ajax('skip', {dir:$(el).text()}, box);
 }
 </script>
 #.jscss
