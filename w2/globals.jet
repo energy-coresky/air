@@ -22,7 +22,6 @@
         <button onclick="ajax(['_glob','report'],box)">Scan globals</button>
       @else
         <a @href(sky.g.dir(this))@if(0 === $red) style="color:red;text-decoration:line-through"~if>{!$one!}</a>
-        <input type="hidden" name="{!$one!}" value="{-{$exd[$one] or 0}-}"> <span class="md-span"></span>
       ~if
     </div>
   ~loop
