@@ -13,16 +13,6 @@ Energy
 
 AB (absolute busy) application is product of InfoParc http://absolutebusy.com/ moved to SKY.
 
-## Documentation (russian only):
+## Docs
 
-- http://ru.coresky.net/tree?id69 (Ghost SQLs)
-- http://ru.coresky.net/tree?id62 (Parser Jet)
-- http://ru.coresky.net/tree?id67 (Sky Gate)
-
-## TODO
-
-- Move to PDO SQLs and write query builder
-- Finish SQL functions and drivers
-- Add modules for apps (use global namespace)
-- Move coresky code to RAM
-- Fix others and prepare production version 1.0
+See wiki section.

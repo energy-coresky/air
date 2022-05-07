@@ -96,7 +96,7 @@ abstract class Model_m extends MVC_BASE
     use SQL_COMMON;
     protected $dd;
 
-    function __construct() {
+    function __construct() { # set database driver & onduty table
         isset($this->table) or $this->table = substr(get_class($this), 2);
         $this->dd = $this->head_y();
     }
