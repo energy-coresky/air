@@ -1,5 +1,5 @@
 
-# CORESKY is unusual PHP framework
+# PHP framework CORESKY
 
 Coresky and apps code use global namespace!
 (however you can use `vendor's folder classes` from packagist.org or others).
