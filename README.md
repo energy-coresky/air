@@ -15,4 +15,4 @@ Check `apps` dir. AB (absolute busy) application is product of InfoParc http://a
 
 ## Docs?
 
-See the [wiki section](https://github.com/energy-coresky/air/wiki/%D0%94%D0%BE%D0%BA%D1%83%D0%BC%D0%B5%D0%BD%D1%82%D0%B0%D1%86%D0%B8%D1%8F) (russian only).
+See the [wiki section](https://github.com/energy-coresky/air/wiki) (russian only).
