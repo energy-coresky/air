@@ -1,10 +1,8 @@
 
 # PHP framework CORESKY
 
-Coresky and apps code use global namespace!
-(however you can use `vendor's folder classes` from packagist.org or others).
-Coresky use "global $sky, $user" and may be more unusual.
-This is my favorite "oil painting"! Not finished yet, but you can use it.
+Wellcome for contributors!
+This project is my favorite "oil painting"! Not finished yet, but you can use it.
 
 Regards,
 Energy
