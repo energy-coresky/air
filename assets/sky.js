@@ -215,6 +215,9 @@ var sky = {
             '0' == $(el).val() ? $(id).slideUp(150, sky.resize): $(id).slideDown(150, sky.resize);
         },
         plus: function(cls, h) {
+/*
+            var html = $('.' + cls + ':eq(0)')[0].outerHTML;
+            $(el).before(html).prev().prepend('<a class="fr" href="javascript:;" onclick="sky.f.del(this);">[X]</a>');*/
             var name, el = $('#' + cls).before($('.' + cls + ':eq(0)')[0].outerHTML).prev();
             el.prepend('<a class="fr" href="javascript:;" onclick="sky.f.del(this);">[X]</a>').find('input').val('');
             if (h) for (name in h) {
