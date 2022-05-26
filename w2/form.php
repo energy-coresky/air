@@ -59,7 +59,7 @@ class Form
     }
 
     static function X(...$in) {
-        $cfg = array_shift($in);
+        $cfg = count($in) > 1 ? array_shift($in) : [];
         array_walk($in, function(&$ary) {
             is_array($ary) or $ary = [$ary];
         });
