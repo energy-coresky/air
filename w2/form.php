@@ -16,6 +16,9 @@ class xForm
 
 class Form
 {
+    const OPT_TABLE = 1;
+    const OPT_DIV   = 2;
+
     private $dm = [
         '+' => 'this field cannot be empty',
         '-' => 'enter valid E-mail',
@@ -36,22 +39,33 @@ class Form
         'enctype' => 'multipart/form-data',
         'id' => 'f1',
     ];
-    const OPT_TABLE = 1;
-    const OPT_DIV   = 2;
+
+    public $row = [];
+
+    static $hidden = 0;
+    static $cls_repeat = '';
 
     private $form;
     private $post = [];
     private $ary = []; # collect filter's WHERE rules
-    public $row = [];
     private $js = [];
     private $mk = false;
     private $validation = false;
     private $spec = false;
     private $cv_hash = []; # cv - conditional validation
     private $cv_flag = false;
-    static $hidden = 0;
-    static $cls_repeat = '';
     private $repeat = [];
+
+    function __construct($form, $tag = []) {
+        global $user;
+        is_array($form) or $form = [$form];
+        $this->set_new($form + ['_csrf' => $user->v_csrf], $this->mk);
+        $this->tag = $tag + $this->tag;
+    }
+
+    function __toString() {
+        return $this->def([], true);
+    }
 
     static function A($row, $form) { # no validation
         $me = new Form($form);
@@ -60,13 +74,13 @@ class Form
 
     static function X(...$in) {
         $cfg = count($in) > 1 ? array_shift($in) : [];
-        array_walk($in, function(&$ary) {
-            is_array($ary) or $ary = [$ary];
+        array_walk($in, function(&$form) {
+            is_array($form) or $form = [$form];
         });
         return new xForm($cfg, $in);
     }
 
-    function def($row = [], $as_string = true) { # default processing
+    function def($row = [], $as_string = false) { # default processing
         $html = $this->draw_form($row, $this->mk); # this one should be running first then ->js()
         return $as_string ? $this->js() . $this->tag($html) : [$this->js(), $this->tag($html)];
     }
@@ -76,13 +90,6 @@ class Form
         $this->cv_prepare($this->js, $this->mk);
         $this->walk($this->form);
         return $this->post;
-    }
-
-    function __construct($form, $tag = []) {
-        global $user;
-        $form += ['_csrf' => [$user->v_csrf, 'hidden']];
-        $this->set_new($form, $this->mk);
-        $this->tag = $tag + $this->tag;
     }
 
     function js() {
