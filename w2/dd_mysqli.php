@@ -155,6 +155,14 @@ class dd_mysqli implements Database_driver
         return sqlf('@show tables');
     }
 
+    function _struct($table = false) {
+        $data = $this->sql(1, '@explain $_`', $table);
+        array_walk($data, function(&$v, $k) {
+            $v = is_null($v[3]) ? '' : $v[3]; # default value or empty string
+        });
+        return $data;
+    }
+
     function _rows_count($table) {
         $row = sqlf("-show table status like %s", $this->pref . $table);
         return $row[4];

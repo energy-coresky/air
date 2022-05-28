@@ -120,51 +120,41 @@ abstract class Model_q extends Model_m
 /** SQL parser methods */
 abstract class Model_t extends Model_m
 {
-    protected $list;
     protected $id;
 
-    function __construct() {
-        $this->list = 'select $+ from $_ '; ////////////////
-        parent::__construct();
-    }
-
-    function struct() {
-        $data = $this->sql(1, '@explain $_');
-        array_walk($data, function(&$v, $k) {
-            $v = is_null($v[3]) ? '' : $v[3]; # default value or empty string
-        });
-        return $data;
-    }
-
     function where($rule) {
-        if ($rule instanceof SQL) {
-            $ws = 'where ' == substr($rule, 0, 6);
-            return $ws ? $rule : $rule->prepend('where ');
-        }
-        if (null === $rule) $rule = $this->id;
+        if ($rule instanceof SQL)
+            return 'where ' == substr($rule, 0, 6) ? $rule : $rule->prepend('where ');
+        if (null === $rule)
+            $rule = $this->id;
         if (is_num($rule))
-            return $this->qp('where id=$.', $rule);
-        if (is_array($rule)) return is_int(key($rule))
-            ? $this->qp('where id in ($@)', $rule)
-            : $this->qp('where @@', $rule); # dangerous !
-        return null;
+            return $this->qp('where id=' . $rule); # num already checked
+        if (is_array($rule))
+            return is_int(key($rule)) ? $this->qp('where id in ($@)', $rule) : $this->qp('where @@', $rule);
     }
 
-    function cnt($rule = '') {
-        return $this->sql(1, '+select count(1) from $_ $$', !$rule ? '' : $this->where($rule));
+    function cell($rule = '', String $what = 'count(1)') {
+        return $this->sql(1, '+select ' . $what . ' from $_ $$', !$rule ? '' : $this->where($rule));
     }
 
-    function one($rule, $return_array = false) {
-        if (0 === $rule)
-            return $this->struct();
-        $row = $this->sql(1, ($return_array ? '~' : '>') . 'select * from $_ $$', $this->where($rule));
-        if (isset($row->id))
+    function one($rule, String $pref = '>') {
+        if (!in_array($pref, ['>', '~', '-']))
+            throw new Error("Wrowng prefix $pref");
+        $row = $this->sql(1, $pref . 'select * from $_ $$', $this->where($rule));
+        if ('>' == $pref && isset($row->id)) {
             $this->id = $row->id;
+        } elseif ('~' == $pref && isset($row['id'])) {
+            $this->id = $row['id'];
+        } elseif ('-' == $pref) {
+            $this->id = $row[0];
+        }
         return $row;
     }
 
-    function all($rule = '', $what = '#select *') {
-        return $this->sql(1, $what . ' from $_ $$', $this->where($rule));
+    function all($rule = '', Array $what = ['*'], String $pref = '#') {
+        if (!in_array($pref, ['', '@', '%', '#']))
+            throw new Error("Wrowng prefix $pref");
+        return $this->sql(1, $pref . 'select !! from $_ $$', $what, $this->where($rule));
     }
 
     function insert($ary) {
@@ -172,30 +162,11 @@ abstract class Model_t extends Model_m
     }
 
     function update($what, $rule = null) {
-        if (null === $rule) $rule = $this->id;
-        if (is_array($what))
-            return $this->sql(1, 'update $_ set @@ $$', $what, $this->where($rule));
-        return $this->sql(1, 'update $_ set $$ $$', $what, $this->where($rule));
-    }
-
-    function replace(&$id, $validate = true) {
-        $rare = new Rare;
-        $ret = $rare->replace($this->table, $id, $validate);
-        if ($ret === false) return $rare->get_errors();
-        if (!$ret && $id) return 'Nothing changed!';
-        $id or $id = $ret;
-        $this->id = $id;
-        return false;
+        return $this->sql(1, 'update $_ set ' . (is_array($what) ? '@@' : '$$') . ' $$', $what, $this->where($rule));
     }
 
     function delete($rule = null) {
-        if (is_array($rule))
-            $rule = $this->qp(SQL::_UPD, 'id in ($@)', $rule);
         return $this->sql(1, 'delete from $_ $$', $this->where($rule));
-    }
-
-    function _html($ary) {
-        foreach ($ary as &$c) $c = html($c);
     }
 
     function _list($ipp = 0) { # items per page

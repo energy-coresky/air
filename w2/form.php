@@ -55,21 +55,26 @@ class Form
     private $cv_hash = []; # cv - conditional validation
     private $cv_flag = false;
     private $repeat = [];
+    private $has_js = false;
 
-    function __construct($form, $tag = []) {
+    function __construct($form, $row = []) {
         global $user;
         is_array($form) or $form = [$form];
         $this->set_new($form + ['_csrf' => $user->v_csrf], $this->mk);
-        $this->tag = $tag + $this->tag;
+        $this->row = $row;
     }
 
     function __toString() {
         return $this->def([], true);
     }
 
+    function tag($tag) {
+        $this->tag = $tag + $this->tag;
+    }
+
     static function A($row, $form) { # no validation
         $me = new Form($form);
-        return $me->tag($me->draw_form($row, $me->mk));
+        return $me->def($row, true);
     }
 
     static function X(...$in) {
@@ -82,7 +87,20 @@ class Form
 
     function def($row = [], $as_string = false) { # default processing
         $html = $this->draw_form($row, $this->mk); # this one should be running first then ->js()
-        return $as_string ? $this->js() . $this->tag($html) : [$this->js(), $this->tag($html)];
+        $etc = array_join($this->tag, function($k, $v) {
+            return !$k ? trim($v) : $k . '="' . $v . '"';
+        }, ' ');
+        $js = '';
+        if ($this->has_js || $this->repeat) {
+            $s = '{' . array_join($this->js, function($k, $v) {
+                $v = is_string($v) ? "'$v'" : sprintf("['$v[0]', %s]", '/' == @$v[1][0] ? $v[1] : "'$v[1]'");
+                return "'$k':$v";
+            }, ",\n") . '}';
+            $repeat = $this->repeat_js();
+            $js = "$(function() {\nsky.f.set('#{$this->tag['id']}', $s, $repeat);\n});";
+            $js = tag('', "id=\"{$this->tag['id']}-message\"") . js($js);
+        }
+        return $as_string ? $js . tag($html, $etc, 'form') : [$js, tag($html, $etc, 'form')];
     }
 
     function validate() {
@@ -90,23 +108,6 @@ class Form
         $this->cv_prepare($this->js, $this->mk);
         $this->walk($this->form);
         return $this->post;
-    }
-
-    function js() {
-        $s = '{' . array_join($this->js, function($k, $v) {
-            $v = is_string($v) ? "'$v'" : sprintf("['$v[0]', %s]", '/' == @$v[1][0] ? $v[1] : "'$v[1]'");
-            return "'$k':$v";
-        }, ",\n") . '}';
-        $repeat = $this->repeat_js();
-        $js = "$(function() {\nsky.f.set('#{$this->tag['id']}', $s, $repeat);\n});";
-        return tag('', "id=\"{$this->tag['id']}-message\"") . js($js);
-    }
-
-    function tag($html) {
-        $etc = array_join($this->tag, function($k, $v) {
-            return !$k ? trim($v) : $k . '="' . $v . '"';
-        }, ' ');
-        return tag($html, $etc, 'form');
     }
 
     function input($type, $val, $etc = '') {
@@ -252,6 +253,7 @@ class Form
                 $name = '';
 
             } elseif (false !== strpos('+-~.*#/|', $name[0])) {
+                $this->has_js = true;
                 $this->proc_char($char = $name[0], $name = substr($name, 1), $mk);
             } elseif ($this->validation) {
                 if (isset($_POST[$name]))
