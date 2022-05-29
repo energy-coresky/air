@@ -73,7 +73,10 @@ abstract class MVC_BASE
         global $sky;
         if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
             isset(SKY::$reg[$name]) && is_a(SKY::$reg[$name], $name) or SKY::$reg[$name] = new $name;
-           'm' == $name[0] or SKY::$reg[$name]->dd->onduty(SKY::$reg[$name]->table);/////////
+            if ('m' != $name[0]) {
+                SKY::$reg[$name]->dd->onduty(SKY::$reg[$name]->table);
+                SQL::$dd = SKY::$reg[$name]->dd;
+            }
         }
         return $sky->$name;
     }
