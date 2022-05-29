@@ -137,7 +137,7 @@ abstract class Model_t extends Model_m
         return $this->sql(1, '+select ' . $what . ' from $_ $$', !$rule ? '' : $this->where($rule));
     }
 
-    function one($rule, String $pref = '>') {
+    function one($rule = null, String $pref = '>') {
         if (!in_array($pref, ['>', '~', '-']))
             throw new Error("Wrowng prefix $pref");
         $row = $this->sql(1, $pref . 'select * from $_ $$', $this->where($rule));
@@ -151,9 +151,12 @@ abstract class Model_t extends Model_m
         return $row;
     }
 
-    function all($rule = '', Array $what = ['*'], String $pref = '#') {
+    function all($rule = '', $what = '*', String $pref = '#') {
         if (!in_array($pref, ['', '@', '%', '#']))
             throw new Error("Wrowng prefix $pref");
+        if ($what instanceof SQL)
+            $what = (string)$what;
+        is_array($what) or $what = [$what];
         return $this->sql(1, $pref . 'select !! from $_ $$', $what, $this->where($rule));
     }
 
