@@ -3,8 +3,6 @@
 # For Licence and Disclaimer of this code, see http://coresky.net/license
 
 function view($in, $return = false, $param = null) {
-    global $sky;
-
     if ($in instanceof MVC) {
         $layout = MVC::$layout;
         $mvc = $in;
@@ -17,30 +15,23 @@ function view($in, $return = false, $param = null) {
         }
         $mvc = MVC::sub($in, $param, $no_handle);
     }
-    if ('' !== $mvc->echo)
+    if ('' !== $mvc->ob)
         $mvc->body = '';
     trace("$layout^$mvc->body", 'LAYOUT^BODY', 1);
 
     if ($layout || $mvc->body) {
-        $_vars =& MVC::fire($mvc, $layout);
-        ob_start();
-        $sky->in_tpl = true;
+        if ($return)
+            ob_start();
+        $_vars =& MVC::jet($mvc, $layout);
         call_user_func(function() use (&$_vars) {
-            extract($_vars, EXTR_REFS);
-            require $_parsed;
+            require $_vars['_parsed'];
         });
-        $sky->in_tpl = false;
-        $mvc->echo = ob_get_clean();
+        if ($return)
+            $mvc->ob = ob_get_clean();
+    } elseif (!$return) {
+        echo $mvc->ob;
     }
-    if ($mvc->is_sub)
-        return $return ? $mvc->echo : print($mvc->echo);
-    if ($sky->ajax || !$layout)
-        $sky->tail_x('', $mvc->echo); # tail_x ended with exit()
-    if (!$sky->tailed)
-        throw new Error('MVC::tail() must used in the layout');
-    if (1 == $sky->extra) # save extra cache
-        file_put_contents("var/extra/$sky->fn_extra", ($sky->s_extra_ttl ? time() + $sky->s_extra_ttl : 0) . "\n<!-- E -->$mvc->echo");
-    echo $mvc->echo;
+    return MVC::tail($mvc, $layout);
 }
 
 function t(...$in) { # situational translation
@@ -140,8 +131,8 @@ abstract class Model_t extends Model_m
         return $this->sql(1, '+select ' . $what . ' from $_ $$', !$rule ? '' : $this->where($rule));
     }
 
-    function one($rule = null, String $pref = '>') {
-        if (!in_array($pref, ['>', '~', '-']))
+    function one($rule = null, String $pref = '~') {
+        if (!in_array($pref, ['-', '~', '>']))
             throw new Error("Wrowng prefix $pref");
         $row = $this->sql(1, $pref . 'select * from $_ $$', $this->where($rule));
         if ('>' == $pref && isset($row->id)) {
@@ -272,7 +263,7 @@ class MVC extends MVC_BASE
 
     public $_v = []; # body vars
     public $body = '';
-    public $echo;
+    public $ob;
     public $is_sub;
 
     static $vars;
@@ -286,6 +277,14 @@ class MVC extends MVC_BASE
     function __construct($is_sub = false) {
         MVC::$stack[] = $this;
         $this->is_sub = $is_sub;
+    }
+
+    static function in_tpl($bool = null) {
+        global $sky;
+        static $mem = [];
+        if (is_bool($bool))
+            $mem[] = $sky->in_tpl;
+        $sky->in_tpl = null === $bool ? array_pop($mem) : $bool;
     }
 
     static function instance($level = 0) {
@@ -316,31 +315,33 @@ class MVC extends MVC_BASE
         return "$dir/$name.jet";
     }
 
-    static function &fire($mvc, $layout = '') {
+    static function vars(&$all, &$new, $pref = false) {
+        array_walk($new, function (&$v, string $k, $pref) use (&$all) {
+            if ('' === $k || '_' == $k[0])
+                throw new Error("Cannot use `$k` var");
+
+            $p = strlen($k) > 1 && '_' == $k[1] ? $k[0] : false;
+            if ('e' === $p) {
+                $all[$k] = new eVar($v);
+            } elseif (!$p && $pref) {
+                $all[$pref . $k] =& $v;
+            } else {
+                $all[$k] =& $v;
+            }
+        }, $pref);
+    }
+
+    static function &jet($mvc, $layout = '') {
         global $sky;
         $vars = SKY::$vars;
-        if (is_string($mvc)) {
+        if (is_string($mvc)) { # for __std.exception
             $name = $mvc;
             $vars['sky'] = $sky;
         } else {
             $name = "_$mvc->body";
-            $func = function (&$v, string $k, $y_vars) use (&$vars) {
-                if ('' === $k || '_' == $k[0])
-                    throw new Error("Cannot use `$k` var");
-
-                $pref = strlen($k) > 1 && '_' == $k[1] ? $k[0] : false;
-                if ('e' === $pref) {
-                    $vars[$k] = new eVar($v);
-                } elseif ($y_vars && false === $pref) {
-                    $vars['y_' . $k] =& $v;
-                } else {
-                    $vars[$k] =& $v;
-                }
-            };
-            $mvc->is_sub or array_walk(MVC::$_y, $func, true);
-            array_walk($mvc->_v, $func, false);
+            $mvc->is_sub or MVC::vars($vars, MVC::$_y, 'y_');
+            MVC::vars($vars, $mvc->_v);
             $vars['sky'] = $mvc;
-            $vars['_stdout'] =& $mvc->echo;
         }
         $vars['_parsed'] = $fn = MVC::fn_parsed($layout, $name);
         $dev = DEV || DESIGN;
@@ -355,7 +356,7 @@ class MVC extends MVC_BASE
                     break; # recompilation required
             }
         }
-        $ok or new Jet($layout, $name, $fn, $vars);
+        $ok or new Jet($name, $layout, $fn, $vars);
         trace("JET: $fn, " . ($ok ? 'used cached' : 'recompiled'));
         return $vars;
     }
@@ -402,8 +403,15 @@ class MVC extends MVC_BASE
         echo $plus . '<link href="' . PATH . 'favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
     }
 
-    static function tail() {
+    static function tail($mvc = false, $layout = false) {
         global $sky;
+        if ($mvc) {
+            if ($mvc->is_sub)
+                return $mvc->ob;
+            if ($sky->ajax || !$layout)
+                $sky->tail_x('', $mvc->ob); # tail_x ended with exit()
+            return $mvc->ob;
+        }
         $sky->ajax or $sky->tail();
     }
 
@@ -440,7 +448,7 @@ class MVC extends MVC_BASE
         end(MVC::$stack)->body = $body;
     }
 
-    static function handle($method, $param = null) {
+    static function handle($method, &$param = null) {
         if (method_exists(MVC::$mc, $method))
             return MVC::$mc->$method($param);
         if (method_exists(MVC::$cc, $method))
@@ -462,11 +470,11 @@ class MVC extends MVC_BASE
             }
         } elseif ($action instanceof Closure) {
             $me->set($action($param));
-        } else { // array /////////////?
+        } else {
             $me->body = MVC::$tpl . '.' . substr($action[1], 2);
             $me->set(call_user_func($action, $param));
         }
-        $me->echo = ob_get_clean();
+        $me->ob = ob_get_clean();
         array_pop(MVC::$stack);
         return $me;
     }
@@ -563,7 +571,13 @@ class MVC extends MVC_BASE
         if ($sky->error_no > 400 && $sky->error_no < 501)
             $me->set(MVC::$mc->error_y($action));
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);
-        $me->echo = ob_get_clean();
-        view($me); # visualize
+        $me->ob = ob_get_clean();
+        $me->ob = view($me, $extra = 1 == $sky->extra); # visualize
+        if (!$sky->tailed)
+            throw new Error('MVC::tail() must used in the layout');
+        if ($extra) { # save extra cache
+            file_put_contents("var/extra/$sky->fn_extra", ($sky->s_extra_ttl ? time() + $sky->s_extra_ttl : 0) . "\n<!-- E -->$me->ob");
+            echo $me->ob;
+        }
     }
 }

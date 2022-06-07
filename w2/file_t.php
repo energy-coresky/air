@@ -22,7 +22,7 @@ class File_t extends MVC_BASE
 
     static function read_f($id, $is_download = false) {
         self::$me or self::$me = new File_t;
-        if (!$row = self::$me->t_file->one((int)$id))
+        if (!$row = self::$me->t_file->one((int)$id, '>'))
             return;
         $ary = explode(' ', $row->type);
         if ($is_download && false === ($size = @filesize(DIR_U . "$id.$ary[1]")))
@@ -133,7 +133,7 @@ class File_t extends MVC_BASE
 
     static function crop($id, $x0, $y0, $x1, $y1, $szx, $szy) {
         self::$me or self::$me = new File_t;
-        if (!$row = self::$me->t_file->one(qp(' id=$.', $id)))
+        if (!$row = self::$me->t_file->one(qp(' id=$.', $id), '>'))
             return false;
         $ary = explode(' ', $row->type);
         $func = self::$me->img_f[$ary[1]];

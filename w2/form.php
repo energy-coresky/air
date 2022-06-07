@@ -72,7 +72,11 @@ class Form
         $this->tag = $tag + $this->tag;
     }
 
-    static function A($row, $form) { # no validation
+    static function A($row, $form = false) { # no validation
+        if (!$form) {
+            $form = $row;
+            $row = [];
+        }
         $me = new Form($form);
         return $me->def($row, true);
     }

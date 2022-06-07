@@ -254,8 +254,8 @@ class HEAVEN extends SKY
             $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
         }
         $this->k_static = [[], [], []]; # skip app css and js files
-        $this->in_tpl = true;
-        require MVC::fire('__std.exception')['_parsed'];
+        $_vars = MVC::jet('__std.exception');
+        require $_vars['_parsed'];
     }
 
     function tracing($plus = '', $trace_x = false) {

@@ -10,8 +10,13 @@ class Jet
     private $empty = [];
     private $loop = [];
     private $div = '<div style="display:none" id="err-top"></div>';
-    private $current = '';
+    private $cur_tpf;
+    private $cur_ml;
+
     private static $vars = [];
+    private static $block = [];
+    private static $inc = [];
+
     static $directive = false;
     static $custom = [];
 
@@ -24,18 +29,18 @@ class Jet
         return sprintf("<?php $pattern ?>", $arg);
     }
 
-    function __construct($layout, $name, $fn = false, $vars = null) {
+    function __construct($name, $layout = '', $fn = false, $vars = null) {
         global $sky;
 
-        $this->body = $name;
         if (null !== $vars)
             Jet::$vars = $vars;
-        $part = '';
+        $marker = '';
         if ($layout) {
+            $this->body = $name;
             $name = "y_$layout";
-        } else {
+        } elseif (is_string($name)) {
             if (strpos($name, '.'))
-                list($name, $part) = explode('.', $name, 2);
+                list($name, $marker) = explode('.', $name, 2);
             $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
             if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.php"))
                 $name = "b$name";
@@ -46,39 +51,95 @@ class Jet
                 require $fn_jet;
             Jet::$directive = true;
         }
-        $this->files[$name] = 1;
-        $this->parsed = $this->parse($this->current = $name, $part);
+
+        $this->parsed = $this->parse($name, $marker);
+
         if ($fn) {
-            $out = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n";
-            $out .= (DEV ? "trace('TPL: $list')?>" : '?>') . $this->parsed;
+            $code = $this->proc_blocks(); # must calc $this->files first!
+            $out = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n$code";
+            if (DEV)
+                $out .= "trace('TPL: $list'); MVC::in_tpl(true);\n";
+            $out .= "extract(\$_vars, EXTR_REFS) ?>" . strtr($this->parsed, $this->replace);
             if (DEV && $vars && !$layout)
-                $out .= '<?php if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif; ?>';
-            file_put_contents($fn, $out);
+                $out .= '<?php if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif ?>';
+            if (DEV)
+                $out .= "<?php MVC::in_tpl();";
+            file_put_contents($fn, $this->optimize($out));
         }
     }
 
-    static function warm_all() {
+    static function warm_all($is_prod) {
         //2do
     }
-    
-    private function parse($name, $part = '') {
-        $in = file_get_contents(MVC::fn_tpl($name));
-        if ('' !== $part) {
-            $ary = preg_split("/([\r\n]+|\A)\s*\#[\.\w+]*?\.{$part}[\.\w+]*?( .*?)?([\r\n]+|\z)/s", $in, 3);
-            $in = '';
-            if (count($ary) != 3)
-                throw new Error("Jet: cannot find `$name.$part`");
-            else
-                $in = $ary[1];
+
+    private function proc_blocks() {
+        $top = $this->replace = [];
+        $used = ['k', 'e', 'y'];
+        foreach (Jet::$block as $name => $ary) {
+            list ($lab, $pf, $code, $files) = $ary;
+            if (!$lab)
+                continue; # @use without @block
+            $this->files += $files;
+            if ($pf && ' ' == $pf[1]) {
+                $php = ($is_php = strpos($code, '?')) ? '$_a = SKY::$vars; ' : '';
+                if (DEV)
+                    $php .= 'MVC::in_tpl(false); ';
+                if ($is_php)
+                    $php .= '$_b = (array)';
+                $php .= "MVC::handle('$pf[0]_$name', \$_vars)";
+                if ($is_php)
+                    $php .= '; MVC::vars($_a, $_b); extract($_a, EXTR_REFS)';
+                if (DEV)
+                    $php .= '; MVC::in_tpl()';
+                $this->replace[$lab] = $is_php
+                    ? "<?php call_user_func(function() use(&\$_vars) { $php ?>$code<?php }) ?>"
+                    : "<?php $php ?>$code";
+                continue;
+            }
+            $this->replace[$lab] = $code;
+            if ($pf) {
+                if (in_array($pf[0], $used))
+                    throw new Error("Jet blocks: char `$pf[0]` occupied");
+                $used[] = $pf[0];
+                $pf[1] = '_';
+                $top[] = "\$_$pf = (array)MVC::handle('$pf$name', \$_vars); MVC::vars(\$_vars, \$_$pf, '$pf');";
+            }
         }
-        for ($i = 0; $i < 20 && $this->preprocessor($in); $i++);
-        $in = preg_replace('/([\r\n]+|\A)\s*#\.[\.\w+]+.*?([\r\n]+|\z)/s', '$2', $in); # delete nested part markers
-        
+        Jet::$block = Jet::$inc = [];
+        return $top ? implode("\n", $top) . "\n" : '';
+    }
+
+    private function parse($name, $marker = '') {
+        $this->cur_ml = false;
+        if (is_array($name)) {
+            list ($in, $this->cur_tpf, $this->cur_ml) = $name;
+        } else {
+            $this->files[$this->cur_tpf = $name] = 1;
+            $in = file_get_contents(MVC::fn_tpl($name));
+        }
+        if ('' !== $marker) {
+            $re = "/([\r\n]+|\A)\s*\#([\.\w+]*?\.{$marker}[\.\w+]*?)( .*?)?([\r\n]+|\z)/s";
+            preg_match($re, $in, $match);
+            if (3 != count($ary = preg_split($re, $in, 3)))
+                throw new Error("Jet: cannot find `$name.$marker`");
+            $in = $ary[1];
+            $this->cur_ml = substr($match[2], 1);
+        }
+        # @verb
         $in = preg_replace_callback('/@verb(.*?)~verb/s', function ($m) {
             $this->replace[$lab = '%__verb_' . count($this->replace) . '__%'] = $m[1];
             return $lab;
         }, $in);
-        
+        # delete nested part markers
+        $in = preg_replace('/([\r\n]+|\A)\s*#\.[\.\w+]+.*?([\r\n]+|\z)/s', '$2', $in);
+        # preprocessor
+        for ($i = 0; $i < 20 && $this->preprocessor($in); $i++);
+        # @block
+        $in = preg_replace_callback('/@block\(([a-z][ \*]|)(\w+)\)(.*?)~block/s', function ($m) {
+            $this->_block($m[1], $m[2], $m[3], $lab = '%__block_' . $m[2] . '__%');
+            return $lab;
+        }, $in);
+
         $out = '';
         foreach (token_get_all($in) as $token) {
             if (is_array($token)) {
@@ -92,7 +153,7 @@ class Jet
             $out .= $token;
         }
 
-        return $this->optimize(strtr($out, $this->replace));
+        return strtr($out, $this->replace);
     }
 
     private function preprocessor(&$in) {
@@ -223,22 +284,22 @@ class Jet
             $end = '~' == $m[0][0];
             $sp = $m[2] ? ' ' : '';
             $arg = isset($m[3]) ? substr($m[3], 1, -1) : '';
-            switch ($m[1]) {
+            switch ($tag = $m[1]) {
                 case 'php': return $end ? "?>$sp" : "<?php$sp";
                 case 'unless': $arg = "!($arg)";
                 case 'if': return $end ? "<?php endif ?>$sp" : "<?php if ($arg): ?>";
-                case 'cache': return $end ? '<?php Rare::cache(); endif ?>' : "<?php if (Rare::cache($arg)): ?>";
+                case 'cache': return $end ? '<?php Rare::cache(); endif ?>' : Jet::q('if (Rare::cache(%s)):', $arg);
                 case 'loop': return $this->_loop($end, $arg); # for, foreach, while, do { .. } while(..)
             }
-
             if ($end)
                 return $m[0];
-            if (isset(Jet::$custom[$m[1]])) # user defined
-                return call_user_func(Jet::$custom[$m[1]], $arg, $this);
 
-            switch ($m[1]) {
+            if (isset(Jet::$custom[$tag])) # user defined
+                return call_user_func(Jet::$custom[$tag], $arg, $this);
+            switch ($tag) {
                 case 'inc': return $this->_file('' === $arg ? '*' : $arg);
-                case 'view': return Jet::q('view(%s)', $arg);
+                case 'use': return (string)$this->_block($arg, $m[0]);
+                case 'view': return Jet::q(DEV ? "MVC::in_tpl(false);view(%s);MVC::in_tpl()" : 'view(%s)', $arg);
                 case 'pdaxt': return sprintf('<?php MVC::pdaxt(%s) ?>', $arg ? $arg : '') . $sp;
                 case 'else': return '<?php else: ?>' . $sp;
                 case 'elseif': return "<?php elseif ($arg): ?>";
@@ -264,7 +325,7 @@ class Jet
         }, $str);
     }
 
-    function _loop($end, $arg) {
+    private function _loop($end, $arg) {
         $cnt = count($this->loop);
         if ($end) {
             $iv = $cnt - 1 ? '$_' . $cnt : '$_';
@@ -296,28 +357,64 @@ class Jet
         return "<?php $iv = 0; $for ($arg): ?>";
     }
 
-    function _file($name) {
+    private function test_cycled(&$tpl, $op) {
+        if ('.' == $tpl[0])
+            $tpl = $this->cur_tpf . $tpl;
+        if (in_array($tpl, Jet::$inc))
+            throw new Error("Jet: cycled @$op($tpl)");
+        Jet::$inc[] = $this->cur_tpf;
+        if (!$this->cur_ml)
+            return;
+        $ary = explode('.', $this->cur_ml);
+        array_walk($ary, function ($v) {
+            Jet::$inc[] = "$this->cur_tpf.$v";
+        });
+    }
+
+    private function _file($tpl) {
         $red = '%s';
         $div = '';
-        if ('*' == $name) {
+        if ('*' == $tpl) {
             $div = $this->div;
             if ('_' === $this->body)
-                return $div . '<?php echo $_stdout ?>';
-            $name = $this->body;
-        } elseif (DEV && 'r_' == substr($name, 0, 2)) { # red label
+                return $div . '<?php echo $sky->ob ?>';
+            $tpl = $this->body;
+        } elseif (DEV && 'r_' == substr($tpl, 0, 2)) { # red label
             $red = '<?php if ($sky->s_red_label): ?>'
-                . tag("@inc($name)", 'class="red_label"')
+                . tag("@inc($tpl)", 'class="red_label"')
                 . "<?php else: ?>%s<?php endif ?>";
         }
-        if ('.' == $name[0])
-            $name = $this->current . $name;
-        # 2do: throw new Error('Jet: cycled @inc()');
-        $lab = "%__inc_{$name}__%";
-        if (isset($this->replace[$lab]))
+
+        $this->test_cycled($tpl, 'inc');
+        if (isset($this->replace[$lab = "%__inc_{$tpl}__%"]))
             return $div . $lab;
-        $me = new Jet('', $name);
+
+        $me = new Jet($tpl);
         $this->replace[$lab] = sprintf($red, $me->parsed);
         $this->files += $me->files;
         return $div . $lab;
+    }
+
+    private function _block($pf, $name, $tpl = '', $lab = false) {
+        if ($inline = $lab) { # from @block(..)
+            if (isset(Jet::$block[$name])) {
+                if (Jet::$block[$name][0])
+                    throw new Error("Jet: duplicated @block($name) definishion");
+                Jet::$block[$name][0] = $lab;
+                return; # @block(..) already overloaded by @use(..)
+            }
+        } else { # from @use(..)
+            if (!preg_match('/^(.*?) as ([a-z][ \*]|)(\w+)$/', $pf, $m))
+                return $name;
+            list (, $tpl, $pf, $name) = $m;
+            if ($inline = '`' == $tpl[0]) {
+                $tpl = substr($tpl, 1, -1);
+            } else {
+                $this->test_cycled($tpl, 'use');
+            }
+        }
+
+        $me = new Jet($inline ? [$tpl, $this->cur_tpf, $this->cur_ml] : $tpl);
+        Jet::$block[$name] = [$lab ? $lab : (Jet::$block[$name][0] ?? false), $pf, $me->parsed, $me->files];
     }
 }
