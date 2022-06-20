@@ -35,9 +35,6 @@ class Azure
         $sky->k_static = [[], ["~/azure.js"], ["~/desktop.css", "~/azure.css"]];
         MVC::body('_vis.layout');
 
-        $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
-        SKY::$vars['k_js'] = "sky.is_debug=$sky->debug; var addr='" . LINK . "'; sky.tz=$tz;";
-
         $fsize = ['320 x 480', '640 x 480', '768 x 768', '1024 x 555', '1366 x 768', /* notebook */ '1536 x 555'];
         return [
             'fsize' => option(3, array_combine($fsize, $fsize)),

@@ -6,20 +6,24 @@
   Comment: <input value="Not a problem" size="100">
   <button onclick="sky.g.mark(this,'{{$ident}}')">Mark</button>
   <br><br>
-  <button onclick="ajax(['_glob','report'],box)">&lt;&lt; Back</button>
+  <button onclick="dev(['_glob','report'])">&lt;&lt; Back</button>
 </div>
 #.form
 
-#.dirs.skip ==========================================================================================================
+#.submenu
+@loop(['report' => 'Show Report', 'dirs' => 'Select Dirs', 'save' => 'Save Report'] as $name => $title)
+    <a class="inner-menu" href="_glob?{!$name!}"{!$sky->_1 == $name and ' active'!}>{!$title!}</a>
+~loop
+#.submenu.dirs.skip ==========================================================================================================
+#use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
+@use(.submenu as m_glob)
 <div style="margin:0 10px 10px 10px">
-  <h2>Directories for Globals report</h2>
   <p>
   @loop($dirs as $one)
     @continue($red = $continue($one))
     <div class="md">
       @if('.' == $one)
-        <span style="background:#dfd">--root-project-directory--</span>
-        <button onclick="ajax(['_glob','report'],box)">Scan globals</button>
+        <span style="background:#dfd">--root-project-directory--</span> {{DIR}}
       @else
         <a @href(sky.g.dir(this))@if(0 === $red) style="color:red;text-decoration:line-through"~if>{!$one!}</a>
       ~if
@@ -30,15 +34,15 @@
 #.dirs.skip
 
 #.report.mark ==========================================================================================================
+#use(`<h4>GLOBALS REPORT</h4>` as header)
+@use(.submenu as m_glob)
 <div style="margin:0 10px 10px 10px" id="report-inner">
 #.save
-<h1>PHP Version: {{PHP_VERSION}}, Time now: {{NOW}}<br>
+<h2>PHP Version: {{PHP_VERSION}}, Time now: {{NOW}}<br>
 Used CoreSky Version: {{SKY::version()['app'][1]}}<br>
-App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}</h1>
+App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}</h2>
 <h2>Modules: {{$modules}}</h2>
 <button onclick="sky.g.save()">Save report</button>
-<button onclick="ajax(['_glob','report'],box)">Re-scan</button>
-<button onclick="ajax(['_glob','dirs'],box)">Directories</button>
 @loop($defs as $key => $ary)
   @if('VAR'==$key)<h2>VARS ASSIGNING IN THE GLOBAL NAMESPACE</h2>
   @else<h2>{{$key}}</h2>
@@ -88,13 +92,13 @@ sky.g.save = function() {
     ajax('save', {html:html}, 'report-inner');
 }
 sky.g.form = function(s) {
-    ajax('form', {ident:s}, box);
+    dev('form', {ident:s});
 }
 sky.g.mark = function(el, s) {
-    ajax('mark', {ident:s, desc:$(el).prev().val()}, box);
+    dev('mark', {ident:s, desc:$(el).prev().val()});
 }
 sky.g.dir = function(el) {
-    ajax('skip', {dir:$(el).text()}, box);
+    dev('skip', {dir:$(el).text()});
 }
 </script>
 #.jscss

@@ -3,7 +3,7 @@
 class Debug
 {
     static function start() {
-        if (DEV && Ext::cfg('cron')) {
+        if (DEV && DEV::cfg('cron')) {
             $cron = new Schedule;
             $ts = strtotime(substr($cron->n_cron_dt, 0, 19));
             if (START_TS - $ts > 60)

@@ -174,4 +174,8 @@ class Admin
         }
         return $result;
     }
+
+    static function warm_jet($is_prod) {
+        //2do
+    }
 }

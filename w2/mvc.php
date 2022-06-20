@@ -14,22 +14,17 @@ function view($in, $return = false, $param = null) {
             $return = true;
         }
         $mvc = MVC::sub($in, $param, $no_handle);
+        $mvc->return = $return;
     }
     if ('' !== $mvc->ob)
         $mvc->body = '';
-    trace("$layout^$mvc->body", 'LAYOUT^BODY', 1);
+    trace("$mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 
     if ($layout || $mvc->body) {
-        if ($return)
-            ob_start();
         $_vars =& MVC::jet($mvc, $layout);
-        call_user_func(function() use (&$_vars) {
-            require $_vars['_parsed'];
+        $mvc->ob = call_user_func(function() use (&$_vars) {
+            return require $_vars['_parsed'];
         });
-        if ($return)
-            $mvc->ob = ob_get_clean();
-    } elseif (!$return) {
-        echo $mvc->ob;
     }
     return MVC::tail($mvc, $layout);
 }
@@ -50,7 +45,7 @@ function t(...$in) { # situational translation
 
     if (isset($sky->trans_late[$str])) {
         DEFAULT_LG == LG or $str = $sky->trans_late[$str];
-    } elseif (DEV && 1 == Ext::cfg('trans')) {
+    } elseif (DEV && 1 == DEV::cfg('trans')) {
         SKY::$reg['trans_coll'][$str] = $sky->trans_i;
     }
     $args or print $str;
@@ -74,7 +69,7 @@ abstract class MVC_BASE
 
     function __set($name, $value) {
         global $sky;
-        if ($sky->in_tpl)
+        if (DEV && $sky->in_tpl && !$sky->in_row_c)
             throw new Error("Cannot set \$sky->$name property from the templates");
         $sky->$name = $value;
     }
@@ -216,22 +211,41 @@ class Controller extends MVC_BASE
     }
 }
 
-abstract class HOOK extends Controller
+trait HOOK
 {
+    static function rewrite_h($cnt, &$surl) {
+        if (1 == $cnt && 'robots.txt' == $surl[0] && !$_GET)
+            return array_unshift($surl, '_etc');
+        HOOK::re_dev($cnt, $surl);
+    }
+
+    static function re_dev($cnt, &$surl) {
+        global $sky;
+        if (DEV && 2 == $cnt && $sky->s_statp == $surl[0])
+            return $surl[0] = '_etc';
+    }
+
+    static function re_verse_ext($cnt, &$surl, $ext = 'html') {
+        if ('_' == $surl[0][0])
+            return false;
+        $a = explode('.', $s =& $surl[$cnt - 1]);
+        return $s = 2 != count($a) || $ext != $a[1] ? "$s.$ext" : $s = $a[0];
+    }
+
+    static function head_h() {
+        global $sky, $user;
+        $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
+        return "sky.is_debug=" . (int)$sky->debug . "; sky.tz=$tz;";// var addr='".LINK."';";
+    }
+
+    //add named limits and permission to sky-gate!!!!!!
+
     function mc(Array $in = null) {
         $name = get_class(MVC::$mc);
         if (!$in)
             return $name;
         if (is_int(key($in)))
             return in_array($name, $in);
-    }
-
-    //add named limits and permission to sky-gate!!!!!!
-
-    static function rewrite_h($cnt) {
-        global $sky;
-        if (1 == $cnt && 'robots.txt' == $sky->surl[0] && !$_GET)
-            array_unshift($sky->surl, '_etc');
     }
 
     function setLG_h() {
@@ -300,15 +314,8 @@ class MVC extends MVC_BASE
 
     static function fn_tpl($name) {
         global $sky;
-        $wing2 = [
-            '__std' => 'standard_c',
-            '__lng' => 'language',
-            '__vis' => 'azure',
-            '__svg' => 'svg',
-            '__glb' => 'globals',
-        ];
-        if (isset($wing2[$name]))
-            return DIR_S . '/w2/' . $wing2[$name] . '.jet';
+        if ('_' == ($name[1] ?? '') && '_' == $name[0])
+            return DIR_S . '/w2/' . $name . '.jet';
         $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
         if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.jet"))
             $name = "b$name";
@@ -316,7 +323,7 @@ class MVC extends MVC_BASE
     }
 
     static function vars(&$all, &$new, $pref = false) {
-        array_walk($new, function (&$v, string $k, $pref) use (&$all) {
+        array_walk($new, function (&$v, string $k) use (&$all, $pref) {
             if ('' === $k || '_' == $k[0])
                 throw new Error("Cannot use `$k` var");
 
@@ -328,7 +335,7 @@ class MVC extends MVC_BASE
             } else {
                 $all[$k] =& $v;
             }
-        }, $pref);
+        });
     }
 
     static function &jet($mvc, $layout = '') {
@@ -356,7 +363,7 @@ class MVC extends MVC_BASE
                     break; # recompilation required
             }
         }
-        $ok or new Jet($name, $layout, $fn, $vars);
+        $ok or new Jet($name, $layout, $fn, is_string($mvc) ? false : $mvc->return);
         trace("JET: $fn, " . ($ok ? 'used cached' : 'recompiled'));
         return $vars;
     }
@@ -365,7 +372,7 @@ class MVC extends MVC_BASE
         global $sky;
 
         is_numeric($time) or $time = strtotime($time);
-        if (@$_SERVER['HTTP_IF_MODIFIED_SINCE'] && ($if_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']))) {
+      if (0 &&          @$_SERVER['HTTP_IF_MODIFIED_SINCE'] && ($if_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']))) {///////////
             !$use_site_ts or $sky->s_site_ts < $time or $time = $sky->s_site_ts; # overall site design timestamp
             if ($if_time >= $time) {
                 http_response_code(304); # Not Modified
@@ -377,9 +384,33 @@ class MVC extends MVC_BASE
         header('Last-Modified: ' . substr(gmdate('r', $time), 0, -5) . 'GMT');
     }
 
+    static function pdaxt($plus = '') {
+        global $sky, $user;
+
+        if ($sky->show_pdaxt || DEV) {
+            $link = $user->pid
+                ? ($user->u_uri_admin ? $user->u_uri_admin : Admin::$adm['first_page'])
+                : 'auth';
+            echo '<span class="pdaxt">';
+            if (DEV || 1 == $user->pid) {
+                if (!$sky->is_mobile) {
+                    if ($sky->has_public)
+                        echo DEV ? a('P', PROTO . '://' . _PUBLIC) : sprintf(span_r, 'P');
+                    echo DEV ? a('D', ["dev('_dev')"]) : sprintf(span_r, 'D');
+                    echo a('A', PATH . $link);
+                }
+                echo a('X', ['sky.trace(1)']) . a('T', ['sky.trace(0)']);
+            } else {
+                echo a('ADMIN', PATH . $link);
+            }
+            echo "$plus</span>";
+        }
+    }
+
     static function head($plus = '') {
         global $sky, $user;
 
+$js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         if (!$sky->k_title) {
             $v =& MVC::instance()->_v;
             if (isset($v['y_h1']))
@@ -397,9 +428,10 @@ class MVC extends MVC_BASE
             $sky->k_static = [[], ["~/$fn.js"], ["~/$fn.css"]]; # default app meta_tags, js, css files
         }
         $plus = "<title>$sky->k_title</title>$plus";
-        $plus .= tag($sky->k_static[0] + ['csrf-token' => $user->v_csrf, 'surl-path' => PATH]); # meta tags
+        $csrf = isset($user) ? $user->v_csrf : '';
+        $plus .= tag($sky->k_static[0] + ['csrf-token' => $csrf, 'sky.home' => LINK]); # meta tags
         $plus .= js([-2 => '~/jquery.min.js', -1 => '~/sky.js'] + $sky->k_static[1]);
-        $plus .= css($sky->k_static[2] + [-1 => '~/sky.css']) . js($sky->k_js);
+        $plus .= css($sky->k_static[2] + [-1 => '~/sky.css']) . js($js);
         echo $plus . '<link href="' . PATH . 'favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
     }
 
@@ -407,9 +439,9 @@ class MVC extends MVC_BASE
         global $sky;
         if ($mvc) {
             if ($mvc->is_sub)
-                return $mvc->ob;
+                return $mvc->return ? $mvc->ob : print($mvc->ob);
             if ($sky->ajax || !$layout)
-                $sky->tail_x('', $mvc->ob); # tail_x ended with exit()
+                $sky->tail_x('', $mvc->ob); # tail_x ended with "throw new Stop"
             return $mvc->ob;
         }
         $sky->ajax or $sky->tail();
@@ -419,29 +451,6 @@ class MVC extends MVC_BASE
         global $sky;
         header("Content-Type: $mime;");
         $sky->ajax = 3;
-    }
-
-    static function pdaxt($plus = '') {
-        global $sky, $user;
-
-        if ($sky->show_pdaxt || DEV) {
-            $link = $user->pid
-                ? ($user->u_uri_admin ? $user->u_uri_admin : Admin::$adm['first_page'])
-                : 'auth';
-            echo '<span class="pdaxt">';
-            if (DEV || 1 == $user->pid) {
-                if (!$sky->is_mobile) {
-                    if ($sky->has_public)
-                        echo DEV ? a('P', PROTO . '://' . _PUBLIC) : sprintf(span_r, 'P');
-                    echo DEV ? a('D', PATH . '_dev') : sprintf(span_r, 'D');
-                    echo a('A', PATH . $link);
-                }
-                echo a('X', ['sky.trace(1)']) . a('T', ['sky.trace()']);
-            } else {
-                echo a('ADMIN', PATH . $link);
-            }
-            echo "$plus</span>";
-        }
     }
 
     static function body($body) {
@@ -455,24 +464,28 @@ class MVC extends MVC_BASE
             return MVC::$cc->$method($param);
     }
 
-    static function sub($action, $param = null, $no_handle = false) {
+    static function sub(&$action, $param = null, $no_handle = false) {
         global $sky;
         $me = new MVC(true);
         ob_start();
         if (is_string($action)) {
             if (DEV && $sky->s_red_label && 'r_' == substr($action, 0, 2)) {
                 echo tag("view($action)", 'class="red_label"'); # show red label
+                $me->hnd = 'red-label';
             } else {
                 list ($tpl, $action) = 2 == count($ary = explode('.', $action)) ? $ary : [MVC::$tpl, $ary[0]];
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $me->body = "$tpl." . substr($action, 2);
                 $me->set($no_handle ? $param : MVC::handle($action, $param));
+                $me->hnd = $no_handle ? "no-handle" : "::$action()";
             }
         } elseif ($action instanceof Closure) {
             $me->set($action($param));
+            $me->hnd = "Closure";
         } else {
             $me->body = MVC::$tpl . '.' . substr($action[1], 2);
             $me->set(call_user_func($action, $param));
+            $me->hnd = "$action[0]::$action[1]()";
         }
         $me->ob = ob_get_clean();
         array_pop(MVC::$stack);
@@ -514,13 +527,12 @@ class MVC extends MVC_BASE
             if ($recompile = !$dst || filemtime($fn_src) > filemtime($fn_dst))
                 Gate::put_cache($class, $fn_src, $fn_dst);
         }
-        $is_j = 1 == $sky->ajax;
         $action = $in_a
-            ? ('' === $sky->_1 ? ($is_j ? 'empty_j' : 'empty_a') : ($is_j ? 'j_' : 'a_') . $sky->_1)
-            : ($is_j ? 'j_' : 'a_') . $_0;
+            ? ('' === $sky->_1 ? ($this->return ? 'empty_j' : 'empty_a') : ($this->return ? 'j_' : 'a_') . $sky->_1)
+            : ($this->return ? 'j_' : 'a_') . $_0;
         require $fn_dst;
         if (!method_exists($gape = new Gape, $action))
-            $action = $is_j ? 'default_j' : 'default_a';
+            $action = $this->return ? 'default_j' : 'default_a';
         if (isset($gape->src))
             $real = $gape->src;
         if ($in_a)
@@ -534,13 +546,14 @@ class MVC extends MVC_BASE
         $me = new MVC;
         ob_start();
         $param = [];
+        $me->return = 1 == $sky->ajax;
         if ('_' == $sky->_0[0]) {
-            if ($id = array_search(URI, [1 => '_x1', 15 => '_x2', 16 => '_x3'])) {
+            if ($id = array_search(URI, [2 => '_x0', 1 => '_x1', 15 => '_x2', 16 => '_x3'])) {
                 $param = [$id];
                 $sky->surl[0] = '_trace';
             }
             $real = $class = 'standard_c';
-            $action = (1 == $sky->ajax ? 'j' : 'a') . $sky->_0;
+            $action = ($me->return ? 'j' : 'a') . $sky->_0;
             MVC::$tpl = '_std';
             $me->body = '_std.' . substr($sky->_0, 1);
             $gape = false;
@@ -552,7 +565,7 @@ class MVC extends MVC_BASE
                 default:  $me->body = MVC::$tpl . "." . substr($action, 2); break; # a_.. or j_..
             }
         }
-        trace("$class::$action()" . ($class == $real ? '' : ' (virtual)'), 'TOP-VIEW');
+        $me->hnd = "$class::$action()";
         if ($gape)
             $class .= '_cached';
         MVC::$mc = new $class;
@@ -562,12 +575,15 @@ class MVC extends MVC_BASE
         if ($gape) {
             $param = (array)call_user_func([$gape, $action], $sky, $user);
             if (DEV && 1 == $sky->error_no) { # gate error
-                $me->body = 1 == $sky->ajax ? '' : '_std.lock';
+                $me->body = $me->return ? '' : '_std.lock';
                 $sky->ca_path = ['ctrl' => $real, 'func' => $action];
             }
         }
-        if (!$sky->error_no || $sky->surl && '_exception' == $sky->surl[0])
+        if (!$sky->error_no || $sky->surl && '_exception' == $sky->surl[0]) {
             $me->set(call_user_func_array([MVC::$mc, $action], $param));
+        } else {
+            $me->hnd = "error";
+        }
         if ($sky->error_no > 400 && $sky->error_no < 501)
             $me->set(MVC::$mc->error_y($action));
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);

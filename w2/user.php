@@ -84,7 +84,7 @@ class USER
             ];
             if ($_POST || $this->banend) {
                 if ($this->flood && $this->clk_flood > 28) # set hard ban when > 29 flood clicks
-                    $_ &= self::BANNED;
+                    $_ &= self::BANNED;                    ///////////////////////////////////////////////////////////
                 $ary['!clk_flood'] = $this->flood ? 'clk_flood+1' : 0;
             }
             if ($this->pretty = $this->pretty && $this->sky === $cookie) {
@@ -118,7 +118,7 @@ class USER
                 $ary['ref'] = $sky->eref;
             }
             if ($sky->ajax) {
-                if ($_ & self::NO_JS && $this->clk_total > 1 && $sky->s_j_manda)
+                if (($_ & self::NO_JS) && $this->clk_total > 1 && $sky->s_j_manda)
                     $this->js_unlock = true;
                 $_ &= ~self::NO_JS;
             } elseif (1 == $this->clk_total) { # second click
@@ -143,10 +143,10 @@ class USER
             if (2 == $this->auth && $sky->is_front && Admin::section($sky->lref))
                 $this->u_uri_admin = $sky->lref;
 
-            $_c = $_ & self::NO_ANY_C && $sky->s_c_manda;
-            $_j = $_ & self::NO_JS    && $sky->s_j_manda;
-            if ($_c || $_j)
-                $sky->error_no = "1$sky->s_c_manda$sky->s_j_manda" . (int)$_c . (int)$_j;
+            $_c = ($_ & self::NO_ANY_C) && $sky->s_c_manda;
+            $_j = ($_ & self::NO_JS)    && $sky->s_j_manda;
+    //        if ($_c || $_j)
+      //          $sky->error_no = "1$sky->s_c_manda$sky->s_j_manda" . (int)$_c . (int)$_j;
             if ($_j)
                 $this->v_tz = ''; # for exit from js lock
 

@@ -7,7 +7,9 @@ class Install
     const DONE = 'Done.';
 
     static function run($page) {
-        return ['page' => $page] + (array)(new Install)->{"_$page"}();
+        $page or $page = 'database';
+        MVC::body("_inst.$page[0]");
+        return (array)(new Install)->{"_$page"}();
     }
 
     function memo($var = false, $default = '') {

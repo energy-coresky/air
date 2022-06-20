@@ -26,10 +26,6 @@ img, table {
 #trace {
     width: 100%;
     text-align:left;
-    overflow: auto;
-    background: #005;
-    color: #0f0;
-    margin:0 auto;
 }
 img.right {
     border: 1px solid #ccc;
@@ -95,7 +91,7 @@ div#box {
 div#box div#box-in {
     position: fixed;
     background-color: rgba(255,255,255, 1);
-    overflow: auto;
+    overflow: hidden;
 }
 #box-in pre span:hover, #box-in td span:hover, #err-top pre span:hover {
     color: red;

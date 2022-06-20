@@ -4,12 +4,22 @@ var sky = {
     max_filesize: 5000000,
     id: 0,
     mode: '', // visual or debug
-    tz: '',
-    path: '',
+    tz: null,
+    home: '/',
     scrf: '',
     err: function(s) {
         alert(s);
     },
+    err_t: 0,
+    err_show: function(r) {
+        if (r) {
+            $('#trace-x').html(r.catch_error);
+            'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func) : dev('_x1');
+        } else if (sky.err_t) {
+            dev('_x0');
+        }
+    },
+    d: {}, // dev utilities
     a: { // ajax
         body: null,
         div: 'main',
@@ -141,21 +151,14 @@ var sky = {
         });
     },
     g: { // sky gate & language extensions
-        box: function(ctrl, func, err) {
+        box: function(ctrl, func, layout) {
+            if (layout) {
+                $('#trace-x').html('<h1>' + $('#trace-t h1:eq(0)').html() + '</h1>');
+                sky.err_t = 0;
+            }
             var fn = !ctrl ? '' : ("default_c" == ctrl ? "*" : ctrl.substr(2));
-            ajax(['_gate', fn], {err:err || ''}, function(r) {
-                box(r);
-                $('h1 span.gate-err').html(ctrl + '::' + func);
-                sky.set_file_clk('#box-in');
-                if (func) setTimeout(function() {
-                    var el = false;
-                    $('#gate legend b').each(function() {
-                        if ($(this).text() == func)
-                            el = $(this).parent().parent().find('input[type=button]')[0];
-                    });
-                    sky.g.edit(el, fn + '.' + func, true);
-                }, 777);
-            });
+            dev('?_gate=' + fn + '&func=' + func);
+            //$('#err-top div:eq(0)').html()
         }
     },
     f: { // forms
@@ -334,7 +337,7 @@ var sky = {
     bgs: function(el) {
         if (!el) el = $('#box-in');
         sky.background_obj = {el:el, css:el.css('background')};
-        el.css('background', 'url(' + sky.path + 'img/ajax2.gif)');
+        el.css('background', 'url(' + sky.home + 'img/ajax2.gif)');
     },
     bgh: function(bg) {
         if (sky.background_obj) {
@@ -345,35 +348,49 @@ var sky = {
     set_file_clk: function(id) {
         $(id + ' pre span, ' + id + ' td span').each(function() {
             $(this).click(function() {
-                if (!$(this).attr('style'))
-                ajax('', {name:$(this).html(), c:$(this).next().hasClass('error')}, function(r) {
-                    sky.box_html = $('#box').html();
-                    box(r);
-                    $('#box-in div.code').get(0).scrollIntoView({block:'center',behavior:'smooth'});
+                if (!$(this).attr('style')) {
+                    var n = $(this).html();
+                    $('#top-head').html('<b>' + n + '</b>');
+                ajax('', {name:n, c:$(this).next().hasClass('error')}, function(r) {
+                    sky.box_html = $('#v-body').html();
+                    $('#v-body').html(r);
+                    $('#v-body div.code').get(0).scrollIntoView({block:'center',behavior:'smooth'});
                     sky.key[27] = function() { // Escape
-                        $('#box').html(sky.box_html);
+                        $('#v-body').html(sky.box_html);
                         sky.set_file_clk(id);
                     };
-                }, '_file');
+                }, '_file')};
             });
         });
         sky.key[27] = sky.hide;
     },
     box_html: '',
     trace: function(c) {
-        if (c) $.post(addr + '_x' + c, function(r) {
+        if (1) {
+            dev('_x' + c);
+            return;
+        }
+        if (c) $.post(sky.home + '_x' + c, function(r) {
             box('<ul style="position:fixed" id="x-cell">'
                 + '<li><a href="javascript:;" onclick="sky.trace(1)" class="' + (1 == c ? 'active' : '') + '">X<sup>0</sup></a></li>'
                 + '<li><a href="javascript:;" onclick="sky.trace(2)" class="' + (2 == c ? 'active' : '') + '">X<sup>-1</sup></a></li>'
                 + '<li><a href="javascript:;" onclick="sky.trace(3)" class="' + (3 == c ? 'active' : '') + '">X<sup>-2</sup></a></li>'
                 + '</ul><pre>' + r + '</pre>', 'x');
-            sky.set_file_clk('#box-in');
+            //sky.set_file_clk('#box-in');
         }); else {
             var r = $('#trace').html();
             box('<pre>' + r + '</pre>', 't');
-            sky.set_file_clk('#box-in');
+            //sky.set_file_clk('#box-in');
         }
     }
+}
+
+function dev(addr, pf) {
+    if (pf)
+        return ajax(addr, pf, 'v-body');
+    if ($.isArray(addr))
+        return ajax(addr, {}, 'v-body');
+    box('<iframe src="' + sky.home + addr + '" style="width:100%; height:100%;vertical-align:middle;border:0;"></iframe>');
 }
 
 function box(html, c) {
@@ -390,8 +407,8 @@ function box(html, c) {
         box.children('#box-in').css(css).html(html).click(sky.true);
     sky.show();
     sky.resize();
-    if ('e' == c)
-        sky.set_file_clk('#box-in');
+    //if ('e' == c)
+      //  sky.set_file_clk('#box-in');
     if (el && ('t' == c || 'x' == c))
         el.scrollIntoView({block:'center',behavior:'smooth'});
 }
@@ -407,7 +424,7 @@ function ajax(j_, postfields, func, c_) {
         j_ = sky.a._1 = 1 == j_.length ? '' : j_[1];
     }
     j_ = 'number' == typeof j_ ? 'ajax' + (j_ ? j_ : '') : j_;
-    var mem_x, url = sky.path + '?AJAX=' + (c_ || sky.a.div) + '&' + (c_ || sky.a._0) + '=' + j_;
+    var mem_x, ctrl0 = c_ || sky.a.div, ctrl1 = c_ || sky.a._0;
     if (sky.a.x_el) {
         mem_x = sky.a.x_el.html();
         sky.a.x_el.html(sky.a.x_html);
@@ -415,32 +432,40 @@ function ajax(j_, postfields, func, c_) {
     $.ajaxSetup({
         headers: {'X-Orientation': sky.orientation()}
     });
-    sky.post(url, postfields || '', function(r) {
+    sky.post(sky.home + '?AJAX=' + ctrl0 + '&' + ctrl1 + '=' + j_, postfields || '', function(r) {
         var error_func = sky.a.error(); // get the current and restore default error handler
         func = func || sky.a.body;
+        var x_trace = function () {
+            try {
+                $('#trace-x').html('');
+                window.parent.document.getElementById('trace-x').innerHTML = '';
+                //'_' != ctrl1.charAt(0);
+            } catch (e) {};
+        }
         if (sky.a.x_el)
             sky.a.x_el.html(mem_x);
         if ('undefined' !== typeof r.catch_error) {
             if ('undefined' !== typeof r.ky) {
-                location.href = sky.path + (12 == r.ky ? '' : '_exception');
+                location.href = sky.home + (12 == r.ky ? '' : '_exception');
             } else if ('undefined' !== typeof r.err_no) {
                 return error_func ? error_func(r) : sky.err('Error ' + r.err_no + ' (error handler not set)');
             } else {
-                'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func, r.catch_error) : box(r.catch_error, 'e');
+                sky.err_show(r);
             }
+        } else switch (typeof func) {
+            case 'function': x_trace(); return func(r);
+            case 'string':   x_trace(); return $('#' + func).html(r);
+            case 'object':   x_trace(); return func ? func.html(r) : null; // null is object
+            default:         x_trace(); return r ? sky.err(r) : null;
         }
-        else if ('function' == typeof func) func(r);
-        else if ('string' == typeof func) $('#' + func).html(r);
-        else if ('object' == typeof func && func) func.html(r); // null is object
-        else if (r) sky.err(r);
     });
 }
 
 (function($) {
-    sky.path = $('meta[name="surl-path"]').attr('content');
+    sky.home = $('meta[name="sky.home"]').attr('content');
     sky.scrf = $('meta[name="csrf-token"]').attr('content');
 
-    var path = sky.path.replace(/\//g, "\\/");
+    var path = sky.home.replace(/\//g, "\\/");
     var m = location.href.match(new RegExp('^.+?' + path + '(\\w*)[^\\?]*(\\?(\\w+).*?)?(#.*)?$', ''));
     sky.a.div = m && m[1] ? m[1] : 'main';
     sky.a._0  = 'adm' == sky.a.div && m[3] ? m[3] : sky.a.div;
@@ -468,19 +493,23 @@ function ajax(j_, postfields, func, c_) {
 
 $(function() {
     var html = '<div id="box" style="display:none"><div id="box-in"></div></div>'
-        + '<div style="opacity:0;position:absolute;left:0;top:0;z-index:-1000"><img src="' + sky.path + 'img/ajax2.gif" /></div>';
+        + '<div style="opacity:0;position:absolute;left:0;top:0;z-index:-1000"><img src="' + sky.home + 'img/ajax2.gif" /></div>';
     // set box
     $('body').prepend(html).keydown(function(e) {
         if ('function' == typeof sky.key[e.keyCode]) try {
             sky.key[e.keyCode]();
         } catch(e) {}
     });
-    if ($('#err-bottom')[0]) {
-        $('#err-top').show().html($('#err-bottom').html());
-        $('#err-bottom').remove();
+
+
+    if ($('#trace-t')[0] && 0) {///////////////////////////////////////////////
+        $('#err-top').show().html($('#trace-t').html());
+        $('#trace-t').remove();
         if ('function' == typeof sky.g.show)
             sky.g.show();
     }
+  sky.err_show(); // _x0 + sky gate
+
     sky.resize();
     $(window).resize(sky.resize);
 
@@ -492,11 +521,11 @@ $(function() {
             sky.tz = 0;
         ajax('_', {tz:sky.tz, scr:scr}, function (r) {
             if ('main' == r)
-                location.href = sky.path;
+                location.href = sky.home;
         }, '_init');
     }
 
-    sky.set_file_clk('#err-top');
+    //sky.set_file_clk('#err-top');
     sky.load();
 });
 

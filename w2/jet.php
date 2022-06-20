@@ -4,41 +4,42 @@
 
 class Jet
 {
-    private $parsed;
-    private $replace = [];
+    private $parsed = [];
     private $files = [];
-    private $empty = [];
-    private $loop = [];
     private $div = '<div style="display:none" id="err-top"></div>';
-    private $cur_tpf;
-    private $cur_ml;
 
-    private static $vars = [];
-    private static $block = [];
-    private static $inc = [];
+    private static $directive = false;
+    private static $custom = [];
+    private static $verb;
+    private static $inc;
+    private static $use;
+    private static $ref;
+    private static $block;
+    private static $id;
+    private static $empty = [];
 
-    static $directive = false;
-    static $custom = [];
+    static $tpl = [];
+    static $loop = [];
+    static $fn;
 
     static function directive($name, $func = null) {
         Jet::$custom += is_array($name) ? $name : [$name => $func];
     }
 
-    static function q($pattern, $arg) {
-        $arg = in_array(@$arg[0], [false, "'", '"']) ? $arg : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"';
-        return sprintf("<?php $pattern ?>", $arg);
-    }
-
-    function __construct($name, $layout = '', $fn = false, $vars = null) {
+    function __construct($name, $layout = false, $fn = false, $return = null) {
         global $sky;
 
-        if (null !== $vars)
-            Jet::$vars = $vars;
+        if ($fn) {
+            Jet::$block = Jet::$use = Jet::$ref = Jet::$inc = Jet::$verb = [];
+            Jet::$id = 1;
+            Jet::$fn = basename($fn);
+        }
         $marker = '';
         if ($layout) {
             $this->body = $name;
-            $name = "y_$layout";
-        } elseif (is_string($name)) {
+            $name = '_' == $layout[0] ? $layout : "y_$layout";
+        }
+        if (is_string($name)) {
             if (strpos($name, '.'))
                 list($name, $marker) = explode('.', $name, 2);
             $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
@@ -52,189 +53,261 @@ class Jet
             Jet::$directive = true;
         }
 
-        $this->parsed = $this->parse($name, $marker);
+        $this->parse($name, $marker);
 
-        if ($fn) {
-            $code = $this->proc_blocks(); # must calc $this->files first!
-            $out = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n$code";
-            if (DEV)
-                $out .= "trace('TPL: $list'); MVC::in_tpl(true);\n";
-            $out .= "extract(\$_vars, EXTR_REFS) ?>" . strtr($this->parsed, $this->replace);
-            if (DEV && $vars && !$layout)
-                $out .= '<?php if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif ?>';
-            if (DEV)
-                $out .= "<?php MVC::in_tpl();";
-            file_put_contents($fn, $this->optimize($out));
-        }
+        if ($fn)
+            file_put_contents($fn, $this->compile($layout, $return));
     }
 
-    static function warm_all($is_prod) {
-        //2do
-    }
+    private function compile($layout, $return) {
+        $top = $bottom = $replace = $set0 = [];
+        $occupied = ['k', 'e', 'y'];
+        static $inner;
 
-    private function proc_blocks() {
-        $top = $this->replace = [];
-        $used = ['k', 'e', 'y'];
-        foreach (Jet::$block as $name => $ary) {
-            list ($lab, $pf, $code, $files) = $ary;
-            if (!$lab)
-                continue; # @use without @block
+        $outer = function ($name) use (&$bottom, &$replace, &$set0, &$inner) {
+            list ($id, $pf, $parsed, $files, $scheme2, $loop) = Jet::$block[$name];
+            if (!$id)
+                return ''; // #use without @block
+            if (isset($replace[$id]))
+                return $replace[$id];
             $this->files += $files;
-            if ($pf && ' ' == $pf[1]) {
-                $php = ($is_php = strpos($code, '?')) ? '$_a = SKY::$vars; ' : '';
-                if (DEV)
-                    $php .= 'MVC::in_tpl(false); ';
-                if ($is_php)
-                    $php .= '$_b = (array)';
-                $php .= "MVC::handle('$pf[0]_$name', \$_vars)";
-                if ($is_php)
-                    $php .= '; MVC::vars($_a, $_b); extract($_a, EXTR_REFS)';
-                if (DEV)
-                    $php .= '; MVC::in_tpl()';
-                $this->replace[$lab] = $is_php
-                    ? "<?php call_user_func(function() use(&\$_vars) { $php ?>$code<?php }) ?>"
-                    : "<?php $php ?>$code";
-                continue;
+            $tpl = $inner($name, $pf, $parsed);
+
+            if (isset(Jet::$use[$name])) { // has @use
+                $cnt_u = count(Jet::$use[$name]);
+                $set0[] = $bv = '$_b' . $id;
+                $if = "else: ?>$tpl<?php endif";
+                for ($j = 0; $j < $cnt_u; $j++) {
+                    list ($use_id, $pf, $parsed, $files) = Jet::$use[$name][$j];
+                    $this->files += $files;
+                    $replace[$use_id] = "<?php $bv = $use_id ?>";
+                    $if = "if ($use_id == $bv): ?>" . $inner($name, $pf, $parsed) . "<?php $if";
+                    $j == $cnt_u - 1 or $if = "else$if";
+                }
+                if ($scheme2) { # @use last
+                    if ($loop)
+                        $set0[] = $iv = '$_i' . $id;
+                    $ob = sprintf('$_ob[%s]', $loop ? "\"$id-$iv\"" : -$id);
+                    $tpl = "<?php \$_ob[] = ob_get_clean(); $ob = ''; ";
+                    $tpl .= 'ob_start()' . ($loop ? "; $iv++ ?>" : ' ?>');
+                    $if = "ob_start(); $if; $ob = ob_get_clean();";
+                    $bottom[] = $loop
+                        ? "for ($iv = 0; isset($ob); $iv++): $if endfor"
+                        : "if (isset($ob)): $if endif";
+                } else { # @block last
+                    $tpl = "<?php $if ?>";
+                }
             }
-            $this->replace[$lab] = $code;
-            if ($pf) {
-                if (in_array($pf[0], $used))
+            return $replace[$id] = $tpl;
+        };
+
+        $inner = function ($name, $pf, $parsed) use (&$top, &$occupied, &$outer) {
+            $tpl = '';
+            array_walk_recursive($parsed, function ($str, $id) use (&$tpl, &$outer) {
+                if (isset(Jet::$ref[$id])) {
+                    $block_id = Jet::$block[$str][0] ?? 0;
+                    $str = $block_id ? (Jet::$ref[$id] ? $outer($str) : "<?php \$_b$block_id = $id ?>") : '';
+                }
+                $tpl .= $str;
+            });
+            if ($closure = strpos($tpl, '?'))
+                $closure = preg_match("/\\$\w+/s", $tpl);
+            if ($pf && ' ' == $pf[1]) {
+                $s = $closure ? '$_a = SKY::$vars; ' : '';
+                if (DEV)
+                    $s .= 'MVC::in_tpl(false); ';
+                if ($closure)
+                    $s .= '$_b = (array)';
+                $s .= "MVC::handle('$pf[0]_$name', \$_vars)";
+                if ($closure)
+                    $s .= '; MVC::vars($_a, $_b); extract($_a, EXTR_REFS)';
+                if (DEV)
+                    $s .= '; MVC::in_tpl()';
+                if ($closure)
+                    return "<?php call_user_func(function() use(&\$_vars) { $s ?>$tpl<?php }) ?>";
+                return "<?php $s ?>$tpl";
+            } elseif ($pf) { # asterisk
+                if (in_array($pf[0], $occupied))
                     throw new Error("Jet blocks: char `$pf[0]` occupied");
-                $used[] = $pf[0];
+                $occupied[] = $pf[0];
                 $pf[1] = '_';
                 $top[] = "\$_$pf = (array)MVC::handle('$pf$name', \$_vars); MVC::vars(\$_vars, \$_$pf, '$pf');";
             }
+            return $tpl;
+        };
+
+        foreach (array_keys(Jet::$block) as $name)
+            $outer($name);
+
+        $out = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n";
+        if ($top)
+            $out .= implode("\n", $top) . "\n";
+        if ($set0)
+            $out .= implode(" = ", $set0) . " = 0;\n";
+        if ($bottom)
+            $out .= "\$_ob = []; ";
+        if ($bottom || $return)
+            $out .= "ob_start(); ";
+        $out .= "extract(\$_vars, EXTR_REFS) ?>";
+        if (DEV) {
+            $out .= "<?php\ntrace('TPL: $list'); MVC::in_tpl(true);";
+            $out .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || 1 == $sky->ajax && !$sky->is_sub))';
+            $out .= "\nthrow new Error('Return status do not match for file: ' . __FILE__) ?>";
         }
-        Jet::$block = Jet::$inc = [];
-        return $top ? implode("\n", $top) . "\n" : '';
+        array_walk_recursive($this->parsed, function ($str, $id) use (&$out, &$replace) {
+            $out .= isset(Jet::$ref[$id]) ? ($replace[$id] ?? '') : $str;
+        });
+        if ($bottom)
+            $out .= "<?php \$_ob[] = ob_get_clean();\n" . implode(";\n", $bottom) . ' ?>';
+        if (DEV && !$layout)
+            $out .= '<?php if (2 == DEV::cfg("var")): DEV::ed_var(get_defined_vars()); endif ?>';
+        if (DEV)
+            $out .= "<?php MVC::in_tpl() ?>";
+        if ($return) {
+            $out .= '<?php return ' . ($bottom ? 'implode("", $_ob);' : 'ob_get_clean();');
+        } else {
+            $out .= $bottom ? '<?php echo implode("", $_ob); return "";' : "<?php return '';";
+        }
+        $str = $ct = ''; /* optimize `?><?php` in parsed templates */
+/*        $buf = [];
+        foreach (token_get_all($out) as $token) {
+            is_array($token) or $token = [0, $token];
+            if ($token[0] == T_OPEN_TAG && $ct) {
+                array_pop($buf);
+                T_WHITESPACE != end($buf)[0] or array_pop($buf);
+                $token = [0, in_array(end($buf)[1], [':', ';']) ? "\n" : ";\n"];
+            }
+            $buf[] = $token;
+            $ct = T_CLOSE_TAG == $token[0];
+        }
+        while ($buf)
+            $str .= array_shift($buf)[1]; */
+        return strtr($out, Jet::$verb) . "\n";
+    }
+
+    private function save($in, $new = false) {
+        if ($new || is_array($in)) {
+            $this->parsed[++Jet::$id] = $in;
+            return Jet::$id++;
+        }
+        isset($this->parsed[Jet::$id]) or $this->parsed[Jet::$id] = '';
+        $this->parsed[Jet::$id] .= $in;
+        return '';
     }
 
     private function parse($name, $marker = '') {
-        $this->cur_ml = false;
-        if (is_array($name)) {
-            list ($in, $this->cur_tpf, $this->cur_ml) = $name;
+        $this->marker = false;
+        if ($inline = is_array($name)) {
+            list ($in, $this->marker) = $name;
         } else {
-            $this->files[$this->cur_tpf = $name] = 1;
+            Jet::$tpl[] = [$name, $marker];
+            $this->files[$name] = 1;
             $in = file_get_contents(MVC::fn_tpl($name));
         }
         if ('' !== $marker) {
-            $re = "/([\r\n]+|\A)\s*\#([\.\w+]*?\.{$marker}[\.\w+]*?)( .*?)?([\r\n]+|\z)/s";
-            preg_match($re, $in, $match);
-            if (3 != count($ary = preg_split($re, $in, 3)))
+            if (3 != count($ary = preg_split("/^\#([\.\w+]*?\.{$marker}\b[\.\w+]*).*$/m", $in, 3)))
                 throw new Error("Jet: cannot find `$name.$marker`");
             $in = $ary[1];
-            $this->cur_ml = substr($match[2], 1);
+            $this->marker = $marker;
         }
         # @verb
         $in = preg_replace_callback('/@verb(.*?)~verb/s', function ($m) {
-            $this->replace[$lab = '%__verb_' . count($this->replace) . '__%'] = $m[1];
+            Jet::$verb[$lab = '%__verb_' . count(Jet::$verb) . '__%'] = $m[1];
             return $lab;
         }, $in);
+        # disable PHP tags
+        foreach (token_get_all($in) as $token) {
+            if (T_OPEN_TAG == $token[0])
+                throw new Error("Jet: cannot use PHP tags, apply @php(..) instead");
+        }
         # delete nested part markers
         $in = preg_replace('/([\r\n]+|\A)\s*#\.[\.\w+]+.*?([\r\n]+|\z)/s', '$2', $in);
         # preprocessor
-        for ($i = 0; $i < 20 && $this->preprocessor($in); $i++);
-        # @block
-        $in = preg_replace_callback('/@block\(([a-z][ \*]|)(\w+)\)(.*?)~block/s', function ($m) {
-            $this->_block($m[1], $m[2], $m[3], $lab = '%__block_' . $m[2] . '__%');
-            return $lab;
-        }, $in);
-
-        $out = '';
-        foreach (token_get_all($in) as $token) {
-            if (is_array($token)) {
-                list($id, $str) = $token;
-                $token = $str;
-                if ($id == T_INLINE_HTML) {
-                    $this->parse_statements($token);
-                    $this->parse_echos($token);
-                }
-            }
-            $out .= $token;
+        $in = $this->preprocessor($in);
+        # the main parser
+        $offset = 0;
+        while (false !== ($pos = strpos($in, '#use(', $offset)))
+            $offset = $this->_block($pos, $in, false);
+        while (preg_match('/^(.*?)(~|@)([a-z]+)(.*)$/s', $in, $m)) {
+            $this->save($this->echos($m[1]));
+            $in = substr($m[4], strlen($br = Rare::bracket($m[4])));
+            $code = $this->statements($m[3], $br ? substr($br, 1, -1) : '', '~' == $m[2], $in);
+            $this->save(null === $code ? $m[2] . $m[3] . $br : $code);
         }
-
-        return strtr($out, $this->replace);
+        $this->save($this->echos($in));
+        $inline or array_pop(Jet::$tpl);
     }
 
-    private function preprocessor(&$in) {
-        $_i = $_u = 0;
-        $re = '/\B\#(end|if|elseif|else)([ \t]*)(\( ( (?>[^()]+) | (?3) )* \))?/x';
-        $in = preg_replace_callback($re, function ($_match) use (&$_i, &$_u) {
-            if ($_u < 0)
-                return $_match[0];
-            extract(Jet::$vars, EXTR_REFS);
-            $_label = '%__ife_' . ++$_i . '__%';
-            switch ($_match[1]) {
-                case 'end':
-                    $_u = $_u ? -$_u : -99;
-                    return $_label;
-                case 'if':
-                    if ($_i > 1)
-                        throw new Error("Jet preprocessor: cannot use nested #if..");
-                case 'elseif':
-                    if (!isset($_match[3]))
-                        return $_match[0];
-                    $_u or !eval("return $_match[3];") or $_u = $_i;
-                    return $_label;
-                case 'else':
-                    $_u or $_u = $_i;
-                    return $_label;
-            }
-        }, $in);
-        if ($_i) {
-            for ($ok = false, $prv = $i = 1; $i <= $_i; $i++, $prv = $pos) {
-                $pos = strpos($in, "%__ife_{$i}__%");
-                if ($i > 1) { # from second step
-                    $size = $ok ? ($i > 10 ? 12 : 11) : $pos - $prv;
-                    $pos -= $size;
-                    $in = substr($in, 0, $prv) . substr($in, $prv + $size);
-                    $ok = false;
-                }
-                if ($i == -$_u)
-                    $ok = true;
-                if ($i == $_i) # last cycle
-                    $in = str_replace("%__ife_{$i}__%", '', $in);
-            }
+    private function statements($tag, $arg, $end, &$str) {
+        $q = function ($pattern, $arg) {
+            return sprintf("<?php $pattern ?>", in_array(@$arg[0], [false, "'", '"'])
+                ? $arg
+                : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"'
+            );
+        };
+        switch ($tag) {
+            case 'php':
+                return $arg ? '<?php ' . trim($arg) . ' ?>' : ($end ? '?>' : '<?php');
+            case 'unless':
+                $arg = preg_match("/^\\$\w+$/", $arg) ? "!$arg" : "!($arg)";
+            case 'if':
+                return $end ? "<?php endif ?>" : "<?php if ($arg): ?>";
+            case 'cache':
+                return $end ? '<?php Rare::cache(); endif ?>' : $q('if (Rare::cache(%s)):', $arg);
+            case 'loop':
+                return $this->_loop($end, $arg);
         }
-        return $_i;
+        if ($end)
+            return;
+
+        switch ($tag) {
+            case 'inc':
+                return $this->_inc('' === $arg ? '*' : $arg);
+            case 'block':
+            case 'use':
+                return !$arg ? null : $this->_block($arg, $str, 'block' == $tag);
+            case 'view':
+                return $q(DEV ? "MVC::in_tpl(false);view(%s);MVC::in_tpl()" : 'view(%s)', $arg);
+            case 'pdaxt':
+                return sprintf('<?php MVC::pdaxt(%s) ?>', $arg);
+            case 'else':
+                return '<?php else: ?>';
+            case 'elseif':
+                return "<?php elseif ($arg): ?>";
+            case 't':
+                return $q('echo t(%s)', $arg);
+            case 'p':
+                return $q('echo \'"\' . PATH . %s . \'"\'', $arg);
+            case 'dump':
+                return "<?php echo '<pre>' . html(print_r($arg, true)) . '</pre>' ?>";
+            case 'mime':
+                $this->div = '';
+                return $q('MVC::doctype(%s)', $arg);
+            case 'href':
+                return 'href="javascript:;" onclick="' . $this->echos($arg) . '"';
+            case 'csrf':
+                return '<?php echo hidden() ?>';
+            case 'head':
+                return "<?php MVC::head($arg) ?>";
+            case 'tail':
+                $ed_var = DEV ? ' if (2 == DEV::cfg("var")): DEV::ed_var(get_defined_vars()); endif;' : '';
+                return "<?php$ed_var MVC::tail($arg) ?>";
+            case 'continue':
+                return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>';
+            case 'break':
+                return $arg ? "<?php if ($arg): break; endif ?>" : '<?php break ?>';
+            case 'empty':
+                if ('do' == end(Jet::$loop))
+                    throw new Error('Jet: no @empty statement for `do-while`');
+                Jet::$empty[] = $i = count(Jet::$loop) - 1;
+                return $this->_loop(true, '') . '<?php if (!' . ($i ? '$_' . (1 + $i) : '$_') . '): ?>';
+        }
+        if (isset(Jet::$custom[$tag]))
+            return call_user_func(Jet::$custom[$tag], $arg, $this); # user defined
     }
 
-    /* delete `<?php  ?>` and merge `?><?php` in parsed templates */
-    private function optimize($in) {
-        $out = $tmp = '';
-        $flag = false;
-        foreach (token_get_all($in) as $token) {
-            if (is_array($token)) {
-                list($id, $str) = $token;
-                if (T_OPEN_TAG == $id) {
-                    if ($flag) {
-                        $out = substr($out, 0, -strlen($flag)) . ';';
-                        $tmp = '';
-                    } else {
-                        $out .= $tmp;
-                        $tmp = $str;
-                    }
-                } elseif (T_CLOSE_TAG == $id) {
-                    '' === $tmp and $flag = $str;
-                    '' === $tmp ? ($out .= $str) : ($tmp = '');
-                    continue;
-                } elseif (T_WHITESPACE == $id) {
-                    '' === $tmp ? ($out .= $str) : ($tmp .= $str);
-                } else {
-                    $out .= $tmp . $str;
-                    $tmp = '';
-                }
-            } else {
-                $out .= $tmp . $token;
-                $tmp = '';
-            }
-            $flag = false;
-        }
-        return $out;
-    }
-
-    private function parse_echos(&$str) {
-        $str = preg_replace_callback('/[~@]?{[{!\-](.*?)[\-!}]}/s', function ($m) {
+    private function echos(&$str) {
+        return preg_replace_callback('/[~@]?{[{!\-](.*?)[\-!}]}/s', function ($m) {
             if ('@' == $m[0][0])
                 return substr($m[0], 1); # verbatim
             $tilda = '~' == $m[0][0];
@@ -279,69 +352,119 @@ class Jet
         }, $str);
     }
 
-    private function parse_statements(&$str) {
-        $str = preg_replace_callback('/[~@]([a-z]+)([ \t]*)(\( ( (?>[^()]+) | (?3) )* \))?/x', function ($m) {
-            $end = '~' == $m[0][0];
-            $sp = $m[2] ? ' ' : '';
-            $arg = isset($m[3]) ? substr($m[3], 1, -1) : '';
-            switch ($tag = $m[1]) {
-                case 'php': return $end ? "?>$sp" : "<?php$sp";
-                case 'unless': $arg = "!($arg)";
-                case 'if': return $end ? "<?php endif ?>$sp" : "<?php if ($arg): ?>";
-                case 'cache': return $end ? '<?php Rare::cache(); endif ?>' : Jet::q('if (Rare::cache(%s)):', $arg);
-                case 'loop': return $this->_loop($end, $arg); # for, foreach, while, do { .. } while(..)
+    private function preprocessor($in) {
+        $ary = [];
+        $p =& $ary;
+        $d = [&$p];
+        $tmp = '';
+        while (preg_match("/^(.*?)\#((if\(|elseif\()|(end|else)\b)(.*)$/s", $in, $m)) {
+            $in = $m[5];
+            $arg = ($br = '(' == $m[2][-1]) ? Rare::bracket('(' . $m[5]) : false;
+            $if = 'if(' == $m[2];
+            if (count($d) < 2 && !$if || '()' == $arg || $br && !$arg) {
+                $tmp .= $m[1] . '#' . $m[2];
+                continue;
             }
-            if ($end)
-                return $m[0];
+            if ('end' == $m[2]) {
+                array_push($p, $tmp . $m[1], 'end');
+                array_pop($d);
+                $p =& $d[count($d) - 1];
+            } else {
+                if ($arg)
+                    $in = substr($m[5], strlen($arg) - 1);
+                if ($if) {
+                    array_push($p, $tmp . $m[1], []);
+                    $tmp = $m[1] = '';
+                    $p =& $p[count($p) - 1];
+                    $d[] =& $p;
+                }
+                array_push($p, $tmp . $m[1], $arg ?: 'else');
+            }
+            $tmp = '';
+        }
+        $p[] = $tmp . $in;
 
-            if (isset(Jet::$custom[$tag])) # user defined
-                return call_user_func(Jet::$custom[$tag], $arg, $this);
-            switch ($tag) {
-                case 'inc': return $this->_file('' === $arg ? '*' : $arg);
-                case 'use': return (string)$this->_block($arg, $m[0]);
-                case 'view': return Jet::q(DEV ? "MVC::in_tpl(false);view(%s);MVC::in_tpl()" : 'view(%s)', $arg);
-                case 'pdaxt': return sprintf('<?php MVC::pdaxt(%s) ?>', $arg ? $arg : '') . $sp;
-                case 'else': return '<?php else: ?>' . $sp;
-                case 'elseif': return "<?php elseif ($arg): ?>";
-                case 't': return Jet::q('echo t(%s)', $arg);
-                case 'p': return Jet::q('echo \'"\' . PATH . %s . \'"\'', $arg);
-                case 'dump': return "<?php echo '<pre>' . html(print_r($arg, true)) . '</pre>' ?>";
-                case 'mime': $this->div = ''; return Jet::q('MVC::doctype(%s)', $arg);
-                case 'href': return 'href="javascript:;" onclick="' . $arg . '"';
-                case 'csrf': return '<?php echo hidden() ?>' . $sp;
-                case 'head': return "<?php MVC::head($arg) ?>";
-                case 'tail':
-                    $ed_var = DEV ? ' if (2 == Ext::cfg("var")): Ext::ed_var(get_defined_vars()); endif;' : '';
-                    return "<?php$ed_var MVC::tail($arg) ?>";
-                case 'continue': return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>' . $sp;
-                case 'break': return $arg ? "<?php if ($arg): break; endif ?>" : '<?php break ?>' . $sp;
-                case 'empty':
-                    if ('do' == end($this->loop))
-                        throw new Error('Jet: no @empty statement for `do-while`');
-                    $this->empty[] = $i = count($this->loop) - 1;
-                    return $this->_loop(true, '') . '<?php if (!' . ($i ? '$_' . (1 + $i) : '$_') . '): ?>';
+        $eval = function ($arg) {
+            static $ary;
+            if (null === $ary) {
+                $ary = [':_0' => '$sky->_0', ':_1' => '$sky->_1', ':_2' => '$sky->_2'];
+                foreach (is_file($fn = 'main/app/jet.let') ? file($fn) : [] as $one) {
+                    if (preg_match("/^(:\w+)\s+(.+)/", $one, $m))
+                        $ary[$m[1]] = $m[2];
+                }
             }
-            return $m[0];
-        }, $str);
+            for ($i = 0; $i < 22; $arg = $new, $i++) {
+                $new = preg_replace_callback("/(:\w+)/", function ($m) use (&$ary) {
+                    return '(' . $ary[$m[1]] . ')';
+                }, $arg);
+                if ($arg === $new)
+                    break;
+            }
+            if ($i > 21)
+                throw new Error("Jet preprocessor: cycled pseudo-variables");
+            global $sky;
+            return eval("return $arg;");
+        };
+
+        $crop = function ($ary) use(&$crop, &$eval) {
+            $out = '';
+            foreach ($ary as $v) {
+                if (is_string($v)) {
+                    $out .= $v;
+                    continue;
+                }
+                $i = $ce = $ok = $len = 0;
+                for ($cnt = count($v); $i < $cnt; $i++) {
+                    if (++$i == $cnt)
+                        break;
+                    if (is_array($el = $v[$i]))
+                        continue;
+                    !$ce or $ce++;
+                    if ('else' === $el) {
+                        $ce++;
+                        $ok or $ok = $i;
+                    }
+                    if ($ok && !$len)
+                        $len = $i - $ok - 1;
+                    if (!$ok && '(' === $el[0] && $eval($el))
+                        $ok = $i;
+                }
+                if ($ce > 2 || 'end' !== end($v)) { # reassemble on wrong syntax
+                    foreach ($v as $i => $ok) {
+                        if (is_array($ok)) {
+                            $out .= $crop([$ok]);
+                        } elseif (0 == $i % 2) {
+                            $out .= $ok;
+                        } else {
+                            $out .= 1 != $i ? ('e' == $ok[0] ? "#$ok" : "#elseif$ok") : "#if$ok";
+                        }
+                    };
+                } elseif ($ok) {
+                    $out .= $crop(array_slice($v, $ok + 1, $len));
+                }
+            }
+            return $out;
+        };
+
+        return $crop($ary);
     }
 
     private function _loop($end, $arg) {
-        $cnt = count($this->loop);
+        $cnt = count(Jet::$loop);
         if ($end) {
             $iv = $cnt - 1 ? '$_' . $cnt : '$_';
             if ($arg) { # do-while
-                array_pop($this->loop);
+                array_pop(Jet::$loop);
                 return sprintf("<?php $iv++; } while (%s); ?>", preg_match('/^\$e_\w+$/', $arg) ? "\$row = $arg->one()" : $arg);
-            } elseif (end($this->empty) == $cnt) {
-                array_pop($this->empty);
+            } elseif (end(Jet::$empty) == $cnt) {
+                array_pop(Jet::$empty);
                 return '<?php endif ?>';
             }
-            return sprintf('<?php %s++; end%s ?>', $iv, array_pop($this->loop));
+            return sprintf('<?php %s++; end%s ?>', $iv, array_pop(Jet::$loop));
         }
-
         $iv = $cnt ? '$_' . (1 + $cnt) : '$_';
         if (!$arg) { # do-while
-            $this->loop[] = 'do';
+            Jet::$loop[] = 'do';
             return "<?php $iv = 0; do { ?>";
         }
         $is_for = $is_foreach = false;
@@ -353,68 +476,89 @@ class Jet
             $is_foreach = true;
             $arg .= ' as $row'; # eVar style cycle
         }
-        $this->loop[] = ($for = $is_foreach ? 'foreach' : ($is_for ? 'for' : 'while'));
-        return "<?php $iv = 0; $for ($arg): ?>";
+        Jet::$loop[] = ($loop = $is_foreach ? 'foreach' : ($is_for ? 'for' : 'while'));
+        return "<?php $iv = 0; $loop ($arg): ?>";
     }
 
     private function test_cycled(&$tpl, $op) {
+        $file = Jet::$tpl[count(Jet::$tpl) - 1][0];
         if ('.' == $tpl[0])
-            $tpl = $this->cur_tpf . $tpl;
+            $tpl = $file . $tpl;
         if (in_array($tpl, Jet::$inc))
-            throw new Error("Jet: cycled @$op($tpl)");
-        Jet::$inc[] = $this->cur_tpf;
-        if (!$this->cur_ml)
-            return;
-        $ary = explode('.', $this->cur_ml);
-        array_walk($ary, function ($v) {
-            Jet::$inc[] = "$this->cur_tpf.$v";
-        });
+            throw new Error("Jet: cycled $op($tpl)");
+        Jet::$inc[] = $this->marker ? "$file.$this->marker" : $file;
     }
 
-    private function _file($tpl) {
-        $red = '%s';
-        $div = '';
+    private function _inc($tpl) {
+        $red = '';
         if ('*' == $tpl) {
-            $div = $this->div;
+            $this->save($this->div);
             if ('_' === $this->body)
-                return $div . '<?php echo $sky->ob ?>';
+                return $this->save('<?php echo $sky->ob ?>');
             $tpl = $this->body;
         } elseif (DEV && 'r_' == substr($tpl, 0, 2)) { # red label
-            $red = '<?php if ($sky->s_red_label): ?>'
-                . tag("@inc($tpl)", 'class="red_label"')
-                . "<?php else: ?>%s<?php endif ?>";
+            $red = '<?php if ($sky->s_red_label): ?>' . tag("@inc($tpl)", 'class="red_label"');
+            $this->save($red . '<?php else: ?>');
+            $red = '<?php endif ?>';
         }
 
-        $this->test_cycled($tpl, 'inc');
-        if (isset($this->replace[$lab = "%__inc_{$tpl}__%"]))
-            return $div . $lab;
-
-        $me = new Jet($tpl);
-        $this->replace[$lab] = sprintf($red, $me->parsed);
-        $this->files += $me->files;
-        return $div . $lab;
+        $this->test_cycled($tpl, '@inc');
+        $jet = new Jet($tpl);
+        $this->save($jet->parsed);
+        $this->save($red);
+        $this->files += $jet->files;
+        return '';
     }
 
-    private function _block($pf, $name, $tpl = '', $lab = false) {
-        if ($inline = $lab) { # from @block(..)
-            if (isset(Jet::$block[$name])) {
-                if (Jet::$block[$name][0])
-                    throw new Error("Jet: duplicated @block($name) definishion");
-                Jet::$block[$name][0] = $lab;
-                return; # @block(..) already overloaded by @use(..)
-            }
-        } else { # from @use(..)
-            if (!preg_match('/^(.*?) as ([a-z][ \*]|)(\w+)$/', $pf, $m))
-                return $name;
-            list (, $tpl, $pf, $name) = $m;
-            if ($inline = '`' == $tpl[0]) {
-                $tpl = substr($tpl, 1, -1);
+    private function _block($arg, &$str, $is_block) {
+        if ($is_block) {
+            if (preg_match('/^(.+?) as ([a-z][ \*]|)(\w+)$/', $arg, $m)) {
+                list (, $tpl, $pf, $name) = $m;
+            } elseif (preg_match('/^([a-z][ \*]|)(\w+) (.*?)~block(\W|\z)/s', "$arg $str", $m)) {
+                list (, $pf, $name, $tpl) = $m;
+                $str = substr($str, 6 + strlen($tpl));
+                $tpl = "`$tpl`";
             } else {
-                $this->test_cycled($tpl, 'use');
+                return null;
             }
+            $exist = isset(Jet::$block[$name]);
+            if ($exist && Jet::$block[$name][0])
+                throw new Error("Jet: duplicated @block($name)");
+            Jet::$block[$name][0] = $id = $this->save($name, true);
+            Jet::$block[$name][4] = 0;
+            Jet::$block[$name][5] = count(Jet::$loop);
+            Jet::$ref[$id] = true;
+            if ($exist)
+                return ''; // @block(..) already overloaded by #use(..)
+            $type = 2;
+        } else {
+            if ($type = (int)is_int($arg)) { // 0 for @use, 1 for #use
+                $s1 = substr($str, $pos = 4 + $arg);
+                $arg = ($br = Rare::bracket($s1)) ? substr($br, 1, -1) : '';
+            }
+            if (!preg_match('/^(.+?) as ([a-z][ \*]|)(\w+)$/', $arg, $m))
+                return $type ? $pos : null;
+            list (, $tpl, $pf, $name) = $m;
+            if ($type)
+                $str = substr($str, 0, $pos - 4) . substr($str, $pos + strlen($br));
+        }
+        if ('`' == $tpl[0]) {
+            $tpl = [substr($tpl, 1, -1), $this->marker];
+        } else {
+            $this->test_cycled($tpl, $is_block ? '@block' : (1 == $type ? '#' : '@') . 'use');
+        }
+        $jet = new Jet($tpl);
+        $data = [0, $pf, $jet->parsed, $jet->files, Jet::$block[$name][4] ?? 0, Jet::$block[$name][5] ?? 0];
+
+        if ($type) { // #use(..) or @block(..)
+            Jet::$block[$name] = [Jet::$block[$name][0] ?? 0] + $data;
+        } else { // @use(..)
+            Jet::$ref[$id = $this->save($name, true)] = false;
+            Jet::$use[$name][] = [$id] + $data;
+            if (isset(Jet::$block[$name]))
+                Jet::$block[$name][4] = 1;
         }
 
-        $me = new Jet($inline ? [$tpl, $this->cur_tpf, $this->cur_ml] : $tpl);
-        Jet::$block[$name] = [$lab ? $lab : (Jet::$block[$name][0] ?? false), $pf, $me->parsed, $me->files];
+        return 1 == $type ? $pos - 4 : '';
     }
 }

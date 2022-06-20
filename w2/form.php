@@ -60,7 +60,9 @@ class Form
     function __construct($form, $row = []) {
         global $user;
         is_array($form) or $form = [$form];
-        $this->set_new($form + ['_csrf' => $user->v_csrf], $this->mk);
+        if (isset($user))
+            $form += ['_csrf' => $user->v_csrf];
+        $this->set_new($form, $this->mk);
         $this->row = $row;
     }
 

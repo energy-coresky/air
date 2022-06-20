@@ -6,12 +6,13 @@ class standard_c extends Controller
 {
     private $_c = '';
     private $_a = '';
+    private $_y = [];
 
     function head_y($action) {
-        $soft = [
+        $head2 = [
             'a_trace',
             'j_file',
-            'a_exception',
+//            'a_exception',
             'j_init',
             'j_crop_code',
             'j_crop',
@@ -20,20 +21,42 @@ class standard_c extends Controller
         ];
         if ('a_etc' == $action)
             return;
-        if ('a_etc' == $action || DEV && 'a_dev' == $action) # run MVC::$cc !
-            return parent::head_y($action);
-        if (in_array($action, $soft)) # app's ::head_y() locked !
-            return $this->soft(3);
+        if ('a_' == substr($action, 0, 2)) {
+            $this->_y = ['page' => substr($action, 2)];
+            MVC::$layout = '__std.layout';
+        }
+        if (in_array($action, $head2))
+            return $this->head_y2(3);
         if (!DEV)
             return 404;
-        global $sky;
-        $v = explode('.', $sky->_1, 2);
+        $v = explode('.', $this->_1, 2);
         $this->_c = '*' == $v[0] ? 'default_c' : "c_$v[0]";
         $this->_a = isset($v[1]) ? $v[1] : '';
         return ['y_1' => $v[0]];
     }
 
-    private function soft($x) {
+    function tail_y() {
+        global $sky;
+        if ($this->_y) {
+            #if ('WINNT' == PHP_OS)
+            #    $ary += ['adm?get_dev' => 'Open DEV.SKY.'];
+            $sky->k_static = [[], ["~/dev.js"], ["~/dev.css"]];
+            defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PATH);
+            return $this->_y + ['tasks' => [
+                '_dev' => 'DEV Settings',
+                '_gate' => 'Open SkyGate',
+                '_lang?list' => 'Open SkyLang',
+                '_inst' => 'Compile Project',
+                '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
+                '_visual' => 'Visual HTML',
+                '_php' => 'Visual PHP',
+                '_visual' => 'Visual HTML',
+                '_sandbox' => 'Sandbox',
+            ]];
+        }
+    }
+
+    private function head_y2($x) {
         global $sky, $user;
         $user = new USER;
     }
@@ -43,8 +66,10 @@ class standard_c extends Controller
         if (!$user->root && !DEBUG)
             return 404;
         $sky->debug = false;
-        echo sqlf('+select tmemo from $_memory where id=%d', $id); # show X-trace
-        throw new Stop;
+        $this->_y = ['page' => 2 == $id ? 'trace-t' : 'trace-x'];
+        if (2 != $id)
+            $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
+        return ['body' => $body ?? 0];
     }
 
     function j_file() {
@@ -64,7 +89,7 @@ class standard_c extends Controller
         $sky->error_no < 10000 or $no = 11;
         $no or jump();
         $sky->k_static = [[], [], []];
-        MVC::$layout = '';
+        MVC::$layout = $this->_y = '';
         return [
             'ky' => $sky->error_no,
             'no' => $no,
@@ -136,75 +161,73 @@ class standard_c extends Controller
 
     # functions below for DEV only
 
-    function a_dev() {
-        $form = Ext::form();
-        if ($_POST) {
-            foreach ($form as $k => $v)
-                is_int($k) or isset($_POST[$k]) or $_POST[$k] = 0;
-            Ext::save($_POST);
-        }
-        return ['form' => Form::A(Ext::$cfg, $form)];
-    }
-
-    function a_get_dev() {
-        is_file('dev.php') or file_put_contents('dev.php', file_get_contents('http://coresky.net/download?dev.php'));
-        jump(WWW ? '../dev.php' : 'dev.php');
-    }
+    #function a_get_dev() {
+    #    is_file('dev.php') or file_put_contents('dev.php', file_get_contents('http://coresky.net/download?dev.php'));
+    #    jump(WWW ? '../dev.php' : 'dev.php');
+    #}
 
     function j_drop() {
         echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
     }
 
-    function j_inst() { //////////////////////////////////////////////////////////////
-        return Install::run($this->_1);
+    function a_gate() { /* ====================================== */
+        return $this->j_gate();
     }
 
-    function j_gate() { //////////////////////////////////////////////////////////////
+    function j_gate() {
         if ($this->_c == 'c_') # open last access time controller
-            $this->_c = Gate::atime();
+            $this->_c = DEV::atime();
         $list = Gate::controllers($this->_c);
         return [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
             'h1' => $this->_c,
             'virtuals' => $this->_c ? array_shift($list) : '',
             'list' => $list,
-            'cshow' => Gate::cshow() ? ' checked' : '',
-            'e_func' => $this->_c ? Gate::view($this->_c) : false,
-            'error' => isset($_POST['err']) ? $_POST['err'] : false,
+            'cshow' => DEV::cshow() ? ' checked' : '',
+            'e_func' => $this->_c ? DEV::gate($this->_c) : false,
+            'func' => $this->_3 ?? '',
         ];
     }
 
     function j_virt() {
-        Gate::save($this->_c, preg_split("/\s+/", trim($_POST['v'])));
+        DEV::save_gate($this->_c, preg_split("/\s+/", trim($_POST['v'])));
         return $this->j_gate();
     }
 
     function j_delete() {
-        Gate::save($this->_c, $this->_a);
+        DEV::save_gate($this->_c, $this->_a);
         $this->_a or $this->_c = 'c_';
         return $this->j_gate();
     }
 
     function j_edit() {
-        return Gate::view($this->_c, $this->_a);
+        return DEV::gate($this->_c, $this->_a);
     }
 
     function j_save() {
-        Gate::save($this->_c, $this->_a, true);
-        return Gate::view($this->_c, $this->_a, false);
+        DEV::save_gate($this->_c, $this->_a, true);
+        return DEV::gate($this->_c, $this->_a, false);
     }
 
     function j_code() {
-        Gate::compile($this->_c, $this->_a);
+        DEV::compile($this->_c, $this->_a);
     }
 
     function x_c23_edit() {
-        return Gate::ary_c23();
+        return DEV::ary_c23();
     }
 
-    function j_lang() { //////////////////////////////////////////////////////////////
+    function a_lang() { /* ====================================== */
+        return $this->j_lang();
+    }
+
+    function j_lang() {
         MVC::body('_lng.' . substr($this->_c, 2));
         return call_user_func([new Language, $this->_c], $this->_a);
+    }
+
+    function a_glob() { /* ====================================== */
+        return $this->j_glob();
     }
 
     function j_glob() {
@@ -212,16 +235,30 @@ class standard_c extends Controller
         return call_user_func([new Globals, $this->_c], $this->_a);
     }
 
-    function j_visual() {
+    function a_inst() {
+        return $this->j_inst();
+    }
+
+    function j_inst() { /* ====================================== */
+        return Install::run($this->_1);
+    }
+
+    function a_dev() {
+        return DEV::run($this->_1, $this->_2);
+    }
+
+    function j_visual() { /* ====================================== */
         MVC::body('_vis.' . substr($this->_c, 2));
         return call_user_func([new Azure, $this->_c], $this->_a);
     }
 
     function a_visual() {
+        $this->_y = [];
         return Azure::layout();
     }
 
     function a_api() { # lang auto translations
+        $this->_y = [];
         # 2do
     }
 }

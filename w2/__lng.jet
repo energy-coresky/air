@@ -13,11 +13,20 @@ CREATE TABLE `{{SQL::$dd->pref}}language` (
 {!$obj->sql!}
 #.table
 
-#.generate
-formal tpl
-#.generate
-
-#.list.fix.store /////////////////////////////////////////////////////////////////////////
+#.generate formal tpl
+#.generate.header
+    <b>LANGUAGES</b>, sorted: <b><u>{{$obj->nsort?'no':'yes'}}</u></b>,
+    sync: <b><u id="sync">{{$obj->nsync?'no':'yes'}}</u></b>
+#.submenu.header
+    @loop($obj->list as $one)
+    <a href="{{PATH}}?_lang=list.{{$one}}"
+        {!$one==$obj->lg and ' active'!} class="inner-menu"
+        style="{!$one==DEFAULT_LG and 'text-transform:uppercase;'!}"
+        >{{$one}}
+    </a>
+    ~loop
+#.submenu.list.fix.store /////////////////////////////////////////////////////////////////////////
+#use(.header as header)
 <div id="lang">
 @if(1 == $obj->error)
     <h1>Please setup constant DEBUG to 1</h1>
@@ -28,18 +37,14 @@ formal tpl
 @elseif(4 == $obj->error)
     <h1>The table `{{SQL::$dd->pref}}language` is absent. Create?</h1>
     <pre>@inc(.table)</pre>
-    <input value="Yes!" type="button" onclick="ajax('fix',{sql:$(this).prev().text()},box)"/>
+    <input value="Yes!" type="button" onclick="dev('fix',{sql:$(this).prev().text()})"/>
 @elseif(5 == $obj->error)
     <h1>Languages not match (table and $sky->lg). Fix?</h1>
     <pre>{!$obj->sql!}</pre>
-    <input value="Yes!" type="button" onclick="ajax('fix',{sql:$(this).prev().text()},box)"/>
+    <input value="Yes!" type="button" onclick="dev('fix',{sql:$(this).prev().text()})"/>
 @else
+    @use(.submenu as m_lang)
     <fieldset><legend>Languages</legend>
-    @loop($obj->list as $one)
-        <input style="{!$one==DEFAULT_LG and 'text-transform:uppercase;'!}{!$one==$obj->lg and 'background:#afa;'!}"
-            value="{{$one}}" type="button" onclick="ajax('list.{{$one}}',box)"/>
-    ~loop
-        sorted: <b><u>{{$obj->nsort?'no':'yes'}}</u></b>, sync: <b><u id="sync">{{$obj->nsync?'no':'yes'}}</u></b>
     <div class="fr">Legend:
         <table style="display:inline-table">
             <tr>
@@ -52,7 +57,7 @@ formal tpl
     </fieldset>
     @if(!$obj->lg)
         <h1>Sky Languages: you will redirected..</h1>
-        <script>setTimeout("ajax('list.{{DEFAULT_LG}}',box)", 500)</script>
+        <script>setTimeout("location.href='{{PATH}}?_lang=list.{{DEFAULT_LG}}'", 500)</script>
     @else
         <p>
         <div class="fr" style="margin:0 15px 10px 0;">
@@ -61,7 +66,7 @@ formal tpl
             <input value="add new item" type="button" onclick="sky.g.all(0, 0)"/>
         </div>
         <div class="fl" style="margin:0 0 10px 15px;">
-            <input value="sort items" type="button" onclick="ajax('list.{{DEFAULT_LG}}',{sort:1},box)"/> total: <b>{{$e_list->cnt}}</b>
+            <input value="sort items" type="button" onclick="dev('list.{{DEFAULT_LG}}',{sort:1})"/> total: <b>{{$e_list->cnt}}</b>
         </div>
         <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
         <tr id="lang-head">
@@ -152,7 +157,7 @@ sky.g.editing = false;
 sky.g.info = 'Please finish current editing before open new one';
 sky.g.delete = function(id) {
     if (confirm('Are you sure? Delete item?'))
-        ajax('fix.{{$obj->lg}}', {delete:id}, box);
+        dev('fix.{{$obj->lg}}', {delete:id});
 };
 sky.g.all = function(el, id, is_save) {
     if (is_save) {
@@ -162,7 +167,7 @@ sky.g.all = function(el, id, is_save) {
         ajax('store.' + id, $('#all-edit').serialize(), function(r) {
             if ('1' == r)
                 return alert('Identifier non unique!');
-            box(r);
+            $('#v-body').html(r);
         });
     } else {
         if (el) {
@@ -208,7 +213,7 @@ sky.g.save = function(id, is_const) {
     ajax('fix.{{$obj->lg}}', {save:s, id:id, 'const-prev':cp}, function(r) {
         if ('1' == r)
             return alert('Identifier non unique!');
-        box(r);
+        $('#v-body').html(r);
     });
 };
 sky.g.generate = function() {
@@ -246,7 +251,7 @@ sky.g.parse = function(v) {
 </script>
 
 <style>
-#lang { margin:10px 15px }
+#lang { margin:10px }
 #lang legend { font-size:14px; }
 </style>
 #.jscss

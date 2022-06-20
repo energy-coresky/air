@@ -1,0 +1,161 @@
+html {
+    overflow: hidden;
+}
+body, pre {
+    margin: 0;
+}
+body {
+  font-family:
+        system-ui,
+        -apple-system, /* Firefox supports this but not yet `system-ui` */
+        'Segoe UI',
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif,
+        'Apple Color Emoji',
+        'Segoe UI Emoji';
+    
+    color:#4a4a4a;
+    font-size: 14px;
+}
+pre, fieldset {
+    width: 95%;
+}
+a {
+    text-decoration:none;
+    font-size: 12px;
+}
+div {
+    font-size: 12px;
+}
+:root {
+    --xsw: auto;
+}
+fieldset {
+    /*margin-right:20px;*/
+}
+#main {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: auto auto;
+    grid-template-rows:    27px calc(100% - 54px) 27px;
+    grid-template-areas: 'head head'
+                         'menu body'
+                         'tail tail';
+    overflow: hidden;
+}
+#v-head {
+    grid-area: head;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 .75rem;
+    background-color: #eee;
+    border-bottom:1px solid #ccc;
+}
+#v-head a, #v-tail a {
+    padding:0 10px;
+    line-height: 26px;
+    display: inline-block;
+    cursor:default;
+}
+#v-tail {
+    grid-area: tail;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 .75rem;
+}
+#v-menu {
+    grid-area: menu;
+    overflow: auto;
+    background-color: #eee;
+    border-bottom:1px solid #ccc;
+}
+#v-menu a {
+    display:block;
+    border-bottom: 1px solid #ccc;
+    padding:4px 10px;
+    color: #555;
+    cursor:default;
+}
+a[active] {
+    border-bottom: 3px solid #4338ca !important;
+    background-color: #818cf8;
+    color: #fff !important;
+}
+.inner-menu {
+    line-height:12px;
+    padding-left: 30px !important;
+    background-color: #e0e7ff;
+}
+a[active].inner-menu {
+    border-bottom: 1px solid #3b82f6 !important;
+    background-color: #bfdbfe;
+    color: #1e40af !important;
+}
+#v-menu a:hover, #v-head a:hover, #v-tail a:hover {
+    background-color: #ddd;
+    color: #000 !important;
+}
+
+.other-task {
+    padding:10px;
+    background-color: #ccc;
+    color: #000;
+    font-weight:bold;
+}
+#v-body {
+    grid-area: body;
+    overflow: auto;
+    border-bottom:1px solid #ccc;
+}
+
+.trace-x {
+    background-color:#000;
+    color: #0f0;
+    width:100vw;
+}
+.trace-t {
+    background-color:#005;
+    color: #7ff;
+    width:100vw;
+}
+.trace-x pre, .trace-t pre {
+    padding: 10px;
+    background-color: #fff;
+    color: #000;
+}
+pre#trace {
+    background-color: transparent;
+    color: currentColor;
+}
+.trace-x h1, .trace-t h1 {
+    margin: 0;
+    padding: 0 10px;
+    background-color: #efe;
+    color: #000;
+}
+
+dt {
+    float: left;
+    text-align: right;
+    width: 25%;
+    padding-right: 5px;
+}
+dd {
+    text-align: left;
+    margin-left: 25%;
+}
+th {
+    text-align:left;
+    vertical-align:top;
+    font-weight:normal;
+    border-top:1px solid #a0a0a0;
+    border-bottom: 1px solid #a0a0a0;
+/*  background: #eef;*/
+}
+td {
+    vertical-align:top;
+    border-bottom: 1px solid #a0a0a0;
+}

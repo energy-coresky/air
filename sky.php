@@ -124,7 +124,7 @@ class SKY implements PARADISE
         if (CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
         if (DEV)
-            Ext::init();
+            DEV::init();
 
         $this->memory(3, 's');
         $this->debug |= (int)$this->s_trace_single;
@@ -261,7 +261,7 @@ class SKY implements PARADISE
         $plus .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
         if ($trace_x) {
             if (DEV) {
-                $plus .= Ext::trace();
+                $plus .= DEV::trace();
                 SKY::$dd->_xtrace();
             }
             sqlf('update $_memory set tmemo=%s where id=1', $plus);
@@ -295,7 +295,7 @@ class SKY implements PARADISE
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.122 2022-02-06T09:30:00+02:00 energy';
+    const CORE = '0.123 2022-06-11T11:00:00+02:00 energy';
 
     static function version() {
         global $sky;
@@ -411,6 +411,7 @@ class eVar implements Iterator
     }
 
     function next() {
+        global $sky;
         $exit = function ($fail) {
             $this->row = false;
             $this->i--;
@@ -426,8 +427,10 @@ class eVar implements Iterator
                 $this->row = $this->dd->one($this->e['query']->stmt, 'O');
             $x = false;
             if (isset($this->e['row_c']) && $this->row) {
+                $sky->in_row_c = true;
                 $this->row->__i = $this->i;
                 $x = call_user_func_array($this->e['row_c'], [&$this->row]);
+                $sky->in_row_c = false;
                 if (false === $x)
                     return $exit(false);
             }

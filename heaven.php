@@ -18,6 +18,7 @@ class HEAVEN extends SKY
     public $page_p = 'p';
     public $show_pdaxt = false;
     public $ajax = 0;
+    public $surl_orig = '';
     public $surl = [];
 
     function __get($name) {
@@ -69,7 +70,6 @@ class HEAVEN extends SKY
     }
 
     function load() {
-
         $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
         if (!preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname))
             exit('sname');
@@ -94,7 +94,7 @@ class HEAVEN extends SKY
             in_array($wo = (int)$_SERVER['HTTP_X_ORIENTATION'], [0, 1, 2]) or $wo = 0;
             $this->orientation = $wo;
         }
-        if (DEV && Ext::$static) {
+        if (DEV && DEV::$static) {
             $s = substr($this->s_statp, 0, -1) + 1;
             $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
         }
@@ -105,8 +105,8 @@ class HEAVEN extends SKY
         $this->eref = !$m ? $referer : false;
 
         if ('' !== URI) { # not main page
-            $this->surl = explode('/', explode('?', URI)[0]);
-            common_c::rewrite_h($cnt_s = count($this->surl));
+            $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
+            $cnt_s = count($this->surl);
             if (1 == $cnt_s && '' === $this->surl[0]) {
                 $this->surl = [];
                 if ($this->ajax && 'AJAX' == key($_GET)) {
@@ -115,6 +115,8 @@ class HEAVEN extends SKY
                         $this->surl = ['adm'];
                     array_shift($_GET);
                 }
+            } else {
+                common_c::rewrite_h($cnt_s, $this->surl);
             }
         }
 
@@ -167,7 +169,7 @@ class HEAVEN extends SKY
         if ($flag) {
             if (!$etc) {
                 $plus or $this->errors .= $this->check_other();
-                $this->errors .= "<h1>Stdout, depth=$i</h1>" . html($stdout);
+                $this->errors .= "<h1>Stdout, depth=$i</h1><pre>" . html(mb_substr($stdout, 0, 100)) . '</pre>';
             }
             $out = json(['catch_error' => $this->errors] + $etc, true);
             $out or $out = json_encode(['catch_error' => '<h1>See X-tracing</h1>']);/////////////////////////
@@ -179,7 +181,7 @@ class HEAVEN extends SKY
         }
         echo $stdout; # send to browser
         $this->tailed = true;
-        exit;
+        exit;//throw new Stop;
     }
 
     function tail() {
@@ -193,18 +195,19 @@ class HEAVEN extends SKY
             if ($trace_single) {
                 $this->tracing('', true); # write X-tracing
             } else {
+                $out = '<h1>Tracing</h1>' . tag($this->tracing(), 'id="trace"', 'pre');
+                $out_x = tag('', 'id="trace-x" style="display:none"');
                 if ($this->errors) {
-                    $out = tag($this->check_other() . $this->errors, '');
-                    $out .= '<h1>Tracing</h1>' . tag($this->tracing(), 'id="trace"', 'pre');
-                    echo tag($out, 'id="err-bottom"');
+                    $out = $this->check_other() . $this->errors . $out;
+                    echo tag($out, 'id="trace-t" style="display:none"') . $out_x . js("sky.err_t=1");
                 } else {
                     global $user;
                     if (!$this->is_front && (DEV || 1 == $user->pid)) {
                         echo a('see tracing', ['sky.trace()']) . ' + ' . a('X', ['sky.trace(1)']);
                     }
                     echo $this->was_error == SKY::ERR_SHOW
-                        ? $this->check_other() . tag($this->tracing(), 'id="trace"', 'pre') . js("$('div.error')[0].scrollIntoView();")
-                        : tag($this->tracing(), 'style="display:none" id="trace"', 'pre');
+                        ? $this->check_other() . $out . js("$('div.error')[0].scrollIntoView();")
+                        : tag($out, 'id="trace-t" style="display:none"') . $out_x;
                 }
             }
         }
@@ -262,9 +265,9 @@ class HEAVEN extends SKY
         if ($this->debug) {
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
-            
-            $this->tracing = 'PATH: ' . PATH . html("\nURI: " . URI . "\n\$sky->lref: $this->lref") . "\n\$sky->ajax: $this->ajax"
-                . "\n\$sky->k_type: $this->k_type\n\$sky->surl: " . ($this->surl ? print_r($this->surl,1) : '[]') . "\n\n$this->tracing";
+            $tracing = 'PATH: ' . PATH . html("\nURI: " . URI . "\n\$sky->lref: $this->lref") . "\n\$sky->ajax: $this->ajax";
+            $tracing .= "\n\$sky->k_type: $this->k_type\nSURL: " . html("$this->surl_orig -> " . implode('/', $this->surl));
+            $this->tracing = $tracing . "\n\n" . $this->tracing;
             if ($this->fn_extra)
                 $this->tracing = "EXTRA: $this->fn_extra\n$this->tracing";
             if ($this->debug > 1) {
@@ -275,7 +278,7 @@ class HEAVEN extends SKY
         }
         $plus = parent::tracing($plus, $trace_x);
         if (DEV && !$trace_x)
-            $plus .= Ext::trace();
+            $plus .= DEV::trace();
         return preg_replace('/^(' . preg_quote(DIR, '/') . '.*)$/m', '<span>$1</span>', $plus);
     }
 

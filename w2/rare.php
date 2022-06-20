@@ -39,6 +39,27 @@ class Rare
         return $list;
     }
 
+    static function bracket(String $in, $b = '(') {
+        if ('' === $in || $b != $in[0])
+            return '';
+        $close = ['(' => ')', '[' => ']', '{' => '}', '<' => '>'];
+        $s = '';
+        $i = 0;
+        foreach (token_get_all("<?php $in") as $v) {
+            if (is_array($v)) {
+                $v = $v[1];
+            } elseif ($b == $v) {
+                $i++;
+            } elseif ($close[$b] == $v) {
+                $i--;
+            }
+            $s .= $v;
+            if (!$i && '<?php ' != $s)
+                return substr($s, 6);
+        }
+        return '';
+    }
+
     static function cache($name = '', $func = null, $ttl = 0) {
         global $sky;
         
