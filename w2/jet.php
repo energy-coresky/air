@@ -169,7 +169,7 @@ class Jet
             $out .= $bottom ? '<?php echo implode("", $_ob); return "";' : "<?php return '';";
         }
         $str = $ct = ''; /* optimize `?><?php` in parsed templates */
-/*        $buf = [];
+        $buf = [];
         foreach (token_get_all($out) as $token) {
             is_array($token) or $token = [0, $token];
             if ($token[0] == T_OPEN_TAG && $ct) {
@@ -181,8 +181,8 @@ class Jet
             $ct = T_CLOSE_TAG == $token[0];
         }
         while ($buf)
-            $str .= array_shift($buf)[1]; */
-        return strtr($out, Jet::$verb) . "\n";
+            $str .= array_shift($buf)[1];
+        return strtr($str, Jet::$verb) . "\n";
     }
 
     private function save($in, $new = false) {
