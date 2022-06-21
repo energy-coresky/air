@@ -98,7 +98,7 @@ sky.a._1 = '{{$sky->_1}}';
     <span style="width:40%" id="master">@block(`` as top_tpl)</span>
     <div style="width:35%" id="tpl-list">
         <form method="post" style="display:inline-block"><input type="hidden" name="t0">
-        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}}))>
+        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}})){{'_dev?view=' == substr(URI, 0, 10) and ' active'}}>
             ▲ Views (<span>@block(views)?~block</span>)
         </a>
         &nbsp; &nbsp; <a href="#">▲ SQLs (?)</a>

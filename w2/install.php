@@ -246,9 +246,12 @@ class Install
                 $one = "$path/" . basename($one);
                 in_array($one, $list) or $list[] = $one;
             }
-        } elseif (WWW . 'pub' == $path) {
-            in_array($one = WWW . 'pub/sky.js', $list) or $list[] = $one;///////2do:check all
-            in_array($one = WWW . 'pub/sky.css', $list) or $list[] = $one;
+        } elseif (WWW . 'pub' == $path && is_dir($assets = DIR_S . '/assets')) {
+            $assets = Rare::list_path($assets, 'is_file');
+            foreach ($assets as $one) {
+                $one = WWW . 'pub/' . basename($one);
+                in_array($one, $list) or $list[] = $one;
+            }
         }
         return $list;
     }

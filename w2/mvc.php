@@ -285,6 +285,7 @@ class MVC extends MVC_BASE
     static $layout = '';
     static $mc; # main controller
     static $cc; # common controller
+    static $ctrl;
     static $tpl = 'default';
     static $cache_filename = '';
 
@@ -458,10 +459,11 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     }
 
     static function handle($method, &$param = null) {
-        if (method_exists(MVC::$mc, $method))
+        if (MVC::$ctrl = method_exists(MVC::$mc, $method) ? get_class(MVC::$mc) : false)
             return MVC::$mc->$method($param);
-        if (method_exists(MVC::$cc, $method))
+        if (MVC::$ctrl = method_exists(MVC::$cc, $method) ? 'common_c' : false)
             return MVC::$cc->$method($param);
+        MVC::$ctrl = 'not-found';
     }
 
     static function sub(&$action, $param = null, $no_handle = false) {
@@ -477,7 +479,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $me->body = "$tpl." . substr($action, 2);
                 $me->set($no_handle ? $param : MVC::handle($action, $param));
-                $me->hnd = $no_handle ? "no-handle" : "::$action()";
+                $me->hnd = $no_handle ? "no-handle" : substr(MVC::$ctrl, 0, -7) . "::$action()";
             }
         } elseif ($action instanceof Closure) {
             $me->set($action($param));
