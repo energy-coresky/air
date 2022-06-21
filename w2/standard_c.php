@@ -29,10 +29,19 @@ class standard_c extends Controller
             return $this->head_y2(3);
         if (!DEV)
             return 404;
+        $this->load();
         $v = explode('.', $this->_1, 2);
         $this->_c = '*' == $v[0] ? 'default_c' : "c_$v[0]";
         $this->_a = isset($v[1]) ? $v[1] : '';
         return ['y_1' => $v[0]];
+    }
+
+    function load() {
+        global $sky;
+        SKY::$databases += ['_' => [
+            'driver' => 'sqlite3', 'dsn' => DIR_S . '/w2/coresky.sqlite3',
+        ]];
+        $sky->memory(3, 'd', SQL::open('_'));
     }
 
     function tail_y() {
@@ -65,6 +74,7 @@ class standard_c extends Controller
         global $sky, $user;
         if (!$user->root && !DEBUG)
             return 404;
+        $this->load();
         $sky->debug = false;
         $this->_y = ['page' => 2 == $id ? 'trace-t' : 'trace-x'];
         if (2 != $id)

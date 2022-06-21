@@ -7,31 +7,68 @@ class Display
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
 
-    static function jet($fn, $bc = '') {
+    static function jet($fn, $marker = '') {
         $s = function ($s, $c) {
             return '<span style="color:' . $c . '">' . html($s) . '</span>';
         };
         $in = file_get_contents($fn);
-        $lnum = $out = '';
-        while (preg_match('/^(.*?)(~|@|#)([a-z]+)(.*)$/s', $in, $m)) {
-            $out .= html($m[1]);
-            $in = substr($m[4], strlen($br = Rare::bracket($m[4])));
-            $out .= $s($m[2] . $m[3], '#' == $m[2] ? '#090' : '#00f');
-            if ($br)
-                $out .= $s($br, '#00b;font-weight:bold');
-        }
-        $lines = explode("\n", unl($out));
-        foreach ($lines as $i => &$line) {
+        $lnum = $inm = '';
+        $ary = [""];
+        $list = [];
+
+        foreach (explode("\n", unl($in)) as $i => $line) {
             $lnum .= str_pad(1 + $i, 3, 0, STR_PAD_LEFT) . "<br>";
+            $cnt = count($ary) - 1;
             if (preg_match("/^#\.([\.\w]+)(.*)$/", $line, $m)) {
-                $line = $s('#.', '#222') . $s($m[1], 'red') . $s($m[2], '#b45309');
-                $line = '<div class="code" style="background:#e7ebf2;font-family: monospace;font-size: 14px;">' . "$line</div>";
+                $line = $s('#.', '#090') . $s($m[1], 'red') . $s($m[2], '#b45309');
+                $ary[] = ['<div class="code" style="background:#e7ebf2;font-family: monospace;font-size: 14px;">' . "$line</div>"];
+                $ary[] = "";
+                if (in_array($marker, explode('.', $m[1])))
+                    $inm = !$inm;
+                if ($inm)
+                    $list[] = 2 + $cnt;
             } else {
-                $line .= "\n";
+                $ary[$cnt] .= "$line\n";
             }
         }
-        $out = implode("", $lines);
-
+        $fu = function ($v) use ($s) {
+            $out = '';
+            while (preg_match('/^(.*?)(~|@|){([{!\-])(.*?)([\-!}])}(.*)$/s', $v, $m)) {
+                $out .= html($m[1]);
+                $v = $m[6];
+                if ('@' == $m[2])
+                    $out .= html("@{"."$m[3]$m[4]$m[5]"."}");
+                elseif ('{' == $m[3])
+                    $out .= $s($m[2] . "{{".$m[4]."}}", '#fff; background:#bb7');
+                elseif ('!' == $m[3])
+                    $out .= $s($m[2] . "{!".$m[4]."!}", '#fff; background:#777');
+                else
+                    $out .= $s($m[2] . "{-".$m[4]."-}", '#b45309'); # Jet comment
+            }
+            return $out . html($v);
+        };
+        foreach ($ary as $i => &$v) {
+            if (is_array($v)) {
+                $v = $v[0];
+            } else {
+                $out = '';
+                while (preg_match('/^(.*?)(~|@|#)([a-z]+)(.*)$/s', $v, $m)) {
+                    $out .= $fu($m[1]);
+                    $v = substr($m[4], strlen($br = Rare::bracket($m[4])));
+                    $out .= $s($m[2] . $m[3], '#' == $m[2] ? '#090' : '#00f');
+                    if ($br && '`' != $br[1] && in_array($m[3], ['inc', 'use', 'block']))
+                        $out .= $s($br, 'red');
+                    elseif ($br)
+                        $out .= $s($br, '#00b;font-weight:bold');
+                }
+                $v = $out . $fu($v);
+                if (in_array($i, $list) || '' === $marker)
+                    $v = '<div class="code" style="background:#fef3c7;font-family: monospace;font-size: 14px;">' . "$v</div>";
+            }
+        }
+        $out = implode("", $ary);
+        if ($out[-1] == "\n")
+            $out = "\n" . $out;
         $table = self::lay_l . $lnum . self::lay_m . '<pre style="margin:0">' . $out . '</pre>' . self::lay_r;
         return '<div class="php">' . $table . '</div>';
     }

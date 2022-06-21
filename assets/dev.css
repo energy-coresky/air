@@ -5,7 +5,7 @@ body, pre {
     margin: 0;
 }
 body {
-  font-family:
+    font-family:
         system-ui,
         -apple-system, /* Firefox supports this but not yet `system-ui` */
         'Segoe UI',
@@ -79,6 +79,9 @@ fieldset {
     color: #555;
     cursor:default;
 }
+[noborder] {
+    border:0px !important;
+}
 a[active] {
     border-bottom: 3px solid #4338ca !important;
     background-color: #818cf8;
@@ -100,10 +103,17 @@ a[active].inner-menu {
 }
 
 .other-task {
+    border-bottom: 1px solid #4338ca !important;
+    border-left: 3px solid #4338ca !important;
     padding:10px;
     background-color: #ccc;
     color: #000;
+    font-size:16px;
     font-weight:bold;
+}
+.other-info {
+    padding:10px;
+    background-color: #ffc;
 }
 #v-body {
     grid-area: body;

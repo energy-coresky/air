@@ -545,7 +545,7 @@ class Jet
         if ('`' == $tpl[0]) {
             $tpl = [substr($tpl, 1, -1), $this->marker];
         } else {
-            $this->test_cycled($tpl, $is_block ? '@block' : (1 == $type ? '#' : '@') . 'use');
+            $this->test_cycled($tpl, $is_block ? '@block' : ($type ? '#use' : '@use'));
         }
         $jet = new Jet($tpl);
         $data = [0, $pf, $jet->parsed, $jet->files, Jet::$block[$name][4] ?? 0, Jet::$block[$name][5] ?? 0];

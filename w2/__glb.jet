@@ -13,6 +13,7 @@
 #.submenu
 @loop(['report' => 'Show Report', 'dirs' => 'Select Dirs', 'save' => 'Save Report'] as $name => $title)
     <a class="inner-menu" href="_glob?{!$name!}"{!$sky->_1 == $name and ' active'!}>{!$title!}</a>
+    ~{- sky.g.save() -}
 ~loop
 #.submenu.dirs.skip ==========================================================================================================
 #use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
@@ -33,16 +34,31 @@
 </div>
 #.dirs.skip
 
-#.report.mark ==========================================================================================================
+#.submenu_v
+    <br><div class="other-task">Globals report</div>
+    <div class="other-info">
+    <table cellspacing="0" cellpadding="0" width="100%">
+        <tr><td>Total definitions:</td><td>200</td></tr>
+        @loop($defs as $key => $ary)
+            <tr><td style="padding-left:10px"{{'EVAL' == $key ? '' : ' noborder'}}>
+                {{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}:
+            </td><td{{'EVAL' == $key ? '' : ' noborder'}}>{{count($ary)}}</td></tr>
+        ~loop
+        <tr><td>No problem:</td><td>163</td></tr>
+        <tr><td>Marked OK:</td><td>17</td></tr>
+        <tr><td>Unchecked definitions:</td><td style="background:pink">20</td></tr>
+    </table>
+    </div>
+#.submenu_v.report.mark ==========================================================================================================
 #use(`<h4>GLOBALS REPORT</h4>` as header)
+#use(.submenu_v as m_view)
 @use(.submenu as m_glob)
 <div style="margin:0 10px 10px 10px" id="report-inner">
 #.save
 <h2>PHP Version: {{PHP_VERSION}}, Time now: {{NOW}}<br>
 Used CoreSky Version: {{SKY::version()['app'][1]}}<br>
 App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}</h2>
-<h2>Modules: {{$modules}}</h2>
-<button onclick="sky.g.save()">Save report</button>
+<h2>Modules: {{$modules}}</h2><hr>
 @loop($defs as $key => $ary)
   @if('VAR'==$key)<h2>VARS ASSIGNING IN THE GLOBAL NAMESPACE</h2>
   @else<h2>{{$key}}</h2>

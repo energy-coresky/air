@@ -143,7 +143,7 @@ final class SQL
     function exec() {
         if ($this->parse_error)
             return false;
-       $qstr = $this->qstr; # build sql string
+      $qstr = (string)$this->qstr; # build sql string
         if (SQL::NO_EXEC & $this->mode)
             return $qstr;
 

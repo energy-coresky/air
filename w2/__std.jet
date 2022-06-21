@@ -63,7 +63,7 @@ sky.a._1 = '{{$sky->_1}}';
     </div>
     <div style="width:calc((100% - 170px) * 0.3)">
     @loop($_ < 4)
-        <a href="_x{{$_}}"{{"_x$_" == URI and ' active'}}>{{$_ ? "X$_" : 'T0'}}</a>
+        <a href="_x{{$_}}"{{"_x$_" == ($trace_x ?? URI) and ' active'}}>{{$_ ? "X$_" : 'T0'}}</a>
     ~loop
     </div>
     <div id="top-head" style="width:calc((100% - 170px) * 0.4)">@block(`` as header)</div>
@@ -89,16 +89,18 @@ sky.a._1 = '{{$sky->_1}}';
 
 <div id="v-body">
     <div style="display:table-cell; width:inherit;" class="{{$y_page}}">
-        <script>sky.d.tracing = window.parent.document.getElementById('trace-t').innerHTML</script>
+        <script>sky.d.trace_t = window.parent.document.getElementById('trace-t').innerHTML</script>
         @inc(*)
     </div>
 </div>
 
 <div id="v-tail">
-    <span style="width:40%" id="master"></span>
+    <span style="width:40%" id="master">@block(`` as top_tpl)</span>
     <div style="width:35%" id="tpl-list">
         <form method="post" style="display:inline-block"><input type="hidden" name="t0">
-        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}}))>▲ Views (<span>?</span>)</a>
+        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}}))>
+            ▲ Views (<span>@block(views)?~block</span>)
+        </a>
         &nbsp; &nbsp; <a href="#">▲ SQLs (?)</a>
         &nbsp; &nbsp; <a href="#">▲ Classes (?)</a>
         <form>
@@ -116,7 +118,7 @@ sky.a._1 = '{{$sky->_1}}';
 {!$body!}
 <script>
     @if('_x0' == URI)
-        $('.trace-t').html(sky.d.tracing);
+        $('.trace-t').html(sky.d.trace_t);
     @elseif('_x1' == URI)
         $('.trace-x').prepend(window.parent.document.getElementById('trace-x').innerHTML);
     ~if
@@ -129,10 +131,19 @@ sky.a._1 = '{{$sky->_1}}';
     <br><div class="other-task">Views</div>
     @loop($list as $v)
         <a {{$nv == $_ and 'active '}}href="_dev?view={{$sky->_2}}&nv={{$_}}">{{"$v[0] $v[1]"}}</a>
+        @if($nv == $_)
+        @loop(['Source templates', 'Parsed template', 'Master action'] as $x)
+            <a class="inner-menu" href="_glob?"{!$_2 == 0 and ' active'!}>{!$x!}</a>
+        ~loop
+        ~if
     ~loop
-#.submenu_v.view
+    <br><div class="other-task">Variables</div>
+    <a href="_glob?">Show</a>
+#.submenu_v.view //////////////////////////////////////////////////////////////////////////////
 #use(.submenu_v as m_view)
-{!$tpl!}
+#use(`{{count($list)}}` as views)
+#use(`{!$top!}` as top_tpl)
+#use(`{!$header!}` as header)
 {!$layout!}
 {!$body!}
 #.view

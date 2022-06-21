@@ -421,39 +421,55 @@ class DEV
 
     function c_view($x) {
         $cr = [1 => 1, 2 => 15, 3 => 16];
-        $trace = $x ? sqlf('+select tmemo from $_memory where id=%d', $cr[$x]) : $_POST['t0'];
-        for ($list = []; preg_match("/(TOP|SUB)\-VIEW: (\S+) (\S+)(.*)/s", $trace, $m); ) {
+        if ($_POST)
+            SQL::open('_')->sqlf('update memory set tmemo=%s where id=1', $_POST['t0']);
+        $trace = $x
+            ? sqlf('+select tmemo from $_memory where id=%d', $cr[$x])
+            : SQL::open('_')->sqlf('+select tmemo from memory where id=1');
+        $top = $header = '';
+        $nv = $_GET['nv'] ?? 0;
+        for ($list = [], $i = 0; preg_match("/(TOP|SUB)\-VIEW: (\S+) (\S+)(.*)/s", $trace, $m); $i++) {
+            $m[1] = ucfirst(strtolower($m[1]));
+            $title = "$m[1]-view:&nbsp;<b>$m[2]</b> &nbsp; Template: <b>" . ('^' == $m[3] ? 'no-tpl' : $m[3]) . "</b>";
+            if ('Top' == $m[1])
+                $top = $title;
+            if ($nv == $i)
+                $header = $title;
             $trace = $m[4];
             array_pop($m);
             array_shift($m);
             $list[] = $m;
         }
-        $nv = $_GET['nv'] ?? 0;
-        $tpl = 'View(s) not found';
-        $layout = '<h1>Layout not used</h1>';
-        $body = '<h1>Body template not used</h1>';
+
+        $layout = '>Layout not used</div>';
+        $body = '>Body template not used</div>';
+        $sl = $sb = ';background:pink"';
         if ($list) {
             $tpl = $list[$nv][2];
-            if ('^' == $tpl) {
-                $tpl = 'Templates not used';
-            } else {
+            if ('^' != $tpl) {
                 list ($lay, $bod) = explode('^', $tpl);
                 if ($lay) {
-                    $layout = "y_$lay.jet";
-                    $layout = "<h1>$layout</h1>" . Display::jet("view/$layout");
+                    $sl = '"';
+                    $fn = "y_$lay.jet";
+                    $layout = ">Layout: $fn</div>" . Display::jet("view/$fn") . '<br>';
                 }
                 if ($bod) {
-                    $body = "_" . explode('.', $bod)[0] . '.jet';
-                    $body = "<h1>$body</h1>" . Display::jet("view/$body");
+                    $sb = '"';
+                    $bod = explode('.', $bod);
+                    $fn = "_$bod[0].jet";
+                    $bod = $fn . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
+                    $body = ">Body: $bod</div>" . Display::jet("view/$fn", $marker) . '<br>';
                 }
             }
         }
         return [
             'list' => $list,
             'nv' => $nv,
-            'tpl' => "<h1>$tpl</h1>",
-            'layout' => $layout,
-            'body' => $body,
+            'layout' => '<div class="other-task" style="position:sticky; top:0px' . $sl . $layout,
+            'body' => '<div class="other-task" style="position:sticky; top:42px' . $sb . $body,
+            'trace_x' => "_x$x",
+            'top' => $top,
+            'header' => $header,
         ];
     }
 

@@ -133,12 +133,18 @@ class SKY implements PARADISE
         $this->trace_cli = $this->s_trace_cli;
     }
 
-    function memory($id = 9, $char = 'n', $table = 'memory') {
+    function memory($id = 9, $char = 'n', $dd = null) {
         if (!isset(SKY::$mem[$char])) {
-            SKY::$dd or $this->load();
-            list($dt, $imemo, $tmemo) = sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
+            if ($dd) {
+                SKY::$reg["ghost_$char"] = $dd;
+            } else {
+                SKY::$dd or $this->load();
+                $dd = SKY::$dd;
+            }
+            
+            list($dt, $imemo, $tmemo) = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
             SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id);
-            if (9 == $id && defined('WWW') && 'n' == $char && 'memory' == $table)
+            if (9 == $id && defined('WWW') && 'n' == $char)
                 Schedule::setWWW($this->n_www);
         }
     }
@@ -241,10 +247,11 @@ class SKY implements PARADISE
         $flags = 0; # reset flags
         if ($return)
             return $new;
+        $dd = array_key_exists($name = "ghost_$char", SKY::$reg) ? SKY::$reg[$name] : SKY::$dd;
         if ($f2)
-            return $new && sql($new);
+            return $new && $dd->sql($new);
         if ($f1)
-            sqlf($x[2], $new);
+            $dd->sqlf($x[2], $new);
     }
 
     static function date($in = 0, $hm = true) {

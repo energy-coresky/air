@@ -12,7 +12,7 @@ sky.d.trace = function() {
 };
 
 sky.d.view = function(x) {
-    $('#v-tail input').val(sky.d.tracing);
+    $('#v-tail input').val(sky.d.trace_t);
     $('#v-tail form').attr('action', sky.home + '_dev?view=' + x).submit();
 };
 
