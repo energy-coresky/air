@@ -1,14 +1,14 @@
 ### Application list
 
 1. AB.SKY application
-2. .. next comming soon
+2. .. others comming soon
 
 AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
 After installation and using MySQL database try switch to SQLite (edit main/conf.php)
 
 ### How to install
 
-Create an ampty dir in the Apache root: `mkdir ab`, then `mkdir ab/web`. Put in the last folder this two files: **ab.sky** and **moon.php**. Open in browser simila like `http://my-apache.lock/ab/moon.php`, then follow the instructions.
+Create an ampty dir in the Apache root: `mkdir ab`, then `mkdir ab/web`. Put in the last folder this two files: **ab.sky** and **moon.php**. Open in browser similar like `http://my-apache.local/ab/web/moon.php`, then follow the instructions.
 
 ### To do
 
