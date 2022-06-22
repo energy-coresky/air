@@ -216,5 +216,17 @@ td {
     display: inline-flex;
     align-items: center;
 }
+#gr-modules {
+    margin-top:8px;
+    padding-bottom:3px;
+}
+#gr-modules span {
+    display: inline-block;
+    background:#e0e7ff;
+    margin:0 5px 5px 0;
+    padding:2px 5px;
+    border-radius: 5px;
+}
+
 
 

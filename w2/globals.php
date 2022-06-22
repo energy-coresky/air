@@ -292,7 +292,9 @@ class Globals
                     ];
                 },
             ],
-            'modules' => implode(' ', get_loaded_extensions()),
+            'modules' => array_map(function ($v) {
+                return '<span>' . $v . '</span>';
+            }, get_loaded_extensions()),
             'cnt' => $this->cnt,
         ];
     }

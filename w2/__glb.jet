@@ -49,16 +49,25 @@
         <tr><td>Unchecked definitions:</td><td class="bg-r">20</td></tr>
     </table>
     </div>
-#.menu.report.mark ----------------------------------------------------------------------------------------------------------
+#.menu.report.mark.save ----------------------------------------------------------------------------------------------------------
 #use(`<h4>GLOBALS REPORT</h4>` as header)
 #use(.menu)
 @use(.m_glob)
+<div class="bg-wx" style="border-bottom:1px solid #4338ca; height:41px;">
+    <div style="font-weight:bold;font-size:16px;">
+        App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
+    </div>
+</div>
+<div class="bg-wx">
+    <div style="font-weight:bold;font-size:16px;">
+        Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
+    </div>
+</div>
 <div style="margin:0 10px 10px 10px" id="report-inner">
-#.save
-<h2>PHP Version: {{PHP_VERSION}}, Time now: {{NOW}}<br>
-Used CoreSky Version: {{SKY::version()['app'][1]}}<br>
-App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}</h2>
-<h2>Modules: {{$modules}}</h2><hr>
+<fieldset id="gr-modules"><legend>Modules in current PHP Version: {{PHP_VERSION}}</legend>
+    {!implode('', $modules)!}
+</fieldset>
+
 @loop($defs as $key => $ary)
   @if('VAR'==$key)<h2>VARS ASSIGNING IN THE GLOBAL NAMESPACE</h2>
   @else<h2>{{$key}}</h2>
@@ -88,8 +97,8 @@ App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::vers
 ~loop
 <br>
 Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$cnt[1]}} directories
-#.save
 </div>
+#.save
 @inc(.jscss)
 #.report.mark
 
