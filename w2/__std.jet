@@ -80,7 +80,7 @@ $(function() {
 #.m_gate  ////////////////////////////////////////////////////////////////////////////// <fieldset id="contr">
 @loop($list as $one => $ex)
     <a href="{{PATH}}?_gate={!is_int($ex)?$one:$ex!}"
-        {!$one==$y_1 and ' active'!} class="inner-menu"
+        class="inner-menu" @active($one==$y_1)
         style="background:{!is_int($ex)?($ex?'':'#fcc'):'#ffc'!}"
         >{!'*' == $one ? 'default_c' : "c_$one"!}
     </a>

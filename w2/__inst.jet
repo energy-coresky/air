@@ -2,7 +2,7 @@
 #.m_inst //////////////////////////////////////////////////////////////////////////////
 @loop(['database', 'files', 'system'] as $name)
     <a href="_inst?{!$name!}"
-        {!($sky->_1 ?: 'database')== $name and ' active'!} class="inner-menu"
+        @active(($sky->_1 ?: 'database')== $name) class="inner-menu"
         >{!ucfirst('system' == $name ? 'Edit & Compile' : $name)!}
     </a>
 ~loop

@@ -12,7 +12,7 @@
 
 #.m_glob ==========================================================================================================
 @loop(['report' => 'Show Report', 'dirs' => 'Select Dirs', 'save' => 'Save Report'] as $name => $title)
-    <a class="inner-menu" href="_glob?{!$name!}"{!$sky->_1 == $name and ' active'!}>{!$title!}</a>
+    <a class="inner-menu" href="_glob?{!$name!}"@active($sky->_1 == $name)>{!$title!}</a>
     ~{- sky.g.save() -}
 ~loop
 #.m_glob.dirs.skip ----------------------------------------------------------------------------------------------------------

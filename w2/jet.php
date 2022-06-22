@@ -233,14 +233,14 @@ class Jet
         while (preg_match('/^(.*?)(~|@)([a-z]+)(.*)$/s', $in, $m)) {
             $this->save($this->echos($m[1]));
             $in = substr($m[4], strlen($br = Rare::bracket($m[4])));
-            $code = $this->statements($m[3], $br ? substr($br, 1, -1) : '', '~' == $m[2], $in);
+            $code = $this->statements($m[3], $br ? substr($br, 1, -1) : '', '~' == $m[2], $in, $br);
             $this->save(null === $code ? $m[2] . $m[3] . $br : $code);
         }
         $this->save($this->echos($in));
         $inline or array_pop(Jet::$tpl);
     }
 
-    private function statements($tag, $arg, $end, &$str) {
+    private function statements($tag, $arg, $end, &$str, &$br) {
         $q = function ($pattern, $arg) {
             return sprintf("<?php $pattern ?>", in_array(@$arg[0], [false, "'", '"'])
                 ? $arg
@@ -261,6 +261,8 @@ class Jet
         }
         if ($end)
             return;
+        if (isset(Jet::$custom[$tag]))
+            return call_user_func(Jet::$custom[$tag], $arg, $this); # user defined
 
         switch ($tag) {
             case 'inc':
@@ -303,9 +305,9 @@ class Jet
                     throw new Error('Jet: no @empty statement for `do-while`');
                 Jet::$empty[] = $i = count(Jet::$loop) - 1;
                 return $this->_loop(true, '') . '<?php if (!' . ($i ? '$_' . (1 + $i) : '$_') . '): ?>';
+            default:
+                return !$br || '()' == $br ? null : "<?php echo $br ? ' $tag' : '' ?>";
         }
-        if (isset(Jet::$custom[$tag]))
-            return call_user_func(Jet::$custom[$tag], $arg, $this); # user defined
     }
 
     private function echos(&$str) {

@@ -17,7 +17,7 @@ CREATE TABLE `{{SQL::$dd->pref}}language` (
 #.generate.m_lang /////////////////////////////////////////////////////////////////////////
     @loop($obj->list as $one)
     <a href="{{PATH}}?_lang=list.{{$one}}"
-        {!$one==$obj->lg and ' active'!} class="inner-menu"
+        @active($one==$obj->lg) class="inner-menu"
         style="{!$one==DEFAULT_LG and 'font-weight:bold;text-decoration:underline'!}"
         >{{$one}} - {{$obj->toname[$one]}}
     </a>

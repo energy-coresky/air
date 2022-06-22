@@ -11,11 +11,11 @@
 #.menu //////////////////////////////////////////////////////////////////////////////
     <br><div class="other-task">Views</div>
     @loop($list_views as $v)
-        <a {{$nv == $_ and 'active '}}href="_dev?view={{$sky->_2}}&nv={{$_}}">{{"$v[0] $v[1]"}}</a>
+        <a href="_dev?view={{$sky->_2}}&nv={{$_}}"@active($nv == $_)>{{"$v[0] $v[1]"}}</a>
         @if($nv == $_)
         @loop($list_menu as $k => $v)
             <a href="_dev?view={{$sky->_2}}&nv={{$_}}&act={{$k}}"
-                class="inner-menu" {!$k == ($sky->_6 ?: 0) and ' active'!}>{!$v!}
+                class="inner-menu"@active($k == ($sky->_6 ?: 0))>{!$v!}
             </a>
         ~loop
         ~if
@@ -34,7 +34,7 @@
 
 #.m_dev //////////////////////////////////////////////////////////////////////////////
 @loop(['overview', 'system', 'documentation'] as $name)
-    <a class="inner-menu" href="_dev?{!$name!}"{!(!$sky->_1 && 'overview' == $name || $sky->_1 == $name) and ' active'!}>{!ucfirst($name)!}</a>
+    <a class="inner-menu" href="_dev?{!$name!}"@active(!$sky->_1 && 'overview' == $name || $sky->_1 == $name)>{!ucfirst($name)!}</a>
 ~loop
 #.m_dev.overview ------------------------------------------------------------------------------
 #use(`<h4><u>DEV INSTANCE ONLY</u> CONFIGURATION AND INFORMATION</h4>` as header)
@@ -56,7 +56,7 @@
     <div style="width:126px"><a href="{{PATH}}{{$sky->d_last_page ?: '_dev'}}">▼ Tasks</a>
     </div>
     <div style="width:144px">
-    @loop($_ < 4)<a href="_x{{$_}}"{{"_x$_" == $y_tx and ' active'}}>{{$_ ? "X$_" : 'T0'}}</a>~loop
+    @loop($_ < 4)<a href="_x{{$_}}"@active("_x$_" == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
     </div>
     <div id="top-head" style="width:calc(100% - 380px)">@block(`` as header)</div>
     <div style="text-align:right; width:110px"><a href="#">Esc - Close @inc(__svg.x)</a></div>
@@ -69,7 +69,7 @@
         <a href="_dev">Show</a>
     #else
     @loop($y_tasks as $uri => $name)
-        <a href="{{$uri}}"{{$sky->_0 == explode('?', $uri)[0] and ' active'}}>{{$name}}</a>
+        <a href="{{$uri}}"@active($sky->_0 == explode('?', $uri)[0])>{{$name}}</a>
         @if('_gate' == $uri)@block(`` as m_gate)
         @elseif('_lang?list' == $uri)@block(`` as m_lang)
         @elseif('_inst' == $uri)@block(`` as m_inst)
@@ -92,7 +92,7 @@
     <span style="width:40%" id="master">@block(`` as top_tpl)</span>
     <div style="width:35%" id="tpl-list">
         <form method="post" style="display:inline-block"><input type="hidden" name="t0">
-        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}})){{'_dev?view=' == substr(URI, 0, 10) and ' active'}}>
+        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}}))@active('_dev?view=' == substr(URI, 0, 10))>
             ▲ Views (<span>@block(views)?~block</span>)
         </a>&nbsp; &nbsp;
         <a href="#">
