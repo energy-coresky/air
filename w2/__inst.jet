@@ -1,21 +1,24 @@
 
-#.submenu
+#.m_inst //////////////////////////////////////////////////////////////////////////////
 @loop(['database', 'files', 'system'] as $name)
     <a href="_inst?{!$name!}"
         {!($sky->_1 ?: 'database')== $name and ' active'!} class="inner-menu"
         >{!ucfirst('system' == $name ? 'Edit & Compile' : $name)!}
     </a>
 ~loop
-#.s.f.d.submenu //////////////////////////////////////////////////////////////////////////////
+#.m_inst.s.f.d ------------------------------------------------------------------------------
 #use(`<h4>CREATE SKY-PACKAGE FOR MOON.PHP</h4>` as header)
-@use(.submenu as m_inst)
+@use(.m_inst)
 <div id="inst">
 <form>
-<input type="hidden" name="step" value="">
-<b style="margin-left:77px">{{$title or ''}}</b>
-#if('files' != :_1)<input type="button" value="save" onclick="sky.g.save(this)">#end
-<progress style="display:none"></progress>
-<br><hr><div>
+<div class="bg-wx">
+    <div style="font-weight:bold;font-size:16px;">@block(`var/project.sky` as cp_b) &nbsp; </div>
+    @block(cp_h)<input type="button" value="save" onclick="sky.g.save(this)">
+        <input type="hidden" name="step" value="">
+        <progress style="display:none"></progress> @block(`` as cp_x)
+    ~block
+</div>
+<div style="margin:10px">
 #if('system' == :_1)
     @inc(.system)
 #elseif('files' == :_1)
@@ -23,13 +26,18 @@
 #else
     @inc(.database)
 #end
-</div><pre id="log" style="display:none"></pre>
+<pre id="log" style="display:none"></pre>
+</div>
+#if('system' == :_1)
+    <div class="bg-wx">
+        New app version: &nbsp; <input name="vapp" size="7" value="{{$vapp}}"> &nbsp; &nbsp; Coresky version: <b>{{$vcore}}</b>
+    </div>
+#end
 </form>
 </div>
 <style>
-#inst { margin:10px; }
 .mod { width:120px; display:inline-block}
-.md-span { color: blue}
+.md-span { color: #222; font-size:13px; }
 </style>
 <script>
 var c_ = false, r_ = false, proc = false;
@@ -57,12 +65,13 @@ sky.g.save = function(el) {
 #.s.f.d
 
 #.database  //////////////////////////////////////////////////////////////////////////////     -- fix SQL::$dd->pref
+#use(`var/app.sql` as cp_b)
+#use(` &nbsp; &nbsp; <label> <input type="checkbox" name="empty"> empty file from the start</label>` as cp_x)
 <p>
-<label>empty file from the start <input type="checkbox" name="empty"></label>
-&nbsp; &nbsp; current table's prefix: <input value="{{SQL::$dd->pref}}" name="pref" size="5">
+Current table's prefix: <input value="{{SQL::$dd->pref}}" name="pref" size="5">
 <label><input type="checkbox" name="mixed"> mixed</label>
 &nbsp; &nbsp; use prefix: <input value="" name="pref_use" size="5">
-<table>
+<table width="50%" cellspacing="0">
 <tr><th>Tables</th><th>Create table</th><th>Insert rows</th></tr>
 <tr><td></td><td><a @href($('#inst input.c').prop('checked',c_=!c_))>[un]check all</a></td>
 <td><a @href($('#inst input.r').prop('checked',r_=!r_))>[un]check all</a></td></tr>
@@ -78,11 +87,9 @@ sky.g.save = function(el) {
 <p>Filename <input name="fn" size="7" value="{{$row->fn or 'app'}}">
 &nbsp; &nbsp; <label><input type="checkbox" name="do"> do make</label>
 &nbsp; &nbsp; <label><input type="checkbox" name="bz2"> compress data using bz2</label>
-&nbsp; &nbsp; App version: <input name="vapp" size="7" value="{{$vapp}}">
-&nbsp; &nbsp; Coresky version: <b>{{$vcore}}</b>
 <p>SQL compiled {{date(DATE_DT, $row->ts_sql)}} ^<b>TR:</b> {{$row->count_tr}}
 &nbsp; &nbsp; <label><input checked type="checkbox" name="sql"> include</label>
-<fieldset><legend><small>check required modules</small></legend>
+<fieldset><legend>Check required modules</legend>
 @loop($modules as $one)
     @if('Core'!==($name=$one))
         @if('apache2handler'===$one) @php $name="<small>$name</small>" ~php ~if
@@ -97,18 +104,20 @@ PHP version &gt;= <input name="vphp" value="{{$row->vphp or PHP_VERSION}}" size=
 &nbsp; &nbsp; <label><input type="checkbox" name="and"{{$and ? ' checked' : ''}}> and</label>
 &nbsp; &nbsp; PHP &lt;= <input name="vphp2" value="{{$row->vphp2 or '7.1'}}" size="5">
 &nbsp; &nbsp; MySQL version &gt;= <input name="vmysql" value="{{$row->vmysql or $mysql}}" size="5">
-<p>Description:<br><textarea name="desc" rows="5">{{$row->desc or ''}}</textarea>
+<p>Description:<br><textarea name="desc" rows="5" style="width:75%">{{$row->desc or ''}}</textarea>
 #.system
 
 #.files //////////////////////////////////////////////////////////////////////////////
-<a @href(sky.g.walk(1))>expand all</a>@php $cnt = 0; ~php
+#use(`Directories & files.. Check for exclude` as cp_b)
+#use(`<a @href(sky.g.walk(1)) style="margin-left:100px">expand all directories</a>` as cp_h)
+@php $cnt = 0; ~php
 <p>
 @loop($files as $one => $ary)
     <div class="md">
-        <a @href(sky.g.files(this, 2))>{!$one!}</a>
+        <a class="code" @href(sky.g.files(this, 2))>{!'.' == $one ? '--root-project-directory--' : $one!}</a>
         <input type="hidden" name="{!$one!}" value="{{$exd[$one] or 0}}"> <span class="md-span"></span>
-        <a @href(sky.toggle(this))>&gt;&gt;&gt;</a>
-        <div style="display:none; min-height:10px;">@php $cnt += count($ary[1]); ~php
+        <a class="code" @href(sky.toggle(this)) style="color:#d7d;font-size:14px">&gt;&gt;&gt;</a>
+        <div style="display:none;">@php $cnt += count($ary[1]); ~php
         @loop($ary[1] as $file)
             <div style="margin-left:20px">
                 <label><input type="checkbox" name="{{$file}}"{{isset($exf[$file]) ? ' checked' : ''}}> {{$file}}</label>

@@ -49,126 +49,21 @@ isset($error) && $error && $sky->debug or $error = isset($list[$no]) ? $list[$no
 #end
 #.exception
 
-#.layout //////////////////////////////////////////////////////////////////////////////
-<!doctype html><html>
-<head>@head<script>
-sky.a._0 = sky.a.div = '{{$sky->_0}}';
-sky.a._1 = '{{$sky->_1}}';
-</script>
-</head>
-<body>
-<div id="main">
-<div id="v-head">
-    <div style="width:170px"><a href="_dev">▼ Tasks</a>
-    </div>
-    <div style="width:calc((100% - 170px) * 0.3)">
-    @loop($_ < 4)
-        <a href="_x{{$_}}"{{"_x$_" == ($trace_x ?? URI) and ' active'}}>{{$_ ? "X$_" : 'T0'}}</a>
-    ~loop
-    </div>
-    <div id="top-head" style="width:calc((100% - 170px) * 0.4)">@block(`` as header)</div>
-    <div style="text-align:right; width:calc((100% - 170px) * 0.3)"><a href="#">Esc - Close [X]</a></div>
-</div>
-
-<div id="v-menu">
-#if('_trace'!=:_0)
-    <div class="other-task">Tasks</div>
-    @loop($y_tasks as $uri => $name)
-        <a href="{{$uri}}"{{$sky->_0 == explode('?', $uri)[0] and ' active'}}>{{$name}}</a>
-        @if('_gate' == $uri)@block(`` as m_gate)
-        @elseif('_lang?list' == $uri)@block(`` as m_lang)
-        @elseif('_inst' == $uri)@block(`` as m_inst)
-        @elseif('_glob' == explode('?', $uri)[0])@block(`` as m_glob)
-        @elseif('_dev' == explode('?', $uri)[0])@block(`` as m_dev)
-        ~if
-    ~loop
-    <a @href(ajax('',alert,'_drop'))>Drop All Cache</a>
-    @block(`` as m_view)
-#end
-</div>
-
-<div id="v-body">
-    <div style="display:table-cell; width:inherit;" class="{{$y_page}}">
-        <script>sky.d.trace_t = window.parent.document.getElementById('trace-t').innerHTML</script>
-        @inc(*)
-    </div>
-</div>
-
-<div id="v-tail">
-    <span style="width:40%" id="master">@block(`` as top_tpl)</span>
-    <div style="width:35%" id="tpl-list">
-        <form method="post" style="display:inline-block"><input type="hidden" name="t0">
-        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}})){{'_dev?view=' == substr(URI, 0, 10) and ' active'}}>
-            ▲ Views (<span>@block(views)?~block</span>)
-        </a>
-        &nbsp; &nbsp; <a href="#">▲ SQLs (?)</a>
-        &nbsp; &nbsp; <a href="#">▲ Classes (?)</a>
-        <form>
-    </div>
-    <div style="text-align:right; width:25%"><b>AB.SKY {{SKY::version()['app'][3]}}</b></div>
-</div>
-#if('_trace'!=:_0)
-    <style>#v-menu { width: 170px; } #v-body { width: calc(100vw - 170px); }</style>
-#end
-</div>
-@tail</body></html>
-#.layout
-
-#.trace //////////////////////////////////////////////////////////////////////////////
-{!$body!}
-<script>
-    @if('_x0' == URI)
-        $('.trace-t').html(sky.d.trace_t);
-    @elseif('_x1' == URI)
-        $('.trace-x').prepend(window.parent.document.getElementById('trace-x').innerHTML);
-    ~if
-    sky.d.tracing = $('#trace').html();
-    sky.d.trace();
-</script>
-#.trace
-
-#.submenu_v
-    <br><div class="other-task">Views</div>
-    @loop($list as $v)
-        <a {{$nv == $_ and 'active '}}href="_dev?view={{$sky->_2}}&nv={{$_}}">{{"$v[0] $v[1]"}}</a>
-        @if($nv == $_)
-        @loop(['Source templates', 'Parsed template', 'Master action'] as $x)
-            <a class="inner-menu" href="_glob?"{!$_2 == 0 and ' active'!}>{!$x!}</a>
-        ~loop
-        ~if
-    ~loop
-    <br><div class="other-task">Variables</div>
-    <a href="_glob?">Show</a>
-#.submenu_v.view //////////////////////////////////////////////////////////////////////////////
-#use(.submenu_v as m_view)
-#use(`{{count($list)}}` as views)
-#use(`{!$top!}` as top_tpl)
-#use(`{!$header!}` as header)
-{!$layout!}
-{!$body!}
-#.view
-
-#.submenu_d
-@loop(['overview', 'system', 'documentation'] as $name)
-    <a class="inner-menu" href="_dev?{!$name!}"{!(!$sky->_1 && 'overview' == $name || $sky->_1 == $name) and ' active'!}>{!ucfirst($name)!}</a>
-~loop
-#.submenu_d.overview //////////////////////////////////////////////////////////////////////////////
-#use(`<h4><u>DEV instance only</u> configuration and information</h4>` as header)
-@use(.submenu_d as m_dev)
-<div style="padding:10px 0 0 10px">
-<fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
-{! $form !}
-</fieldset>
-</div>
-#.overview
-
-#.system
-@use(.submenu_d as m_dev)
-#.system
-
-#.documentation
-@use(.submenu_d as m_dev)
-#.documentation
+#.crop_code //////////////////////////////////////////////////////////////////////////////
+<table width="100%" id="crop" cellpadding="5">
+<tr>
+    <td width="75%">
+        <img style="position:absolute"/><div style="position:relative; z-index:777; border:1px dashed red"></div>
+    </td>
+    <td width="25%" style="border-left:2px solid #bbb; padding:5px;"><h2>Crop an image</h2>
+        Original picture size: <span></span><hr>
+        Required size: <select>{! $opt !}</select><br><br>
+        Region: <input type="range" min="20" max="100" value="50"/><br><br>
+        <button>finish</button> &nbsp; mode: <span style="background:#bfb">move</span>
+    </td>
+</tr>
+</table>
+#.crop_code
 
 ==============================================================================================
 |||||||||||||||||||||||||||||||||||||||||||| GATE ||||||||||||||||||||||||||||||||||||||||||||
@@ -182,7 +77,7 @@ $(function() {
 </script>
 #.lock
     
-#.submenu_g  ------------ <fieldset id="contr">
+#.m_gate  ////////////////////////////////////////////////////////////////////////////// <fieldset id="contr">
 @loop($list as $one => $ex)
     <a href="{{PATH}}?_gate={!is_int($ex)?$one:$ex!}"
         {!$one==$y_1 and ' active'!} class="inner-menu"
@@ -190,18 +85,18 @@ $(function() {
         >{!'*' == $one ? 'default_c' : "c_$one"!}
     </a>
 ~loop
-#.submenu_g.header
-<i>SKY GATE</i>:<b>
+#.m_gate.header ------------------------------------------------------------------------------
+<h4><span style="color:#4338ca">CONTROLLER</span>:<b>
 @if($list[$y_1])
     <span style="color:#000">{{strtoupper($h1)}}.PHP</span>
 @else
     <span style="color:red">{{strtoupper($h1)}}.PHP</span> (not exists)
     <a @href(ajax('{{$y_1}}','v-body','_delete'))>delete</a>
 ~if
-</b>
-#.header.gate.virt.delete //////////////////////////////////////////////////////////////////////////////
-#use(.header as header)
-@use(.submenu_g as m_gate)
+</b></h4>
+#.header.gate.virt.delete ------------------------------------------------------------------------------
+#use(.header)
+@use(.m_gate)
 <div id="gate">
 @if($y_1)
     @if('default_c'!=$h1 && $list[$y_1])
@@ -287,7 +182,7 @@ $(function() {
 
 #.c23_edit.c23_2edit //////////////////////////////////////////////////////////////////////////////
 <div class="c23-tpl" style="background:{!$isaddr?'#efe':'#fee'!}">
-    <a class="red-link fr" @href(sky.g.hide(this))>[X]</a>
+    <a class="red-link fr" @href(sky.g.hide(this))>@inc(__svg.x)</a>
     <input name="kname[]" size="6" placeholder="key name" value="{{$kname}}"/>
     <input name="key[]" size="15" placeholder="key" value="{{$key}}"/>
     <div style="margin-top:2px">
@@ -316,7 +211,7 @@ sky.g.edit = function(el, func, scroll) {
     el = $(el).parents('.function');
     sky.g.html = el.html();
     ajax(encodeURIComponent(func), function(r) {
-        el.html(r).parent().css({background:'rgba(173,228,255,0.5)',borderBottom:'3px solid #77f'}).find(':checkbox').click(function() {
+        el.html(r).parent().css({background:'#e0e7ff',borderBottom:'3px solid #77f'}).find(':checkbox').click(function() {
             sky.g.code(el, func);
         });
         if (scroll)
@@ -376,8 +271,8 @@ $(function() {
 </script>
 
 <style>
-fieldset { border:none; background:#e7ebf2; margin-bottom:10px; padding-top:0px; }
-fieldset legend { position:relative;top:-5px; left:70px; }
+fieldset { border:none; background:#eee; margin-bottom:10px; padding-top:0px; }
+fieldset legend { position:relative;top:-5px; left:40px; }
 #gate { margin:10px }
 #gate legend { font-size:14px; }
 div.function { margin-top:-9px; }
@@ -400,21 +295,4 @@ div.function { margin-top:-9px; }
 }
 </style>
 #.jscss
-
-
-#.crop_code //////////////////////////////////////////////////////////////////////////////
-<table width="100%" id="crop" cellpadding="5">
-<tr>
-    <td width="75%">
-        <img style="position:absolute"/><div style="position:relative; z-index:777; border:1px dashed red"></div>
-    </td>
-    <td width="25%" style="border-left:2px solid #bbb; padding:5px;"><h2>Crop an image</h2>
-        Original picture size: <span></span><hr>
-        Required size: <select>{! $opt !}</select><br><br>
-        Region: <input type="range" min="20" max="100" value="50"/><br><br>
-        <button>finish</button> &nbsp; mode: <span style="background:#bfb">move</span>
-    </td>
-</tr>
-</table>
-#.crop_code
 

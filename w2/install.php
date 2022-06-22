@@ -76,7 +76,6 @@ class Install
 
     function _database() {
         if (!isset($_POST['step'])) return [
-            'title' => 'var/app.sql',
             'tables' => sql("@show tables"),
             'mem' => $this->memo('tables', []),
         ];
@@ -308,7 +307,6 @@ class Install
             $v = [0, Rare::list_path($k, 'is_file')];
         });
         return [
-            'title' => 'Directories & files, check for exclude',
             'files' => $files,
             'exd' => $saved[0],
             'exf' => $saved[1],

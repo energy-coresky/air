@@ -14,19 +14,25 @@ CREATE TABLE `{{SQL::$dd->pref}}language` (
 #.table
 
 #.generate formal tpl
-#.generate.header
-    <b>LANGUAGES</b>, sorted: <b><u>{{$obj->nsort?'no':'yes'}}</u></b>,
-    sync: <b><u id="sync">{{$obj->nsync?'no':'yes'}}</u></b>
-#.submenu.header
+#.generate.m_lang /////////////////////////////////////////////////////////////////////////
     @loop($obj->list as $one)
     <a href="{{PATH}}?_lang=list.{{$one}}"
         {!$one==$obj->lg and ' active'!} class="inner-menu"
-        style="{!$one==DEFAULT_LG and 'text-transform:uppercase;'!}"
-        >{{$one}}
+        style="{!$one==DEFAULT_LG and 'font-weight:bold;text-decoration:underline'!}"
+        >{{$one}} - {{$obj->toname[$one]}}
     </a>
     ~loop
-#.submenu.list.fix.store /////////////////////////////////////////////////////////////////////////
-#use(.header as header)
+#.menu.m_lang -------------------------------------------------------------------------
+    <br><div class="other-task">Languages</div>
+    <div class="other-info">
+    <table cellspacing="0" cellpadding="0" width="100%">
+        <tr><td>sorted:</td><td><b><u>{{$obj->nsort?'no':'yes'}}</u></b></td></tr>
+        <tr><td>sync: </td><td><b><u id="sync">{{$obj->nsync?'no':'yes'}}</u></b></td></tr>
+    </table>
+    </div>
+#.menu.list.fix.store -------------------------------------------------------------------------
+#use(`<h4>LANGUAGE: {{$obj->lg and strtoupper($obj->lg . ' - ' . $obj->toname[$obj->lg])}}</h4>` as header)
+#use(.menu)
 <div id="lang">
 @if(1 == $obj->error)
     <h1>Please setup constant DEBUG to 1</h1>
@@ -43,17 +49,16 @@ CREATE TABLE `{{SQL::$dd->pref}}language` (
     <pre>{!$obj->sql!}</pre>
     <input value="Yes!" type="button" onclick="dev('fix',{sql:$(this).prev().text()})"/>
 @else
-    @use(.submenu as m_lang)
+    @use(.m_lang)
     <fieldset><legend>Languages</legend>
-    <div class="fr">Legend:
-        <table style="display:inline-table">
-            <tr>
-            <td width="7" bgcolor="yellow"></td><td>Key longer then value</td>
-            <td width="7" bgcolor="red"></td><td>Duplicated</td>
-            <td width="7" bgcolor="pink"></td><td>Not translated</td>
-            </tr>
-        </table>
-    </div>
+        <input value="sort items" type="button" onclick="dev('list.{{DEFAULT_LG}}',{sort:1})"/> total: <b>{{$e_list->cnt}}</b>
+        <div class="fr">Legend:
+            <table style="display:inline-table"><tr>
+                <td width="7" bgcolor="yellow"></td><td>Key longer then value</td>
+                <td width="7" bgcolor="red"></td><td>Duplicated</td>
+                <td width="7" bgcolor="pink"></td><td>Not translated</td>
+            </tr></table>
+        </div>
     </fieldset>
     @if(!$obj->lg)
         <h1>Sky Languages: you will redirected..</h1>
@@ -66,7 +71,9 @@ CREATE TABLE `{{SQL::$dd->pref}}language` (
             <input value="add new item" type="button" onclick="sky.g.all(0, 0)"/>
         </div>
         <div class="fl" style="margin:0 0 10px 15px;">
-            <input value="sort items" type="button" onclick="dev('list.{{DEFAULT_LG}}',{sort:1})"/> total: <b>{{$e_list->cnt}}</b>
+            
+
+
         </div>
         <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
         <tr id="lang-head">

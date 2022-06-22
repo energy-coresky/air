@@ -10,21 +10,21 @@
 </div>
 #.form
 
-#.submenu
+#.m_glob ==========================================================================================================
 @loop(['report' => 'Show Report', 'dirs' => 'Select Dirs', 'save' => 'Save Report'] as $name => $title)
     <a class="inner-menu" href="_glob?{!$name!}"{!$sky->_1 == $name and ' active'!}>{!$title!}</a>
     ~{- sky.g.save() -}
 ~loop
-#.submenu.dirs.skip ==========================================================================================================
+#.m_glob.dirs.skip ----------------------------------------------------------------------------------------------------------
 #use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
-@use(.submenu as m_glob)
+@use(.m_glob)
 <div style="margin:0 10px 10px 10px">
   <p>
   @loop($dirs as $one)
     @continue($red = $continue($one))
     <div class="md">
       @if('.' == $one)
-        <span style="background:#dfd">--root-project-directory--</span> {{DIR}}
+        <span class="bg-g">--root-project-directory--</span> {{DIR}}
       @else
         <a @href(sky.g.dir(this))@if(0 === $red) style="color:red;text-decoration:line-through"~if>{!$one!}</a>
       ~if
@@ -34,7 +34,7 @@
 </div>
 #.dirs.skip
 
-#.submenu_v
+#.menu ==========================================================================================================
     <br><div class="other-task">Globals report</div>
     <div class="other-info">
     <table cellspacing="0" cellpadding="0" width="100%">
@@ -46,13 +46,13 @@
         ~loop
         <tr><td>No problem:</td><td>163</td></tr>
         <tr><td>Marked OK:</td><td>17</td></tr>
-        <tr><td>Unchecked definitions:</td><td style="background:pink">20</td></tr>
+        <tr><td>Unchecked definitions:</td><td class="bg-r">20</td></tr>
     </table>
     </div>
-#.submenu_v.report.mark ==========================================================================================================
+#.menu.report.mark ----------------------------------------------------------------------------------------------------------
 #use(`<h4>GLOBALS REPORT</h4>` as header)
-#use(.submenu_v as m_view)
-@use(.submenu as m_glob)
+#use(.menu)
+@use(.m_glob)
 <div style="margin:0 10px 10px 10px" id="report-inner">
 #.save
 <h2>PHP Version: {{PHP_VERSION}}, Time now: {{NOW}}<br>
@@ -73,7 +73,7 @@ App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::vers
         <td width="35%">{{$row->desc}}</td>
         <td width="15%" align="right">
           @if($row->nap){{$row->nap}}
-          @elseif('redy'==$row->class)
+          @elseif('bg-r'==$row->class)
             <a @href(sky.g.form('{{$key}}.{{$ident}}'))>mark OK</a>
           ~if
         </td>
@@ -81,7 +81,7 @@ App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::vers
       ~loop
       @empty
       <tr>
-        <td style="background: #dfd; padding:33px;">{{$key}} definitions not found</td>
+        <td class="bg-g p-20">{{$key}} definitions not found</td>
       </tr>
     ~loop
   </table>
@@ -94,12 +94,6 @@ Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$c
 #.report.mark
 
 #.jscss ==========================================================================================================
-<style>
-.redy {background:pink}
-.norm {}
-.blue-ok {background:#ddf}
-.check-ok {background:#ffd}
-</style>
 <script>
 sky.set_file_clk('#box-in');
 sky.g.save = function() {

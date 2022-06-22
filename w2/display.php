@@ -3,7 +3,7 @@
 class Display
 {
     static $me = false;
-    const lay_l = '<table cellpadding="0" cellspacing="0" style="font-size:14px;width:100%"><tr><td class="tdlnum mono" style="width:10px">';
+    const lay_l = '<table cellpadding="0" cellspacing="0" style="font-size:14px;width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
 
@@ -21,7 +21,7 @@ class Display
             $cnt = count($ary) - 1;
             if (preg_match("/^#\.([\.\w]+)(.*)$/", $line, $m)) {
                 $line = $s('#.', '#090') . $s($m[1], 'red') . $s($m[2], '#b45309');
-                $ary[] = ['<div class="code" style="background:#e7ebf2;font-family: monospace;font-size: 14px;">' . "$line</div>"];
+                $ary[] = ['<div class="code" style="background:#e7ebf2;">' . "$line</div>"];
                 $ary[] = "";
                 if (in_array($marker, explode('.', $m[1])))
                     $inm = !$inm;
@@ -39,7 +39,7 @@ class Display
                 if ('@' == $m[2])
                     $out .= html("@{"."$m[3]$m[4]$m[5]"."}");
                 elseif ('{' == $m[3])
-                    $out .= $s($m[2] . "{{".$m[4]."}}", '#fff; background:#bb7');
+                    $out .= $s($m[2] . "{{".$m[4]."}}", '#fff; background:#b45309');
                 elseif ('!' == $m[3])
                     $out .= $s($m[2] . "{!".$m[4]."!}", '#fff; background:#777');
                 else
@@ -63,7 +63,7 @@ class Display
                 }
                 $v = $out . $fu($v);
                 if (in_array($i, $list) || '' === $marker)
-                    $v = '<div class="code" style="background:#fef3c7;font-family: monospace;font-size: 14px;">' . "$v</div>";
+                    $v = '<div class="code" style="background:#fef3c7;">' . "$v</div>";
             }
         }
         $out = implode("", $ary);

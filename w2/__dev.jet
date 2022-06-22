@@ -1,0 +1,111 @@
+#.jet core template
+
+#.system
+@use(.m_dev)
+#.system
+
+#.documentation
+@use(.m_dev)
+#.documentation
+
+#.menu //////////////////////////////////////////////////////////////////////////////
+    <br><div class="other-task">Views</div>
+    @loop($list_views as $v)
+        <a {{$nv == $_ and 'active '}}href="_dev?view={{$sky->_2}}&nv={{$_}}">{{"$v[0] $v[1]"}}</a>
+        @if($nv == $_)
+        @loop($list_menu as $k => $v)
+            <a href="_dev?view={{$sky->_2}}&nv={{$_}}&act={{$k}}"
+                class="inner-menu" {!$k == ($sky->_6 ?: 0) and ' active'!}>{!$v!}
+            </a>
+        ~loop
+        ~if
+    ~loop
+    <br><div class="other-task">Variables</div>
+    <a href="#">Show</a>
+#.menu.view ------------------------------------------------------------------------------
+#use(.menu)
+#use(`{{count($list_views)}}` as views)
+#use(`{!$top!}` as top_tpl)
+#use(`{!$header!}` as header)
+@if($php){!$php!}@else
+    {!$layout!}{!$body!}
+~if
+#.view
+
+#.m_dev //////////////////////////////////////////////////////////////////////////////
+@loop(['overview', 'system', 'documentation'] as $name)
+    <a class="inner-menu" href="_dev?{!$name!}"{!(!$sky->_1 && 'overview' == $name || $sky->_1 == $name) and ' active'!}>{!ucfirst($name)!}</a>
+~loop
+#.m_dev.overview ------------------------------------------------------------------------------
+#use(`<h4><u>DEV INSTANCE ONLY</u> CONFIGURATION AND INFORMATION</h4>` as header)
+@use(.m_dev)
+<div style="padding:10px 0 0 10px">
+<fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
+{! $form !}
+</fieldset>
+</div>
+#.overview
+
+#.layout //////////////////////////////////////////////////////////////////////////////
+<!doctype html><html>
+<head>@head<script>sky.a._0 = sky.a.div = '{{$sky->_0}}'; sky.a._1 = '{{$sky->_1}}'; sky.a.uri = '{{URI}}'</script>
+</head>
+<body>
+<div id="main">
+<div id="v-head">
+    <div style="width:126px"><a href="{{PATH}}{{$sky->d_last_page ?: '_dev'}}">▼ Tasks</a>
+    </div>
+    <div style="width:144px">
+    @loop($_ < 4)<a href="_x{{$_}}"{{"_x$_" == $y_tx and ' active'}}>{{$_ ? "X$_" : 'T0'}}</a>~loop
+    </div>
+    <div id="top-head" style="width:calc(100% - 380px)">@block(`` as header)</div>
+    <div style="text-align:right; width:110px"><a href="#">Esc - Close @inc(__svg.x)</a></div>
+</div>
+
+<div id="v-menu">
+#if('_trace'!=:_0)
+    <div class="other-task">Tasks</div>
+    #if('view'==:_1)
+        <a href="_dev">Show</a>
+    #else
+    @loop($y_tasks as $uri => $name)
+        <a href="{{$uri}}"{{$sky->_0 == explode('?', $uri)[0] and ' active'}}>{{$name}}</a>
+        @if('_gate' == $uri)@block(`` as m_gate)
+        @elseif('_lang?list' == $uri)@block(`` as m_lang)
+        @elseif('_inst' == $uri)@block(`` as m_inst)
+        @elseif('_glob' == explode('?', $uri)[0])@block(`` as m_glob)
+        @elseif('_dev' == explode('?', $uri)[0])@block(`` as m_dev)
+        ~if
+    ~loop
+    <a @href(ajax('',alert,'_drop'))>Drop All Cache</a>
+    #end
+    @block(`` as menu)
+#end
+</div>
+
+<div id="v-body">
+    <div style="display:table-cell; width:inherit;" class="{{$y_page}}">@inc(*)</div>
+    <div id="trace-h" style="display:none">{!$err_ajax ?? ''!}</div>
+</div>
+
+<div id="v-tail">
+    <span style="width:40%" id="master">@block(`` as top_tpl)</span>
+    <div style="width:35%" id="tpl-list">
+        <form method="post" style="display:inline-block"><input type="hidden" name="t0">
+        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}})){{'_dev?view=' == substr(URI, 0, 10) and ' active'}}>
+            ▲ Views (<span>@block(views)?~block</span>)
+        </a>&nbsp; &nbsp;
+        <a href="#">
+            ▲ SQLs (?)
+        </a>&nbsp; &nbsp;
+        <a href="#">▲ Classes (?)</a>
+        <form>
+    </div>
+    <div style="text-align:right; width:25%"><b>AB.SKY {{SKY::version()['app'][3]}}</b></div>
+</div>
+#if('_trace'!=:_0)
+    <style>#v-menu { width: 170px; } #v-body { width: calc(100vw - 170px); }</style>
+#end
+</div>
+@tail</body></html>
+#.layout

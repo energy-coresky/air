@@ -23,7 +23,7 @@ class standard_c extends Controller
             return;
         if ('a_' == substr($action, 0, 2)) {
             $this->_y = ['page' => substr($action, 2)];
-            MVC::$layout = '__std.layout';
+            MVC::$layout = '__dev.layout';
         }
         if (in_array($action, $head2))
             return $this->head_y2(3);
@@ -47,21 +47,26 @@ class standard_c extends Controller
     function tail_y() {
         global $sky;
         if ($this->_y) {
+            if (!$_POST && '_trace' != $sky->_0)
+                $sky->d_last_page = URI;
             #if ('WINNT' == PHP_OS)
             #    $ary += ['adm?get_dev' => 'Open DEV.SKY.'];
             $sky->k_static = [[], ["~/dev.js"], ["~/dev.css"]];
             defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PATH);
-            return $this->_y + ['tasks' => [
-                '_dev' => 'DEV Settings',
-                '_gate' => 'Open SkyGate',
-                '_lang?list' => 'Open SkyLang',
-                '_inst' => 'Compile Project',
-                '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
-                '_visual' => 'Visual HTML',
-                '_php' => 'Visual PHP',
-                '_visual' => 'Visual HTML',
-                '_sandbox' => 'Sandbox',
-            ]];
+            return $this->_y + [
+                'tx' => '_trace' == $sky->_0 ? URI : '_x0',
+                'tasks' => [
+                    '_dev' => 'Development',
+                    '_gate' => 'Open SkyGate',
+                    '_lang?list' => 'Open SkyLang',
+                    '_inst' => 'Compile Project',
+                    '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
+                    '_visual' => 'Visual HTML',
+                    '_php' => 'Visual PHP',
+                    '_visual' => 'Visual HTML',
+                    '_sandbox' => 'Sandbox',
+                ],
+            ];
         }
     }
 
@@ -79,7 +84,7 @@ class standard_c extends Controller
         $this->_y = ['page' => 2 == $id ? 'trace-t' : 'trace-x'];
         if (2 != $id)
             $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
-        return ['body' => $body ?? 0];
+        echo $body ?? 'err';
     }
 
     function j_file() {
@@ -188,7 +193,15 @@ class standard_c extends Controller
         if ($this->_c == 'c_') # open last access time controller
             $this->_c = DEV::atime();
         $list = Gate::controllers($this->_c);
-        return [
+        $ary = [];
+        if ($this->_4) {
+////////////////////////////            $this->debug = 0;
+            $ary = [
+                'y_tx' => '_x1',
+                'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
+            ];
+        }
+        return $ary + [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
             'h1' => $this->_c,
             'virtuals' => $this->_c ? array_shift($list) : '',

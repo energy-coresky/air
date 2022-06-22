@@ -415,11 +415,12 @@ class DEV
     ///////////////////////////////////// DEV UTILITY /////////////////////////////////////
     static function run($page, $v) {
         $page or $page = 'overview';
-        MVC::body("_std.$page");
+        MVC::body("_dev.$page");
         return (array)(new DEV)->{"c_$page"}($v);
     }
 
     function c_view($x) {
+        global $sky;
         $cr = [1 => 1, 2 => 15, 3 => 16];
         if ($_POST)
             SQL::open('_')->sqlf('update memory set tmemo=%s where id=1', $_POST['t0']);
@@ -428,7 +429,7 @@ class DEV
             : SQL::open('_')->sqlf('+select tmemo from memory where id=1');
         $top = $header = '';
         $nv = $_GET['nv'] ?? 0;
-        for ($list = [], $i = 0; preg_match("/(TOP|SUB)\-VIEW: (\S+) (\S+)(.*)/s", $trace, $m); $i++) {
+        for ($list = [], $i = 0; preg_match("/(TOP|SUB|BLK)\-VIEW: (\S+) (\S+)(.*)/s", $trace, $m); $i++) {
             $m[1] = ucfirst(strtolower($m[1]));
             $title = "$m[1]-view:&nbsp;<b>$m[2]</b> &nbsp; Template: <b>" . ('^' == $m[3] ? 'no-tpl' : $m[3]) . "</b>";
             if ('Top' == $m[1])
@@ -440,36 +441,65 @@ class DEV
             array_shift($m);
             $list[] = $m;
         }
+        $menu = ['Source templates', 'Parsed template', 'Master action'];
 
         $layout = '>Layout not used</div>';
         $body = '>Body template not used</div>';
-        $sl = $sb = ';background:pink"';
-        if ($list) {
+        $sl = $sb = ';background:#eee"';
+        $php = '';
+        if (2 == $sky->_6) {
+            $ctrl = explode('::', $list[$nv][1]);
+            $fn = "main/app/$ctrl[0].php";
+            $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
+                . ", action: $ctrl[1]</div>";
+            $php .= Display::php(file_get_contents($fn));
+        } elseif (1 == $sky->_6) {
+            $tpl = $list[$nv][2];
+            list ($lay, $bod) = explode('^', $tpl);
+            $fn = MVC::fn_parsed($lay, "_$bod");
+            $php = '<div class="other-task" style="position:sticky; top:0px">Parsed: ';
+            if (is_file($fn)) {
+                $php .= basename($fn) . '</div>' . Display::php(file_get_contents($fn));
+            } else {
+                $php .= ' not found</div>';
+            }
+            
+        } elseif ($list) {
             $tpl = $list[$nv][2];
             if ('^' != $tpl) {
                 list ($lay, $bod) = explode('^', $tpl);
                 if ($lay) {
                     $sl = '"';
-                    $fn = "y_$lay.jet";
-                    $layout = ">Layout: $fn</div>" . Display::jet("view/$fn") . '<br>';
+                    $lay = explode('.', $lay);
+                    $fn = '_' == $lay[0][0] ? DIR_S . "/w2/_$lay[0].jet" : "view/y_$lay[0].jet";
+                    $lay = basename($fn) . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
+                    $layout = ">Layout: $lay</div>" . Display::jet($fn, $marker) . '<br>';
+                    if ('' === $bod) {
+                        $sb = '"';
+                        $body = '>Body: used "echo" in controller</div><br>';
+                    }
                 }
                 if ($bod) {
                     $sb = '"';
                     $bod = explode('.', $bod);
-                    $fn = "_$bod[0].jet";
-                    $bod = $fn . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
-                    $body = ">Body: $bod</div>" . Display::jet("view/$fn", $marker) . '<br>';
+                    $fn = '_' == $bod[0][0] ? DIR_S . "/w2/_$bod[0].jet" : "view/_$bod[0].jet";
+                    $bod = basename($fn) . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
+                    $body = ">Body: $bod</div>" . Display::jet($fn, $marker) . '<br>';
                 }
             }
         }
         return [
-            'list' => $list,
+            'list_views' => $list,
+            'list_menu' => $menu,
             'nv' => $nv,
-            'layout' => '<div class="other-task" style="position:sticky; top:0px' . $sl . $layout,
-            'body' => '<div class="other-task" style="position:sticky; top:42px' . $sb . $body,
-            'trace_x' => "_x$x",
+            'y_tx' => "_x$x",
             'top' => $top,
             'header' => $header,
+            // for src tpl
+            'layout' => '<div class="other-task" style="position:sticky; top:0px' . $sl . $layout,
+            'body' => '<div class="other-task" style="position:sticky; top:42px' . $sb . $body,
+            // for parsed tpl
+            'php' => $php,
         ];
     }
 

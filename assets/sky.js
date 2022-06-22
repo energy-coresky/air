@@ -14,7 +14,7 @@ var sky = {
     err_show: function(r) {
         if (r) {
             $('#trace-x').html(r.catch_error);
-            'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func) : dev('_x1');
+            'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func, 0) : dev('_x1');
         } else if (sky.err_t) {
             dev('_x0');
         }
@@ -35,6 +35,19 @@ var sky = {
                 sky.a.err_tmp = tmp;
             sky.a.err = func ? func : sky.a.err_tmp;
             return tmp;
+        }
+    },
+    g: { // sky gate & language extensions
+        box: function(ctrl, func, layout) {
+            if (layout) {
+                $('#trace-x').html('<h1>' + $('#trace-t h1:eq(0)').html() + '</h1>');
+                sky.err_t = 0;
+            } else {
+                func += '&ajax';
+            }
+            var fn = !ctrl ? '' : ("default_c" == ctrl ? "*" : ctrl.substr(2));
+            dev('?_gate=' + fn + '&func=' + func);
+            //$('#err-top div:eq(0)').html()
         }
     },
     key: {27: this.false},
@@ -149,17 +162,6 @@ var sky = {
                 return a;
             }
         });
-    },
-    g: { // sky gate & language extensions
-        box: function(ctrl, func, layout) {
-            if (layout) {
-                $('#trace-x').html('<h1>' + $('#trace-t h1:eq(0)').html() + '</h1>');
-                sky.err_t = 0;
-            }
-            var fn = !ctrl ? '' : ("default_c" == ctrl ? "*" : ctrl.substr(2));
-            dev('?_gate=' + fn + '&func=' + func);
-            //$('#err-top div:eq(0)').html()
-        }
     },
     f: { // forms
         h: {},

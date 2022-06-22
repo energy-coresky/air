@@ -119,6 +119,8 @@ class Jet
                 if ($closure)
                     $s .= '$_b = (array)';
                 $s .= "MVC::handle('$pf[0]_$name', \$_vars)";
+                if (DEV)
+                    $s .= "; trace(MVC::\$ctrl . '::$pf[0]_$name() ^', 'BLK-VIEW')";
                 if ($closure)
                     $s .= '; MVC::vars($_a, $_b); extract($_a, EXTR_REFS)';
                 if (DEV)
@@ -511,8 +513,9 @@ class Jet
     }
 
     private function _block($arg, &$str, $is_block) {
+        $regexp = '/^(.+?) as ([a-z][ \*]|)(\w+)$/';
         if ($is_block) {
-            if (preg_match('/^(.+?) as ([a-z][ \*]|)(\w+)$/', $arg, $m)) {
+            if (preg_match($regexp, $arg, $m)) {
                 list (, $tpl, $pf, $name) = $m;
             } elseif (preg_match('/^([a-z][ \*]|)(\w+) (.*?)~block(\W|\z)/s', "$arg $str", $m)) {
                 list (, $pf, $name, $tpl) = $m;
@@ -536,7 +539,7 @@ class Jet
                 $s1 = substr($str, $pos = 4 + $arg);
                 $arg = ($br = Rare::bracket($s1)) ? substr($br, 1, -1) : '';
             }
-            if (!preg_match('/^(.+?) as ([a-z][ \*]|)(\w+)$/', $arg, $m))
+            if (!preg_match('/^(\.()(\w+))$/', $arg, $m) && !preg_match($regexp, $arg, $m))
                 return $type ? $pos : null;
             list (, $tpl, $pf, $name) = $m;
             if ($type)

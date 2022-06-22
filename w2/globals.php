@@ -284,7 +284,7 @@ class Globals
                          $x = substr($x, 1);
                     $ok = isset($nap[$id]);
                     return [
-                        'class' => $c[2] || $gt ? ($ok ? 'check-ok' : 'redy') : 'norm', //blue-ok
+                        'class' => $c[2] || $gt ? ($ok ? 'bg-y' : 'bg-r') : 'norm', //bg-b
                         'pos' => "$c[0]^$c[1]",
                         'desc' => $x,
                         'nap' => $ok ? $nap[$id] : '',

@@ -373,7 +373,7 @@ class MVC extends MVC_BASE
         global $sky;
 
         is_numeric($time) or $time = strtotime($time);
-      if (0 &&          @$_SERVER['HTTP_IF_MODIFIED_SINCE'] && ($if_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']))) {///////////
+            if (@$_SERVER['HTTP_IF_MODIFIED_SINCE'] && ($if_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']))) {
             !$use_site_ts or $sky->s_site_ts < $time or $time = $sky->s_site_ts; # overall site design timestamp
             if ($if_time >= $time) {
                 http_response_code(304); # Not Modified
@@ -459,7 +459,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     }
 
     static function handle($method, &$param = null) {
-        if (MVC::$ctrl = method_exists(MVC::$mc, $method) ? get_class(MVC::$mc) : false)
+        if (MVC::$ctrl = method_exists(MVC::$mc, $method) ? substr(get_class(MVC::$mc), 0, -7) : false)
             return MVC::$mc->$method($param);
         if (MVC::$ctrl = method_exists(MVC::$cc, $method) ? 'common_c' : false)
             return MVC::$cc->$method($param);
@@ -479,7 +479,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $me->body = "$tpl." . substr($action, 2);
                 $me->set($no_handle ? $param : MVC::handle($action, $param));
-                $me->hnd = $no_handle ? "no-handle" : substr(MVC::$ctrl, 0, -7) . "::$action()";
+                $me->hnd = $no_handle ? "no-handle" : MVC::$ctrl . "::$action()";
             }
         } elseif ($action instanceof Closure) {
             $me->set($action($param));

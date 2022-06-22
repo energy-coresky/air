@@ -5,6 +5,7 @@
 class Language
 {
     public $list;
+    public $toname;
     public $error;  //TODO: rerr
     public $lg;
     public $sql;
@@ -30,6 +31,8 @@ class Language
         if (!$this->error = (int)(1 !== DEBUG))
             $lg && ($this->list = $lg) or $this->error = 2;
         $this->error or DEFAULT_LG && in_array(DEFAULT_LG, $this->list) or $this->error = 3;
+        if ($this->list)
+            $this->toname = SQL::open('_')->sql('@select code2, name from langs where code2 in ($@)', $this->list);
     }
 
     function c_list($lg) {
