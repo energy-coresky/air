@@ -231,10 +231,15 @@ class Jet
         while (false !== ($pos = strpos($in, '#use(', $offset)))
             $offset = $this->_block($pos, $in, false);
         while (preg_match('/^(.*?)(~|@)([a-z]+)(.*)$/s', $in, $m)) {
-            $this->save($this->echos($m[1]));
-            $in = substr($m[4], strlen($br = Rare::bracket($m[4])));
-            $code = $this->statements($m[3], $br ? substr($br, 1, -1) : '', '~' == $m[2], $in, $br);
-            $this->save(null === $code ? $m[2] . $m[3] . $br : $code);
+            if ($m[1] && '~' == $m[1][-1]) {
+                $this->save($this->echos(substr($m[1], 0, -1) . $m[2] . $m[3]));
+                $in = $m[4];
+            } else {
+                $this->save($this->echos($m[1]));
+                $in = substr($m[4], strlen($br = Rare::bracket($m[4])));
+                $code = $this->statements($m[3], $br ? substr($br, 1, -1) : '', '~' == $m[2], $in, $br);
+                $this->save(null === $code ? $m[2] . $m[3] . $br : $code);
+            }
         }
         $this->save($this->echos($in));
         $inline or array_pop(Jet::$tpl);
@@ -310,7 +315,7 @@ class Jet
         }
     }
 
-    private function echos(&$str) {
+    private function echos($str) {
         return preg_replace_callback('/[~@]?{[{!\-](.*?)[\-!}]}/s', function ($m) {
             if ('@' == $m[0][0])
                 return substr($m[0], 1); # verbatim
