@@ -45,7 +45,7 @@ function t(...$in) { # situational translation
 
     if (isset($sky->trans_late[$str])) {
         DEFAULT_LG == LG or $str = $sky->trans_late[$str];
-    } elseif (DEV && 1 == DEV::cfg('trans')) {
+    } elseif (DEV && 1 == $sky->d_trans) {
         SKY::$reg['trans_coll'][$str] = $sky->trans_i;
     }
     $args or print $str;
@@ -287,7 +287,6 @@ class MVC extends MVC_BASE
     static $cc; # common controller
     static $ctrl;
     static $tpl = 'default';
-    static $cache_filename = '';
 
     function __construct($is_sub = false) {
         MVC::$stack[] = $this;
@@ -397,7 +396,7 @@ class MVC extends MVC_BASE
                 if (!$sky->is_mobile) {
                     if ($sky->has_public)
                         echo DEV ? a('P', PROTO . '://' . _PUBLIC) : sprintf(span_r, 'P');
-                    echo DEV ? a('D', ["dev('_dev')"]) : sprintf(span_r, 'D');
+                    echo DEV ? a('D', ["dev('" . ($sky->d_last_page ?: '_dev') . "')"]) : sprintf(span_r, 'D');
                     echo a('A', PATH . $link);
                 }
                 echo a('X', ['sky.trace(1)']) . a('T', ['sky.trace(0)']);

@@ -10,6 +10,10 @@ class Console
         echo "Command `$name` not found";
     }
 
+    function _master() {
+        // 2do `.. git push origin master` with question about new SKY version
+    }
+
     function _m() {
         $sky->debug = 0;
         echo sqlf('+select tmemo from $_memory where id=%d', $argv[2] ?? 1);

@@ -34,7 +34,7 @@ class Tailwind
     ];
 
     function components() {
-        return sqlf('@select name, concat("az.test(\':",id,"\')") from $_azure');
+        return sqlf('@select name, concat("az.test(\':",id,"\')") from $_venus');
     }
 
     private $pad = [

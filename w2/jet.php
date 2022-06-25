@@ -162,7 +162,7 @@ class Jet
         if ($bottom)
             $out .= "<?php \$_ob[] = ob_get_clean();\n" . implode(";\n", $bottom) . ' ?>';
         if (DEV && !$layout)
-            $out .= '<?php if (2 == DEV::cfg("var")): DEV::ed_var(get_defined_vars()); endif ?>';
+            $out .= '<?php if (2 == $sky->d_var): DEV::ed_var(get_defined_vars()); endif ?>';
         if (DEV)
             $out .= "<?php MVC::in_tpl() ?>";
         if ($return) {
@@ -299,7 +299,7 @@ class Jet
             case 'head':
                 return "<?php MVC::head($arg) ?>";
             case 'tail':
-                $ed_var = DEV ? ' if (2 == DEV::cfg("var")): DEV::ed_var(get_defined_vars()); endif;' : '';
+                $ed_var = DEV ? ' if (2 == $sky->d_var): DEV::ed_var(get_defined_vars()); endif;' : '';
                 return "<?php$ed_var MVC::tail($arg) ?>";
             case 'continue':
                 return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>';

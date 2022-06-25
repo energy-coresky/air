@@ -29,6 +29,7 @@ class SKY implements PARADISE
     static $vars = [];
     static $databases;
     static $dd = false;
+    static $plans = [];
 
     protected $ghost = false;
     protected $except = false;
@@ -147,6 +148,7 @@ class SKY implements PARADISE
             if (9 == $id && defined('WWW') && 'n' == $char)
                 Schedule::setWWW($this->n_www);
         }
+        return SKY::$mem[$char][3];
     }
 
     function tail_ghost($alt = false) {
@@ -200,7 +202,7 @@ class SKY implements PARADISE
             $x[3] = $k + $x[3];    # v - visitor
         } elseif (is_null($v)) {   # u - user
             unset($x[3][$k]);      # i,j,k - Language data
-        } elseif (is_null($k)) {
+        } elseif (is_null($k)) {   # d - dev conf
             if ($old)
                 if (is_array($v)) $x[2] = $v + $x[2]; else unset($x[2][$v]);
             $flag = 2;
@@ -302,7 +304,7 @@ class SKY implements PARADISE
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.123 2022-06-11T11:00:00+02:00 energy';
+    const CORE = '0.124 2022-06-25T16:02:00+02:00 energy';
 
     static function version() {
         global $sky;

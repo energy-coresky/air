@@ -1,6 +1,6 @@
 <?php
 
-class Azure
+class Venus // rename to venus
 {
     private $layout = false;
 
@@ -23,7 +23,7 @@ class Azure
 
     static function layout() {
         global $sky, $user;
-        $az = new Azure;
+        $az = new Venus;
         $az->layout = true;
 
         MVC::$layout = '';
@@ -32,8 +32,8 @@ class Azure
             return;
         }
         $sky->k_title = 'Visual SKY';
-        $sky->k_static = [[], ["~/azure.js"], ["~/desktop.css", "~/azure.css"]];
-        MVC::body('_vis.layout');
+        $sky->k_static = [[], ["~/venus.js"], ["~/desktop.css", "~/venus.css"]];
+        MVC::body('_ven.layout');
 
         $fsize = ['320 x 480', '640 x 480', '768 x 768', '1024 x 555', '1366 x 768', /* notebook */ '1536 x 555'];
         return [
@@ -47,7 +47,7 @@ class Azure
         $html = $this->file($fn);
         json([
             'html' => preg_replace("/&(\w+);/", '&amp;$1;', $html),
-            'list' => view('_vis.popup', [
+            'list' => view('_ven.popup', [
                 'files' => $this->files(),
                 'components' => (new Tailwind)->components(),
             ]),
@@ -63,11 +63,11 @@ class Azure
     function file($fn, $save = null) {
         if (':' == $fn[0]) {
             if ($save) {
-                sqlf('update $_azure set tmemo=%s where id=%d', $save, substr($fn, 1));
+                sqlf('update $_venus set tmemo=%s where id=%d', $save, substr($fn, 1));
                 return true;
             }
             $css = $this->layout ? '<link rel="stylesheet" href="pub/desktop.css">' : '';
-            return $css . sqlf('+select tmemo from $_azure where id=%d', substr($fn, 1));
+            return $css . sqlf('+select tmemo from $_venus where id=%d', substr($fn, 1));
         } elseif (strpos($fn, '/')) {
             preg_match('/^https?:/', $fn) or $fn = "https://$fn";
         } else {
@@ -106,7 +106,7 @@ class Azure
     
     function c_colors() {
         json([
-            'right' => view('_vis.colors', [
+            'right' => view('_ven.colors', [
                 'list' => array_keys($this->colors)
             ])
         ]);

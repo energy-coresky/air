@@ -38,10 +38,10 @@ class standard_c extends Controller
 
     function load() {
         global $sky;
-        SKY::$databases += ['_' => [
-            'driver' => 'sqlite3', 'dsn' => DIR_S . '/w2/coresky.sqlite3',
-        ]];
-        $sky->memory(3, 'd', SQL::open('_'));
+        if ($sky->d_dev) {
+            $sky->debug = 0;
+            $sky->s_prod_error = 1;
+        }
     }
 
     function tail_y() {
@@ -61,7 +61,6 @@ class standard_c extends Controller
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Compile Project',
                     '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
-                    '_visual' => 'Visual HTML',
                     '_php' => 'Visual PHP',
                     '_visual' => 'Visual HTML',
                     '_sandbox' => 'Sandbox',
@@ -186,22 +185,17 @@ class standard_c extends Controller
     }
 
     function a_gate() { /* ====================================== */
+        if ('c_' == $this->_c)
+            $this->_c = DEV::atime(); # open last access time controller
         return $this->j_gate();
     }
 
     function j_gate() {
-        if ($this->_c == 'c_') # open last access time controller
-            $this->_c = DEV::atime();
         $list = Gate::controllers($this->_c);
-        $ary = [];
-        if ($this->_4) {
-////////////////////////////            $this->debug = 0;
-            $ary = [
-                'y_tx' => '_x1',
-                'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
-            ];
-        }
-        return $ary + [
+        return (!$this->_4 ? [] : [
+            'y_tx' => '_x1',
+            'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
+        ]) + [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
             'h1' => $this->_c,
             'virtuals' => $this->_c ? array_shift($list) : '',
@@ -213,12 +207,12 @@ class standard_c extends Controller
     }
 
     function j_virt() {
-        DEV::save_gate($this->_c, preg_split("/\s+/", trim($_POST['v'])));
+        DEV::save($this->_c, preg_split("/\s+/", trim($_POST['v'])));
         return $this->j_gate();
     }
 
     function j_delete() {
-        DEV::save_gate($this->_c, $this->_a);
+        DEV::save($this->_c, $this->_a);
         $this->_a or $this->_c = 'c_';
         return $this->j_gate();
     }
@@ -228,7 +222,7 @@ class standard_c extends Controller
     }
 
     function j_save() {
-        DEV::save_gate($this->_c, $this->_a, true);
+        DEV::save($this->_c, $this->_a, true);
         return DEV::gate($this->_c, $this->_a, false);
     }
 
@@ -258,26 +252,27 @@ class standard_c extends Controller
         return call_user_func([new Globals, $this->_c], $this->_a);
     }
 
-    function a_inst() {
+    function a_inst() { /* ====================================== */
         return $this->j_inst();
     }
 
-    function j_inst() { /* ====================================== */
+    function j_inst() {
         return Install::run($this->_1);
     }
 
-    function a_dev() {
-        return DEV::run($this->_1, $this->_2);
-    }
-
-    function j_visual() { /* ====================================== */
-        MVC::body('_vis.' . substr($this->_c, 2));
-        return call_user_func([new Azure, $this->_c], $this->_a);
-    }
-
-    function a_visual() {
+    function a_visual() { /* ====================================== */
         $this->_y = [];
-        return Azure::layout();
+        return Venus::layout();
+    }
+
+    function j_visual() {
+        MVC::body('_ven.' . substr($this->_c, 2));
+        return call_user_func([new Venus, $this->_c], $this->_a);
+    }
+
+    function a_dev() {
+        MVC::body('_dev.' . ($page = $this->_1 ? $this->_1 : 'overview'));
+        return (array)$this->dev->{"c_$page"}($this->_2);
     }
 
     function a_api() { # lang auto translations

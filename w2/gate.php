@@ -20,8 +20,6 @@ class Gate
     function __construct() {
         global $sky;
         $sky->memory();
-        $sky->debug = 0;////////////////////
-        $sky->s_prod_error = 1;
     }
 
     static function instance() {

@@ -3,7 +3,8 @@
 class Debug
 {
     static function start() {
-        if (DEV && DEV::cfg('cron')) {
+        global $sky;
+        if (DEV && $sky->d_cron) {
             $cron = new Schedule;
             $ts = strtotime(substr($cron->n_cron_dt, 0, 19));
             if (START_TS - $ts > 60)

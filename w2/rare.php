@@ -45,8 +45,12 @@ class Rare
         $close = ['(' => ')', '[' => ']', '{' => '}', '<' => '>'];
         $s = '';
         $i = 0;
+        if ('{' == $b)
+            $in = 'function' . $in;
         foreach (token_get_all("<?php $in") as $v) {
             if (is_array($v)) {
+                if (!$i && in_array($v[0], [T_OPEN_TAG, T_FUNCTION]))
+                    continue;
                 $v = $v[1];
             } elseif ($b == $v) {
                 $i++;
@@ -54,14 +58,15 @@ class Rare
                 $i--;
             }
             $s .= $v;
-            if (!$i && '<?php ' != $s)
-                return substr($s, 6);
+            if (!$i)
+                return $s;
         }
         return '';
     }
 
     static function cache($name = '', $func = null, $ttl = 0) {
         global $sky;
+        static $cache_jet;
         
         if ($name) { # the begin place
             $file = 'var/cache/_' . (DEFAULT_LG ? '%s_' : '') . "$name.php";
@@ -85,7 +90,7 @@ class Rare
                     : ($str = file_get_contents($fn));
                 return $str;
             } elseif ($recompile) {
-                MVC::$cache_filename = $fn;
+                $cache_jet = $fn;
                 ob_start();
                 return true;
             }
@@ -93,7 +98,7 @@ class Rare
             return false;
             
         } else { # the end place in the template
-            file_put_contents(MVC::$cache_filename, $str = ob_get_clean());
+            file_put_contents($cache_jet, $str = ob_get_clean());
             echo $str;
         }
     }

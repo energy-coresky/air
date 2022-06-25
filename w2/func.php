@@ -6,6 +6,10 @@ class Func
         switch($match[1]) {
             case 'now':
                 return $dd->f_dt();
+            case 'fmt':
+                return $dd->f_fmt($match[3]);
+            case 'week':
+                return $dd->f_week($match[3]);
             case 'cc':
                 return call_user_func_array([$dd, 'f_cc'], Func::parse($match[3]));
             default:
@@ -20,7 +24,7 @@ class Func
         foreach (token_get_all("<?php $m3") as $i => $x) {
             list ($lex, $x) = is_array($x) ? $x : [0, $x];
 
-            if (!$i || 1 == $i || T_WHITESPACE == $lex)
+            if (!$i || 1 == $i) //  || T_WHITESPACE == $lex
                 continue;
             '(' != $x or $p++;
             ')' != $x or $p--;

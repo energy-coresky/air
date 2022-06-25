@@ -107,6 +107,15 @@ class dd_sqlite3 implements Database_driver
         return sql('+select count(1) from $_`', $table);
     }
 
+    function f_fmt($in) {
+        $in = explode(',', substr($in, 1, -1), 2);
+        return "strftime($in[0], $in[1])";
+    }
+
+    function f_week($in) {
+        return "strftime('%w', " . substr($in, 1, -1) . ")";
+    }
+
     function f_cc(...$in) {
         return implode(' || ', $in);
     }

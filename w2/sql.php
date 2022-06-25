@@ -168,7 +168,7 @@ final class SQL
             $depth = SQL::NO_TRACE & $this->mode ? (int)$is_error : 1 + $this->mode & 7;
             if ($depth)
                 trace(($is_error ? "ERROR in {$this->_dd->name} - $no: " . $this->_dd->error() . "\n" : '') . "SQL: $char$qstr", $is_error, $depth);
-            if (DEV && DEV::cfg('sql'))
+            if (DEV && $sky->d_sql)
                 DEV::ed_sql($qstr, $ts, $depth, $no);
         }
 

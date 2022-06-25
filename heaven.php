@@ -278,7 +278,7 @@ class HEAVEN extends SKY
         }
         $plus = parent::tracing($plus, $trace_x);
         if (DEV && !$trace_x)
-            $plus .= DEV::trace();
+            $plus .= $this->dev->trace();
         return preg_replace('/^(' . preg_quote(DIR, '/') . '.*)$/m', '<span>$1</span>', $plus);
     }
 

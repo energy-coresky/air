@@ -63,7 +63,7 @@ class Display
                 }
                 $v = $out . $fu($v);
                 if (in_array($i, $list) || '' === $marker)
-                    $v = '<div class="code" style="background:#fef3c7;">' . "$v</div>";
+                    $v = '<div class="code" style="background:#ffd;">' . "$v</div>";
             }
         }
         $out = implode("", $ary);
@@ -71,6 +71,18 @@ class Display
             $out = "\n" . $out;
         $table = self::lay_l . $lnum . self::lay_m . '<pre style="margin:0">' . $out . '</pre>' . self::lay_r;
         return '<div class="php">' . $table . '</div>';
+    }
+
+    static function php_method($fn, $method) {
+        $php = unl(file_get_contents($fn));
+        $bc = '';
+        if (preg_match("/^(.*?)function $method\([^\)]*\)\s*({.*)$/s", $php, $m)) {
+            $n0 = substr_count($m[1], "\n");
+            $br = Rare::bracket($m[2], '{');
+            $sz = substr_count($br, "\n");
+            $bc = str_repeat('=', $n0) . str_repeat('*', 1 + $sz);
+        }
+        return Display::php($php, $bc);
     }
 
     static function php($str, $bc = '') {
@@ -94,7 +106,7 @@ class Display
 
     private function add_line_no(&$val, $key) {
         $val = strtr($val, ['=TOP-TITLE=' => '&#61;TOP-TITLE&#61;']);
-        $colors = ['' => '', '=' => '', '*' => 'ff7', '+' => 'dfd', '-' => 'fdd', '.' => 'eee'];
+        $colors = ['' => '', '=' => '', '*' => 'ffd', '+' => 'dfd', '-' => 'fdd', '.' => 'eee'];
         $pad = $c = '';
         if (!$key) for(; $this->lenb > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++)
             $this->lnum .= "<br>" and $pad .= '<div class="code" style="background:#eee">&nbsp;</div>';

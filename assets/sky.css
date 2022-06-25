@@ -13,8 +13,8 @@ html, body {
     clear: both;
 }
 .red_label {
-    background-color: red;
-    color: white;
+    background-color: red !important;
+    color: white !important;
     display: inline;
 }
 img, table {
@@ -127,7 +127,7 @@ li.elm-chk { vertical-align:top; }
 li.desc { padding:2px 5px 0 15px; }
 li.desc-chk { padding:2px 15px 0 0; }
 #f1 h2 { background:#93b8d8; color:#fff; text-align:center; margin-bottom:0; line-height:45px; }
-#f1 h3 { color:#5e5eb5; text-align:center; margin-bottom:10px; line-height:20px; }
+#f1 h3 { text-align:center; margin-bottom:10px; }
 .xf-div { width:100%; display:table; }
 .debug-table td table { border-collapse:collapse; }
 .debug-table td table th, .debug-table td table td { border:1px solid #333; }

@@ -12,10 +12,13 @@ function e() {
 class DEV
 {
     const js = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js';
-    static $cfg = [];
-    static $ini = 'var/cfg_dev.ini';
+
     static $static = false;
-    static $cfg_default = "files = \nvar = 2\nsql = 1\nstatic = pub\nconst = 0\nclass = 0\ncron = 0";
+    static $sqls = [['##', 'Time', 'Query']];
+    static $vars = [['##', 'Name', 'Value']];
+
+    //static $consts = [['##', 'Name', 'Value']];
+    //static $classes = [['##', 'Name', 'Value']];
 
     static function start() {
         global $sky;
@@ -30,12 +33,18 @@ class DEV
 
     static function init() {
         if (DEV && !CLI) {
-            DEV::$cfg = is_file(DEV::$ini) ? parse_ini_file(DEV::$ini) : parse_ini_string(DEV::$cfg_default);
+            global $sky;
+            SKY::$databases += ['_' => [
+                'driver' => 'sqlite3', 'dsn' => DIR_S . '/w2/coresky.sqlite3',
+            ]];
+            $sky->dev = new DEV;
+            $sky->memory(3, 'd', SQL::open('_')) + ['static' => 'pub'];
 
-            $stat = explode(',', DEV::$cfg['static']);
+            if (!$sky->d_static)
+                return;
             $stat = array_map(function ($v) {
                 return '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v;
-            }, $stat);
+            }, explode(',', $sky->d_static));
 
             $files = [];
             foreach ($stat as $one) {
@@ -46,8 +55,8 @@ class DEV
                     $files[$one] = 0;
                 }
             }
-            if (isset(DEV::$cfg['files']) && DEV::$cfg['files']) {
-                $saved = array_explode(DEV::$cfg['files'], '#', ',');
+            if ($sky->d_files) {
+                $saved = array_explode($sky->d_files, '#', ',');
                 if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
                     DEV::$static = true;
                 $files = $saved + $files;
@@ -59,22 +68,14 @@ class DEV
                 }
             }
             if (DEV::$static)
-                DEV::save(['files' => array_join($files, '#', ',')]);
+                SKY::d('files', array_join($files, '#', ','));
         }
     }
 
-    static function cfg($name) {
-        return isset(DEV::$cfg[$name]) ? DEV::$cfg[$name] : '';
-    }
-
-    static function save($ary) {
-        DEV::$cfg = $ary + DEV::$cfg;
-        file_put_contents(DEV::$ini, "\n; this is auto-generated file\n\n" . array_join(DEV::$cfg, ' = '));
-    }
-
-    static function form() {
+    function form() {
         $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
         return [ # visitor data
+            'dev' => ['Set debug=0 for DEV-tools', 'checkbox'],
             'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
             'sql' => ['Show SQLs in the tracing', 'checkbox'],
             'const' => ['Show user-defined global CONSTANTs in the tracing,' . $br, 'checkbox'],
@@ -89,20 +90,15 @@ class DEV
         ];
     }
 
-    static $sqls = [['##', 'Time', 'Query']];
-    static $vars = [['##', 'Name', 'Value']];
-    static $consts = [['##', 'Name', 'Value']];
-    static $classes = [['##', 'Name', 'Value']];
-
-    static function trace() {
+    function trace() {
         global $sky;
         $style = 'style="width:100%; display:table; background-color:#fff; color:#000"';
         $avar = [1 => 'from Globals', 'from Jet Templates'];
         $out = '';
 
-        if (DEV::cfg('sql'))
+        if ($sky->d_sql)
             $out .= tag('<h2>SQL queries:</h2>' . Debug::table(DEV::$sqls), $style);
-        if ($i = DEV::cfg('var'))
+        if ($i = $sky->d_var)
             $out .= tag("<h2>Variables $avar[$i]:</h2>" . Debug::table(DEV::$vars), $style);
         return $out;
     }
@@ -126,8 +122,6 @@ class DEV
     }
     
     static function ed_sql($sql, $ts, $depth, $err) {
-        global $sky;
-
         static $i = 1;
         $j = 0;
         list ($file, $line) = array_values(debug_backtrace()[$depth]);
@@ -256,7 +250,7 @@ class DEV
         return $c;
     }
 
-    static function save_gate($class, $func = false, $ary = false) {
+    static function save($class, $func = false, $ary = false) {
         $sky_gate = Gate::load_array();
         if (is_array($func)) { # save virtuals
             $found = [];
@@ -413,12 +407,6 @@ class DEV
     }
 
     ///////////////////////////////////// DEV UTILITY /////////////////////////////////////
-    static function run($page, $v) {
-        $page or $page = 'overview';
-        MVC::body("_dev.$page");
-        return (array)(new DEV)->{"c_$page"}($v);
-    }
-
     function c_view($x) {
         global $sky;
         $cr = [1 => 1, 2 => 15, 3 => 16];
@@ -449,10 +437,10 @@ class DEV
         $php = '';
         if (2 == $sky->_6) {
             $ctrl = explode('::', $list[$nv][1]);
-            $fn = "main/app/$ctrl[0].php";
+            $fn = 'standard_c' == $ctrl[0] ? DIR_S . "/w2/standard_c.php" : "main/app/$ctrl[0].php";
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
-            $php .= Display::php(file_get_contents($fn));
+            $php .= Display::php_method($fn, substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
             $tpl = $list[$nv][2];
             list ($lay, $bod) = explode('^', $tpl);
@@ -504,14 +492,14 @@ class DEV
     }
 
     function c_overview() {
-        $form = DEV::form();
+        $form = $this->form();
         if ($_POST) {
             foreach ($form as $k => $v)
                 is_int($k) or isset($_POST[$k]) or $_POST[$k] = 0;
-            DEV::save($_POST);
+            SKY::d($_POST);
         }
         $this->_y = ['page' => 'dev'];
-        return ['form' => Form::A(DEV::$cfg, $form)];
+        return ['form' => Form::A(SKY::$mem['d'][3], $form)];
     }
 
     function c_system() {

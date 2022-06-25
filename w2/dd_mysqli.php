@@ -168,6 +168,15 @@ class dd_mysqli implements Database_driver
         return $row[4];
     }
 
+    function f_fmt($in) {
+        $in = explode(',', substr($in, 1, -1), 2);
+        return "date_format($in[1], $in[0])";
+    }
+
+    function f_week($in) {
+        return "strftime('%w', $in)";
+    }
+
     function f_cc(...$in) {
         return 'concat(' . implode(', ', $in) . ')';
     }

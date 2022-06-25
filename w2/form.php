@@ -56,9 +56,11 @@ class Form
     private $cv_flag = false;
     private $repeat = [];
     private $has_js = false;
+    private $div_top;
 
-    function __construct($form, $row = []) {
+    function __construct($form, $row = [], $div = true) {
         global $user;
+        $this->div_top = $div;
         is_array($form) or $form = [$form];
         if (isset($user))
             $form += ['_csrf' => $user->v_csrf];
@@ -103,14 +105,16 @@ class Form
                 return "'$k':$v";
             }, ",\n") . '}';
             $repeat = $this->repeat_js();
-            $js = "$(function() {\nsky.f.set('#{$this->tag['id']}', $s, $repeat);\n});";
-            $js = tag('', "id=\"{$this->tag['id']}-message\"") . js($js);
+            $js = js("$(function() {\nsky.f.set('#{$this->tag['id']}', $s, $repeat);\n});");
+            if ($this->div_top)
+                $js = tag('', "id=\"{$this->tag['id']}-message\"") . $js;
         }
         return $as_string ? $js . tag($html, $etc, 'form') : [$js, tag($html, $etc, 'form')];
     }
 
     function validate() {
         $this->validation = true;
+        unset($this->form['_csrf']);
         $this->cv_prepare($this->js, $this->mk);
         $this->walk($this->form);
         return $this->post;
