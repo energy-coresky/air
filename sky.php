@@ -35,6 +35,7 @@ class SKY implements PARADISE
     protected $except = false;
 
     function __construct() {
+        require DIR_S . '/w2/plan.php';
         ob_get_level() && ob_end_clean();
         $this->debug = DEBUG;
         $this->constants();
@@ -48,11 +49,9 @@ class SKY implements PARADISE
             if (strpos($name, '\\')) # `vendor` folder autoloader
                 return;
             if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
-                is_file($file = "main/app/$name.php") ? require $file : eval("class $name extends Model_$name[0] {}");
-            } elseif (is_file($file = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php')) {
-                require $file; # wing2 folder
-            } else {
-                require "main/w3/$name.php";
+                Plan::app($name, '_');
+            } elseif (!Plan::app($name)) {
+                Plan::app($name, 'w3/');
             }
             return true;
         }, true, true);
@@ -336,6 +335,18 @@ if (!class_exists('Error', false)) {
 class Stop extends Exception {}
 
 # use exception `Exception`, `die` when exceptional situation is caused by events of the outside world. Configure as crash or not.
+
+interface Cache_driver
+{
+    function info();
+    //function close();
+    function test($name);
+    function get($name, $return);
+    function put($name, $data);
+    function mtime($name);
+    function drop($name, $quiet);
+    function drop_all($path);
+}
 
 //////////////////////////////////////////////////////////////////////////
 class eVar implements Iterator

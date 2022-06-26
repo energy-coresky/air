@@ -83,15 +83,15 @@ final class SQL
         if (isset(SQL::$connections[$name])) {
             $dd = SQL::$connections[$name];
         } else {
-            '' === $name && !isset(SKY::$databases[''])
-                ? ($cfg =& SKY::$databases)
-                : ($cfg =& SKY::$databases[$name]);
+            if ($main = '' === $name) {
+                Plan::app('mvc');
+                Plan::app('common_c', 'app/');
+            }
+            $main && !isset(SKY::$databases[''])? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
             $driver = "dd_$cfg[driver]";
             isset($cfg['pref']) or $cfg['pref'] = '';
             $dd = SQL::$connections[$name] = new $driver($cfg['dsn'], $cfg['pref']);
             unset($cfg['dsn']);
-            require_once DIR_S . '/w2/mvc.php';
-            require_once 'main/app/common_c.php';
             common_c::dd_h($name, $dd);
         }
         return $p2 || !SQL::$dd ? (SQL::$dd = $dd) : $dd;

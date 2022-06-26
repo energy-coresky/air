@@ -30,7 +30,7 @@ class Gate
     static function load_array($class = false) {
         $sky_gate = [];
         if (is_file($fn = Gate::ARRAY))
-            require $fn;
+            require $fn;//req
         if (!$class)
             return $sky_gate;
         if (!isset($sky_gate[$class]))

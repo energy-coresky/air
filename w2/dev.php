@@ -90,7 +90,7 @@ class DEV
         ];
     }
 
-    function trace() {
+    static function trace() {
         global $sky;
         $style = 'style="width:100%; display:table; background-color:#fff; color:#000"';
         $avar = [1 => 'from Globals', 'from Jet Templates'];
@@ -166,7 +166,7 @@ class DEV
                             and sqlf('delete from $_memory where id=%d', $val)
                             and eval($php);
                     } elseif (is_file($val)) {
-                        require $val;
+                        require $val;//req
                     }
                 break;
             }

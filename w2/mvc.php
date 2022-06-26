@@ -2,29 +2,29 @@
 
 # For Licence and Disclaimer of this code, see http://coresky.net/license
 
-function view($in, $return = false, $param = null) {
-    if ($in instanceof MVC) {
+function view($in, $return = false, &$_vars = null) {
+    if (!$in) {
+        return require $return;
+    } elseif ($in instanceof MVC) {
         $layout = MVC::$layout;
         $mvc = $in;
     } else {
         list($in, $layout) = is_array($in) ? $in : [$in, ''];
         $no_handle = false;
         if (!is_bool($return)) {
-            $no_handle = is_array($param = $return);
+            $no_handle = is_array($_vars = $return);
             $return = true;
         }
-        $mvc = MVC::sub($in, $param, $no_handle);
+        $mvc = MVC::sub($in, $_vars, $no_handle);
         $mvc->return = $return;
     }
     if ('' !== $mvc->ob)
         $mvc->body = '';
-    trace("$mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 
+    trace("$mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
     if ($layout || $mvc->body) {
         $_vars =& MVC::jet($mvc, $layout);
-        $mvc->ob = call_user_func(function() use (&$_vars) {
-            return require $_vars['_parsed'];
-        });
+        $mvc->ob = Plan::jet($_vars);
     }
     return MVC::tail($mvc, $layout);
 }
@@ -271,8 +271,6 @@ trait HOOK
 
 class MVC extends MVC_BASE
 {
-    const dir_j = 'var/jet/';
-
     private static $stack = [];
 
     public $_v = []; # body vars
@@ -308,18 +306,8 @@ class MVC extends MVC_BASE
 
     static function fn_parsed($layout, $body) {
         global $sky;
-        $p = MVC::dir_j . (DESIGN ? 'd' : '') . ($sky->is_mobile ? 'm' : '') . '_';
+        $p = (DESIGN ? 'd' : '') . ($sky->is_mobile ? 'm' : '') . '_';
         return "$p{$sky->style}-{$layout}-{$body}.php";
-    }
-
-    static function fn_tpl($name) {
-        global $sky;
-        if ('_' == ($name[1] ?? '') && '_' == $name[0])
-            return DIR_S . '/w2/' . $name . '.jet';
-        $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
-        if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.jet"))
-            $name = "b$name";
-        return "$dir/$name.jet";
     }
 
     static function vars(&$all, &$new, $pref = false) {
@@ -350,18 +338,17 @@ class MVC extends MVC_BASE
             MVC::vars($vars, $mvc->_v);
             $vars['sky'] = $mvc;
         }
-        $vars['_parsed'] = $fn = MVC::fn_parsed($layout, $name);
+        $fn = MVC::fn_parsed($layout, $name);
         $dev = DEV || DESIGN;
-        $ok = is_file($fn) && ($sky->s_jet_cact || !$dev);
+        $ok = Plan::jet($fn, 'test') && ($sky->s_jet_cact || !$dev);
         if ($ok && ($dev || $sky->s_jet_prod)) { # this `if` can be skipped on the production by the config
-            $mtime = filemtime($fn);             # to get max speed (avoid mtime checking)
-            $lines = file($fn);
-            $files = explode(' ', trim($lines[1], " \r\n#"));
+            list ($mtime, $files) = Plan::jet($fn, 'mx'); # to get max speed (avoid mtime checking)
             foreach ($files as $one) {
-                $ok &= filemtime(MVC::fn_tpl($one)) < $mtime; # check for file mtime
+                $ok &= Plan::view("$one.jet", 'mtime') < $mtime; # check for file mtime
                 if (!$ok)
                     break; # recompilation required
             }
+            Plan::view(0);
         }
         $ok or new Jet($name, $layout, $fn, is_string($mvc) ? false : $mvc->return);
         trace("JET: $fn, " . ($ok ? 'used cached' : 'recompiled'));
@@ -531,7 +518,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $action = $in_a
             ? ('' === $sky->_1 ? ($this->return ? 'empty_j' : 'empty_a') : ($this->return ? 'j_' : 'a_') . $sky->_1)
             : ($this->return ? 'j_' : 'a_') . $_0;
-        require $fn_dst;
+        require $fn_dst; //req
         if (!method_exists($gape = new Gape, $action))
             $action = $this->return ? 'default_j' : 'default_a';
         if (isset($gape->src))
@@ -593,8 +580,8 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         if (!$sky->tailed)
             throw new Error('MVC::tail() must used in the layout');
         if ($extra) { # save extra cache
-            file_put_contents("var/extra/$sky->fn_extra", ($sky->s_extra_ttl ? time() + $sky->s_extra_ttl : 0) . "\n<!-- E -->$me->ob");
-            echo $me->ob;
+  #          file_put_contents("var/extra/$sky->fn_extra", ($sky->s_extra_ttl ? time() + $sky->s_extra_ttl : 0) . "\n<!-- E -->$me->ob");
+   #         echo $me->ob;
         }
     }
 }

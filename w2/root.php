@@ -32,7 +32,7 @@ class Root
                     'Visitors online:' => $sky->s_online,
                     'PHP NOW:' => NOW . ' (' . PHP_TZ . '), ' . gmdate(DATE_DT) . ' (GMT)',
                     'SQL NOW:' => ($t = sql('+select $now')) . ' ' . (NOW == $t ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
-                    'Cron layer last tick:' => (new Schedule)->n_cron_dt,
+//                    'Cron layer last tick:' => (new Schedule)->n_cron_dt,
                     'Backup settings:' => sql('+select dt from $_memory where id=7'),
                     'Timestamp NOW:' => time(),
                     'Max timestamp:' => sprintf('%d (PHP_INT_MAX), GMT: %s', PHP_INT_MAX, gmdate(DATE_DT, PHP_INT_MAX)),
@@ -53,7 +53,7 @@ class Root
                 $_out = array_filter($_out, function($v) use ($list_vars) {
                     return (bool)($list_vars ^ is_object($v));
                 });
-      trace(get_defined_vars(),'xxx');
+      //trace(get_defined_vars(),'xxx');
                 foreach ($_out as $k => $v) if (!$list_vars) {
                     $methods = get_class_methods($v);
                     $vars = get_object_vars($v);

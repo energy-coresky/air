@@ -64,42 +64,52 @@ class Rare
         return '';
     }
 
-    static function cache($name = '', $func = null, $ttl = 0) {
+    static function cache($name = false, $func = '', $ttl = -3) {
         global $sky;
-        static $cache_jet;
+        static $cache = [];
+        static $files = [];
         
         if ($name) { # the begin place
-            $file = 'var/cache/_' . (DEFAULT_LG ? '%s_' : '') . "$name.php";
-            if (is_numeric($func))
+            if (is_numeric($func)) {
+                $tmp = $ttl;
                 $ttl = $func;
-            if (-1 == $ttl) # delete on ttl = -1
-                return @unlink(DEFAULT_LG ? sprintf($file, $func) : $file);
-            $fn = DEFAULT_LG ? sprintf($file, LG) : $file;
-            $ttl or $ttl = SKY::$mem['s'][3]['cache_sec'];
-            $recompile = true;
-            if ($sky->s_cache_act && is_file($fn)) {
-                $s = stat($fn);
-                $s['mtime'] + $ttl < time() or $recompile = false;
+                $func = $tmp;
             }
-
-            trace("CACHE: $fn, " . ($recompile ? 'recompiled' : 'used cached'));
+            if (is_array($name)) {
+                $dc = Plan::open($name[0]);
+                $fn = ($name[2] ?? $dc->pref) . "$name[1].php";
+            } else {
+                $dc = Plan::open('cache');
+                if (-2 == $ttl) # quiet delete file on ttl = -2
+                    return $dc->drop('jet_' . (DEFAULT_LG ? $func . '_' : '') . "$name.php", true);
+                $fn = 'jet_' . (DEFAULT_LG ? LG . '_' : '') . "$name.php";
+            }
+            if (-3 == $ttl && '' === ($ttl = $sky->s_cache_sec)) { # get ttl from SKY conf
+                $sky->s_cache_act = 1;
+                $sky->s_cache_sec = $ttl = 300; # 5 min
+            }
+            $mtime = $dc->mtime($fn);
+            $recompile = !$sky->s_cache_act || !$mtime || -1 != $ttl && ($mtime + $ttl < time());
+            trace("$fn, " . ($recompile ? 'recompiled' : 'used cached'), 'CACHE');
 
             if (is_callable($func)) {
                 $recompile
-                    ? file_put_contents($fn, $str = call_user_func($func, $name, true))
-                    : ($str = file_get_contents($fn));
+                    ? $dc->put($fn, $str = call_user_func($func, $dc))
+                    : ($str = $dc->get($fn));
                 return $str;
             } elseif ($recompile) {
-                $cache_jet = $fn;
+                $cache[] = $dc;
+                $files[] = $fn;
                 ob_start();
-                return true;
+                return true; # if (true) .. recompile Jet-cache-area ~if
             }
-            require $fn;
-            return false;
+            $dc->get($fn, false); # echo to Jet-stdout
+            return false; # if (false) .. no recompile ~if
             
         } else { # the end place in the template
-            file_put_contents($cache_jet, $str = ob_get_clean());
-            echo $str;
+            echo $str = ob_get_clean();
+            $dc = array_pop($cache);
+            $dc->put(array_pop($files), $str);
         }
     }
 
@@ -117,7 +127,7 @@ class Rare
             $label = strtolower('_' == $m[2][1] ? $m[2] : "x_$m[2]");
             if ('PHP' == $m[1]) {
                 return $ary[$m[0]] = view($label, true);
-            } elseif (is_file($fn = MVC::fn_tpl($label))) {
+            } elseif (is_file($fn = MVC::fn_tpl($label))) {/// 2do /////////////////////////////////////////////////////////
                 return $ary[$m[0]] = file_get_contents($fn);
             }
             trace("LABEL: file `$fn` not found", true);

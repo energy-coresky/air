@@ -203,6 +203,7 @@ class standard_c extends Controller
             'cshow' => DEV::cshow() ? ' checked' : '',
             'e_func' => $this->_c ? DEV::gate($this->_c) : false,
             'func' => $this->_3 ?? '',
+            'vaults' => [strtoupper(DIR_M) . '.SKY.', 'Earth', 'Mercury', 'Venus'],
         ];
     }
 

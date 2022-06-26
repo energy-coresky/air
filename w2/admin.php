@@ -163,7 +163,7 @@ class Admin
         jump(me);
     }
 
-    static function drop_all_cache() {
+    static function drop_all_cache() { // 2do Plans!
         global $sky;
         $sky->s_contr = '';
         $dirs = ['var/cache', 'var/gate', 'var/jet', 'var/extra'];

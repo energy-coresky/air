@@ -43,7 +43,6 @@ class HEAVEN extends SKY
 
         header('Content-Type: text/html; charset=' . ENC);
         defined('DESIGN') or define('DESIGN', false);
-        define('DIR_V', DESIGN ? WWW . 'view' : 'view');
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
         if (false === $this->method)
             throw new Error('Unknown request method');
@@ -258,7 +257,11 @@ class HEAVEN extends SKY
         }
         $this->k_static = [[], [], []]; # skip app css and js files
         $_vars = MVC::jet('__std.exception');
-        require $_vars['_parsed'];
+        Plan::jet($_vars += [
+            'no' => $no,
+            'tracing' => $tracing,
+            'error' => $error ?? '',
+        ]);
     }
 
     function tracing($plus = '', $trace_x = false) {

@@ -2,18 +2,10 @@
 
 class dc_file implements Cache_driver
 {
-    use SQL_COMMON;
-
-    public $name = 'File';
-    public $quote = '"';
-    public $conn;
+    public $type = 'File';
     public $pref;
 
-    function __construct($dsn, $pref) {
-        $this->conn = mysqli_init() or exit('db');
-        list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
-        @mysqli_real_connect($this->conn, $host, $user, $pass, $dbname) or exit('connect');
-        $this->pref = $pref;
+    function __construct($cfg) {
     }
 
     function info() {
@@ -23,5 +15,41 @@ class dc_file implements Cache_driver
             'charset' => '',///////////
         ];
         return $ary + ['str' => implode(', ', $ary)];
+    }
+
+    function test($name) {
+        return is_file($name);
+    }
+
+    function get($name, $return, $quiet = false, &$vars = false) {
+        if ($quiet && !is_file($name))
+            return false;
+        if ($return)
+            return file_get_contents($name);
+        if ($vars)
+            return view(false, $name, $vars);
+        return require $name;
+    }
+
+    function put($name, $data) {
+        return file_put_contents($name, $data);
+    }
+
+    function mtime($name) {
+        return is_file($name) ? stat($name)['mtime'] : 0;
+    }
+
+    function drop($name, $quiet) {
+        if ($quiet && !is_file($name))
+            return true;
+        return unlink($name);
+    }
+
+    function drop_all($path) {
+        $result = 1;
+        foreach (glob("$path/*.php") as $fn) {
+            $result &= (int)unlink($fn);
+        }
+        return $result;
     }
 }

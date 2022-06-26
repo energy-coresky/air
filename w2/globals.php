@@ -126,7 +126,6 @@ class Globals
             $p1 = $id;
 #            $out .= (is_array($id) ? implode(' ', $id) : (is_int($id) ? token_name($id) : $id))." [$braces][$line]\n";
         }
-#'main/z.php'!=$fn or print "\n\n$out\n\n";
     }
 
     function push($key, $ident) {
@@ -258,7 +257,7 @@ class Globals
         foreach ($this->definitions as &$definition)
             ksort($definition); # natcasesort($definition);
 
-        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []);
+        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []);  //req
 
         return [
             'defs' => $this->definitions,
@@ -304,7 +303,7 @@ class Globals
     }
 
     function c_mark() {
-        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []);
+        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []); //req
         $nap[$_POST['ident']] = $_POST['desc'];
         file_put_contents($fn, "<?php \$nap = " . var_export($nap, 1) . ';');
         return $this->c_report();

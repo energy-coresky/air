@@ -2,8 +2,7 @@
 
 #.404 this template for 404 (or others) error inside app layout
 @php isset($tracing) or $tracing = ''; ~php
-#if(is_file(($sky->style ? DIR_V . "/$sky->style" : DIR_V) . "/error.jet"))@inc(error.404)
-#else
+#if(Jet::err_file())@inc(error.404)#else
     <h1>404 - Page not found</h1>
     <pre>{!$tracing!}</pre>
 #end
@@ -22,8 +21,7 @@ $p_prev = $ru ? 'вернуться на предыдущую страницу' 
 $p_main = $ru ? 'открыть главную' : 'open main page';
 isset($error) && $error && $sky->debug or $error = isset($list[$no]) ? $list[$no] : $list[500];
 ~php
-#if(is_file(($sky->style ? DIR_V . "/$sky->style" : DIR_V) . "/error.jet"))@inc(error.exception)
-#else
+#if(Jet::err_file())@inc(error.exception)#else
 <!doctype html><html>
 <head>@head()</head>
 <body style="background:url({!PATH!}img/cloud.jpg);background-size:cover;margin:0 10px;@if(!$tracing)text-align:center;~if">
@@ -76,8 +74,22 @@ $(function() {
 });
 </script>
 #.lock
-    
-#.m_gate  ////////////////////////////////////////////////////////////////////////////// <fieldset id="contr">
+
+#.qq
+        @if($nv == $_)
+        @loop($list_menu as $k => $v)
+            <a href="_dev?view={{$sky->_2}}&nv={{$_}}&act={{$k}}"
+                class="inner-menu"@active($k == ($sky->_6 ?: 0))>{!$v!}
+            </a>
+        ~loop
+        ~if
+    <br><div class="other-task">Variables</div>
+#.menu.qq //////////////////////////////////////////////////////////////////////////////
+    <br><div class="other-task">Wares</div>
+    @loop($vaults as $v)
+        <a href="#"@active(0 == $_)>{{$v}}</a>
+    ~loop
+#.m_gate.menu <fieldset id="contr">
 @loop($list as $one => $ex)
     <a href="{{PATH}}?_gate={!is_int($ex)?$one:$ex!}"
         class="inner-menu" @active($one==$y_1)
@@ -95,6 +107,7 @@ $(function() {
 ~if
 </b></h4>
 #.header.gate.virt.delete ------------------------------------------------------------------------------
+#use(.menu)
 #use(.header)
 @use(.m_gate)
 <div id="gate">

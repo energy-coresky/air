@@ -22,6 +22,10 @@ class Jet
     static $loop = [];
     static $fn;
 
+    static function err_file() {
+        return Plan::view("error.jet", 'test');
+    }
+
     static function directive($name, $func = null) {
         Jet::$custom += is_array($name) ? $name : [$name => $func];
     }
@@ -32,31 +36,24 @@ class Jet
         if ($fn) {
             Jet::$block = Jet::$use = Jet::$ref = Jet::$inc = Jet::$verb = [];
             Jet::$id = 1;
-            Jet::$fn = basename($fn);
+            Jet::$fn = explode('-', basename($fn), 2)[1];
         }
-        $marker = '';
         if ($layout) {
             $this->body = $name;
             $name = '_' == $layout[0] ? $layout : "y_$layout";
         }
-        if (is_string($name)) {
-            if (strpos($name, '.'))
-                list($name, $marker) = explode('.', $name, 2);
-            $dir = $sky->style ? DIR_V . "/$sky->style" : DIR_V;
-            if ($sky->is_mobile && '_' == $name[0] && is_file("$dir/b$name.php"))
-                $name = "b$name";
-        }
+        if (is_string($name) && strpos($name, '.'))
+            list($name, $marker) = explode('.', $name, 2);
         if (!Jet::$directive) {
             MVC::handle('jet_c');
             if (is_file($fn_jet = 'main/app/jet.php'))
-                require $fn_jet;
+                require $fn_jet; //req
             Jet::$directive = true;
         }
 
-        $this->parse($name, $marker);
-
+        $this->parse($name, $marker ?? '');
         if ($fn)
-            file_put_contents($fn, $this->compile($layout, $return));
+            Plan::jet($fn, 'put', $this->compile($layout, $return));
     }
 
     private function compile($layout, $return) {
@@ -204,7 +201,7 @@ class Jet
         } else {
             Jet::$tpl[] = [$name, $marker];
             $this->files[$name] = 1;
-            $in = file_get_contents(MVC::fn_tpl($name));
+            $in = Plan::view("$name.jet", 'get');
         }
         if ('' !== $marker) {
             if (3 != count($ary = preg_split("/^\#([\.\w+]*?\.{$marker}\b[\.\w+]*).*$/m", $in, 3)))
