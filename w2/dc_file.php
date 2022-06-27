@@ -21,13 +21,11 @@ class dc_file implements Cache_driver
         return is_file($name);
     }
 
-    function get($name, $return, $quiet = false, &$vars = false) {
+    function get($name, $return = true, $quiet = false) {
         if ($quiet && !is_file($name))
             return false;
         if ($return)
             return file_get_contents($name);
-        if ($vars)
-            return view(false, $name, $vars);
         return require $name;
     }
 

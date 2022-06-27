@@ -10,9 +10,12 @@ class Plan
         'gate' => ['path' => 'var/gate'],
         'glob' => ['path' => 'var/glob'],
         'sql' => ['path' => 'var/sql'],
-       // 'ware' => [], // 'ware_name' (module name) => 'wares/path_to_main_dir'
+       // 'wares' => [], // 'ware_name' (module name) => 'wares/path_to_main_dir'
     ];
     static $wares = ['main'];
+    static $ware = 'main';
+    static $parsed_fn;
+
     /*
         driver => 'file' by default
         path   => required!
@@ -37,71 +40,47 @@ class Plan
         unset($cfg['dsn']);
     }
 
-    static function app($name, $p = false) {
-        $app = Plan::open('app', end(Plan::$wares));
-        if ('_' == $p) {
-            $fn = "app/$name.php";
-            return $app->test($fn) ? $app->get($fn, false) : eval("class $name extends Model_$name[0] {}");
-        } elseif (!$p) {
-            $fn = DIR_S . '/w2/' . ($name = strtolower($name)) . '.php';
-            return $app->driver->test($fn) ? $app->driver->get($fn, false) : false;
-        }
-        $app->get($p . "$name.php", false); # w3/
-    }
-
-    static function gate($name, $p = false) {
-        if ('test' == $p)
-            return '';
-        if ('mtime' == $p)
-            return '';
-        if ('put' == $p)
-            return '';
-    }
-
-    static function view($name, $p = false) {
-        static $view;
-
-        if (!$name)
-            return $view = 0;
-        $view or $view = Plan::open('view', end(Plan::$wares));
-        
-        $path = '_' == ($name[1] ?? '') && '_' == $name[0] ? DIR_S . '/w2/' : $view->path;
-        
-        if ('test' == $p)
-            return $view->driver->test($path . $name);
-        if ('mtime' == $p)
-            return $view->driver->mtime($path . $name);
-        if ('get' == $p) {
-            $s = $view->driver->get($path . $name, true);
-            $view = 0;
-            return $s;
+    static function __callStatic($func, $arg) {
+        list ($name, $op) = explode('_', $func);
+        $plan = Plan::open($name ?: 'app');
+        $a0 = $arg[0];
+        if ('jet' == $name)
+            $a0 = Plan::$ware . '-' . $a0;
+        switch ($op) {
+            case 'p': return $plan->put($a0, $arg[1]);
+            case 'g': return $plan->get($a0);
+           case 'g2': return file_get_contents(DIR_S . "/w2/$a0.php");
+            case 'tp': Plan::$parsed_fn = $plan->path . $a0;
+            case 't': return $plan->test($a0);
+            case 'm': return $plan->mtime($a0);
+            case 'r': return $plan->get($a0, false);
+            case 'rr': $recompile = $arg[1]; return require $plan->path . $a0;
+            case 'gs':
+                if ('_' == ($a0[1] ?? '') && '_' == $a0[0])
+                    return file_get_contents(DIR_S . '/w2/' . $a0);
+                return $plan->get($a0);
+            case 'mf':
+                $s = $plan->get($a0);
+                $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
+                return [$plan->mtime($a0), explode(' ', trim($line, " \r\n#"))];
+            # the app postfixes:
+            case 'w2':
+            case 'as':
+                if (is_file($fn = DIR_S . '/w2/' . ($a0 = strtolower($a0)) . '.php'))
+                    return require $fn;
+                if ('w2' == $op)
+                    throw new Error("Plan::_w2($arg[0]) failed");
+                $a0 = "w3/$a0";
+            case 'ap': return require ($plan->path . "$a0.php");
+            case 'am':
+                $fn = $plan->path . "app/$a0.php";
+                return is_file($fn) ? require $fn : eval("class $a0 extends Model_$a0[0] {}");
+            default: throw new Error("Plan::$func(..) - method not exists");
         }
     }
 
-    static function jet(&$in, $p = 0, $data = 0) { # parsed templates
-        static $fn;
-        static $jet;
-
-        if (0 === $p) {
-            $r = $jet->get($fn, false, false, $in);
-            $jet = 0;
-            return $r;
-        }
-        $ware = end(Plan::$wares);
-        $jet or $jet = Plan::open('jet', $ware);
-        $fn = $ware . "-$in";
-        if ('mx' == $p) {
-            $s = $jet->get($fn, true);
-            $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
-            return [$jet->mtime($fn), explode(' ', trim($line, " \r\n#"))];
-        }
-        if ('test' == $p)
-            return $jet->test($fn);
-        if ('put' == $p)
-            return $jet->put($fn, $data);
-    }
-
-    static function open($name, $ware = 'main') {
+    static function open($name, $ware = false) {
+        $ware or $ware = Plan::$ware;
         if (isset(Plan::$tree[$ware][$name])) {
             return Plan::$tree[$ware][$name];
         } elseif ('cache' == $name && 'main' == $ware) {
@@ -128,8 +107,8 @@ class Plan
         return $this->driver->test($this->path . $name);
     }
 
-    function get($name, $return = true, $quiet = false, &$vars = false) {
-        return $this->driver->get($this->path . $name, $return, $quiet, $vars);
+    function get($name, $return = true, $quiet = false) {
+        return $this->driver->get($this->path . $name, $return, $quiet);
     }
 
     function put($name, $data) {
@@ -140,15 +119,15 @@ class Plan
         return $this->driver->mtime($this->path . $name);
     }
 
-    function drop_all() {
-        if (in_array($this->apn[0], ['view', 'glob', 'app']))
-            throw new Error("Cannot drop all " . $this->apn[0]);
-        return $this->driver->drop_all($this->path);
-    }
-
     function drop($name, $quiet = false) {
         if (in_array($this->apn[0], ['view', 'glob', 'app']))
             throw new Error("Cannot drop " . $this->apn[0]);
         return $this->driver->drop($this->path . $name, $quiet);
+    }
+
+    function drop_all() {
+        if (in_array($this->apn[0], ['view', 'glob', 'app']))
+            throw new Error("Cannot drop all " . $this->apn[0]);
+        return $this->driver->drop_all($this->path);
     }
 }

@@ -2,7 +2,7 @@
 
 class dc_memcached implements Cache_driver
 {
-    public $type = 'Opcache';
+    public $type = 'Memcached';
     public $pref;
 
     function __construct($cfg) {
@@ -21,7 +21,7 @@ class dc_memcached implements Cache_driver
         return ;
     }
 
-    function get($name, $return, $quiet = false, &$vars = false) {
+    function get($name, $return, $quiet = false) {
     }
 
     function put($name, $data) {

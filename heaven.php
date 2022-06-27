@@ -255,9 +255,10 @@ class HEAVEN extends SKY
             $tracing .= $h1 . $this->errors . tag($this->tracing($plus, true), 'id="trace"', 'pre');
             $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
         }
+
         $this->k_static = [[], [], []]; # skip app css and js files
-        $_vars = MVC::jet('__std.exception');
-        Plan::jet($_vars += [
+        $vars = MVC::jet('__std.exception');
+        view(false, Plan::$parsed_fn, $vars += [
             'no' => $no,
             'tracing' => $tracing,
             'error' => $error ?? '',

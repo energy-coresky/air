@@ -22,10 +22,6 @@ class Jet
     static $loop = [];
     static $fn;
 
-    static function err_file() {
-        return Plan::view("error.jet", 'test');
-    }
-
     static function directive($name, $func = null) {
         Jet::$custom += is_array($name) ? $name : [$name => $func];
     }
@@ -53,7 +49,7 @@ class Jet
 
         $this->parse($name, $marker ?? '');
         if ($fn)
-            Plan::jet($fn, 'put', $this->compile($layout, $return));
+            Plan::jet_p($fn, $this->compile($layout, $return));
     }
 
     private function compile($layout, $return) {
@@ -201,7 +197,7 @@ class Jet
         } else {
             Jet::$tpl[] = [$name, $marker];
             $this->files[$name] = 1;
-            $in = Plan::view("$name.jet", 'get');
+            $in = Plan::view_gs("$name.jet");
         }
         if ('' !== $marker) {
             if (3 != count($ary = preg_split("/^\#([\.\w+]*?\.{$marker}\b[\.\w+]*).*$/m", $in, 3)))
@@ -400,8 +396,8 @@ class Jet
                 }
             }
             for ($i = 0; $i < 22; $arg = $new, $i++) {
-                $new = preg_replace_callback("/(:\w+)/", function ($m) use (&$ary) {
-                    return '(' . $ary[$m[1]] . ')';
+                $new = preg_replace_callback("/:\w+/", function ($m) use (&$ary) {
+                    return isset($ary[$m[0]]) ? '(' . $ary[$m[0]] . ')' : $m[0];
                 }, $arg);
                 if ($arg === $new)
                     break;

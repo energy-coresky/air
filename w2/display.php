@@ -11,7 +11,7 @@ class Display
         $s = function ($s, $c) {
             return '<span style="color:' . $c . '">' . html($s) . '</span>';
         };
-        $in = file_get_contents($fn);
+        $in = $fn;
         $lnum = $inm = '';
         $ary = [""];
         $list = [];
@@ -74,7 +74,7 @@ class Display
     }
 
     static function php_method($fn, $method) {
-        $php = unl(file_get_contents($fn));
+        $php = unl($fn);
         $bc = '';
         if (preg_match("/^(.*?)function $method\([^\)]*\)\s*({.*)$/s", $php, $m)) {
             $n0 = substr_count($m[1], "\n");

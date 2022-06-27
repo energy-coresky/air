@@ -84,7 +84,7 @@ class Gate
         $real = $class;
         if (false === Gate::$controller_data)
             Gate::real_src($real, $fn_src, false);
-        file_put_contents($fn_dst, Gate::instance()->parse($fn_src, $class));
+        Plan::gate_p($fn_dst, Gate::instance()->parse($fn_src, $class));
     }
 
     function view_code($ary, $class, $func) {

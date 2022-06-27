@@ -4,7 +4,7 @@
 
 function view($in, $return = false, &$_vars = null) {
     if (!$in) {
-        return require $return;
+        return require Plan::$parsed_fn;
     } elseif ($in instanceof MVC) {
         $layout = MVC::$layout;
         $mvc = $in;
@@ -22,10 +22,8 @@ function view($in, $return = false, &$_vars = null) {
         $mvc->body = '';
 
     trace("$mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
-    if ($layout || $mvc->body) {
-        $_vars =& MVC::jet($mvc, $layout);
-        $mvc->ob = Plan::jet($_vars);
-    }
+    if ($layout || $mvc->body)
+        $mvc->ob = view(false, 0, MVC::jet($mvc, $layout));
     return MVC::tail($mvc, $layout);
 }
 
@@ -340,15 +338,14 @@ class MVC extends MVC_BASE
         }
         $fn = MVC::fn_parsed($layout, $name);
         $dev = DEV || DESIGN;
-        $ok = Plan::jet($fn, 'test') && ($sky->s_jet_cact || !$dev);
+        $ok = Plan::jet_tp($fn) && ($sky->s_jet_cact || !$dev);
         if ($ok && ($dev || $sky->s_jet_prod)) { # this `if` can be skipped on the production by the config
-            list ($mtime, $files) = Plan::jet($fn, 'mx'); # to get max speed (avoid mtime checking)
+            list ($mtime, $files) = Plan::jet_mf($fn); # to get max speed (avoid mtime checking)
             foreach ($files as $one) {
-                $ok &= Plan::view("$one.jet", 'mtime') < $mtime; # check for file mtime
+                $ok &= Plan::view_m("$one.jet") < $mtime; # check for file mtime
                 if (!$ok)
                     break; # recompilation required
             }
-            Plan::view(0);
         }
         $ok or new Jet($name, $layout, $fn, is_string($mvc) ? false : $mvc->return);
         trace("JET: $fn, " . ($ok ? 'used cached' : 'recompiled'));
@@ -506,19 +503,19 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $list = !$ex && $sky->s_contr ? explode(' ', $sky->s_contr) : Gate::controllers();
         $in_a = '*' !== $_0 && in_array($_0, $list, true);
         $class = $real = $in_a ? 'c_' . $_0 : 'default_c';
-        $dst = is_file($fn_dst = "var/gate/$class.php");
+        $dst = Plan::gate_t($fn_dst = "$class.php");
         $recompile = false;
         if (!$dst || DEV) {
             $src = is_file($fn_src = "main/app/$class.php") or !$in_a or $src = Gate::real_src($real, $fn_src);
             if (!$src)
                 return $ex || !$in_a ? ['Controller', '_', false, ''] : $this->gate(true);
-            if ($recompile = !$dst || filemtime($fn_src) > filemtime($fn_dst))
+            if ($recompile = !$dst || filemtime($fn_src) > Plan::gate_m($fn_dst))
                 Gate::put_cache($class, $fn_src, $fn_dst);
         }
         $action = $in_a
             ? ('' === $sky->_1 ? ($this->return ? 'empty_j' : 'empty_a') : ($this->return ? 'j_' : 'a_') . $sky->_1)
             : ($this->return ? 'j_' : 'a_') . $_0;
-        require $fn_dst; //req
+        Plan::gate_rr($fn_dst, $recompile);
         if (!method_exists($gape = new Gape, $action))
             $action = $this->return ? 'default_j' : 'default_a';
         if (isset($gape->src))

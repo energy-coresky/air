@@ -437,17 +437,17 @@ class DEV
         $php = '';
         if (2 == $sky->_6) {
             $ctrl = explode('::', $list[$nv][1]);
-            $fn = 'standard_c' == $ctrl[0] ? DIR_S . "/w2/standard_c.php" : "main/app/$ctrl[0].php";
+            $fn = ($std = 'standard_c' == $ctrl[0]) ? "standard_c" : "app/$ctrl[0].php";
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
-            $php .= Display::php_method($fn, substr($ctrl[1], 0, -2));
+            $php .= Display::php_method($std ? Plan::_g2($fn) : Plan::_g($fn), substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
             $tpl = $list[$nv][2];
             list ($lay, $bod) = explode('^', $tpl);
             $fn = MVC::fn_parsed($lay, "_$bod");
             $php = '<div class="other-task" style="position:sticky; top:0px">Parsed: ';
-            if (is_file($fn)) {
-                $php .= basename($fn) . '</div>' . Display::php(file_get_contents($fn));
+            if (Plan::jet_t($fn)) {
+                $php .= $fn . '</div>' . Display::php(Plan::jet_g($fn));
             } else {
                 $php .= ' not found</div>';
             }
@@ -459,9 +459,9 @@ class DEV
                 if ($lay) {
                     $sl = '"';
                     $lay = explode('.', $lay);
-                    $fn = '_' == $lay[0][0] ? DIR_S . "/w2/_$lay[0].jet" : "view/y_$lay[0].jet";
-                    $lay = basename($fn) . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
-                    $layout = ">Layout: $lay</div>" . Display::jet($fn, $marker) . '<br>';
+                    $fn = '_' == $lay[0][0] ? "_$lay[0].jet" : "y_$lay[0].jet";
+                    $lay = $fn . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
+                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_gs($fn), $marker) . '<br>';
                     if ('' === $bod) {
                         $sb = '"';
                         $body = '>Body: used "echo" in controller</div><br>';
@@ -470,9 +470,9 @@ class DEV
                 if ($bod) {
                     $sb = '"';
                     $bod = explode('.', $bod);
-                    $fn = '_' == $bod[0][0] ? DIR_S . "/w2/_$bod[0].jet" : "view/_$bod[0].jet";
-                    $bod = basename($fn) . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
-                    $body = ">Body: $bod</div>" . Display::jet($fn, $marker) . '<br>';
+                    $fn = "_$bod[0].jet";
+                    $bod = $fn . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
+                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_gs($fn), $marker) . '<br>';
                 }
             }
         }

@@ -48,11 +48,7 @@ class SKY implements PARADISE
             trace("autoload($name)");
             if (strpos($name, '\\')) # `vendor` folder autoloader
                 return;
-            if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
-                Plan::app($name, '_');
-            } elseif (!Plan::app($name)) {
-                Plan::app($name, 'w3/');
-            }
+            in_array(substr($name, 0, 2), ['m_', 'q_', 't_']) ? Plan::_am($name) : Plan::_as($name);
             return true;
         }, true, true);
 
@@ -341,7 +337,7 @@ interface Cache_driver
     function info();
     //function close();
     function test($name);
-    function get($name, $return);
+    function get($name, $return, $quiet);
     function put($name, $data);
     function mtime($name);
     function drop($name, $quiet);
