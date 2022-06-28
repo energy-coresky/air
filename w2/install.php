@@ -15,7 +15,7 @@ class Install
     function memo($var = false, $default = '') {
         if (false === $this->mem) {
             $tmemo = sqlf('+select tmemo from $_memory where id=6');
-            $this->mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=now(), tmemo=%s where id=6');
+            $this->mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=6');
         }
         if ($var) {
             if (is_array($default))

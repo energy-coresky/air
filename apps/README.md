@@ -1,7 +1,8 @@
 ### Application list
 
 1. AB.SKY application
-2. .. others comming soon
+2. MED.CRM.SKY app
+3. .. others comming soon
 
 AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
 After installation and using MySQL database try switch to SQLite (edit main/conf.php)
