@@ -53,9 +53,9 @@ class dc_file implements Cache_driver
         return unlink($this->path . $name);
     }
 
-    function drop_all($ext = 'php') {
+    function drop_all($ext = '') {
         $result = 1;
-        foreach (glob("$this->path/*.$ext") as $fn)
+        foreach (glob("$this->path/*$ext") as $fn)
             $result &= (int)unlink($fn);
         return $result;
     }

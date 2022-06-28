@@ -9,18 +9,18 @@ class Plan
         'gate' => ['path' => 'var/gate'],
         'glob' => ['path' => 'var/glob'],
         'sql' => ['path' => 'var/sql'],
-       // 'wares' => [], // 'ware_name' (module name) => 'wares/path_to_main_dir'
     ];
     static $wares = ['main'];
     static $ware = 'main';
     static $parsed_fn;
     private static $connections = [];
     /*
-        driver => 'file' by default
         path   => required!
-        pref   => '' by default ??
+        driver => 'file' by default with '' (empty name) connection
+        pref   => '' by default
         ttl    => -1 (infinity) by default
-        dsn    => '' by default ??
+        dsn    => '' by default
+        use    => '' by default ( => 'plan_name') - use selected connection
     */
 
     static function _g($a0, $w2 = false) {
@@ -36,41 +36,42 @@ class Plan
         static $old_ware = false;
         static $old_obj = false;
         list ($pn, $op) = explode('_', $func);
+        $pn or $pn = 'app';
         list ($ware, $a0) = is_array($arg[0]) ? $arg[0] : [Plan::$ware, $arg[0]];
         if ($old_ware != $ware || $old_obj->pn != $pn) {
-            $obj = (object)Plan::open($pn ?: 'app', $ware);
+            $obj = (object)Plan::open($pn, $ware);
             $old_ware = $ware;
             $old_obj = $obj;
             $old_obj->pn = $pn;
         } else {
             $obj = $old_obj;
         }
-        $con = $obj->con;
-        $con->setup($obj);
+        $conn = $obj->con;
+        $conn->setup($obj);
         if ('jet' == $pn)
             $a0 = $ware . '-' . $a0;
         switch ($op) {
             case 'tp': # jet for view(..) func
                 Plan::$parsed_fn = $obj->path . '/' . $a0;
             case 't':
-                return $con->test($a0);
+                return $conn->test($a0);
             case 'm':
-                return $con->mtime($a0);
+                return $conn->mtime($a0);
             case 'p':
-                return $con->put($a0, $arg[1]);
+                return $conn->put($a0, $arg[1]);
             case 'g':
             case 'gq':
-                return $con->get($a0, 'gq' == $op);
+                return $conn->get($a0, 'gq' == $op);
             case 'r':
             case 'rq':
-                return $con->run($a0, 'rq' == $op);
+                return $conn->run($a0, 'rq' == $op);
             case 'rr': # gate
                 $recompile = $arg[1];
                 return require $obj->path . '/' . $a0;
             case 'mf': # jet
-                $s = $con->get($a0);
+                $s = $conn->get($a0);
                 $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
-                return [$con->mtime($a0), explode(' ', trim($line, " \r\n#"))];
+                return [$conn->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'ra': # autoloader
                 if (in_array(substr($a0, 0, 2), ['m_', 'q_', 't_'])) {
                     $fn = $obj->path . "/app/$a0.php";
@@ -79,11 +80,14 @@ class Plan
                 $fn = DIR_S . '/w2/' . ($a0 = strtolower($a0) . '.php');
                 return is_file($fn) ? require $fn : Plan::_r("w3/$a0");
             case 'd':
-            case 'da': return; # 2do
-#        if (in_array($this->apn[0], ['view', 'glob', 'app']))
- #           throw new Error("Cannot drop " . $this->apn[0]);
-  #      if (in_array($this->apn[0], ['view', 'glob', 'app']))
-   #         throw new Error("Cannot drop all " . $this->apn[0]);
+            case 'dq':
+                if (in_array($pn, ['view', 'glob', 'app']))
+                    throw new Error("Failed when Plan::{$pn}_$op(..)");
+                return $conn->drop($a0, 'dq' == $op);
+            case 'da':
+                if (in_array($pn, ['view', 'glob', 'app']))
+                    throw new Error("Failed when Plan::{$pn}_da(..)");
+                return $conn->drop_all($arg[1] ?? '.php');
             default: throw new Error("Plan::$func(..) - method not exists");
         }
     }
