@@ -2,7 +2,6 @@
 
 class Plan
 {
-    static $tree = [];
     static $defaults = [
         'view' => ['path' => DIR_M . '/app/view'],
         'cache' => ['path' => 'var/cache'],
@@ -15,7 +14,7 @@ class Plan
     static $wares = ['main'];
     static $ware = 'main';
     static $parsed_fn;
-
+    private static $connections = [];
     /*
         driver => 'file' by default
         path   => required!
@@ -23,111 +22,112 @@ class Plan
         ttl    => -1 (infinity) by default
         dsn    => '' by default ??
     */
-    public $path;
-    public $pref;
 
-    private $apn;
-    private $driver;
+    static function _g($a0, $w2 = false) {
+        return $w2 ? file_get_contents(DIR_S . "/$a0") : Plan::__callStatic('_g', [$a0]);
+    }
 
-    function __construct($pn, $ware = 'main') {
-        $this->apn = [$pn, $ware];
-        $cfg =& SKY::$plans[$ware][$pn];
-        $this->path = $cfg['path'] . '/';
-        $this->pref = $cfg['pref'] ?? '';
-        $driver = 'dc_' . ($cfg['driver'] ?? 'file');
-        require_once DIR_S . "/w2/$driver.php";
-        $this->driver = new $driver($cfg);
-        unset($cfg['dsn']);
+    static function view_g($a0) {
+        $w2 = '_' == ($a0[1] ?? '') && '_' == $a0[0];
+        return $w2 ? file_get_contents(DIR_S . '/w2/' . $a0) : Plan::__callStatic('view_g', [$a0]);
     }
 
     static function __callStatic($func, $arg) {
-        list ($name, $op) = explode('_', $func);
-        $plan = Plan::open($name ?: 'app');
-        $a0 = $arg[0];
-        if ('jet' == $name)
-            $a0 = Plan::$ware . '-' . $a0;
+        static $old_ware = false;
+        static $old_obj = false;
+        list ($pn, $op) = explode('_', $func);
+        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] : [Plan::$ware, $arg[0]];
+        if ($old_ware != $ware || $old_obj->pn != $pn) {
+            $obj = (object)Plan::open($pn ?: 'app', $ware);
+            $old_ware = $ware;
+            $old_obj = $obj;
+            $old_obj->pn = $pn;
+        } else {
+            $obj = $old_obj;
+        }
+        $con = $obj->con;
+        $con->setup($obj);
+        if ('jet' == $pn)
+            $a0 = $ware . '-' . $a0;
         switch ($op) {
-            case 'p': return $plan->put($a0, $arg[1]);
-            case 'g': return $plan->get($a0);
-           case 'g2': return file_get_contents(DIR_S . "/w2/$a0.php");
-            case 'tp': Plan::$parsed_fn = $plan->path . $a0;
-            case 't': return $plan->test($a0);
-            case 'm': return $plan->mtime($a0);
-            case 'r': return $plan->get($a0, false);
-            case 'rr': $recompile = $arg[1]; return require $plan->path . $a0;
-            case 'gs':
-                if ('_' == ($a0[1] ?? '') && '_' == $a0[0])
-                    return file_get_contents(DIR_S . '/w2/' . $a0);
-                return $plan->get($a0);
-            case 'mf':
-                $s = $plan->get($a0);
+            case 'tp': # jet for view(..) func
+                Plan::$parsed_fn = $obj->path . '/' . $a0;
+            case 't':
+                return $con->test($a0);
+            case 'm':
+                return $con->mtime($a0);
+            case 'p':
+                return $con->put($a0, $arg[1]);
+            case 'g':
+            case 'gq':
+                return $con->get($a0, 'gq' == $op);
+            case 'r':
+            case 'rq':
+                return $con->run($a0, 'rq' == $op);
+            case 'rr': # gate
+                $recompile = $arg[1];
+                return require $obj->path . '/' . $a0;
+            case 'mf': # jet
+                $s = $con->get($a0);
                 $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
-                return [$plan->mtime($a0), explode(' ', trim($line, " \r\n#"))];
-            # the app postfixes:
-            case 'w2':
-            case 'as':
-                if (is_file($fn = DIR_S . '/w2/' . ($a0 = strtolower($a0)) . '.php'))
-                    return require $fn;
-                if ('w2' == $op)
-                    throw new Error("Plan::_w2($arg[0]) failed");
-                $a0 = "w3/$a0";
-            case 'ap': return require ($plan->path . "$a0.php");
-            case 'am':
-                $fn = $plan->path . "app/$a0.php";
-                return is_file($fn) ? require $fn : eval("class $a0 extends Model_$a0[0] {}");
+                return [$con->mtime($a0), explode(' ', trim($line, " \r\n#"))];
+            case 'ra': # autoloader
+                if (in_array(substr($a0, 0, 2), ['m_', 'q_', 't_'])) {
+                    $fn = $obj->path . "/app/$a0.php";
+                    return is_file($fn) ? require $fn : eval("class $a0 extends Model_$a0[0] {}");
+                }
+                $fn = DIR_S . '/w2/' . ($a0 = strtolower($a0) . '.php');
+                return is_file($fn) ? require $fn : Plan::_r("w3/$a0");
+            case 'd':
+            case 'da': return; # 2do
+#        if (in_array($this->apn[0], ['view', 'glob', 'app']))
+ #           throw new Error("Cannot drop " . $this->apn[0]);
+  #      if (in_array($this->apn[0], ['view', 'glob', 'app']))
+   #         throw new Error("Cannot drop all " . $this->apn[0]);
             default: throw new Error("Plan::$func(..) - method not exists");
         }
     }
 
-    static function open($name, $ware = false) {
+    static function &open($pn, $ware = false) {
         $ware or $ware = Plan::$ware;
-        if (isset(Plan::$tree[$ware][$name])) {
-            return Plan::$tree[$ware][$name];
-        } elseif ('cache' == $name && 'main' == $ware) {
-            SKY::$plans['main']['cache'] = SKY::$plans['cache'] ?? Plan::$defaults['cache'];
-        } elseif (!Plan::$tree) {
-            $cache = Plan::open('cache');
-            if (!$cache->get('sky_plan.php', false, true)) {
-                $wares = SKY::$plans['wares'] ?? [];
-                unset(SKY::$plans['main'], SKY::$plans['wares']);
-                SKY::$plans['main'] = SKY::$plans + Plan::$defaults + ['app' => ['path' => DIR_M]];
+
+        if (!Plan::$connections) {
+            require DIR_S . "/w2/dc_file.php";
+            Plan::$connections[''] = new dc_file;
+            $cfg = SKY::$plans['cache'] ?? Plan::$defaults['cache'];
+            if (is_file($fn = $cfg['path'] . '/' . 'sky_plan.php')) {
+                require $fn;
+            } else {
+                $plans = SKY::$plans;
+                SKY::$plans = [];
+                $wares = $plans['wares'] ?? [];
+                unset($plans['wares']);
+                SKY::$plans['main'] = ['app' => ['path' => DIR_M]] + $plans + Plan::$defaults;
                 foreach ($wares as $key) {
                     $plans = [];
-                    if (is_file($fn = 'wares/' . $key . '/conf.php'))
-                        require $fn;
-                    SKY::$plans[$key] = ['app' => ['path' => 'wares/' . $key]] + $plans + SKY::$plans['main'];
+                    require 'wares/' . $key . '/conf.php';
+                    SKY::$plans[$key] = ['app' => ['path' => 'wares/' . $key]] + $plans;
                 }
-                $cache->put('sky_plan.php', '<?php SKY::$plans = ' . var_export(SKY::$plans, true) . ';');
+                file_put_contents($fn, '<?php SKY::$plans = ' . var_export(SKY::$plans, true) . ';');
             }
+            $cfg =& SKY::$plans['main'][$pn];
+        } elseif (isset(SKY::$plans[$ware][$pn])) {
+            $cfg =& SKY::$plans[$ware][$pn];
+            if ($cfg['con'] ?? false)
+                return $cfg;
+        } else {
+            $cfg =& SKY::$plans['main'][$pn];
+            SKY::$plans[$ware][$pn] =& $cfg;
+            if ($cfg['con'] ?? false)
+                return $cfg;
         }
-        return Plan::$tree[$ware][$name] = new Plan($name, $ware);
-    }
-
-    function test($name) {
-        return $this->driver->test($this->path . $name);
-    }
-
-    function get($name, $return = true, $quiet = false) {
-        return $this->driver->get($this->path . $name, $return, $quiet);
-    }
-
-    function put($name, $data) {
-        return $this->driver->put($this->path . $name, $data);
-    }
-
-    function mtime($name) {
-        return $this->driver->mtime($this->path . $name);
-    }
-
-    function drop($name, $quiet = false) {
-        if (in_array($this->apn[0], ['view', 'glob', 'app']))
-            throw new Error("Cannot drop " . $this->apn[0]);
-        return $this->driver->drop($this->path . $name, $quiet);
-    }
-
-    function drop_all() {
-        if (in_array($this->apn[0], ['view', 'glob', 'app']))
-            throw new Error("Cannot drop all " . $this->apn[0]);
-        return $this->driver->drop_all($this->path);
+        if ($cfg['driver'] ?? false) {
+            $class = 'dc_' . $cfg['driver'];
+            Plan::$connections[$pn] = $cfg['con'] = new $class($cfg);
+            unset($cfg['dsn']);
+        } else {
+            $cfg['con'] = Plan::$connections[$cfg['use'] ?? ''];
+        }
+        return $cfg;
     }
 }

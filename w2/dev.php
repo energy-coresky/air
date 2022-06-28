@@ -437,10 +437,10 @@ class DEV
         $php = '';
         if (2 == $sky->_6) {
             $ctrl = explode('::', $list[$nv][1]);
-            $fn = ($std = 'standard_c' == $ctrl[0]) ? "standard_c" : "app/$ctrl[0].php";
+            $fn = ($w2 = 'standard_c' == $ctrl[0]) ? "w2/standard_c.php" : "app/$ctrl[0].php";
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
-            $php .= Display::php_method($std ? Plan::_g2($fn) : Plan::_g($fn), substr($ctrl[1], 0, -2));
+            $php .= Display::php_method(Plan::_g($fn, $std), substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
             $tpl = $list[$nv][2];
             list ($lay, $bod) = explode('^', $tpl);
@@ -461,7 +461,7 @@ class DEV
                     $lay = explode('.', $lay);
                     $fn = '_' == $lay[0][0] ? "_$lay[0].jet" : "y_$lay[0].jet";
                     $lay = $fn . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
-                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_gs($fn), $marker) . '<br>';
+                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_g($fn), $marker) . '<br>';
                     if ('' === $bod) {
                         $sb = '"';
                         $body = '>Body: used "echo" in controller</div><br>';
@@ -472,7 +472,7 @@ class DEV
                     $bod = explode('.', $bod);
                     $fn = "_$bod[0].jet";
                     $bod = $fn . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
-                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_gs($fn), $marker) . '<br>';
+                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_g($fn), $marker) . '<br>';
                 }
             }
         }

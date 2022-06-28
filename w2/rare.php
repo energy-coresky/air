@@ -67,7 +67,6 @@ class Rare
     static function cache($name = false, $func = '', $ttl = -3) {
         global $sky;
         static $cache = [];
-        static $files = [];
         
         if ($name) { # the begin place
             if (is_numeric($func)) {
@@ -76,40 +75,39 @@ class Rare
                 $func = $tmp;
             }
             if (is_array($name)) {
-                $dc = Plan::open($name[0]);
-                $fn = ($name[2] ?? $dc->pref) . "$name[1].php";
+                $plan = "Plan::$name[0]_";
+                $fn = (isset($name[2]) ? "$name[2]/" : '') . "$name[1].php";
             } else {
-                $dc = Plan::open('cache');
+                $plan = 'Plan::cache_';
                 if (-2 == $ttl) # quiet delete file on ttl = -2
-                    return $dc->drop('jet_' . (DEFAULT_LG ? $func . '_' : '') . "$name.php", true);
+                    return Plan::cache_d('jet_' . (DEFAULT_LG ? $func . '_' : '') . "$name.php");
                 $fn = 'jet_' . (DEFAULT_LG ? LG . '_' : '') . "$name.php";
             }
             if (-3 == $ttl && '' === ($ttl = $sky->s_cache_sec)) { # get ttl from SKY conf
                 $sky->s_cache_act = 1;
                 $sky->s_cache_sec = $ttl = 300; # 5 min
             }
-            $mtime = $dc->mtime($fn);
+            $mtime = ("{$plan}m")($fn);
             $recompile = !$sky->s_cache_act || !$mtime || -1 != $ttl && ($mtime + $ttl < time());
             trace("$fn, " . ($recompile ? 'recompiled' : 'used cached'), 'CACHE');
 
             if (is_callable($func)) {
                 $recompile
-                    ? $dc->put($fn, $str = call_user_func($func, $dc))
-                    : ($str = $dc->get($fn));
+                    ? ("{$plan}p")($fn, $str = call_user_func($func))
+                    : ($str = ("{$plan}g")($fn));
                 return $str;
             } elseif ($recompile) {
-                $cache[] = $dc;
-                $files[] = $fn;
+                $cache[] = [$plan, $fn];
                 ob_start();
                 return true; # if (true) .. recompile Jet-cache-area ~if
             }
-            $dc->get($fn, false); # echo to Jet-stdout
+            ("{$plan}r")($fn); # echo to Jet-stdout
             return false; # if (false) .. no recompile ~if
             
         } else { # the end place in the template
             echo $str = ob_get_clean();
-            $dc = array_pop($cache);
-            $dc->put(array_pop($files), $str);
+            list ($plan, $fn) = array_pop($cache);
+            ("{$plan}p")($fn, $str);
         }
     }
 

@@ -84,8 +84,8 @@ final class SQL
             $dd = SQL::$connections[$name];
         } else {
             if ($main = '' === $name) {
-                Plan::_w2('mvc');
-                Plan::_ap('app/common_c');
+                require DIR_S . '/w2/mvc.php';
+                Plan::_r('app/common_c.php');
             }
             $main && !isset(SKY::$databases[''])? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
             $driver = "dd_$cfg[driver]";

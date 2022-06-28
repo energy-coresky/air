@@ -3,9 +3,10 @@
 class dc_file implements Cache_driver
 {
     public $type = 'File';
-    public $pref;
+    private $obj;
+    private $path;
 
-    function __construct($cfg) {
+    function __construct($cfg = null) {
     }
 
     function info() {
@@ -17,37 +18,45 @@ class dc_file implements Cache_driver
         return $ary + ['str' => implode(', ', $ary)];
     }
 
+    function setup($obj) {
+     //?   $this->obj = $obj;
+        $this->path = $obj->path . '/' . ($obj->pref ?? '');
+    }
+
     function test($name) {
-        return is_file($name);
-    }
-
-    function get($name, $return = true, $quiet = false) {
-        if ($quiet && !is_file($name))
-            return false;
-        if ($return)
-            return file_get_contents($name);
-        return require $name;
-    }
-
-    function put($name, $data) {
-        return file_put_contents($name, $data);
+        return is_file($this->path . $name);
     }
 
     function mtime($name) {
-        return is_file($name) ? stat($name)['mtime'] : 0;
+        return is_file($this->path . $name) ? stat($this->path . $name)['mtime'] : 0;
     }
 
-    function drop($name, $quiet) {
-        if ($quiet && !is_file($name))
+    function get($name, $quiet = false) {
+        if ($quiet && !is_file($this->path . $name))
+            return false;
+        return file_get_contents($this->path . $name);
+    }
+
+    function run($name, $quiet = false) {
+        if ($quiet && !is_file($this->path . $name))
+            return false;
+        return require $this->path . $name;
+    }
+
+    function put($name, $data) {
+        return file_put_contents($this->path . $name, $data);
+    }
+
+    function drop($name, $quiet = false) {
+        if ($quiet && !is_file($this->path . $name))
             return true;
-        return unlink($name);
+        return unlink($this->path . $name);
     }
 
-    function drop_all($path) {
+    function drop_all($ext = 'php') {
         $result = 1;
-        foreach (glob("$path/*.php") as $fn) {
+        foreach (glob("$this->path/*.$ext") as $fn)
             $result &= (int)unlink($fn);
-        }
         return $result;
     }
 }
