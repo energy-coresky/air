@@ -181,10 +181,29 @@ class standard_c extends Controller
     #}
 
     function j_drop() {
-        echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
+        echo Admin::drop_all_cache() ? 'OK' : 'Error';
     }
 
-    function a_gate() { /* ====================================== */
+     /* ====================================== */
+
+
+    function __call($name, $args) {
+        list ($x, $name) = explode('_', $name, 2);
+        if (isset(SKY::$plans[$name])) {
+            Plan::$ware = $name;
+            $class = 'c_' . $name;
+            MVC::$cc = MVC::$mc;
+            MVC::$mc = new $class;
+            $action = '' == $this->_1 ? 'empty_' . $x : $x . "_$this->_1";
+            if (method_exists(MVC::$mc, 'head_y'))
+                MVC::instance()->set(MVC::$mc->head_y($action), true);
+            MVC::body("$name." . ($this->_1 ? $this->_1 : 'empty'));
+            return MVC::$mc->$action();
+        }
+        return parent::__call($name, $args);
+    }
+
+    function a_gate() {
         if ('c_' == $this->_c)
             $this->_c = DEV::atime(); # open last access time controller
         return $this->j_gate();
@@ -272,6 +291,7 @@ class standard_c extends Controller
     }
 
     function a_dev() {
+        $this->_y += ['wares' => $this->dev->wares_menu()];
         MVC::body('_dev.' . ($page = $this->_1 ? $this->_1 : 'overview'));
         return (array)$this->dev->{"c_$page"}($this->_2);
     }

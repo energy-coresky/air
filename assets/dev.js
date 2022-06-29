@@ -1,7 +1,13 @@
 
 sky.d.top = function(tr) {
+};
 
-    
+sky.d.drop_cache = function(r, el) {
+    var s = $(el).html(), ok = 'OK' == r;
+    $(el).html(ok ? 'Dropped OK' : r).css({background: ok ? '#dfd' : '#fdd'});
+    setTimeout(function () {
+        $(el).html(s).css({background: ''});
+    }, 2000);
 };
 
 sky.d.trace_t = '';

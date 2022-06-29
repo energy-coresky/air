@@ -491,6 +491,45 @@ class DEV
         ];
     }
 
+    function c_ware() {
+        $works = array_keys($ary = SKY::$plans);
+        array_shift($ary);
+        $dir = array_map('basename', glob('wares/*'));
+        //$dir = array_diff($dir, $works);
+        return [
+            'e_installed' => [
+                'row_c' => function ($row) use (&$ary) {
+                    $name = $ary ? key($ary) : 0;
+                    if (!$ware = array_shift($ary))
+                        return false;
+                    return $ware + [
+                        'name' => ucfirst($name),
+                        'desc' => Plan::_t($_ = [$name, 'desc.txt']) ? Plan::_g($_) : 'No desc',
+                    ];
+                },
+            ],
+            'e_dir' => [
+                'row_c' => function ($row) use (&$dir) {
+                    if (!$ware = array_shift($dir))
+                        return false;
+                    return [
+                        'name' => ucfirst($ware),
+                        'desc' => Plan::_t('desc.txt') ? Plan::_g('desc.txt') : 'No desc',
+                    ];
+                },
+            ],
+        ];
+    }
+
+    function wares_menu() {
+        $menu = [];
+        foreach (SKY::$plans as $ware => $cfg) {
+            if (($cfg['app']['type'] ?? '') == 'dev')
+                $menu['_' . $ware] = ucfirst($ware);
+        }
+        return $menu;
+    }
+
     function c_overview() {
         $form = $this->form();
         if ($_POST) {

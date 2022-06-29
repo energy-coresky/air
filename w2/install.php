@@ -76,7 +76,7 @@ class Install
 
     function _database() {
         if (!isset($_POST['step'])) return [
-            'tables' => sql("@show tables"),
+            'tables' => SKY::$dd->_tables(),
             'mem' => $this->memo('tables', []),
         ];
         if (!$step = $_POST['step']) {

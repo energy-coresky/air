@@ -84,12 +84,9 @@ $(function() {
         ~loop
         ~if
     <br><div class="other-task">Variables</div>
-#.menu.qq //////////////////////////////////////////////////////////////////////////////
-    <br><div class="other-task">Wares</div>
-    @loop($vaults as $v)
-        <a href="#"@active(0 == $_)>{{$v}}</a>
-    ~loop
-#.m_gate.menu <fieldset id="contr">
+#.qq //////////////////////////////////////////////////////////////////////////////
+
+#.m_gate <fieldset id="contr">
 @loop($list as $one => $ex)
     <a href="{{PATH}}?_gate={!is_int($ex)?$one:$ex!}"
         class="inner-menu" @active($one==$y_1)
@@ -107,7 +104,6 @@ $(function() {
 ~if
 </b></h4>
 #.header.gate.virt.delete ------------------------------------------------------------------------------
-#use(.menu)
 #use(.header)
 @use(.m_gate)
 <div id="gate">

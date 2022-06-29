@@ -11,7 +11,7 @@
 @use(.m_inst)
 <div id="inst">
 <form>
-<div class="bg-wx">
+<div class="bg-wx bg-x">
     <div style="font-weight:bold;font-size:16px;">@block(`var/project.sky` as cp_b) &nbsp; </div>
     @block(cp_h)<input type="button" value="save" onclick="sky.g.save(this)">
         <input type="hidden" name="step" value="">
@@ -29,7 +29,7 @@
 <pre id="log" style="display:none"></pre>
 </div>
 #if('system' == :_1)
-    <div class="bg-wx">
+    <div class="bg-wx bg-x">
         New app version: &nbsp; <input name="vapp" size="7" value="{{$vapp}}"> &nbsp; &nbsp; Coresky version: <b>{{$vcore}}</b>
     </div>
 #end

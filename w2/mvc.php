@@ -172,17 +172,21 @@ class Controller extends MVC_BASE
 {
     # for overload if needed
     function head_y($action) {
-        return 'common_c' == get_class($this) ? null : MVC::$cc->head_y($action);
+        return $this->is_common() ? null : MVC::$cc->head_y($action);
     }
 
     # for overload if needed
     function error_y($action) {
-        return 'common_c' == get_class($this) ? null : MVC::$cc->error_y($action);
+        return $this->is_common() ? null : MVC::$cc->error_y($action);
     }
 
     # for overload if needed
     function tail_y() {
-        return 'common_c' == get_class($this) ? null : MVC::$cc->tail_y();
+        return $this->is_common() ? null : MVC::$cc->tail_y();
+    }
+
+    function is_common() {
+        return get_class($this) == get_class(MVC::$cc);
     }
 
     function __call($name, $args) {
@@ -477,7 +481,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         return $me;
     }
 
-    private function set($in, $is_common = false) {
+    function set($in, $is_common = false) {
         global $sky, $user;
 
         if (is_array($in)) {

@@ -204,6 +204,9 @@ td {
 .bg-y {
     background-color: #ffd;
 }
+.bg-x {
+    background-color: #e0e7ff;
+}
 .norm {}
 .p-20 {
     padding: 20px;
@@ -211,10 +214,13 @@ td {
 .bg-wx {
     width: calc(100% - 10px);
     padding-left: 10px;
-    height: 42px;
-    background-color: #e0e7ff;
+    height:41px;
     display: inline-flex;
     align-items: center;
+}
+.fs16 {
+    font-weight:bold;
+    font-size:16px;
 }
 #gr-modules {
     margin-top:8px;
@@ -227,6 +233,14 @@ td {
     padding:2px 5px;
     border-radius: 5px;
 }
-
+.ware {
+    width:170px;
+    height:330px;
+    margin:0 10px 10px 0;
+    padding:10px;
+    background-color: #fff;
+    border-radius: 10px;
+    display: inline-block;
+}
 
 

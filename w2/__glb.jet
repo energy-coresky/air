@@ -53,12 +53,12 @@
 #use(`<h4>GLOBALS REPORT</h4>` as header)
 #use(.menu)
 @use(.m_glob)
-<div class="bg-wx" style="border-bottom:1px solid #4338ca; height:41px;">
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
     <div style="font-weight:bold;font-size:16px;">
         App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
     </div>
 </div>
-<div class="bg-wx">
+<div class="bg-wx bg-x">
     <div style="font-weight:bold;font-size:16px;">
         Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
     </div>

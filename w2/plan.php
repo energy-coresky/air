@@ -12,6 +12,8 @@ class Plan
     ];
     static $wares = ['main'];
     static $ware = 'main';
+    static $view = 'main';
+    static $apps = [];
     static $parsed_fn;
     private static $connections = [];
     /*
@@ -29,15 +31,26 @@ class Plan
 
     static function view_g($a0) {
         $w2 = '_' == ($a0[1] ?? '') && '_' == $a0[0];
-        return $w2 ? file_get_contents(DIR_S . '/w2/' . $a0) : Plan::__callStatic('view_g', [$a0]);
+        if ($w2)
+            return file_get_contents(DIR_S . '/w2/' . $a0);
+        if ('main' != Plan::$ware && !Plan::view_t($a0))
+            return Plan::__callStatic('view_g', [['main', $a0]]);
+        return Plan::__callStatic('view_g', [$a0]);
     }
 
     static function __callStatic($func, $arg) {
         static $old_ware = false;
         static $old_obj = false;
+        global $user;
+
         list ($pn, $op) = explode('_', $func);
         $pn or $pn = 'app';
         list ($ware, $a0) = is_array($arg[0]) ? $arg[0] : [Plan::$ware, $arg[0]];
+        if ('jet' == $pn) {
+            $a0 = Plan::$view . '-' . $a0;
+        } elseif ('view' == $pn && 'main' == $ware) {
+            $ware = Plan::$view;
+        }
         if ($old_ware != $ware || $old_obj->pn != $pn) {
             $obj = (object)Plan::open($pn, $ware);
             $old_ware = $ware;
@@ -48,8 +61,6 @@ class Plan
         }
         $conn = $obj->con;
         $conn->setup($obj);
-        if ('jet' == $pn)
-            $a0 = $ware . '-' . $a0;
         switch ($op) {
             case 'tp': # jet for view(..) func
                 Plan::$parsed_fn = $obj->path . '/' . $a0;
@@ -110,10 +121,16 @@ class Plan
                 foreach ($wares as $key) {
                     $plans = [];
                     require 'wares/' . $key . '/conf.php';
-                    SKY::$plans[$key] = ['app' => ['path' => 'wares/' . $key]] + $plans;
+                    $app = $plans['app'] ?? [];
+                    SKY::$plans[$key] = ['app' => ['path' => 'wares/' . $key] + $app] + $plans;
                 }
                 file_put_contents($fn, '<?php SKY::$plans = ' . var_export(SKY::$plans, true) . ';');
             }
+            foreach (SKY::$plans as $key => $val) {
+                if ('main' == $key || 'view' == $val['app']['type'])
+                    SKY::$styles[$key] = $key;
+            }
+            trace(SKY::$styles);
             $cfg =& SKY::$plans['main'][$pn];
         } elseif (isset(SKY::$plans[$ware][$pn])) {
             $cfg =& SKY::$plans[$ware][$pn];

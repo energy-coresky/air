@@ -30,6 +30,7 @@ class SKY implements PARADISE
     static $databases;
     static $dd = false;
     static $plans = [];
+    static $styles = [];
 
     protected $ghost = false;
     protected $except = false;
