@@ -128,7 +128,7 @@
     @loop($_ < 4)<a href="_x{{$_}}"@active("_x$_" == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
     </div>
     <div id="top-head" style="width:calc(100% - 380px)">@block(`` as header)</div>
-    <div style="text-align:right; width:110px"><a href="#">Esc - Close @inc(__svg.x)</a></div>
+    <div style="text-align:right; width:110px"><a href="#">Esc - Close @inc(__std.x)</a></div>
 </div>
 
 <div id="v-menu">

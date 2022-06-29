@@ -61,7 +61,6 @@ class standard_c extends Controller
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Compile Project',
                     '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
-                    '_sandbox' => 'Sandbox',
                 ],
             ];
         }

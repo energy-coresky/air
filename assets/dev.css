@@ -248,3 +248,7 @@ td {
     overflow:auto;
 }
 
+#doc_div, #doc_div pre {
+    font-size:16px;
+}
+

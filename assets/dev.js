@@ -10,6 +10,12 @@ sky.d.drop_cache = function(r, el) {
     }, 2000);
 };
 
+sky.d.doc_save = function() {
+    ajax('doc_save', $('form').serialize(), function(r) {
+        $('#doc_div').html(r)
+    });
+};
+
 sky.d.attach = function(el,d) {
     var s = d ? el : $(el).prev().val();
     if (!s)
