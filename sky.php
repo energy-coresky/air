@@ -30,7 +30,6 @@ class SKY implements PARADISE
     static $databases;
     static $dd = false;
     static $plans = [];
-    static $styles = [];
 
     protected $ghost = false;
     protected $except = false;
@@ -128,6 +127,8 @@ class SKY implements PARADISE
         if ($this->s_prod_error || $this->debug)
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
+        if (Plan::$put_cache)
+            Plan::cache_p('sky_plan.php', '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
     }
 
     function memory($id = 9, $char = 'n', $dd = null) {

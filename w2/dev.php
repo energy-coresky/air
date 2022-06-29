@@ -34,11 +34,24 @@ class DEV
     static function init() {
         if (DEV && !CLI) {
             global $sky;
+           //trace('222');
             SKY::$databases += ['_' => [
                 'driver' => 'sqlite3', 'dsn' => DIR_S . '/w2/coresky.sqlite3',
             ]];
             $sky->dev = new DEV;
             $sky->memory(3, 'd', SQL::open('_')) + ['static' => 'pub'];
+
+            if (Plan::$put_cache) {
+                $wares = $sky->d_vares ? unserialize($sky->d_vares) : [];
+                $devs = [];
+                foreach ($wares as $key => $path) {
+                    $plans = [];
+                    require "$path/conf.php";
+                    $devs[$key] = ['app' => ['path' => $path] + ($plans['app'] ?? [])] + $plans;
+                }
+                Plan::$put_cache += $devs;
+                SKY::$plans += $devs;
+            }
 
             if (!$sky->d_static)
                 return;
@@ -491,20 +504,38 @@ class DEV
         ];
     }
 
+    function j_attach() {
+        global $sky;
+        $list = $sky->d_vares ? unserialize($sky->d_vares) : [];
+        $s = trim($_POST['s'], " \t\r\n/");
+        if (!$_POST['detach']) {
+            if (!is_dir($s))
+                return print("Dir `$s` not exists");
+            if (!is_file("$s/conf.php"))
+                return print("File `$s/conf.php` not found");
+            $list[basename($s)] = $s;
+        } else {
+            unset($list[strtolower($s)]);
+        }
+        $sky->d_vares = serialize($list);
+        Plan::cache_d('sky_plan.php');
+        echo 'OK';
+    }
+
     function c_ware() {
         $works = array_keys($ary = SKY::$plans);
         array_shift($ary);
-        $dir = array_map('basename', glob('wares/*'));
-        //$dir = array_diff($dir, $works);
+        $dir = array_diff(array_map('basename', glob('wares/*')), $works);
         return [
             'e_installed' => [
                 'row_c' => function ($row) use (&$ary) {
                     $name = $ary ? key($ary) : 0;
                     if (!$ware = array_shift($ary))
                         return false;
-                    return $ware + [
+                    return [
                         'name' => ucfirst($name),
-                        'desc' => Plan::_t($_ = [$name, 'desc.txt']) ? Plan::_g($_) : 'No desc',
+                        'type' => $ware['app']['type'],
+                        'desc' => Plan::_t($_ = [$name, 'desc.txt']) ? Plan::_g($_) : false,
                     ];
                 },
             ],
@@ -514,7 +545,8 @@ class DEV
                         return false;
                     return [
                         'name' => ucfirst($ware),
-                        'desc' => Plan::_t('desc.txt') ? Plan::_g('desc.txt') : 'No desc',
+                        'type' => '',
+                        'desc' => Plan::_t('desc.txt') ? Plan::_g('desc.txt') : false,
                     ];
                 },
             ],

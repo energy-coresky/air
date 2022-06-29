@@ -10,6 +10,15 @@ sky.d.drop_cache = function(r, el) {
     }, 2000);
 };
 
+sky.d.attach = function(el,d) {
+    var s = d ? el : $(el).prev().val();
+    if (!s)
+        return;
+    ajax('attach', {s:s, detach:d}, function(r) {
+        'OK' == r ? (location.href = '_dev?ware') : alert(r);
+    });
+};
+
 sky.d.trace_t = '';
 
 sky.d.trace = function() {

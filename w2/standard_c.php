@@ -61,8 +61,6 @@ class standard_c extends Controller
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Compile Project',
                     '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
-                    '_php' => 'Visual PHP',
-                    '_visual' => 'Visual HTML',
                     '_sandbox' => 'Sandbox',
                 ],
             ];
@@ -290,10 +288,14 @@ class standard_c extends Controller
         return call_user_func([new Venus, $this->_c], $this->_a);
     }
 
+    function j_dev($x = 'j') {
+        MVC::body('_dev.' . ($page = $this->_1 ? $this->_1 : 'overview'));
+        return (array)$this->dev->{"{$x}_$page"}($this->_2);
+    }
+
     function a_dev() {
         $this->_y += ['wares' => $this->dev->wares_menu()];
-        MVC::body('_dev.' . ($page = $this->_1 ? $this->_1 : 'overview'));
-        return (array)$this->dev->{"c_$page"}($this->_2);
+        return $this->j_dev('c');
     }
 
     function a_api() { # lang auto translations

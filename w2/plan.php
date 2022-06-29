@@ -15,6 +15,7 @@ class Plan
     static $view = 'main';
     static $apps = [];
     static $parsed_fn;
+    static $put_cache = false;
     private static $connections = [];
     /*
         path   => required!
@@ -118,19 +119,13 @@ class Plan
                 $wares = $plans['wares'] ?? [];
                 unset($plans['wares']);
                 SKY::$plans['main'] = ['app' => ['path' => DIR_M]] + $plans + Plan::$defaults;
-                foreach ($wares as $key) {
+                foreach ($wares as $val) {
                     $plans = [];
-                    require 'wares/' . $key . '/conf.php';
-                    $app = $plans['app'] ?? [];
-                    SKY::$plans[$key] = ['app' => ['path' => 'wares/' . $key] + $app] + $plans;
+                    require ($path = 'wares/' . $val) . "/conf.php";
+                    SKY::$plans[$val] = ['app' => ['path' => $path] + ($plans['app'] ?? [])] + $plans;
                 }
-                file_put_contents($fn, '<?php SKY::$plans = ' . var_export(SKY::$plans, true) . ';');
+                Plan::$put_cache = SKY::$plans;
             }
-            foreach (SKY::$plans as $key => $val) {
-                if ('main' == $key || 'view' == $val['app']['type'])
-                    SKY::$styles[$key] = $key;
-            }
-            trace(SKY::$styles);
             $cfg =& SKY::$plans['main'][$pn];
         } elseif (isset(SKY::$plans[$ware][$pn])) {
             $cfg =& SKY::$plans[$ware][$pn];

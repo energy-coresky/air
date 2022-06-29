@@ -7,12 +7,14 @@
     <div class="fs16">Installed wares:</div>
 </div>
 <div class="bg-x" style="padding:10px">@php $bg_ware='' ~php
-    @loop($e_installed)@inc(.single)~loop
+    @loop($e_installed)
+        @inc(.single)@empty<h1>No wares</h1>
+    ~loop
     <div>
-    <input name="dir" size="50" placeholder="attach DEV ware from different dir">
-    <input type="button" value="Add">
+    <input name="dir" size="50" placeholder="Attach DEV ware from different directory">
+    <input type="button" value="Add" onclick="sky.d.attach(this,0)">
     </div>
-</div>
+</div><br>
 <div class="bg-wx bg-y" style="border-bottom:1px solid #4338ca;">
     <div class="fs16">Wares directory:</div>
     <div class="fs16" style="margin-left:30%">
@@ -21,17 +23,16 @@
             <option value="view">View</option>
             <option value="dev">Dev</option>
             <option value="prod">Prod</option>
+            <option value="code">Code</option>
         </select><button>Create
         </button>
     </div>
 </div>
 <div class="bg-y" style="padding:10px;">@php $bg_ware='#e0e7ff' ~php
     @loop($e_dir)
-        @inc(.single)
-        @empty
-            <h1>No wares</h1>
+        @inc(.single)@empty<h1>No wares</h1>
     ~loop
-</div>
+</div><br>
 <div class="bg-wx bg-g" style="border-bottom:1px solid #4338ca;">
     <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{DIR_M}}</span>.SKY. application:</div>
 </div>
@@ -41,10 +42,19 @@
         @inc(.single)
     ~loop
 </div>
-#.ware.single ------------------------------------------------------------------------------ @dump($row) 
+#.ware.single ------------------------------------------------------------------------------
 <div class="ware" style="background:{{$bg_ware}}">
-    <h2>{{$row->name}}<sup>{{$row->app['type']??''}}</sup></h2>
-    {{$row->desc}}
+    <h2>{{$row->name}}<sup>{{$row->type}}</sup></h2>
+    <div class="were-desc">
+        @if($row->desc){{$row->desc}}@else
+            This ware don't has desc.txt file
+        ~if
+    </div>
+    <div style="width:150px;position:relative;top:50px">
+    @if(!$bg_ware && 'dev' == $row->type)
+        <button onclick="sky.d.attach('{{$row->name}}',1)">Uninstall</button>@else &nbsp;
+    ~if
+    </div>
 </div>
 #.single.m_dev ------------------------------------------------------------------------------
 #use(.wares_memu as menu)
