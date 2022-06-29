@@ -11,7 +11,7 @@
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
     <div>
-    <input name="dir" size="50" placeholder="Attach DEV ware from different directory">
+    <input name="dir" size="50" value="{{$sky->d_vare_deleted}}" placeholder="Attach DEV ware from different directory">
     <input type="button" value="Add" onclick="sky.d.attach(this,0)">
     </div>
 </div><br>

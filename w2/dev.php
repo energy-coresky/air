@@ -514,8 +514,10 @@ class DEV
             if (!is_file("$s/conf.php"))
                 return print("File `$s/conf.php` not found");
             $list[basename($s)] = $s;
+            $sky->d_vare_deleted = '';
         } else {
-            unset($list[strtolower($s)]);
+            $sky->d_vare_deleted = $list[$s = strtolower($s)];
+            unset($list[$s]);
         }
         $sky->d_vares = serialize($list);
         Plan::cache_d('sky_plan.php');
