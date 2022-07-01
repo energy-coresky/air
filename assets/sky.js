@@ -448,7 +448,7 @@ function ajax(j_, postfields, func, c_) {
             sky.a.x_el.html(mem_x);
         if ('undefined' !== typeof r.catch_error) {
             if ('undefined' !== typeof r.ky) {
-                location.href = sky.home + (12 == r.ky ? '' : '_exception');
+//                location.href = sky.home + (12 == r.ky ? '' : '_exception');
             } else if ('undefined' !== typeof r.err_no) {
                 return error_func ? error_func(r) : sky.err('Error ' + r.err_no + ' (error handler not set)');
             } else {

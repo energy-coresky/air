@@ -32,7 +32,7 @@ class DEV
     }
 
     static function init() {
-        if (DEV && !CLI) {
+        if (DEV && !CLI && SKY::$dd) {
             global $sky;
            //trace('222');
             SKY::$databases += ['_' => [

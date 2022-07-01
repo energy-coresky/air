@@ -10,7 +10,7 @@
 
 #.exception //////////////////////////////////////////////////////////////////////////////
 @php # this template for Exceptions and die() functions
-$ru = DEFAULT_LG && 'ru' == LG;
+$ru = DEFAULT_LG && defined('LG') && 'ru' == LG;
 $list = [ # production errors
     403 => $ru ? 'Ошибка 403 - Попытка взлома заблокирована' : 'Error 403 - Denied hacking attempt',
     404 => $ru ? 'Ошибка 404 - Страница не найдена'          : 'Error 404 - Page not found',
@@ -19,13 +19,14 @@ $list = [ # production errors
 ];
 $p_prev = $ru ? 'вернуться на предыдущую страницу' : 'return to previouse page';
 $p_main = $ru ? 'открыть главную' : 'open main page';
-isset($error) && $error && $sky->debug or $error = isset($list[$no]) ? $list[$no] : $list[500];
+isset($error) && $error && ($sky->debug || DEV) or $error = isset($list[$no]) ? $list[$no] : $list[500];
 ~php
 #if(Plan::view_t('error.jet'))@inc(error.exception)#else
 <!doctype html><html>
 <head>@head()</head>
 <body style="background:url({!PATH!}img/cloud.jpg);background-size:cover;margin:0 10px;@if(!$tracing)text-align:center;~if">
 #.ex_inner
+<style>.error {background-color:red !important;color:#fff !important}</style>
     @if(!$tracing)<div style="display:inline-block; background:#fff; padding:10px; margin-top:15%">~if
     <h1>{{$error}}</h1>
     @if(11 == $no)
@@ -36,6 +37,7 @@ isset($error) && $error && $sky->debug or $error = isset($list[$no]) ? $list[$no
         <a href="javascript:;" onclick="history.back()">{{$p_prev}}</a>
         @if($ru) или@else or~if
         <a href="{!PATH!}">{{$p_main}}</a>
+        @if(DEV)or <a href="_dev">open DEV</a>~if
     ~if
     @if(!$tracing)</div>
     @else

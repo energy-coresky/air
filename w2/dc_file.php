@@ -2,19 +2,13 @@
 
 class dc_file implements Cache_driver
 {
-    public $type = 'File';
+    public $type = 'File'; # 2do add opcache control
+
     private $obj;
     private $path;
 
-    function __construct($cfg = null) {
-    }
-
     function info() {
-        $ary = [
-            'name' => $this->name,
-            'version' => '',///////
-            'charset' => '',///////////
-        ];
+        $ary = ['name' => $this->name, 'version' => ''];
         return $ary + ['str' => implode(', ', $ary)];
     }
 
@@ -24,7 +18,7 @@ class dc_file implements Cache_driver
     }
 
     function test($name) {
-        return is_file($this->path . $name);
+        return is_file($this->path . $name) ? $this->path . $name : false;
     }
 
     function mtime($name) {
@@ -53,10 +47,14 @@ class dc_file implements Cache_driver
         return unlink($this->path . $name);
     }
 
-    function drop_all($ext = '') {
+    function drop_all($mask = '*') {
         $result = 1;
-        foreach (glob("$this->path/*$ext") as $fn)
+        foreach (glob($this->path . $mask) as $fn)
             $result &= (int)unlink($fn);
         return $result;
+    }
+
+    function glob($mask = '*') {
+        return glob($this->path . $mask);
     }
 }

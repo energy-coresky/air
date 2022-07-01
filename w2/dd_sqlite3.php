@@ -10,7 +10,9 @@ class dd_sqlite3 implements Database_driver
     public $pref;
 
     function __construct($filename, $pref) {
-        $this->conn = new SQLite3($filename) or exit('connect');
+        if (!class_exists('SQLite3', false))
+            throw new Error('SQLite3 class not exists');
+        $this->conn = new SQLite3($filename);
         $this->conn->busyTimeout(30000); # 30 secs
         $this->pref = $pref;
     }

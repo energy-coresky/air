@@ -42,8 +42,7 @@ class Jet
             list($name, $marker) = explode('.', $name, 2);
         if (!Jet::$directive) {
             MVC::handle('jet_c');
-            if (is_file($fn_jet = 'main/app/jet.php'))
-                require $fn_jet; //req
+            Plan::_rq('app/jet.php');
             Jet::$directive = true;
         }
 
@@ -270,6 +269,9 @@ class Jet
                 return !$arg ? null : $this->_block($arg, $str, 'block' == $tag);
             case 'view':
                 return $q(DEV ? "MVC::in_tpl(false);view(%s);MVC::in_tpl()" : 'view(%s)', $arg);
+            case 'svg':
+                $p = explode(' ', $arg);
+                return (string)(new SVG($p[0], $p[1] ?? false));
             case 'pdaxt':
                 return sprintf('<?php MVC::pdaxt(%s) ?>', $arg);
             case 'else':
@@ -390,7 +392,10 @@ class Jet
             static $ary;
             if (null === $ary) {
                 $ary = [':_0' => '$sky->_0', ':_1' => '$sky->_1', ':_2' => '$sky->_2'];
-                foreach (is_file($fn = 'main/app/jet.let') ? file($fn) : [] as $one) {
+
+                $lines = ($txt = Plan::_gq('app/jet.let')) ? explode("\n", $txt) : [];
+
+                foreach ($lines as $one) {
                     if (preg_match("/^(:\w+)\s+(.+)/", $one, $m))
                         $ary[$m[1]] = $m[2];
                 }

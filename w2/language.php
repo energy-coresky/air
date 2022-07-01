@@ -105,12 +105,12 @@ class Language
             }
             if ($lgt)
                 $file .= "\n\$lgt = " . var_export($lgt, true) . ";\n\n";
-            file_put_contents($fn = "main/lng/$v.php", $file);
+            Plan::_p("lng/$v.php", $file);
         }
         return [];
     }
 
-    function c_test() {
+    function c_test() { //Plan::_t
         $place = ['view', 'main/app', 'main/w3'];
         list($i, $d, $n) = explode(' ', $_POST['v'] ? $_POST['v'] : '0  ');
         for ($flag = 0; true; ) {

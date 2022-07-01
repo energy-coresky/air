@@ -258,11 +258,12 @@ class HEAVEN extends SKY
 
         $this->k_static = [[], [], []]; # skip app css and js files
         $vars = MVC::jet('__std.exception');
-        view(false, Plan::$parsed_fn, $vars += [
+        $vars += [
             'no' => $no,
             'tracing' => $tracing,
             'error' => $error ?? '',
-        ]);
+        ];
+        view(false, Plan::$parsed_fn, $vars);
     }
 
     function tracing($plus = '', $trace_x = false) {
@@ -288,6 +289,7 @@ class HEAVEN extends SKY
 
     function shutdown() {
         chdir(DIR); # restore dir!
+        Plan::$ware = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
         if (!$this->tailed) { # possible result of `die` function
             global $user;
@@ -306,7 +308,8 @@ class HEAVEN extends SKY
                     $str .= a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) . ' ';
                 if (INPUT_POST == $this->method)
                     $str .= 'POST ';
-                sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', $str . html(URI) . "\n");
+                if ($dd)
+                    sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', $str . html(URI) . "\n");
             }
         }
         parent::shutdown();
@@ -441,9 +444,6 @@ function menu($act, $ary, $tpl = '', $by = '</li><li>', $class = 'menu') {
         $v = sprintf('<a%s href="' . $tpl . '">%s</a>', $ok ? ' class="active"' : '', $k, $v);
     });
 
-    #if (isset($ary[$act]))
-    #   $ary[$act] = '<a class="active"' . substr($ary[$act], 2);
-
     return '</li><li>' == $by ? sprintf('<ul class="%s"><li>%s</li></ul>', $class, implode($by, $ary)) : implode($by, $ary);
 }
 
@@ -499,10 +499,10 @@ function js($x = '', $p2 = true) {
 
     if (is_string($x))
         return "<script>$x</script>";
-    $pref = $sky->surl ? PATH : '';
+    $pref = ($sky->surl ? PATH : '') . ($sky->s_statp ?: '1000p');
     $js = '';
     foreach ($x as $src)
-        $js .= '<script src="' . ('~' == $src[0] ? $pref . $sky->s_statp . substr($src, 1) : $src) . '"></script>';
+        $js .= '<script src="' . ('~' == $src[0] ? $pref . substr($src, 1) : $src) . '"></script>';
     return $js;
 }
 
@@ -511,10 +511,10 @@ function css($x = '', $p2 = 'screen') {
 
     if (is_string($x))
         return '<style>' . $x . ($x && $p2 ? '</style>' : '');
-    $pref = $sky->surl ? PATH : '';
+    $pref = ($sky->surl ? PATH : '') . ($sky->s_statp ?: '1000p');
     $css = '';
     foreach ($x as $src)
-        $css .= '<link rel="stylesheet" href="' . ('~' == $src[0] ? $pref . $sky->s_statp . substr($src, 1) : $src) . '" />';
+        $css .= '<link rel="stylesheet" href="' . ('~' == $src[0] ? $pref . substr($src, 1) : $src) . '" />';
     return $css;
 }
 

@@ -164,8 +164,6 @@ class Admin
     }
 
     static function drop_all_cache() { // 2do Plans!
-        global $sky;
-        $sky->s_contr = '';
         $dirs = ['var/cache', 'var/gate', 'var/jet', 'var/extra'];
         $result = 1;
         foreach ($dirs as $dir) {

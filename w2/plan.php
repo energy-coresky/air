@@ -26,6 +26,13 @@ class Plan
         use    => '' by default ( => 'plan_name') - use selected connection
     */
 
+    static function cache_main() {
+        SKY::$plans['main'] += $ctrl = ['ctrl' => Gate::controllers()];
+        Plan::$put_cache['main'] += $ctrl;
+        Plan::cache_p(['main', 'sky_plan.php'], '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
+        Plan::$put_cache = false;
+    }
+
     static function _g($a0, $w2 = false) {
         return $w2 ? file_get_contents(DIR_S . "/$a0") : Plan::__callStatic('_g', [$a0]);
     }
@@ -63,14 +70,18 @@ class Plan
         $conn = $obj->con;
         $conn->setup($obj);
         switch ($op) {
+            case 'obj':
+                return $obj;
             case 'tp': # jet for view(..) func
                 Plan::$parsed_fn = $obj->path . '/' . $a0;
             case 't':
-                return $conn->test($a0);
+                return $conn->test($a0); # if OK return fullname
             case 'm':
                 return $conn->mtime($a0);
             case 'p':
                 return $conn->put($a0, $arg[1]);
+            case 'b':
+                return $conn->glob($a0); # mask
             case 'g':
             case 'gq':
                 return $conn->get($a0, 'gq' == $op);

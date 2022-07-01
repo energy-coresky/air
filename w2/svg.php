@@ -6,18 +6,20 @@
 class SVG {
     static $size = [16, 16];
     static $fill = "currentColor";
+    private $ca;
 
-    function __construct($ary = []) { # new image from array
-
+    function __construct($c, $a = false) { # new image from array
+        $this->ca = [$c, $a ? 'svglist_' . $a : 'svglist_'];
     }
 
     function __toString() { # compile image
-
+        global $sky;
+        list ($name, $pack) = $this->ca;
+        $tpl = unl(Plan::_g([$sky->d_last_ware ?: 'main', "glob/$pack.pack"]));
+        preg_match("/\n:$name(| [^\n]+)\n(.+?)\n:/s", $tpl, $m);
+        return sprintf('<svg %s xmlns="http://www.w3.org/2000/svg">%s</svg>', $m[1], $m[2]);
     }
 
-    function _std() { # output image from _svg?.. link
-
-
-        echo $this;
+    function _2do() {
     }
 }

@@ -12,8 +12,10 @@ class dd_oci implements Database_driver
     private $error;
 
     function __construct($dsn, $pref) {
+        if (!function_exists('oci_connect'))
+            throw new Error('Function oci_connect() not exists');
         list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
-        $this->conn = oci_connect($user, $pass, "$host/$dbname") or exit('connect');
+        $this->conn = oci_connect($user, $pass, "$host/$dbname");
         $this->pref = $pref;
     }
 

@@ -1,8 +1,8 @@
 <?php
 
-class dc_memcached implements Cache_driver
+class dc_redis implements Cache_driver
 {
-    public $type = 'Memcached';
+    public $type = 'Redis';
 
     private $obj;
     private $path;

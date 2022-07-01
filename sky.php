@@ -28,7 +28,7 @@ class SKY implements PARADISE
     static $reg = [];
     static $vars = [];
     static $databases;
-    static $dd = false;
+    static $dd = null;
     static $plans = [];
 
     protected $ghost = false;
@@ -74,7 +74,7 @@ class SKY implements PARADISE
             if ('Stop' == $name && !$mess)
                 $this->tailed = true;
             global $user;
-            $etc = $m && 22 == $m[1] ? isset($user) && implode("\n", $user->jump_path) : $e->getTraceAsString();
+            $etc = $m && 22 == $m[1] ? isset($user) && implode("\n", $user->jump_path) : $e->getTraceAsString();//////////
             trace("$this->error_title\n$etc", $crash, $e->getLine(), $e->getFile());
             $this->error_title = "Exception $name($mess)";
         });
@@ -89,7 +89,8 @@ class SKY implements PARADISE
 
     function shutdown() {
         chdir(DIR); # restore dir!
-        SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
+        Plan::$ware = 'main';
+        SQL::$dd = SKY::$dd; # set main database driver if loaded
         foreach ($this->shutdown as $object)
             call_user_func([$object, 'shutdown']);
 
@@ -101,11 +102,12 @@ class SKY implements PARADISE
             $this->error_title = "PHP $err";
         }
 
-        $this->ghost or !SKY::$dd or $this->tail_ghost(!$this->cli && !$this->tailed);
-        if ($this->error_prod) # write error log
-            sqlf('update $_memory set dt=' . SKY::$dd->f_dt()
+        if (SKY::$dd) {
+            $this->ghost or $this->tail_ghost(!$this->cli && !$this->tailed);
+            if ($this->error_prod) # write error log
+                sqlf('update $_memory set dt=' . SKY::$dd->f_dt()
                 . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
-
+        }
         if (!$this->tailed) { # if script exit in advance (with exit() or throw new Error())
             $plus = $this->debug ? "x autotrace\n\n" : '';
             $this->cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
@@ -116,7 +118,14 @@ class SKY implements PARADISE
 
     function load() {
         global $argv;
-        SKY::$dd = SQL::open();
+        if (SKY::$dd === false)
+            return false;
+        try {
+            SKY::$dd = SQL::open();
+        } catch (Error $e) {
+            SKY::$dd = false;
+            throw new Error($e->getMessage());
+        }
         if (CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
         if (DEV)
@@ -128,17 +137,19 @@ class SKY implements PARADISE
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
         if (Plan::$put_cache)
-            Plan::cache_p('sky_plan.php', '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
+            Plan::cache_main();
+        return SKY::$dd;
     }
 
     function memory($id = 9, $char = 'n', $dd = null) {
         if (!isset(SKY::$mem[$char])) {
-            if ($dd) {
-                SKY::$reg["ghost_$char"] = $dd;
-            } else {
-                SKY::$dd or $this->load();
-                $dd = SKY::$dd;
-            }
+            if (false === SKY::$dd)
+                return '';
+            $dd or $dd = SKY::$dd;
+            $dd or $dd = $this->load();
+            if (!$dd)
+                return '';
+            SKY::$reg["ghost_$char"] = $dd;
             
             list($dt, $imemo, $tmemo) = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
             SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id);
@@ -149,13 +160,13 @@ class SKY implements PARADISE
     }
 
     function tail_ghost($alt = false) {
+        $this->ghost = true; // version contr c_name statp visit online_ts
         if ($this->lock_table)
             sql('unlock tables');
         if ($this->s_trace_single)
             $this->s_trace_single = 0; # single click done
         foreach (SKY::$mem as $char => &$v)
             $v[0] && $v[2] && SKY::sql($char);
-        $this->ghost = true; // version contr c_name statp visit online_ts
     }
 
     function __get($name) {
@@ -265,7 +276,7 @@ class SKY implements PARADISE
     function tracing($plus = '', $trace_x = false) {
         $plus .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
         $plus .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
-        if ($trace_x) {
+        if ($trace_x && SKY::$dd) {
             if (DEV) {
                 $plus .= DEV::trace();
                 SKY::$dd->_xtrace();
@@ -340,12 +351,13 @@ interface Cache_driver
     function setup($obj);
     //function close();
     function test($name);
-    function get($name, $quiet);
-    function run($name, $quiet);
+    function get($name, $quiet = false);
+    function run($name, $quiet = false);
     function put($name, $data);
     function mtime($name);
-    function drop($name, $quiet);
-    function drop_all($path);
+    function drop($name, $quiet = false);
+    function drop_all($mask = '*');
+    function glob($mask = '*');
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -466,7 +478,8 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
     //if (!isset($sky))        return;
     if (true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;
-        SKY::$dd or $sky->load();
+        if (null === SKY::$dd)
+            $sky->load();
         if (++$sky->cnt_error > 99) {
             $sky->tracing("Error 500", true);
             throw new Error("500 Internal SKY error");

@@ -89,8 +89,12 @@ final class SQL
             }
             $main && !isset(SKY::$databases[''])? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
             $driver = "dd_$cfg[driver]";
-            isset($cfg['pref']) or $cfg['pref'] = '';
-            $dd = SQL::$connections[$name] = new $driver($cfg['dsn'], $cfg['pref']);
+            
+            $dd = new $driver($cfg['dsn'], $cfg['pref'] ?? '');
+            if (!$dd->conn)
+                return false;
+            SQL::$connections[$name] = $dd;
+
             unset($cfg['dsn']);
             common_c::dd_h($name, $dd);
         }

@@ -61,8 +61,8 @@ class Gate
                 }
             }
         }
-        $sky->s_contr = implode(' ', $keys = array_keys($list)); # existen files + real virtuals
-        return false === $virtuals ? $keys : [implode(' ', $refs)] + $list + $deleted;
+        # existen files + real virtuals
+        return false === $virtuals ? array_keys($list) : [implode(' ', $refs)] + $list + $deleted;
     }
 
     static function real_src(&$class, &$fn_src, $test = true) {

@@ -2,20 +2,20 @@
 
 # For Licence and Disclaimer of this code, see http://coresky.net/license
 
-function view($in, $return = false, &$_vars = null) {
-    if (!$in) {
+function view($_in, $return = false, &$_vars = null) {
+    if (!$_in) {
         return require Plan::$parsed_fn;
-    } elseif ($in instanceof MVC) {
+    } elseif ($_in instanceof MVC) {
         $layout = MVC::$layout;
-        $mvc = $in;
+        $mvc = $_in;
     } else {
-        list($in, $layout) = is_array($in) ? $in : [$in, ''];
+        list($_in, $layout) = is_array($_in) ? $_in : [$_in, ''];
         $no_handle = false;
         if (!is_bool($return)) {
             $no_handle = is_array($_vars = $return);
             $return = true;
         }
-        $mvc = MVC::sub($in, $_vars, $no_handle);
+        $mvc = MVC::sub($_in, $_vars, $no_handle);
         $mvc->return = $return;
     }
     if ('' !== $mvc->ob)
@@ -195,8 +195,8 @@ class Controller extends MVC_BASE
             switch ($class = get_class($this)) {
                 case __CLASS__:
                 case 'default_c':
-                    if (DEV && is_file("main/app/c_$sky->_0.php")) {
-                        $sky->s_contr = '';
+                    if (DEV && Plan::_t("app/c_$sky->_0.php")) {
+                        Plan::cache_dq('sky_plan.php');
                         $sky->ajax or jump(URI);
                     }
                     $x = 1 == $sky->ajax ? 'j' : 'a';
@@ -503,13 +503,12 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     private function gate($ex = false) {
         global $sky;
 
-        $_0 = $sky->_0;
-        $list = !$ex && $sky->s_contr ? explode(' ', $sky->s_contr) : Gate::controllers();
-        $in_a = '*' !== $_0 && in_array($_0, $list, true);
-        $class = $real = $in_a ? 'c_' . $_0 : 'default_c';
+        $list = SKY::$plans['main']['ctrl']; // $ex ? Gate::controllers() : ..;
+        $in_a = '*' !== $sky->_0 && in_array($sky->_0, $list, true);
+        $class = $real = $in_a ? 'c_' . $sky->_0 : 'default_c';
         $dst = Plan::gate_t($fn_dst = "$class.php");
         $recompile = false;
-        if (!$dst || DEV) {
+        if (!$dst || DEV) { #Plan::_t
             $src = is_file($fn_src = "main/app/$class.php") or !$in_a or $src = Gate::real_src($real, $fn_src);
             if (!$src)
                 return $ex || !$in_a ? ['Controller', '_', false, ''] : $this->gate(true);
@@ -518,7 +517,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         }
         $action = $in_a
             ? ('' === $sky->_1 ? ($this->return ? 'empty_j' : 'empty_a') : ($this->return ? 'j_' : 'a_') . $sky->_1)
-            : ($this->return ? 'j_' : 'a_') . $_0;
+            : ($this->return ? 'j_' : 'a_') . $sky->_0;
         Plan::gate_rr($fn_dst, $recompile);
         if (!method_exists($gape = new Gape, $action))
             $action = $this->return ? 'default_j' : 'default_a';

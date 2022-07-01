@@ -110,11 +110,16 @@ class standard_c extends Controller
 
     function a_etc() {
         global $sky;
-        $_1 = $sky->_1;
         $ext = '';
-        if ($pos = strrpos($_1, '.'))
-            $ext = substr($_1, $pos + 1);
-        $fn = DEV && in_array($ext, ['js', 'css']) ? DIR_S . "/assets/$_1" : WWW . "pub/etc/$_1";
+
+        if ($pos = strrpos($sky->_1, '.'))
+            $ext = substr($sky->_1, $pos + 1);
+        if (DEV && in_array($ext, ['js', 'css'])) {
+            is_file($fn = DIR_S . "/assets/$sky->_1")
+                or $fn = Plan::_t([$this->d_last_ware, "assets/$sky->_1"]);
+        } else {
+            $fn = WWW . "pub/etc/$sky->_1";
+        }
         if (is_file($fn)) {
             switch ($ext) {
                 case 'txt': header('Content-Type: text/plain; charset=' . ENC); break;
@@ -122,16 +127,16 @@ class standard_c extends Controller
                 case 'xml': header('Content-Type: application/xml'); break;
                 case 'js': header('Content-Type: application/javascript'); break;
             }
-            MVC::last_modified(filemtime($fn), false, function() use($sky, $_1) {
-                $sky->log('etc', "304 $_1");
+            MVC::last_modified(filemtime($fn), false, function() use ($sky) {
+                $sky->log('etc', "304 $sky->_1");
             });
             header('Content-Length: ' . filesize($fn));
-            $sky->log('etc', "200 $_1");
+            $sky->log('etc', "200 $sky->_1");
             while (@ob_end_flush());
             readfile($fn);
             throw new Stop;
         }
-        $sky->log('etc', "404 $_1");
+        $sky->log('etc', "404 $sky->_1");
         return 404;
     }
 
@@ -153,7 +158,7 @@ class standard_c extends Controller
     }
 
     function j_crop_code() {
-        $sizes = is_file('main/app/t_file.php') ? $this->t_file->img_sizes() : ['100 x 100'];
+        $sizes = Plan::_t('app/t_file.php') ? $this->t_file->img_sizes() : ['100 x 100'];
         return ['opt' => option(0, array_combine($sizes, $sizes))];
     }
 
@@ -188,6 +193,8 @@ class standard_c extends Controller
         list ($x, $name) = explode('_', $name, 2);
         if (isset(SKY::$plans[$name])) {
             Plan::$ware = $name;
+            if (DEV)
+                $this->d_last_ware = Plan::$ware;
             $class = 'c_' . $name;
             MVC::$cc = MVC::$mc;
             MVC::$mc = new $class;
@@ -198,6 +205,13 @@ class standard_c extends Controller
             return MVC::$mc->$action();
         }
         return parent::__call($name, $args);
+    }
+
+    function a_svg() {
+        header("Content-Type: image/svg+xml;");
+        $this->ajax = 3;
+        echo new SVG(substr($this->_c, 2), $this->_a);
+        throw new Stop;
     }
 
     function a_gate() {
@@ -265,7 +279,7 @@ class standard_c extends Controller
     }
 
     function j_glob() {
-        MVC::body('_glb.' . substr($this->_c, 2));
+        MVC::body('_glob.' . substr($this->_c, 2));
         return call_user_func([new Globals, $this->_c], $this->_a);
     }
 
@@ -275,16 +289,6 @@ class standard_c extends Controller
 
     function j_inst() {
         return Install::run($this->_1);
-    }
-
-    function a_visual() { /* ====================================== */
-        $this->_y = [];
-        return Venus::layout();
-    }
-
-    function j_visual() {
-        MVC::body('_ven.' . substr($this->_c, 2));
-        return call_user_func([new Venus, $this->_c], $this->_a);
     }
 
     function j_dev($x = 'j') {

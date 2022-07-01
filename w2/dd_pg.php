@@ -12,8 +12,10 @@ class dd_pg implements Database_driver
     private $error_str;
 
     function __construct($dsn, $pref) {
+        if (!function_exists('pg_connect'))
+            throw new Error('Function pg_connect() not exists');
         list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
-        $this->conn = pg_connect("host=$host dbname=$dbname user=$user password=$pass") or exit('connect');
+        $this->conn = pg_connect("host=$host dbname=$dbname user=$user password=$pass");
         $this->pref = $pref;
     }
 

@@ -10,9 +10,11 @@ class dd_ibase implements Database_driver
     public $pref;
 
     function __construct($dsn, $pref) {
+        if (!function_exists('mysqli_init'))
+            throw new Error('Function mysqli_init() not exists');
         $this->conn = mysqli_init() or exit('db');
         list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
-        @mysqli_real_connect($this->conn, $host, $user, $pass, $dbname) or exit('connect');
+        mysqli_real_connect($this->conn, $host, $user, $pass, $dbname);
         $this->pref = $pref;
     }
 
