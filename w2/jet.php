@@ -270,7 +270,7 @@ class Jet
             case 'view':
                 return $q(DEV ? "MVC::in_tpl(false);view(%s);MVC::in_tpl()" : 'view(%s)', $arg);
             case 'svg':
-                $p = explode(' ', $arg);
+                $p = explode('.', $arg, 2);
                 return (string)(new SVG($p[0], $p[1] ?? false));
             case 'pdaxt':
                 return sprintf('<?php MVC::pdaxt(%s) ?>', $arg);

@@ -108,15 +108,15 @@ class HEAVEN extends SKY
             $cnt_s = count($this->surl);
             if (1 == $cnt_s && '' === $this->surl[0]) {
                 $this->surl = [];
+                $cnt_s = 0;
                 if ($this->ajax && 'AJAX' == key($_GET)) {
                     $this->ajax = 1; # j_ template
                     if ('adm' == $_GET['AJAX'])
                         $this->surl = ['adm'];
                     array_shift($_GET);
                 }
-            } else {
-                common_c::rewrite_h($cnt_s, $this->surl);
             }
+            common_c::rewrite_h($cnt_s, $this->surl);
         }
 
         if ($this->debug)

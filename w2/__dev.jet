@@ -3,7 +3,7 @@
 #.ware //////////////////////////////////////////////////////////////////////////////
 #use(`<h4>WALK ALL WARES..</h4>` as header)
 @use(.m_dev)
-<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
+<div class="other-task">
     <div class="fs16">Installed wares:</div>
 </div>
 <div class="bg-x" style="padding:10px">@php $bg_ware='' ~php
@@ -15,7 +15,7 @@
     <input type="button" value="Add" onclick="sky.d.attach(this,0)">
     </div>
 </div><br>
-<div class="bg-wx bg-y" style="border-bottom:1px solid #4338ca;">
+<div class="other-task" style="border-bottom:1px solid #4338ca;">
     <div class="fs16">Wares directory:</div>
     <div class="fs16" style="margin-left:30%">
         Create new ware: type
@@ -33,7 +33,7 @@
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
 </div><br>
-<div class="bg-wx bg-g" style="border-bottom:1px solid #4338ca;">
+<div class="other-task" style="border-bottom:1px solid #4338ca;">
     <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{DIR_M}}</span>.SKY. application:</div>
 </div>
 <div class="" style="padding:10px;">
@@ -133,7 +133,7 @@
 
 <div id="v-menu">
 #if('_trace'!=:_0)
-    <div class="other-task">Tasks</div>
+    <div class="other-task" style="position:sticky; top:0px">Tasks</div>
     #if('view'==:_1 || 'min'==Plan::$ware)
         <a href="_dev">Show</a>
     #else

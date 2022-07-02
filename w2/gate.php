@@ -4,8 +4,6 @@
 
 class Gate
 {
-    const ARRAY = 'main/app/gate.php';
-
     const HAS_T3     = 1;
     const RAW_INPUT  = 2;
     const AUTHORIZED = 16;
@@ -24,66 +22,36 @@ class Gate
 
     static function instance() {
         static $me;
-        return $me ? $me : ($me = new Gate);
+        return $me ?: ($me = new Gate);
     }
 
     static function load_array($class = false) {
-        $sky_gate = [];
-        if (is_file($fn = Gate::ARRAY))
-            require $fn;//req
-        if (!$class)
-            return $sky_gate;
-        if (!isset($sky_gate[$class]))
-            return [$class, []];
-        is_array($ary = $sky_gate[$class]) or $ary = $sky_gate[$class = $ary];
-        return [$class, $ary];
+        $sky_gate = (array)Plan::_rq('app/gate.php');
+        return $class ? ($sky_gate[$class] ?? []) : $sky_gate;
     }
 
-    static function controllers($virtuals = false) {
-        global $sky;
-
-        $glob = glob('main/app/c_*.php');
-        if (is_file($fn = 'main/app/default_c.php'))
+    static function controllers($in = false) {
+        $glob = Plan::_b('app/c_*.php');
+        if ($fn = Plan::_t('app/default_c.php'))
             array_unshift($glob, $fn);
-        $list = $refs = $deleted = [];
+        $list = $deleted = [];
+        $val = false === $in ? Plan::$ware : 1;
         foreach ($glob as $v) {
             $v = basename($v, '.php');
-            $list['default_c' == $v ? '*' : substr($v, 2)] = 1;
+            $list['default_c' == $v ? '*' : substr($v, 2)] = $val; //2do just Plan::$ware?
         };
         foreach (Gate::load_array() as $k => $v) {
             $k = 'default_c' == $k ? '*' : substr($k, 2);
-            if (!isset($list[$k])) {
-                if (is_string($v)) {
-                    $virtuals !== $v or $refs[] = $k;
-                    isset($list[$v = substr($v, 2)]) ? ($list[$k] = $v) : ($deleted[$k] = $v);
-                } else {
-                    $deleted[$k] = 0;
-                }
-            }
+            isset($list[$k]) or $deleted[$k] = 0;
         }
-        # existen files + real virtuals
-        return false === $virtuals ? array_keys($list) : [implode(' ', $refs)] + $list + $deleted;
-    }
-
-    static function real_src(&$class, &$fn_src, $test = true) {
-        $sky_gate = Gate::load_array();
-        $set = isset($sky_gate[$class]);
-        if (!$set && $test)
-            return false;
-        $set or $sky_gate[$class] = [];
-        if (is_string(Gate::$controller_data = $sky_gate[$class])) {
-            Gate::$controller_data = $sky_gate[$class = Gate::$controller_data];
-        } elseif ($test) {
-            return false;
-        }
-        $fn_src = "main/app/$class.php";
-        return $test && is_file($fn_src);
+        return false === $in ? $list : $list + $deleted;
     }
 
     static function put_cache($class, $fn_src, $fn_dst) {
-        $real = $class;
-        if (false === Gate::$controller_data)
-            Gate::real_src($real, $fn_src, false);
+        if (false === Gate::$controller_data) {
+            $sky_gate = Gate::load_array();
+            Gate::$controller_data = $sky_gate[$class] ?? [];
+        }
         Plan::gate_p($fn_dst, Gate::instance()->parse($fn_src, $class));
     }
 
@@ -107,8 +75,8 @@ class Gate
     }
 
     function parse($src_fn, $dst_class = false) {
-        require $src_fn;
-        $reflect = new ReflectionClass($src_class = basename($src_fn, '.php'));
+        Plan::_r($src_fn);
+        $reflect = new ReflectionClass(basename($src_fn, '.php'));
         $methods = array_filter(
             $reflect->getMethods(ReflectionMethod::IS_PUBLIC),
             function ($v) {
@@ -127,8 +95,6 @@ class Gate
 
         $gape = DEV ? "trace('GATE: $dst_class, ' . (\$recompile ? 'recompiled' : 'used cached'));\n\n" : '';
         $gape .= "class Gape extends Bolt\n{";
-        if ($dst_class != $src_class)
-            $gape .= "\n\tpublic \$src = '$src_class';\n"; // virtual controller
 
         foreach ($list as $name => $pars) {
             $this->argc($pars);
@@ -139,8 +105,8 @@ class Gate
             $gape .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
         }
 
-        $content = file_get_contents($src_fn);
-        if (!preg_match("/^<\?(php)?(.*?)class $src_class extends(.+)$/s", $content, $match))
+        $content = Plan::_g($src_fn);
+        if (!preg_match("/^<\?(php)?(.*?)class $dst_class extends(.+)$/s", $content, $match))
             throw new Error("File `$src_fn` must start from &lt;?");
         return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_cached extends" . $match[3];
     }

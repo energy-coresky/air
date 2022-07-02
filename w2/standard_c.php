@@ -193,6 +193,7 @@ class standard_c extends Controller
         list ($x, $name) = explode('_', $name, 2);
         if (isset(SKY::$plans[$name])) {
             Plan::$ware = $name;
+            define('LINK', PROTO . '://' . DOMAIN . PATH);
             if (DEV)
                 $this->d_last_ware = Plan::$ware;
             $class = 'c_' . $name;
@@ -221,15 +222,14 @@ class standard_c extends Controller
     }
 
     function j_gate() {
-        $list = Gate::controllers($this->_c);
         return (!$this->_4 ? [] : [
             'y_tx' => '_x1',
             'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
         ]) + [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
             'h1' => $this->_c,
-            'virtuals' => $this->_c ? array_shift($list) : '',
-            'list' => $list,
+    #        'virtuals' => $this->_c ? array_shift($list) : '',
+            'list' => Gate::controllers($this->_c),
             'cshow' => DEV::cshow() ? ' checked' : '',
             'e_func' => $this->_c ? DEV::gate($this->_c) : false,
             'func' => $this->_3 ?? '',
@@ -237,10 +237,10 @@ class standard_c extends Controller
         ];
     }
 
-    function j_virt() {
-        DEV::save($this->_c, preg_split("/\s+/", trim($_POST['v'])));
-        return $this->j_gate();
-    }
+    #function j_virt() {
+    #    DEV::save($this->_c, preg_split("/\s+/", trim($_POST['v'])));
+    #    return $this->j_gate();
+    #}
 
     function j_delete() {
         DEV::save($this->_c, $this->_a);

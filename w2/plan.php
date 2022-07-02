@@ -27,7 +27,10 @@ class Plan
     */
 
     static function cache_main() {
-        SKY::$plans['main'] += $ctrl = ['ctrl' => Gate::controllers()];
+        do {
+            $c = Gate::controllers();
+        } while (0);
+        SKY::$plans['main'] += $ctrl = ['ctrl' => $c];
         Plan::$put_cache['main'] += $ctrl;
         Plan::cache_p(['main', 'sky_plan.php'], '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
         Plan::$put_cache = false;

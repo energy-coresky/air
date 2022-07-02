@@ -42,12 +42,8 @@ class Console
     }
 
     function _a() {
-       $list = Gate::controllers(true);
-       array_shift($list);
        Gate::$cshow = true;
-       foreach ($list as $k => $v) {
-           if (1 != $v)
-               continue;
+       foreach (Gate::controllers() as $k => $_) {
            $e = new eVar(Gate::view($mc = '*' != $k ? "c_$k" : 'default_c'));
            foreach ($e as $row)
                echo "$mc::$row->func$row->pars  --  " . strip_tags($row->url). "\n";

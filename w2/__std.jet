@@ -96,10 +96,8 @@ $(function() {
 
 #.m_gate <fieldset id="contr">
 @loop($list as $one => $ex)
-    <a href="{{PATH}}?_gate={!is_int($ex)?$one:$ex!}"
-        class="inner-menu" @active($one==$y_1)
-        style="background:{!is_int($ex)?($ex?'':'#fcc'):'#ffc'!}"
-        >{!'*' == $one ? 'default_c' : "c_$one"!}
+    <a href="{{PATH}}?_gate={!$one!}" class="inner-menu" style="background:{! $ex?'':'#fcc' !}"@active($one==$y_1)>
+        {!'*' == $one ? 'default_c' : "c_$one"!}.php
     </a>
 ~loop
 #.m_gate.header ------------------------------------------------------------------------------
@@ -111,16 +109,11 @@ $(function() {
     <a @href(ajax('{{$y_1}}','v-body','_delete'))>delete</a>
 ~if
 </b></h4>
-#.header.gate.virt.delete ------------------------------------------------------------------------------
+#.header.gate.delete ------------------------------------------------------------------------------
 #use(.header)
 @use(.m_gate)
 <div id="gate">
 @if($y_1)
-    @if('default_c'!=$h1 && $list[$y_1])
-        <b>Virtual references</b>: <input size="70" value="{{$virtuals}}"/>
-        <input type="button" value="save" onclick="ajax('{{$y_1}}', {v:$(this).prev().val()}, 'v-body', '_virt')"/>
-        <br><span style="margin-left:200px"><i>list virtuals via space</i></span>
-    ~if
     <label class="fr">
         Show code <input type="checkbox"{{$cshow}} onchange="dev('{!$y_1!}',{s:this.checked})"/>
     </label><br><br>
@@ -148,7 +141,7 @@ $(function() {
 ~if
 </div>
 @inc(.jscss)
-#.gate.virt.delete
+#.gate.delete
 
 #.edit.save //////////////////////////////////////////////////////////////////////////////
 <table width="100%"><tr>

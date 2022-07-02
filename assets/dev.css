@@ -1,3 +1,11 @@
+.bg-wx {
+    width: calc(100% - 10px);
+    padding-left: 10px;
+    height:41px;
+    display: inline-flex;
+    align-items: center;
+}
+
 html {
     overflow: hidden;
 }
@@ -123,6 +131,8 @@ a[active].inner-menu {
     color: #000;
     font-size:16px;
     font-weight:bold;
+    display: inline-flex;
+    width: calc(100% - 23px);
 }
 .other-info {
     padding:12px;
@@ -210,13 +220,6 @@ td {
 .norm {}
 .p-20 {
     padding: 20px;
-}
-.bg-wx {
-    width: calc(100% - 10px);
-    padding-left: 10px;
-    height:41px;
-    display: inline-flex;
-    align-items: center;
 }
 .fs16 {
     font-weight:bold;

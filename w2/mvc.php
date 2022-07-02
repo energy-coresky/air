@@ -196,7 +196,7 @@ class Controller extends MVC_BASE
                 case __CLASS__:
                 case 'default_c':
                     if (DEV && Plan::_t("app/c_$sky->_0.php")) {
-                        Plan::cache_dq('sky_plan.php');
+                        Plan::cache_d(['main', 'sky_plan.php']);
                         $sky->ajax or jump(URI);
                     }
                     $x = 1 == $sky->ajax ? 'j' : 'a';
@@ -500,32 +500,32 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         }
     }
 
-    private function gate($ex = false) {
+    private function gate($recalculate) {
         global $sky;
 
-        $list = SKY::$plans['main']['ctrl']; // $ex ? Gate::controllers() : ..;
-        $in_a = '*' !== $sky->_0 && in_array($sky->_0, $list, true);
-        $class = $real = $in_a ? 'c_' . $sky->_0 : 'default_c';
+        if ($recalculate) {
+            SKY::$plans['main']['ctrl'] = Gate::controllers();
+            Plan::cache_d(['main', 'sky_plan.php']);
+        }
+        $match = '*' !== $sky->_0 && isset(SKY::$plans['main']['ctrl'][$sky->_0]);
+        $class = $match ? 'c_' . $sky->_0 : 'default_c';//////if no * - 404 !!!
         $dst = Plan::gate_t($fn_dst = "$class.php");
         $recompile = false;
-        if (!$dst || DEV) { #Plan::_t
-            $src = is_file($fn_src = "main/app/$class.php") or !$in_a or $src = Gate::real_src($real, $fn_src);
-            if (!$src)
-                return $ex || !$in_a ? ['Controller', '_', false, ''] : $this->gate(true);
-            if ($recompile = !$dst || filemtime($fn_src) > Plan::gate_m($fn_dst))
+        if (!$dst || DEV) {
+            if (!$src = Plan::_t($fn_src = "app/$class.php"))
+                return $recalculate || !$match ? ['Controller', '_', false] : $this->gate(true);
+            if ($recompile = !$dst || Plan::_m($fn_src) > Plan::gate_m($fn_dst))
                 Gate::put_cache($class, $fn_src, $fn_dst);
         }
-        $action = $in_a
+        $action = $match
             ? ('' === $sky->_1 ? ($this->return ? 'empty_j' : 'empty_a') : ($this->return ? 'j_' : 'a_') . $sky->_1)
             : ($this->return ? 'j_' : 'a_') . $sky->_0;
         Plan::gate_rr($fn_dst, $recompile);
         if (!method_exists($gape = new Gape, $action))
             $action = $this->return ? 'default_j' : 'default_a';
-        if (isset($gape->src))
-            $real = $gape->src;
-        if ($in_a)
-            MVC::$tpl = substr($real, 2);
-        return [$class, $action, $gape, $real];
+        if ($match)
+            MVC::$tpl = substr($class, 2);
+        return [$class, $action, $gape];
     }
 
     static function top() {
@@ -540,13 +540,13 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
                 $param = [$id];
                 $sky->surl[0] = '_trace';
             }
-            $real = $class = 'standard_c';
+            $class = 'standard_c';
             $action = ($me->return ? 'j' : 'a') . $sky->_0;
             MVC::$tpl = '_std';
             $me->body = '_std.' . substr($sky->_0, 1);
             $gape = false;
         } else {
-            list ($class, $action, $gape, $real) = $me->gate();
+            list ($class, $action, $gape) = $me->gate(false);
             switch ($action[0]) {
                 case 'd': $me->body = MVC::$tpl . ".default"; break; # default_X
                 case 'e': $me->body = MVC::$tpl . ".empty"; break; # empty_X
@@ -564,7 +564,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             $param = (array)call_user_func([$gape, $action], $sky, $user);
             if (DEV && 1 == $sky->error_no) { # gate error
                 $me->body = $me->return ? '' : '_std.lock';
-                $sky->ca_path = ['ctrl' => $real, 'func' => $action];
+                $sky->ca_path = ['ctrl' => $class, 'func' => $action];
             }
         }
         if (!$sky->error_no || $sky->surl && '_exception' == $sky->surl[0]) {
