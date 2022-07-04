@@ -34,19 +34,19 @@ if ($d || 'php' == $argv[1]) {
     system("php -S localhost:" . ($argv[2] ?? 8888));
 } else {
     define('DIR_R', getcwd());
-	$dir_m = 'main';
+    $dir_m = 'main';
     do {
         $dir = getcwd();
-        if ($found = is_file("$dir_m/app/gate.php") && is_dir('var'))
+        if ($found = is_file("$dir_m/gate.php") && is_dir('var'))
             break;
-		$dir_m = basename($dir);
+        $dir_m = basename($dir);
         chdir('..');
     } while($dir != getcwd());
 
     if (!$found)
         exit("SKY application not found\n");
     define('DIR', $dir);
-	define('DIR_M', $dir_m);
+    define('DIR_M', $dir_m);
     require "$dir_m/conf.php";
 
     $sky  = new SKY;

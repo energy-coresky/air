@@ -87,8 +87,8 @@ Current table's prefix: <input value="{{SQL::$dd->pref}}" name="pref" size="5">
 <p>Filename <input name="fn" size="7" value="{{$row->fn or 'app'}}">
 &nbsp; &nbsp; <label><input type="checkbox" name="do"> do make</label>
 &nbsp; &nbsp; <label><input type="checkbox" name="bz2"> compress data using bz2</label>
-<p>SQL compiled {{date(DATE_DT, $row->ts_sql)}} ^<b>TR:</b> {{$row->count_tr}}
-&nbsp; &nbsp; <label><input checked type="checkbox" name="sql"> include</label>
+<p>SQL compiled {{date(DATE_DT, $row->ts_sql??0)}} ^<b>TR:</b> {{$row->count_tr??'-'}}
+&nbsp; &nbsp; <label><input@checked($row->count_tr??0) type="checkbox" name="sql"> include</label>
 <fieldset><legend>Check required modules</legend>
 @loop($modules as $one)
     @if('Core'!==($name=$one))

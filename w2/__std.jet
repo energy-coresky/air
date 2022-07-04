@@ -96,8 +96,8 @@ $(function() {
 
 #.m_gate <fieldset id="contr">
 @loop($list as $one => $ex)
-    <a href="{{PATH}}?_gate={!$one!}" class="inner-menu" style="background:{! $ex?'':'#fcc' !}"@active($one==$y_1)>
-        {!'*' == $one ? 'default_c' : "c_$one"!}.php
+    <a href="{{PATH}}?_gate={!$one!}" class="inner-menu" style="background:{! $ex?(1==$ex?'':'#cfc'):'#fcc' !}"@active($one==$y_1)>
+        {!'*' == $one ? 'default_c' : "c_$one"!}.php @if(!in_array($ex,['0','1']))({{$ex}})~if
     </a>
 ~loop
 #.m_gate.header ------------------------------------------------------------------------------

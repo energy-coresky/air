@@ -195,7 +195,7 @@ class Controller extends MVC_BASE
             switch ($class = get_class($this)) {
                 case __CLASS__:
                 case 'default_c':
-                    if (DEV && Plan::_t("app/c_$sky->_0.php")) {
+                    if (DEV && Plan::_t([Gate::$ware, "app/c_$sky->_0.php"])) {
                         Plan::cache_d(['main', 'sky_plan.php']);
                         $sky->ajax or jump(URI);
                     }
@@ -228,7 +228,7 @@ trait HOOK
     }
 
     static function re_verse_ext($cnt, &$surl, $ext = 'html') {
-        if ('_' == $surl[0][0])
+        if (0 == $cnt || '_' == $surl[0][0])
             return false;
         $a = explode('.', $s =& $surl[$cnt - 1]);
         return $s = 2 != count($a) || $ext != $a[1] ? "$s.$ext" : $s = $a[0];
@@ -507,14 +507,16 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             SKY::$plans['main']['ctrl'] = Gate::controllers();
             Plan::cache_d(['main', 'sky_plan.php']);
         }
-        $match = '*' !== $sky->_0 && isset(SKY::$plans['main']['ctrl'][$sky->_0]);
+        if ($match = '*' !== $sky->_0 && isset(SKY::$plans['main']['ctrl'][$sky->_0]))
+            Gate::$ware = Plan::$ware = SKY::$plans['main']['ctrl'][$sky->_0];
+
         $class = $match ? 'c_' . $sky->_0 : 'default_c';//////if no * - 404 !!!
         $dst = Plan::gate_t($fn_dst = "$class.php");
         $recompile = false;
         if (!$dst || DEV) {
-            if (!$src = Plan::_t($fn_src = "app/$class.php"))
+            if (!$src = Plan::_t([Gate::$ware, $fn_src = "app/$class.php"]))
                 return $recalculate || !$match ? ['Controller', '_', false] : $this->gate(true);
-            if ($recompile = !$dst || Plan::_m($fn_src) > Plan::gate_m($fn_dst))
+            if ($recompile = !$dst || Plan::_m([Gate::$ware, $fn_src]) > Plan::gate_m($fn_dst))
                 Gate::put_cache($class, $fn_src, $fn_dst);
         }
         $action = $match

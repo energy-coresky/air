@@ -26,13 +26,18 @@ class Language
         $lang->c_generate(null, false); # without sorting
     }
 
+    static function all() {
+        return unserialize(trim(view('_lng.array', [1])));
+    }
+
     function __construct() {
         $lg = MVC::$cc->setLG_h();
         if (!$this->error = (int)(1 !== DEBUG))
             $lg && ($this->list = $lg) or $this->error = 2;
         $this->error or DEFAULT_LG && in_array(DEFAULT_LG, $this->list) or $this->error = 3;
         if ($this->list)
-            $this->toname = SQL::open('_')->sql('@select code2, name from langs where code2 in ($@)', $this->list);
+            $this->toname = ['en' => 'English', 'ru'=>'Russian'];
+        //trace(Language::all());
     }
 
     function c_list($lg) {
@@ -289,6 +294,4 @@ class Language
         ];
     }
 }
-
-
 

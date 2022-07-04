@@ -38,7 +38,10 @@ class Globals
     private $all;
     private $all_lc;
 
-    function __construct() {
+    private $path;
+
+    function __construct($path = '.') {
+        $this->path = $path;
     }
 
     function parse_html($fn, $line_start, $str) {
@@ -216,6 +219,11 @@ class Globals
         return $this->c_dirs();
     }
 
+    static function ware($dir) {
+        $glb = new Globals($dir);
+        return array_keys($glb->c_report()['CLASS']);
+    }
+
     function c_report() {
         SKY::s('gr_start', 1);
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
@@ -237,8 +245,8 @@ class Globals
         $this->all = array_fill_keys(array_keys($all), 0);
         $this->all_lc = array_change_key_case($this->all);
 
-        $dirs = Rare::walk_dirs('.', $this->exclude_dirs());
-        if ('c:/web/air' == DIR_S)
+        $dirs = Rare::walk_dirs($this->path, $this->exclude_dirs());
+        if ('c:/web/air' == DIR_S && '.' == $this->path)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
 
         foreach ($dirs as $dir) {
@@ -249,6 +257,9 @@ class Globals
                     $this->parse($fn);
             }
         }
+        if ('.' != $this->path)
+            return $this->definitions;
+
         if ('c:/web/air' == DIR_S) {
             $this->parse(DIR_S . '/heaven.php');
             $this->parse(DIR_S . '/sky.php');

@@ -191,12 +191,12 @@ class standard_c extends Controller
 
     function __call($name, $args) {
         list ($x, $name) = explode('_', $name, 2);
-        if (isset(SKY::$plans[$name])) {
-            Plan::$ware = $name;
+        if (isset(SKY::$plans[$name])) {////////////////////
+            Plan::$ware = Plan::$view = $name;
             define('LINK', PROTO . '://' . DOMAIN . PATH);
             if (DEV)
                 $this->d_last_ware = Plan::$ware;
-            $class = 'c_' . $name;
+            $class = $name . '_c';
             MVC::$cc = MVC::$mc;
             MVC::$mc = new $class;
             $action = '' == $this->_1 ? 'empty_' . $x : $x . "_$this->_1";
@@ -228,19 +228,12 @@ class standard_c extends Controller
         ]) + [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
             'h1' => $this->_c,
-    #        'virtuals' => $this->_c ? array_shift($list) : '',
-            'list' => Gate::controllers($this->_c),
+            'list' => Gate::controllers(true) + DEV::ctrl(),
             'cshow' => DEV::cshow() ? ' checked' : '',
             'e_func' => $this->_c ? DEV::gate($this->_c) : false,
             'func' => $this->_3 ?? '',
-            'vaults' => [strtoupper(DIR_M) . '.SKY.', 'Earth', 'Mercury', 'Venus'],
         ];
     }
-
-    #function j_virt() {
-    #    DEV::save($this->_c, preg_split("/\s+/", trim($_POST['v'])));
-    #    return $this->j_gate();
-    #}
 
     function j_delete() {
         DEV::save($this->_c, $this->_a);

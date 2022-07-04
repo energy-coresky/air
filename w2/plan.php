@@ -14,6 +14,7 @@ class Plan
     static $ware = 'main';
     static $view = 'main';
     static $apps = [];
+    static $ctrl = [];
     static $parsed_fn;
     static $put_cache = false;
     private static $connections = [];
@@ -26,12 +27,14 @@ class Plan
         use    => '' by default ( => 'plan_name') - use selected connection
     */
 
-    static function cache_main() {
+    static function main() {
         do {
             $c = Gate::controllers();
         } while (0);
-        SKY::$plans['main'] += $ctrl = ['ctrl' => $c];
-        Plan::$put_cache['main'] += $ctrl;
+    #    SKY::$plans['main'] += ['class' => Plan::$class];
+   #     Plan::$put_cache['main'] += ['class' => Plan::$class];
+        SKY::$plans['main'] += ['ctrl' => $c + Plan::$ctrl];
+        Plan::$put_cache['main'] += ['ctrl' => $c + Plan::$ctrl];
         Plan::cache_p(['main', 'sky_plan.php'], '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
         Plan::$put_cache = false;
     }
@@ -99,12 +102,19 @@ class Plan
                 $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
                 return [$conn->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'ra': # autoloader
+                $low = strtolower($a0);
+                $cfg =& SKY::$plans['main']['class'];
                 if (in_array(substr($a0, 0, 2), ['m_', 'q_', 't_'])) {
-                    $fn = $obj->path . "/app/$a0.php";
-                    return is_file($fn) ? require $fn : eval("class $a0 extends Model_$a0[0] {}");
+                    if (is_file($fn = $obj->path . "/app/$a0.php"))
+                        return require $fn;
+                    if ('main' != Plan::$ware && ($fn = Plan::_t(['main', "app/$a0.php"])))
+                        return require $fn;
+                    return eval("class $a0 extends Model_$a0[0] {}");
+                } elseif (isset($cfg[$a0])) {
+                    return Plan::_r([$cfg[$a0], "w3/$low.php"]);
                 }
-                $fn = DIR_S . '/w2/' . ($a0 = strtolower($a0) . '.php');
-                return is_file($fn) ? require $fn : Plan::_r("w3/$a0");
+                $fn = DIR_S . '/w2/' . $low . '.php';
+                return is_file($fn) ? require $fn : Plan::_r("w3/$low.php");
             case 'd':
             case 'dq':
                 if (in_array($pn, ['view', 'glob', 'app']))
@@ -124,19 +134,25 @@ class Plan
         if (!Plan::$connections) {
             require DIR_S . "/w2/dc_file.php";
             Plan::$connections[''] = new dc_file;
-            $cfg = SKY::$plans['cache'] ?? Plan::$defaults['cache'];
-            if (is_file($fn = $cfg['path'] . '/' . 'sky_plan.php')) {
+            $plans = SKY::$plans + Plan::$defaults;
+            if (is_file($fn = $plans['cache']['path'] . '/' . 'sky_plan.php')) {
                 require $fn;
             } else {
-                $plans = SKY::$plans;
                 SKY::$plans = [];
-                $wares = $plans['wares'] ?? [];
-                unset($plans['wares']);
-                SKY::$plans['main'] = ['app' => ['path' => DIR_M]] + $plans + Plan::$defaults;
-                foreach ($wares as $val) {
+                $wares = is_file($fn = DIR_M . '/wares.php') ? (require $fn) : [];
+                SKY::$plans['main'] = ['app' => ['path' => DIR_M], 'class' => []] + $plans;
+                $cfg =& SKY::$plans['main']['class'];
+                foreach ($wares as $key => $val) {
                     $plans = [];
-                    require ($path = 'wares/' . $val) . "/conf.php";
-                    SKY::$plans[$val] = ['app' => ['path' => $path] + ($plans['app'] ?? [])] + $plans;
+                    require ($path = $val['path']) . "/conf.php";
+                    if ($val['type'] ?? 0)
+                        $plans['app']['type'] = 'pr-dev';
+                    if (!DEV && in_array($plans['app']['type'], ['dev', 'pr-dev']))
+                        continue;
+                    foreach ($val['class'] as $cls)
+                        'c_' == substr($cls, 0, 2) ? (Plan::$ctrl[substr($cls, 2)] = $key) : ($cfg[$cls] = $key);
+                    unset($plans['app']['require'], $plans['app']['class']);
+                    SKY::$plans[$key] = ['app' => ['path' => $path] + $plans['app']] + $plans;
                 }
                 Plan::$put_cache = SKY::$plans;
             }

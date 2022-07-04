@@ -41,7 +41,8 @@ class Jet
         if (is_string($name) && strpos($name, '.'))
             list($name, $marker) = explode('.', $name, 2);
         if (!Jet::$directive) {
-            MVC::handle('jet_c');
+            if (MVC::$mc) # not console!
+                MVC::handle('jet_c');
             Plan::_rq('app/jet.php');
             Jet::$directive = true;
         }

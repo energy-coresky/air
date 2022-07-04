@@ -173,7 +173,7 @@ class Admin
         return $result;
     }
 
-    static function warm_jet($is_prod) {
-        //2do
+    static function warm_all() {
+        //2do: sky_plan, gate, jet, svg, assets
     }
 }

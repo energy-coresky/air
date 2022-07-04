@@ -16,11 +16,20 @@ sky.d.doc_save = function() {
     });
 };
 
-sky.d.attach = function(el,d) {
-    var s = d ? el : $(el).prev().val();
-    if (!s)
-        return;
-    ajax('attach', {s:s, detach:d}, function(r) {
+sky.d.attach = function(s, m, form) {
+    ajax('attach', form ? form : {s:s, mode:m}, function(r) {
+        r = $.trim(r);
+        if ('+' == r.charAt(0)) {
+            $('#v-body div:eq(0)').html(r.substr(1));
+        } else {
+            'OK' == r ? (location.href = '_dev?ware') : alert(r);
+        }
+    });
+};
+
+sky.d.second_dir = function(el) {
+    var s = $(el).prev().val();
+    if (s) ajax('second_dir', {s:s}, function(r) {
         'OK' == r ? (location.href = '_dev?ware') : alert(r);
     });
 };

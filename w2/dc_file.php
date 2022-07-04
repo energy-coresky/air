@@ -13,7 +13,7 @@ class dc_file implements Cache_driver
     }
 
     function setup($obj) {
-     //?   $this->obj = $obj;
+        $this->obj = $obj;
         $this->path = $obj->path . '/' . ($obj->pref ?? '');
     }
 
@@ -33,11 +33,14 @@ class dc_file implements Cache_driver
 
     function run($name, $quiet = false) {
         if ($quiet && !is_file($this->path . $name))
-            return false;
+            return [];
         return require $this->path . $name;
     }
 
     function put($name, $data) {
+        global $sky;
+        if (!is_dir($this->obj->path))
+            mkdir($this->obj->path, (int)($sky->s_mkdir_mode ?: 0777), true);
         return file_put_contents($this->path . $name, $data);
     }
 

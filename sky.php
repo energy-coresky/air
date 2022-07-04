@@ -137,7 +137,7 @@ class SKY implements PARADISE
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
         if (Plan::$put_cache)
-            Plan::cache_main();
+            Plan::main();
         return SKY::$dd;
     }
 
@@ -312,7 +312,7 @@ class SKY implements PARADISE
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.124 2022-06-25T16:02:00+02:00 energy';
+    const CORE = '0.125 2022-07-04T08:53:00+02:00 energy';
 
     static function version() {
         global $sky;

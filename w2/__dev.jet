@@ -1,5 +1,24 @@
 #.jet core template
 
+#.attach
++
+<div class="other-task">
+    <div class="fs16">Install {{$name}} ware:</div>
+</div>
+<form id="attach-ware">
+<input type="hidden" name="s" value="prod.{{$dir}}">
+<input type="hidden" name="mode" value="2">
+<div class="" style="padding:10px;">
+    <h1>Select classes:</h1>
+    @loop($classes as $cls)
+        <label><input type="checkbox" name="cls[]" value="{{$cls}}"> {{$cls}}</label><br>
+    ~loop
+    <input type="button" onclick="sky.d.attach(0,0, $('#attach-ware').serialize())" value="Install">
+    <label><input type="checkbox" name="dev"> install for DEV mode only</label>
+</div>
+</form>
+#.attach
+
 #.ware //////////////////////////////////////////////////////////////////////////////
 #use(`<h4>WALK ALL WARES..</h4>` as header)
 @use(.m_dev)
@@ -10,25 +29,24 @@
     @loop($e_installed)
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
-    <div>
-    <input name="dir" size="50" value="{{$sky->d_vare_deleted}}" placeholder="Attach DEV ware from different directory">
-    <input type="button" value="Add" onclick="sky.d.attach(this,0)">
-    </div>
 </div><br>
 <div class="other-task" style="border-bottom:1px solid #4338ca;">
-    <div class="fs16">Wares directory:</div>
-    <div class="fs16" style="margin-left:30%">
+    <div class="fs16">Wares directory: wares/ + 
+        <input name="dir" size="25" value="{{$sky->d_second_wares}}" placeholder="Second wares directory">
+        <input type="button" value="Save" onclick="sky.d.second_dir(this)">
+    </div>
+    <div class="fs16" style="margin-left:10%">
         Create new ware: type
         <select>
             <option value="view">View</option>
             <option value="dev">Dev</option>
             <option value="prod">Prod</option>
-            <option value="code">Code</option>
-        </select><button>Create
-        </button>
+        </select><button>Create</button>
     </div>
 </div>
 <div class="bg-y" style="padding:10px;">@php $bg_ware='#e0e7ff' ~php
+    <div>
+    </div>
     @loop($e_dir)
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
@@ -50,9 +68,19 @@
             This ware don't has desc.txt file
         ~if
     </div>
-    <div style="width:150px;position:relative;top:50px">
-    @if(!$bg_ware && 'dev' == $row->type)
-        <button onclick="sky.d.attach('{{$row->name}}',1)">Uninstall</button>@else &nbsp;
+    <div style="height:50px">
+        @if($row->cnt ?? 0)
+            Classes ({{$row->cnt}}):<br>
+            &nbsp; <b>{{$row->class[0]}}</b><br>
+            @if($row->cnt>1)&nbsp; <b>{{$row->class[1]}}</b>~if
+            @if($row->cnt>2)...~if
+        ~if
+    </div>
+    <div style="width:150px;position:relative;top:20px">
+    @if(!$bg_ware)
+        <button onclick="sky.d.attach('{{$row->name}}','un')">Uninstall</button>
+    @else
+        <button onclick="sky.d.attach('{{$row->type . '.' . $row->path}}',1)">Install</button>
     ~if
     </div>
 </div>

@@ -11,6 +11,7 @@ class Gate
     const OBJ_PFS    = 64;
 
     static $cshow = 0;
+    static $ware = 'main';
     static $controller_data = false; # not loaded initialy
 
     public $url = '';
@@ -26,16 +27,16 @@ class Gate
     }
 
     static function load_array($class = false) {
-        $sky_gate = (array)Plan::_rq('app/gate.php');
+        $sky_gate = (array)Plan::_rq([Gate::$ware, 'gate.php']);
         return $class ? ($sky_gate[$class] ?? []) : $sky_gate;
     }
 
     static function controllers($in = false) {
-        $glob = Plan::_b('app/c_*.php');
+        $glob = Plan::_b([Gate::$ware, 'app/c_*.php']);
         if ($fn = Plan::_t('app/default_c.php'))
             array_unshift($glob, $fn);
         $list = $deleted = [];
-        $val = false === $in ? Plan::$ware : 1;
+        $val = $in ? 1 : Plan::$ware;
         foreach ($glob as $v) {
             $v = basename($v, '.php');
             $list['default_c' == $v ? '*' : substr($v, 2)] = $val; //2do just Plan::$ware?
@@ -44,7 +45,7 @@ class Gate
             $k = 'default_c' == $k ? '*' : substr($k, 2);
             isset($list[$k]) or $deleted[$k] = 0;
         }
-        return false === $in ? $list : $list + $deleted;
+        return !$in ? $list : $list + $deleted;
     }
 
     static function put_cache($class, $fn_src, $fn_dst) {
@@ -75,7 +76,7 @@ class Gate
     }
 
     function parse($src_fn, $dst_class = false) {
-        Plan::_r($src_fn);
+        Plan::_r([Gate::$ware, $src_fn]);
         $reflect = new ReflectionClass(basename($src_fn, '.php'));
         $methods = array_filter(
             $reflect->getMethods(ReflectionMethod::IS_PUBLIC),
@@ -105,7 +106,7 @@ class Gate
             $gape .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
         }
 
-        $content = Plan::_g($src_fn);
+        $content = Plan::_g([Gate::$ware, $src_fn]);
         if (!preg_match("/^<\?(php)?(.*?)class $dst_class extends(.+)$/s", $content, $match))
             throw new Error("File `$src_fn` must start from &lt;?");
         return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_cached extends" . $match[3];
