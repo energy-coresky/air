@@ -31,8 +31,6 @@ class Plan
         do {
             $c = Gate::controllers();
         } while (0);
-    #    SKY::$plans['main'] += ['class' => Plan::$class];
-   #     Plan::$put_cache['main'] += ['class' => Plan::$class];
         SKY::$plans['main'] += ['ctrl' => $c + Plan::$ctrl];
         Plan::$put_cache['main'] += ['ctrl' => $c + Plan::$ctrl];
         Plan::cache_p(['main', 'sky_plan.php'], '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
@@ -43,13 +41,14 @@ class Plan
         return $w2 ? file_get_contents(DIR_S . "/$a0") : Plan::__callStatic('_g', [$a0]);
     }
 
-    static function view_g($a0) {
-        $w2 = '_' == ($a0[1] ?? '') && '_' == $a0[0];
-        if ($w2)
-            return file_get_contents(DIR_S . '/w2/' . $a0);
+    static function view_($op, $a0) { # g or m
+        if ('_' == ($a0[1] ?? '') && '_' == $a0[0]) {
+            $a0 = DIR_S . '/w2/' . $a0;
+            return 'g' == $op ? file_get_contents($a0) : stat($a0)['mtime'];
+        }
         if ('main' != Plan::$ware && !Plan::view_t($a0))
-            return Plan::__callStatic('view_g', [['main', $a0]]);
-        return Plan::__callStatic('view_g', [$a0]);
+            return Plan::__callStatic('view_' . $op, [['main', $a0]]);
+        return Plan::__callStatic('view_' . $op, [$a0]);
     }
 
     static function __callStatic($func, $arg) {

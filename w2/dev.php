@@ -445,7 +445,7 @@ class DEV
                     $lay = explode('.', $lay);
                     $fn = '_' == $lay[0][0] ? "_$lay[0].jet" : "y_$lay[0].jet";
                     $lay = $fn . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
-                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_g($fn), $marker) . '<br>';
+                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_('g', $fn), $marker) . '<br>';
                     if ('' === $bod) {
                         $sb = '"';
                         $body = '>Body: used "echo" in controller</div><br>';
@@ -456,7 +456,7 @@ class DEV
                     $bod = explode('.', $bod);
                     $fn = "_$bod[0].jet";
                     $bod = $fn . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
-                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_g($fn), $marker) . '<br>';
+                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_('g', $fn), $marker) . '<br>';
                 }
             }
         }

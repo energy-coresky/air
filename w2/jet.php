@@ -197,7 +197,7 @@ class Jet
         } else {
             Jet::$tpl[] = [$name, $marker];
             $this->files[$name] = 1;
-            $in = Plan::view_g("$name.jet");
+            $in = Plan::view_('g', "$name.jet");
         }
         if ('' !== $marker) {
             if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3)))

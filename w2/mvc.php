@@ -346,7 +346,7 @@ class MVC extends MVC_BASE
         if ($ok && ($dev || $sky->s_jet_prod)) { # this `if` can be skipped on the production by the config
             list ($mtime, $files) = Plan::jet_mf($fn); # to get max speed (avoid mtime checking)
             foreach ($files as $one) {
-                $ok &= Plan::view_m("$one.jet") < $mtime; # check for file mtime
+                $ok &= Plan::view_('m', "$one.jet") < $mtime; # check for file mtime
                 if (!$ok)
                     break; # recompilation required
             }
