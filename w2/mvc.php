@@ -384,7 +384,11 @@ class MVC extends MVC_BASE
                 if (!$sky->is_mobile) {
                     if ($sky->has_public)
                         echo DEV ? a('P', PROTO . '://' . _PUBLIC) : sprintf(span_r, 'P');
-                    echo DEV ? a('D', ["dev('" . ($sky->d_last_page ?: '_dev') . "')"]) : sprintf(span_r, 'D');
+                    if (DEV) {
+                        echo '_venus' == $sky->d_last_page
+                            ? a('V', PATH . '_venus')
+                            : a('D', ["dev('" . ($sky->d_last_page ?: '_dev') . "')"]);
+                    }
                     echo a('A', PATH . $link);
                 }
                 echo a('X', ['sky.trace(1)']) . a('T', ['sky.trace(0)']);
@@ -554,11 +558,10 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
                 case 'e': $me->body = MVC::$tpl . ".empty"; break; # empty_X
                 default:  $me->body = MVC::$tpl . "." . substr($action, 2); break; # a_.. or j_..
             }
+            $cached = $class . '_cached';
         }
         $me->hnd = "$class::$action()";
-        if ($gape)
-            $class .= '_cached';
-        MVC::$mc = new $class;
+        MVC::$mc = $gape ? new $cached : new $class;
         MVC::$cc = new common_c;
         SKY::$vars['k_class'] = $class;
         $me->set(MVC::$mc->head_y($action), true);

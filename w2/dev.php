@@ -16,7 +16,6 @@ class DEV
     static $static = false;
     static $sqls = [['##', 'Time', 'Query']];
     static $vars = [['##', 'Name', 'Value']];
-
     //static $consts = [['##', 'Name', 'Value']];
     //static $classes = [['##', 'Name', 'Value']];
 
@@ -31,22 +30,21 @@ class DEV
         }
     }
 
-    function shutdown() {
-        Plan::glob_p(['main', 'dev_vars.txt'], SKY::sql('d', true));
-    }
-
     static function init() {
         if (DEV && !CLI && SKY::$dd) {
             global $sky;
 
-            $sky->shutdown[] = $sky->dev = new DEV;
-            SKY::ghost('d', (string)Plan::glob_gq('dev_vars.txt'));
-
-            if (!$sky->d_static)
+            $sky->dev = new DEV;
+            $vars = (string)Plan::glob_gq('dev_vars.txt');
+            SKY::ghost('d', $vars, function ($s) {
+                Plan::glob_p(['main', 'dev_vars.txt'], $s);
+            });
+            if (!$static = $sky->d_static)
                 return;
+
             $stat = array_map(function ($v) {
                 return '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v;
-            }, explode(',', $sky->d_static));
+            }, explode(',', $static));
 
             $files = [];
             foreach ($stat as $one) {
@@ -57,8 +55,8 @@ class DEV
                     $files[$one] = 0;
                 }
             }
-            if ($sky->d_files) {
-                $saved = array_explode($sky->d_files, '#', ',');
+            if ($list = $sky->d_files) {
+                $saved = array_explode($list, '#', ',');
                 if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
                     DEV::$static = true;
                 $files = $saved + $files;
@@ -72,24 +70,6 @@ class DEV
             if (DEV::$static)
                 SKY::d('files', array_join($files, '#', ','));
         }
-    }
-
-    function form() {
-        $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
-        return [ # visitor data
-            'dev' => ['Set debug=0 for DEV-tools', 'checkbox'],
-            'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
-            'sql' => ['Show SQLs in the tracing', 'checkbox'],
-            'const' => ['Show user-defined global CONSTANTs in the tracing,' . $br, 'checkbox'],
-            'class' => ['Show CLASSEs', 'checkbox'],
-            'cron'  => ['Run cron when click on DEV instance', 'checkbox'],
-            ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
-            Form::X([], '<hr>'),
-            ['Check static files for changes (file or path to *.js & *.css files), example: `pub,C:/web/air/assets`', 'li'],
-            'static' => ['', '', 'size="50"'],
-            'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
-            ['Save', 'submit'],
-        ];
     }
 
     static function trace() {
@@ -598,12 +578,24 @@ class DEV
     }
 
     function c_overview() {
-        $form = $this->form();
-        if ($_POST) {
-            foreach ($form as $k => $v)
-                is_int($k) or isset($_POST[$k]) or $_POST[$k] = 0;
+        $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
+        $form = [ # visitor data
+            'app' => ['App name', ''],
+            'dev' => ['Set debug=0 for DEV-tools', 'chk'],
+            'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
+            'sql' => ['Show SQLs in the tracing', 'chk'],
+            'const' => ['Show user-defined global CONSTANTs in the tracing,' . $br, 'chk'],
+            'class' => ['Show CLASSEs', 'chk'],
+            'cron'  => ['Run cron when click on DEV instance', 'chk'],
+            ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
+            Form::X([], '<hr>'),
+            ['Check static files for changes (file or path to *.js & *.css files), example: `pub,C:/web/air/assets`', 'li'],
+            'static' => ['', '', 'size="50"'],
+            'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
+            ['Save', 'submit'],
+        ];
+        if ($_POST)
             SKY::d($_POST);
-        }
         $this->_y = ['page' => 'dev'];
         return ['form' => Form::A(SKY::$mem['d'][3], $form)];
     }

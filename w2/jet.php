@@ -200,9 +200,9 @@ class Jet
             $in = Plan::view_g("$name.jet");
         }
         if ('' !== $marker) {
-            if (3 != count($ary = preg_split("/^\#([\.\w+]*?\.{$marker}\b[\.\w+]*).*$/m", $in, 3)))
+            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3)))
                 throw new Error("Jet: cannot find `$name.$marker`");
-            $in = $ary[1];
+            $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
             $this->marker = $marker;
         }
         # @verb
@@ -216,7 +216,7 @@ class Jet
                 throw new Error("Jet: cannot use PHP tags, apply @php(..) instead");
         }
         # delete nested part markers
-        $in = preg_replace('/([\r\n]+|\A)\s*#\.[\.\w+]+.*?([\r\n]+|\z)/s', '$2', $in);
+        $in = preg_replace('/(\r?\n|\r|\A)#\.\w[\.\w]*.*?(\r?\n|\r|\z)/s', '$2', $in);
         # preprocessor
         $in = $this->preprocessor($in);
         # the main parser
@@ -270,6 +270,11 @@ class Jet
                 return !$arg ? null : $this->_block($arg, $str, 'block' == $tag);
             case 'view':
                 return $q(DEV ? "MVC::in_tpl(false);view(%s);MVC::in_tpl()" : 'view(%s)', $arg);
+            case 'eat':
+                for ($len = strlen($str), $i = 0; $i < $len && in_array($str[$i], [' ', "\r", "\n", "\t"]); $i++);
+                if ($i)
+                    $str = substr($str, $i);
+                return '';
             case 'svg':
                 $p = explode('.', $arg, 2);
                 return (string)(new SVG($p[0], $p[1] ?? false));
@@ -393,9 +398,7 @@ class Jet
             static $ary;
             if (null === $ary) {
                 $ary = [':_0' => '$sky->_0', ':_1' => '$sky->_1', ':_2' => '$sky->_2'];
-
                 $lines = ($txt = Plan::_gq('app/jet.let')) ? explode("\n", $txt) : [];
-
                 foreach ($lines as $one) {
                     if (preg_match("/^(:\w+)\s+(.+)/", $one, $m))
                         $ary[$m[1]] = $m[2];

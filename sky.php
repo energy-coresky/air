@@ -223,7 +223,7 @@ class SKY implements PARADISE
     static function &ghost($char, $original, $tpl = '', $flag = 0) {
         SKY::$mem[$char] = [$flag, $flag & 4 ? null : $original, $tpl, []];
         if ($tpl)
-            trace('GHOST SQL: ' . (is_array($tpl) ? end($tpl) : $tpl), false, 1);
+            trace(is_array($tpl) ? end($tpl) : $tpl, 'GHOST', 1);
         if ($original) foreach (explode("\n", unl($original)) as $v) {
             list($k, $v) = explode(' ', $v, 2);
             SKY::$mem[$char][3][$k] = escape($v, true);
@@ -241,6 +241,8 @@ class SKY implements PARADISE
                 return "$k " . escape($v);
             });
             $new === $x[1] ? ($f1 = 0) : ($x[1] = $new);
+            if ($x[2] instanceof Closure)
+                return $f1 ? $x[2]($new) : false;
         }
         if ($f2 = is_array($x[2])) {
             if (!$f2 = $flags & 2 | $f1)

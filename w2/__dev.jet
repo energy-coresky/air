@@ -26,7 +26,7 @@
     <div class="fs16">Installed wares:</div>
 </div>
 <div class="bg-x" style="padding:10px">@php $bg_ware='' ~php
-    @loop($e_installed)
+    @loop($e_installed)@eat
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
 </div><br>
@@ -45,9 +45,7 @@
     </div>
 </div>
 <div class="bg-y" style="padding:10px;">@php $bg_ware='#e0e7ff' ~php
-    <div>
-    </div>
-    @loop($e_dir)
+    @loop($e_dir)@eat
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
 </div><br>
@@ -56,8 +54,8 @@
 </div>
 <div class="" style="padding:10px;">
     <h1>Connecting ...</h1>
-    @loop($_< 0)
-        @inc(.single)
+    @loop($_< 0)@eat
+        @inc(.single)@empty<h1>No wares</h1>
     ~loop
 </div>
 #.ware.single ------------------------------------------------------------------------------
@@ -91,7 +89,7 @@
 ~loop
 #.m_dev.wares_memu ------------------------------------------------------------------------------
     <br><div class="other-task">Wares</div>
-    <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse ..</a>
+    <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse all..</a>
     @loop($y_wares as $uri => $name)
         <a href="{{$uri}}?ware"@active($uri == URI)>{{$name}}</a>
     ~loop
@@ -115,6 +113,7 @@
 <fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
 {! $form !}
 </fieldset>
+{! Root::_overview(0) !}
 </div>
 #.overview
 
@@ -150,7 +149,8 @@
 <div id="main">
 <div id="v-head">
     <div style="width:126px"><a href="{{PATH}}{{$sky->d_last_page ?: '_dev'}}">
-        ▼ {{'ware'==@(explode('?', $sky->d_last_page))[1] ? 'Wares' : 'Tasks'}}</a>
+        ▼ {{'ware'==@(explode('?', $sky->d_last_page))[1] ? 'Wares' : 'Tasks'}}</a><a
+        @href(history.back())><span style="font-family:Verdana;">&#9668;</span> Back</a>
     </div>
     <div style="width:144px">
     @loop($_ < 4)<a href="_x{{$_}}"@active("_x$_" == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
@@ -175,6 +175,7 @@
         ~if
     ~loop
     <a @href(var x=this;ajax('',function(r) { sky.d.drop_cache(r,x) },'_drop'))>Drop All Cache</a>
+    <a @href(alert('2do'))>Warm All Cache</a>
     #end
     @block(`` as menu)
 #end
@@ -198,7 +199,7 @@
         <a href="#">▲ Classes (?)</a>
         <form>
     </div>
-    <div style="text-align:right; width:25%"><b>AB.SKY {{SKY::version()['app'][3]}}</b></div>
+    <div style="text-align:right; width:25%"><b>{{$sky->d_app}}.SKY. {{SKY::version()['app'][3]}}</b></div>
 </div>
 #if('_trace'!=:_0)
     <style>#v-menu { width: 170px; } #v-body { width: calc(100vw - 170px); }</style>

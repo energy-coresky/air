@@ -47,7 +47,7 @@ class standard_c extends Controller
     function tail_y() {
         global $sky;
         if ($this->_y) {
-            if (!$_POST && '_trace' != $sky->_0)
+            if (1 == $sky->method && '_trace' != $sky->_0)
                 $sky->d_last_page = URI;
             #if ('WINNT' == PHP_OS)
             #    $ary += ['adm?get_dev' => 'Open DEV.SKY.'];
