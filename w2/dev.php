@@ -398,7 +398,9 @@ class DEV
             Plan::glob_p('dev_trace.txt', $_POST['t0']);
         $trace = $x
             ? sqlf('+select tmemo from $_memory where id=%d', $cr[$x])
-            : (string)Plan::glob_gq('dev_trace.txt');
+            : Plan::glob_g('dev_trace.txt');
+        preg_match("/^WARE: (\w+)/m", $trace, $m);
+        $ware = $m[1] ?? 'main';
         $top = $header = '';
         $nv = $_GET['nv'] ?? 0;
         for ($list = [], $i = 0; preg_match("/(TOP|SUB|BLK)\-VIEW: (\S+) (\S+)(.*)/s", $trace, $m); $i++) {
@@ -424,7 +426,8 @@ class DEV
             $fn = ($w2 = 'standard_c' == $ctrl[0]) ? "w2/standard_c.php" : "app/$ctrl[0].php";
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
-            $php .= Display::php_method(Plan::_g($fn, $std), substr($ctrl[1], 0, -2));
+            $we = 'app/common_c.php' != $fn ? $ware : 'main';
+            $php .= Display::php_method(Plan::_g([$we, $fn], $w2), substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
             $tpl = $list[$nv][2];
             list ($lay, $bod) = explode('^', $tpl);
@@ -445,7 +448,7 @@ class DEV
                     $lay = explode('.', $lay);
                     $fn = '_' == $lay[0][0] ? "_$lay[0].jet" : "y_$lay[0].jet";
                     $lay = $fn . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
-                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_('g', $fn), $marker) . '<br>';
+                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_('g', [$ware, $fn]), $marker) . '<br>';
                     if ('' === $bod) {
                         $sb = '"';
                         $body = '>Body: used "echo" in controller</div><br>';
@@ -456,7 +459,7 @@ class DEV
                     $bod = explode('.', $bod);
                     $fn = "_$bod[0].jet";
                     $bod = $fn . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
-                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_('g', $fn), $marker) . '<br>';
+                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_('g', [$ware, $fn]), $marker) . '<br>';
                 }
             }
         }
@@ -466,7 +469,7 @@ class DEV
             'nv' => $nv,
             'y_tx' => "_x$x",
             'top' => $top,
-            'header' => $header,
+            'header' => ('main' == $ware ? '' : '<span style="font-size:14px"><b>' . strtoupper($ware) . ":</b></span> ") . $header,
             // for src tpl
             'layout' => '<div class="other-task" style="position:sticky; top:0px' . $sl . $layout,
             'body' => '<div class="other-task" style="position:sticky; top:42px' . $sb . $body,

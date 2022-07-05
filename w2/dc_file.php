@@ -15,26 +15,23 @@ class dc_file implements Cache_driver
     function setup($obj) {
         $this->obj = $obj;
         $this->path = $obj->path . '/' . ($obj->pref ?? '');
+        return $obj->quiet && !is_file($this->path . $obj->quiet);
     }
 
     function test($name) {
         return is_file($this->path . $name) ? $this->path . $name : false;
     }
 
-    function mtime($name) {
-        return is_file($this->path . $name) ? stat($this->path . $name)['mtime'] : 0;
-    }
-
-    function get($name, $quiet = false) {
-        if ($quiet && !is_file($this->path . $name))
-            return false;
+    function get($name) {
         return file_get_contents($this->path . $name);
     }
 
-    function run($name, $quiet = false) {
-        if ($quiet && !is_file($this->path . $name))
-            return [];
+    function run($name) {
         return require $this->path . $name;
+    }
+
+    function mtime($name) {
+        return stat($this->path . $name)['mtime'];
     }
 
     function put($name, $data) {
@@ -44,10 +41,12 @@ class dc_file implements Cache_driver
         return file_put_contents($this->path . $name, $data);
     }
 
-    function drop($name, $quiet = false) {
-        if ($quiet && !is_file($this->path . $name))
-            return true;
-        return unlink($this->path . $name);
+    function glob($mask = '*') {
+        return glob($this->path . $mask);
+    }
+
+    function drop($name) {
+        return (int)unlink($this->path . $name);
     }
 
     function drop_all($mask = '*') {
@@ -55,9 +54,5 @@ class dc_file implements Cache_driver
         foreach (glob($this->path . $mask) as $fn)
             $result &= (int)unlink($fn);
         return $result;
-    }
-
-    function glob($mask = '*') {
-        return glob($this->path . $mask);
     }
 }

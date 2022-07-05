@@ -36,9 +36,6 @@ class dc_redis implements Cache_driver
     function drop($name, $quiet) {
     }
 
-    function drop_all($mask = '*') {
-    }
-
     function glob($mask = '*') {
     }
 }

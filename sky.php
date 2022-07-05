@@ -353,13 +353,13 @@ interface Cache_driver
     function setup($obj);
     //function close();
     function test($name);
-    function get($name, $quiet = false);
-    function run($name, $quiet = false);
-    function put($name, $data);
+    function get($name);
+    function run($name);
     function mtime($name);
-    function drop($name, $quiet = false);
-    function drop_all($mask = '*');
+    function put($name, $data);
     function glob($mask = '*');
+    function drop($name);
+    function drop_all($mask = '*');
 }
 
 //////////////////////////////////////////////////////////////////////////

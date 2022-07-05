@@ -518,6 +518,8 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $dst = Plan::gate_t($fn_dst = "$class.php");
         $recompile = false;
         if (!$dst || DEV) {
+            if ('main' != Plan::$ware)
+                trace(Plan::$ware, 'WARE');
             if (!$src = Plan::_t([Gate::$ware, $fn_src = "app/$class.php"]))
                 return $recalculate || !$match ? ['Controller', '_', false] : $this->gate(true);
             if ($recompile = !$dst || Plan::_m([Gate::$ware, $fn_src]) > Plan::gate_m($fn_dst))

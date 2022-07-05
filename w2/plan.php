@@ -38,75 +38,78 @@ class Plan
     }
 
     static function _g($a0, $w2 = false) {
-        return $w2 ? file_get_contents(DIR_S . "/$a0") : Plan::__callStatic('_g', [$a0]);
+        $std = is_array($a0) ? $a0[1] : $a0;
+        return $w2 ? file_get_contents(DIR_S . "/$std") : Plan::__callStatic('_g', [$a0]);
     }
 
     static function view_($op, $a0) { # g or m
+        list ($ware, $a0) = is_array($a0) ? $a0 : [Plan::$ware, $a0];
         if ('_' == ($a0[1] ?? '') && '_' == $a0[0]) {
             $a0 = DIR_S . '/w2/' . $a0;
             return 'g' == $op ? file_get_contents($a0) : stat($a0)['mtime'];
         }
-        if ('main' != Plan::$ware && !Plan::view_t($a0))
+        if ('main' != $ware && !Plan::view_t([$ware, $a0]))
             return Plan::__callStatic('view_' . $op, [['main', $a0]]);
-        return Plan::__callStatic('view_' . $op, [$a0]);
+        return Plan::__callStatic('view_' . $op, [[$ware, $a0]]);
     }
 
     static function __callStatic($func, $arg) {
         static $old_ware = false;
         static $old_obj = false;
-        global $user;
-
         list ($pn, $op) = explode('_', $func);
         $pn or $pn = 'app';
         list ($ware, $a0) = is_array($arg[0]) ? $arg[0] : [Plan::$ware, $arg[0]];
+
         if ('jet' == $pn) {
             $a0 = Plan::$view . '-' . $a0;
         } elseif ('view' == $pn && 'main' == $ware) {
             $ware = Plan::$view;
         }
-        if ($old_ware != $ware || $old_obj->pn != $pn) {
+        if ($old_ware == $ware && $old_obj->pn == $pn) {
+            $obj = $old_obj;
+        } else {
             $obj = (object)Plan::open($pn, $ware);
+            $obj->pn = $pn;
             $old_ware = $ware;
             $old_obj = $obj;
-            $old_obj->pn = $pn;
-        } else {
-            $obj = $old_obj;
         }
-        $conn = $obj->con;
-        $conn->setup($obj);
+        $obj->quiet = 'q' === ($op[1] ?? 0) ? $a0 : false;
+        if ($obj->con->setup($obj))
+            return $arg[1] ?? ('rq' == $op ? [] : ('gq' == $op ? '' : 0));
         switch ($op) {
             case 'obj':
                 return $obj;
+            case 'b':
+                return $obj->con->glob($a0); # mask
+            case 'p':
+                return $obj->con->put($a0, $arg[1]);
+            case 'gq':
+            case 'g':
+                return $obj->con->get($a0);
             case 'tp': # jet for view(..) func
                 Plan::$parsed_fn = $obj->path . '/' . $a0;
             case 't':
-                return $conn->test($a0); # if OK return fullname
+                return $obj->con->test($a0); # if OK return fullname
+            case 'mq':
             case 'm':
-                return $conn->mtime($a0);
-            case 'p':
-                return $conn->put($a0, $arg[1]);
-            case 'b':
-                return $conn->glob($a0); # mask
-            case 'g':
-            case 'gq':
-                return $conn->get($a0, 'gq' == $op);
-            case 'r':
+                return $obj->con->mtime($a0);
+            case 'mf': # jet
+                $s = $obj->con->get($a0);
+                $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
+                return [$obj->con->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'rq':
-                return $conn->run($a0, 'rq' == $op);
+            case 'r':
+                return $obj->con->run($a0);
             case 'rr': # gate
                 $recompile = $arg[1];
                 return require $obj->path . '/' . $a0;
-            case 'mf': # jet
-                $s = $conn->get($a0);
-                $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
-                return [$conn->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'ra': # autoloader
                 $low = strtolower($a0);
                 $cfg =& SKY::$plans['main']['class'];
                 if (in_array(substr($a0, 0, 2), ['m_', 'q_', 't_'])) {
                     if (is_file($fn = $obj->path . "/app/$a0.php"))
                         return require $fn;
-                    if ('main' != Plan::$ware && ($fn = Plan::_t(['main', "app/$a0.php"])))
+                    if ('main' != $ware && ($fn = Plan::_t(['main', "app/$a0.php"])))
                         return require $fn;
                     return eval("class $a0 extends Model_$a0[0] {}");
                 } elseif (isset($cfg[$a0])) {
@@ -114,15 +117,12 @@ class Plan
                 }
                 $fn = DIR_S . '/w2/' . $low . '.php';
                 return is_file($fn) ? require $fn : Plan::_r("w3/$low.php");
-            case 'd':
+            case 'da':
             case 'dq':
+            case 'd':
                 if (in_array($pn, ['view', 'glob', 'app']))
                     throw new Error("Failed when Plan::{$pn}_$op(..)");
-                return $conn->drop($a0, 'dq' == $op);
-            case 'da':
-                if (in_array($pn, ['view', 'glob', 'app']))
-                    throw new Error("Failed when Plan::{$pn}_da(..)");
-                return $conn->drop_all($arg[1] ?? '.php');
+                return 'da' == $op ? $obj->con->drop_all($a0) : $obj->con->drop($a0);
             default: throw new Error("Plan::$func(..) - method not exists");
         }
     }

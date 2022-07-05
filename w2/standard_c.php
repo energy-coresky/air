@@ -193,6 +193,7 @@ class standard_c extends Controller
         list ($x, $name) = explode('_', $name, 2);
         if (isset(SKY::$plans[$name])) {////////////////////
             Plan::$ware = Plan::$view = $name;
+            trace(Plan::$ware, 'WARE');
             define('LINK', PROTO . '://' . DOMAIN . PATH);
             if (DEV)
                 $this->d_last_ware = Plan::$ware;
