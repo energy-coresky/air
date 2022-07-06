@@ -138,7 +138,9 @@ abstract class Model_t extends Model_m
         return $row;
     }
 
-    function all($rule = '', $what = '*', String $pref = '#') {
+    function all($rule = 0, $what = '*', String $pref = '#') {
+        if (0 === $rule)
+            return $this->sql(1, 'select * from $_');
         if (!in_array($pref, ['', '@', '%', '#']))
             throw new Error("Wrowng prefix $pref");
         if ($what instanceof SQL)

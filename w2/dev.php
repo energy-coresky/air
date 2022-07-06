@@ -35,7 +35,7 @@ class DEV
             global $sky;
 
             $sky->dev = new DEV;
-            $vars = (string)Plan::glob_gq('dev_vars.txt');
+            $vars = Plan::glob_gq('dev_vars.txt');
             SKY::ghost('d', $vars, function ($s) {
                 Plan::glob_p(['main', 'dev_vars.txt'], $s);
             });

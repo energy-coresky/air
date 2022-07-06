@@ -255,3 +255,6 @@ td {
     font-size:16px;
 }
 
+.upper-case {
+    text-transform:uppercase;
+}

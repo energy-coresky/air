@@ -28,12 +28,10 @@ class Plan
     */
 
     static function main() {
-        do {
-            $c = Gate::controllers();
-        } while (0);
-        SKY::$plans['main'] += ['ctrl' => $c + Plan::$ctrl];
-        Plan::$put_cache['main'] += ['ctrl' => $c + Plan::$ctrl];
-        Plan::cache_p(['main', 'sky_plan.php'], '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
+        Plan::$ctrl += Gate::controllers();
+        SKY::$plans['main'] += ['ctrl' => Plan::$ctrl];
+        Plan::$put_cache['main'] += ['ctrl' => Plan::$ctrl];
+        Plan::cache_p('sky_plan.php', '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
         Plan::$put_cache = false;
     }
 

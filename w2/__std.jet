@@ -168,11 +168,11 @@ $(function() {
 @if($row->code)
     <table width="100%"><tr>
         <td width="85%" style="background:#fff;border:none;padding:10px;">
-            <!-- div class="fl" style="position:absolute">
+            <div class="fl" style="position:">
                 <div class="fl" style="position:relative;top:-18px; left:120px; background:#fff;">
                     <label><input type="checkbox" name="production"{{$row->prod}}>show production code</label>
                 </div>
-            </div -->
+            </div>
             <div id="func-code" style="overflow:auto">{!$row->code!}</div>
         </td>
         <td width="15%" valign="top" style="border:none" onmouseenter="sky.g.code(this,'{{$sky->_1}}')">

@@ -170,6 +170,9 @@ class Admin
             foreach (glob("$dir/*.php") as $fn)
                 $result &= (int)unlink($fn);
         }
+        global $sky;
+        $s = substr($sky->s_statp, 0, -1) + 1;
+        $sky->s_statp = $s > 9999 ? '1000p' : $s . 'p';
         return $result;
     }
 

@@ -62,6 +62,7 @@ class standard_c extends Controller
                     '_inst' => 'Compile Project',
                     '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
                 ],
+                'wares' => $this->dev->wares_menu(),
             ];
         }
     }
@@ -291,7 +292,6 @@ class standard_c extends Controller
     }
 
     function a_dev() {
-        $this->_y += ['wares' => $this->dev->wares_menu()];
         return $this->j_dev('c');
     }
 
