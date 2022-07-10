@@ -40,6 +40,7 @@ class Jet
             Jet::$fn = explode('-', basename($fn), 2)[1];
             $this->occupied = ['k', 'e', 'y'];
         }
+        $this->loop_base = count(Jet::$loop);
         if ($layout) {
             $this->body = $name;
             $name = '_' == $layout[0] ? $layout : "y_$layout";
@@ -135,6 +136,7 @@ class Jet
             $this->b_id = $pb[5] ?: $id;
             $this->b_loop = $pb[3];
             $this->b_if = $pb[4];
+            $this->b_is = true;
             $this->u_if = $this->u_last = false;
             $this->u_loop = 0;
 
@@ -153,6 +155,7 @@ class Jet
                         $jet = $use[1];
                         $this->x_id = $use[0];
                         $this->u_loop = $pu[3];
+                        $this->b_is = false;
                     }
                 }
                 if ($this->u_if) { # @use IN IF
@@ -164,6 +167,7 @@ class Jet
                             continue;
                         list ($use_id, $jet) = Jet::$use[$name][$j]; # @use code to add
                         $this->x_id = $use_id;
+                        $this->b_is = false;
                         $this->u_loop = Jet::$ptr[$use_id][3];
                         Jet::$ptr[$use_id][1] = "<?php $bv = $use_id ?>";
                         $if = ["if ($use_id == $bv): ?>", $code($name, $jet), '<?php ', $if];
@@ -243,7 +247,12 @@ class Jet
         return $str;
     }
 
-    private function fix2(&$str, $loopd) {
+    private function fix2(&$str, $loopd = -1) {
+        if (is_array($str)) {
+            return array_walk_recursive($str, function (&$v) {
+                $this->fix2($v, count(Jet::$loop));
+            });
+        }
         $buf = [];
         foreach (token_get_all($str) as $tn) {
             is_array($tn) or $tn = [0, $tn];
@@ -531,10 +540,10 @@ class Jet
     }
 
     private function _loop($end, $arg) {
-        $cnt = count(Jet::$loop);
+        $cnt = count(Jet::$loop) - $this->loop_base;
         if ($end) {
             $iv = $cnt - 1 ? '$_' . $cnt : '$_';
-            if ($arg) { # do-while
+            if ('' !== $arg) { # do-while
                 array_pop(Jet::$loop);
                 return sprintf("<?php $iv++; } while (%s); ?>", preg_match('/^\$e_\w+$/', $arg) ? "\$row = $arg->one()" : $arg);
             } elseif (end(Jet::$empty) == $cnt) {
@@ -588,10 +597,12 @@ class Jet
 
         $this->test_cycled($tpl, '@inc');
         $jet = new Jet($tpl);
+        $this->files += $jet->files;
         $this->parsed[++Jet::$id] = $jet->parsed;
+        if (count(Jet::$loop))
+            $this->fix2($this->parsed[Jet::$id]);
         $this->parsed[++Jet::$id] = '';
         $this->save($red);
-        $this->files += $jet->files;
         return '';
     }
 
