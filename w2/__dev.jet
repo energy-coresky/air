@@ -81,12 +81,7 @@
     ~if
     </div>
 </div>
-#.single.m_dev ------------------------------------------------------------------------------
-@php $task_act = $sky->_1 ?: 'overview' ~php
-@loop(['overview', 'system'] as $name)
-    <a class="inner-menu" href="_dev?{!$name!}"@active($task_act == $name)>{!ucfirst($name)!}</a>
-~loop
-#.m_dev.wares_memu ------------------------------------------------------------------------------
+#.single.wares_memu ------------------------------------------------------------------------------
     <br><div class="other-task">Wares</div>
     <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse all..</a>
     @loop($y_wares as $uri => $name)
@@ -94,11 +89,6 @@
     ~loop
 #.wares_memu
 
-
-#.system //////////////////////////////////////////////////////////////////////////////
-#use(`<h4>ADJUST SYSTEM CONFIGURATION</h4>` as header)
-@use(.m_dev)
-#.system
 
 #.overview //////////////////////////////////////////////////////////////////////////////
 #use(`<h4><u>DEV INSTANCE ONLY</u> CONFIGURATION AND INFORMATION</h4>` as header)
@@ -109,7 +99,18 @@
 </fieldset>
 {! Root::_overview(0) !}
 </div>
-#.overview
+#.overview.m_dev ------------------------------------------------------------------------------
+@php $task_act = $sky->_1 ?: 'overview' ~php
+@loop(['overview', 'system'] as $name)
+    <a class="inner-menu" href="_dev?{!$name!}"@active($task_act == $name)>{!ucfirst($name)!}</a>
+~loop
+#.m_dev
+
+#.system //////////////////////////////////////////////////////////////////////////////
+#use(`<h4>ADJUST SYSTEM CONFIGURATION</h4>` as header)
+@use(.m_dev)
+#.system
+
 
 #.view //////////////////////////////////////////////////////////////////////////////
 #use(.menu)
@@ -193,7 +194,7 @@
             ▲ SQLs (?)
         </a>&nbsp; &nbsp;
         <a href="#">▲ Classes (?)</a>
-        <form>
+        </form>
     </div>
     <div style="text-align:right; width:25%"><b>{{$sky->d_app}}.SKY. {{SKY::version()['app'][3]}}</b></div>
 </div>

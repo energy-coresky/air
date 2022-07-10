@@ -87,7 +87,7 @@ class Rare
                 $sky->s_cache_act = 1;
                 $sky->s_cache_sec = $ttl = 300; # 5 min
             }
-            $mtime = ("{$plan}m")($fn);
+            $mtime = ("{$plan}mq")($fn);
             $recompile = !$sky->s_cache_act || !$mtime || -1 != $ttl && ($mtime + $ttl < time());
             trace("$fn, " . ($recompile ? 'recompiled' : 'used cached'), 'CACHE');
 

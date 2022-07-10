@@ -165,6 +165,8 @@ class HEAVEN extends SKY
             }
             $flag = $etc || $this->debug && $this->errors;
         }
+        if (DEV)
+            $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
         if ($flag) {
             if (!$etc) {
                 $plus or $this->errors .= $this->check_other();

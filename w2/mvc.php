@@ -393,7 +393,9 @@ class MVC extends MVC_BASE
                     }
                     echo a('A', PATH . $link);
                 }
-                echo a('X', ['sky.trace(1)']) . a('T', ['sky.trace(0)']);
+                $warning = 'style="background:red;color:#fff"';
+                echo a('X', ['sky.trace(1)'], Plan::cache_t(['main', 'sky_xw']) ? $warning : '');
+                echo a('T', ['sky.trace(0)'], $sky->was_warning ? $warning : '');
             } else {
                 echo a('ADMIN', PATH . $link);
             }

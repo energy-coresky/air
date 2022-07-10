@@ -18,6 +18,7 @@ class SKY implements PARADISE
     public $error_no = 0;
     public $error_last = 0;
     public $was_error = 0;
+    public $was_warning = 0;
     public $cnt_error = 0;
     public $cli;
     public $gpc = '';
@@ -489,6 +490,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
     }
     if ($sky->debug || $sky->s_prod_error && true === $is_error) {
         is_string($var) or $var = var_export($var, true);
+        $is_warning = 'WARNING' === $is_error;
         if (is_string($is_error)) {
             $var = "$is_error: $var";
             $is_error = false;
@@ -531,11 +533,13 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
                 $str = Debug::context($context, $has_depth ? $depth : 2) and $sky->errors .= "<pre>$str</pre>";
             } else {
                 $sky->tracing .= "BACKTRACE:\n$backtrace";
-                if (!$sky->cli && !$sky->ajax && !$sky->s_trace_single) {
+                if (!$sky->cli && !$sky->s_trace_single)
                     printf(span_r, "<br /><b>SKY:</b> " . html($var) . " at <b>$file</b> on line <b>$line</b>");
-                }
             }
             $sky->tracing .= "\n";
+        } elseif ($is_warning) {
+            $sky->was_warning = 1;
+            $sky->tracing .= "$fln\n" . '<div class="warning">' . html($var) . "</div>\n";
         } else {
             $sky->tracing .= "$error\n\n";
         }
