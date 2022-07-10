@@ -15,6 +15,7 @@ class Jet
     private static $inc;
     private static $use;
     private static $ptr;
+    private static $top;
     private static $block;
     private static $id;
     private static $empty = [];
@@ -34,7 +35,8 @@ class Jet
 
         if ($fn) {
             Jet::$block = Jet::$use = Jet::$ptr = Jet::$inc = Jet::$verb = [];
-            Jet::$id = 0;
+            $this->parsed[Jet::$id = 1] = '';
+            Jet::$top =& $this->parsed[1];
             Jet::$fn = explode('-', basename($fn), 2)[1];
             $this->occupied = ['k', 'e', 'y'];
         }
@@ -63,27 +65,32 @@ class Jet
     }
 
     private function compile($layout, $return) {
-        $top = $set0 = [];
-
-        $code = function ($name, $jet, $loop_n = 0) use (&$top) {
+        $code = function ($name, $jet) {
             $this->files += $jet->files;
-            $closure = false;
-            array_walk_recursive($jet->parsed, function (&$v, $id) use ($loop_n, &$closure) {
-                if (is_string($id)) {
-                    $ary =& Jet::$ptr[$v];
-                    list ($is_block,, $depth, $loop, $if) = $ary;
+            $s = '';
+            array_walk_recursive($jet->parsed, function (&$v, $id) use (&$s) {
+                if (is_string($id)) { # nested @block or @use
+                    $pv =& Jet::$ptr[$v];
+                    $px =& Jet::$ptr[$this->x_id];
+                    if ($this->u_last) {
+                        $pv[5] = Jet::$id;
+                        $this->parsed[++Jet::$id] = '';
+                    } else {
+                        $pv[5] = $this->b_id;
+                    }
+                    $pv[3] += $px[3]; # in loop
+                    $pv[4] += $px[4]; # in if
                     return;
                 }
-                if ($loop_n)
-                    $this->fix2($v, $loop_n);
-                if ($closure)
-                    return;
-                if ($closure = strpos($v, '?'))
-                    $closure = preg_match("/\\$\w+/s", $v);
+                if ($this->b_loop)
+                    $this->fix2($v, $this->b_loop);
+                $s .= $v;
             });
 
             $pf = $jet->pf;
             if ($pf && ' ' == $pf[1]) { # space
+                if ($closure = strpos($s, '?'))
+                    $closure = preg_match("/\\$\w+/s", $s);
                 $s = $closure ? '$_a = SKY::$vars; ' : '';
                 if (DEV)
                     $s .= 'MVC::in_tpl(false); ';
@@ -105,7 +112,7 @@ class Jet
                     throw new Error("Jet blocks: char `$pf[0]` occupied");
                 $this->occupied[] = $pf[0];
                 $pf[1] = '_';
-                $top[] = "\$_$pf = (array)MVC::handle('$pf$name', \$_vars); MVC::vars(\$_vars, \$_$pf, '$pf');";
+                Jet::$top .= "\$_$pf = (array)MVC::handle('$pf$name', \$_vars); MVC::vars(\$_vars, \$_$pf, '$pf');\n";
             }
             return $jet->parsed;
         };
@@ -116,81 +123,89 @@ class Jet
             return $a < $b ? -1 : 1;
         });
         $tail = false;
+        $set0 = [];
         foreach (Jet::$block as $name => $block) {
             list ($id, $jet) = $block;
             if (!$id) {
                 trace("#use($name) without @block", 'WARNING');
                 continue;
             }
-            $loop_n = Jet::$ptr[$id][3];
+            $pb =& Jet::$ptr[$id];
+            $this->x_id = $id;
+            $this->b_id = $pb[5] ?: $id;
+            $this->b_loop = $pb[3];
+            $this->b_if = $pb[4];
+            $this->u_if = $this->u_last = false;
+            $this->u_loop = 0;
 
             if (isset(Jet::$use[$name])) { # has @use
                 usort(Jet::$use[$name], function ($a, $b) {
-                    $a = $a[2] ?: $a[0];
-                    $b = $b[2] ?: $b[0];
-                    return $a == $b ? 0 : ($a < $b ? -1 : 1);
+                    $a = Jet::$ptr[$a[0]][5] ?: $a[0];
+                    $b = Jet::$ptr[$b[0]][5] ?: $b[0];
+                    return $a < $b ? -1 : 1;
                 });
                 $skip = [];
                 foreach (Jet::$use[$name] as $j => $use) { // 2do @inject ?
-                    $use_id = $use[0];
-                    $last_id = $use[2] ?: $use_id;
-                    if (!$use_if = Jet::$ptr[$use_id][4]) {
+                    $pu =& Jet::$ptr[$use[0]];
+                    $last_id = $pu[5] ?: $use[0];
+                    if (!$this->u_if = $pu[4]) {
                         $skip[] = $j;
                         $jet = $use[1];
+                        $this->x_id = $use[0];
+                        $this->u_loop = $pu[3];
                     }
                 }
-                if ($use_if) { # last @use in if
+                if ($this->u_if) { # @use IN IF
                     $set0[] = $bv = '$_b' . $id;
-                    $use_last = $last_id > $id;
+                    $this->u_last = $last_id > $this->b_id;
                     $if = ['else: ?>', $code($name, $jet), '<?php endif'];
                     for ($j = 0, $cnt = count(Jet::$use[$name]); $j < $cnt; $j++) {
                         if (in_array($j, $skip))
                             continue;
                         list ($use_id, $jet) = Jet::$use[$name][$j]; # @use code to add
+                        $this->x_id = $use_id;
+                        $this->u_loop = Jet::$ptr[$use_id][3];
                         Jet::$ptr[$use_id][1] = "<?php $bv = $use_id ?>";
-                        $if = ["if ($use_id == $bv): ?>", $code($name, $jet, $use_last ? 0 : $loop_n), '<?php ', $if];
+                        $if = ["if ($use_id == $bv): ?>", $code($name, $jet), '<?php ', $if];
                         if ($cnt - 1 != $j)
                             $if = ['else', $if];
                     }
-                    if (!$use_last) { # @block last
-                        Jet::$ptr[$id][1] = ['<?php ', $if, ' ?>'];
-                        continue;
+                    if (!$this->u_last) {
+                        $pb[1] = ['<?php ', $if, ' ?>'];
+                        continue; # @block last
                     }
-                    if ($loop_n)
+                    if ($this->b_loop)
                         $set0[] = $iv = '$_i' . $id;
-                    $ob = sprintf('$_ob[%s]', $loop_n ? "\"$id-$iv\"" : -$id);
-                    Jet::$ptr[$id][1] = "<?php \$_ob[] = ob_get_clean(); $ob = ''; "
-                        . 'ob_start()' . ($loop_n ? "; $iv++ ?>" : ' ?>');
+                    $ob = sprintf('$_ob[%s]', $this->b_loop ? "\"$id-$iv\"" : -$id);
+                    $pb[1] = "<?php \$_ob[] = ob_get_clean(); $ob = ''; "
+                        . 'ob_start()' . ($this->b_loop ? "; $iv++ ?>" : ' ?>');
                     $if = ['ob_start(); ', $if, "; $ob = ob_get_clean();"];
                     if (!$tail) {
                         $tail = true;
                         $this->save("<?php \$_ob[] = ob_get_clean()");
                     }
-                    $this->save($loop_n ? ";\nfor ($iv = 0; isset($ob); $iv++): " : ";\nif (isset($ob)): ");
+                    $this->save($this->b_loop ? ";\nfor ($iv = 0; isset($ob); $iv++): " : ";\nif (isset($ob)): ");
                     $this->parsed[++Jet::$id] = $if;
-                    $this->parsed[++Jet::$id] = $loop_n ? ' endfor' : ' endif';
+                    $this->parsed[++Jet::$id] = $this->b_loop ? ' endfor' : ' endif';
                     continue;
-                } # last @use in if
+                } # @use IN IF
             } # has @use
             
-         //if('menu'==$name)  trace($qq,'111111');
-            Jet::$ptr[$id][1] = $code($name, $jet, $loop_n);
+            $pb[1] = $code($name, $jet);
         } # loop
 
         $out = "<?php\n#" . ($list = implode(' ', array_keys($this->files))) . "\n";
-        if ($top)
-            $out .= implode("\n", $top) . "\n";
         if ($set0)
-            $out .= implode(" = ", $set0) . " = 0;\n";
+            Jet::$top .= implode(" = ", $set0) . " = 0;\n";
         if ($tail)
-            $out .= "\$_ob = []; ";
+            Jet::$top .= "\$_ob = []; ";
         if ($tail || $return)
-            $out .= "ob_start(); ";
-        $out .= "extract(\$_vars, EXTR_REFS) ?>";
+            Jet::$top .= "ob_start(); ";
+        Jet::$top .= "extract(\$_vars, EXTR_REFS) ?>";
         if (DEV) {
-            $out .= "<?php\ntrace('TPL: $list'); MVC::in_tpl(true);";
-            $out .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || 1 == $sky->ajax && !$sky->is_sub))';
-            $out .= "\nthrow new Error('Return status do not match for file: ' . __FILE__) ?>";
+            Jet::$top .= "<?php\ntrace('TPL: $list'); MVC::in_tpl(true);";
+            Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || 1 == $sky->ajax && !$sky->is_sub))';
+            Jet::$top .= "\nthrow new Error('Return status do not match for file: ' . __FILE__) ?>";
         }
         array_walk_recursive($this->parsed, function ($str, $id) use (&$out) {
             $out .= is_string($id) ? '' : $str;
@@ -228,12 +243,12 @@ class Jet
         return $str;
     }
 
-    private function fix2(&$str, $loop_n) {
+    private function fix2(&$str, $loopd) {
         $buf = [];
         foreach (token_get_all($str) as $tn) {
             is_array($tn) or $tn = [0, $tn];
             if (T_VARIABLE == $tn[0] && preg_match("/^\\\$_(\d|)$/", $tn[1], $m)) {
-                $depth = $loop_n + ($m[1] ?: 1);
+                $depth = $loopd + ($m[1] ?: 1);
                 $tn[1] = '$_' . (1 == $depth ? '' : $depth);
             }
             $buf[] = $tn;
@@ -582,14 +597,13 @@ class Jet
 
     private function _block($arg, &$str, $is_block) {
         $regexp = '/^(.+?) as ([a-z][ \*]|)(\w+)$/';
-        $id = function ($name) use ($is_block) {
+        $get_id = function ($name) use ($is_block) {
             $id = ++Jet::$id;
             $this->parsed[$id] = [$name => $id];
-            Jet::$ptr[$id] = [$is_block, &$this->parsed[$id], count(Jet::$depth), count(Jet::$loop), count(Jet::$if), 0, 0];
+            Jet::$ptr[$id] = [$is_block, &$this->parsed[$id], count(Jet::$depth), count(Jet::$loop), count(Jet::$if), 0];
             $this->parsed[++Jet::$id] = '';
             return $id;
         };
-        $counts = [2 => count(Jet::$depth), count(Jet::$loop), count(Jet::$if), 0, 0];
         if ($is_block) {
             if (preg_match($regexp, $arg, $m)) {
                 list (, $tpl, $pf, $name) = $m;
@@ -603,7 +617,7 @@ class Jet
             $exist = isset(Jet::$block[$name]);
             if ($exist && Jet::$block[$name][0])
                 throw new Error("Jet: duplicated @block($name)");
-            Jet::$block[$name][0] = $id($name);
+            Jet::$block[$name][0] = $get_id($name);
             if ($exist)
                 return ''; // @block(..) already overloaded by #use(..)
             $type = 2;
@@ -615,8 +629,11 @@ class Jet
             if (!preg_match('/^(\.()(\w+))$/', $arg, $m) && !preg_match($regexp, $arg, $m))
                 return $type ? $pos : null;
             list (, $tpl, $pf, $name) = $m;
-            if ($type)
+            if ($type) {
                 $str = substr($str, 0, $pos - 4) . substr($str, $pos + strlen($br));
+            } else {
+                $id = $get_id($name);
+            }
         }
         if ('`' == $tpl[0]) {
             $tpl = [substr($tpl, 1, -1), $this->marker];
@@ -630,9 +647,9 @@ class Jet
         array_pop(Jet::$depth);
 
         if ($type) { // #use(..) or @block(..)
-            Jet::$block[$name] = [Jet::$block[$name][0] ?? 0, $jet, 0];
+            Jet::$block[$name] = [Jet::$block[$name][0] ?? 0, $jet];
         } else { // @use(..)
-            Jet::$use[$name][] = [$id($name), $jet, 0];
+            Jet::$use[$name][] = [$id, $jet];
         }
 
         return 1 == $type ? $pos - 4 : '';
