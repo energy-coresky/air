@@ -44,14 +44,14 @@ pre, fieldset {
 }
 pre, .code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: 12px;
+    /* font-size: 12px; */
+}
+div {
+    /* font-size: 12px; */
 }
 a {
     text-decoration:none;
-    font-size: 12px;
-}
-div {
-    font-size: 12px;
+    /* font-size: 12px; */
 }
 :root {
     --xsw: auto;
@@ -76,6 +76,7 @@ div {
                          'menu body'
                          'tail tail';
     overflow: hidden;
+    font-size: 12px;
 }
 #v-head {
     grid-area: head;
@@ -90,6 +91,7 @@ div {
     line-height: 26px;
     display: inline-block;
     cursor:default;
+    font-size: 12px;
 }
 #v-tail {
     grid-area: tail;
@@ -103,12 +105,16 @@ div {
     background-color: #eee;
     border-bottom:1px solid #ccc;
 }
+a {
+    text-decoration:none;
+}
 #v-menu a, #r-menu a {
     display:block;
     border-bottom: 1px solid #ccc;
     padding:4px 0px 4px 10px;
     color: #555;
     cursor:default;
+    font-size: 12px;
 }
 [noborder] {
     border:0px !important;

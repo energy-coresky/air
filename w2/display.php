@@ -3,11 +3,11 @@
 class Display
 {
     static $me = false;
-    const lay_l = '<table cellpadding="0" cellspacing="0" style="font-size:14px;width:100%"><tr><td class="tdlnum code" style="width:10px">';
+    const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
 
-    static function jet($fn, $marker = '') {
+    static function jet($fn, $marker = '', $no_lines = false) {
         $s = function ($s, $c) {
             return '<span style="color:' . $c . '">' . html($s) . '</span>';
         };
@@ -69,6 +69,8 @@ class Display
         $out = implode("", $ary);
         if ($out[-1] == "\n")
             $out = "\n" . $out;
+        if ($no_lines)
+            return '<pre style="margin:0;background:#ffd">' . $out . '</pre>';
         $table = self::lay_l . $lnum . self::lay_m . '<pre style="margin:0">' . $out . '</pre>' . self::lay_r;
         return '<div class="php">' . $table . '</div>';
     }
@@ -85,7 +87,7 @@ class Display
         return Display::php($php, $bc);
     }
 
-    static function php($str, $bc = '') {
+    static function php($str, $bc = '', $no_lines = false) {
         self::$me or self::$me = new Display;
         $me = self::$me;
         if ($str === -1)
@@ -93,13 +95,15 @@ class Display
         $me->lnum = '';
         $me->lenb = strlen($me->back = $bc);
         $me->disp = 0;
-        if ($tag = preg_match("/^\s*[\$]\w+/sm", $str))
+        if ($tag = preg_match("/^\s*[\$]\w+/sm", $str) || $no_lines)
             $str = "<?php $str";
         $str = str_replace(["\r", "\n", '<code>','</code>'], '', highlight_string($str, true));
         if ($tag)
             $str = preg_replace("|^(<span [^>]+>)<span [^>]+>&lt;\?php&nbsp;|", "$1", $str);
         $lines = explode('<br />', preg_replace("|^(<span [^>]+>)<br />|", "$1", $str));
         array_walk($lines, [$me, 'add_line_no']);
+        if ($no_lines)
+            return '<pre style="margin:0">' . implode('', $lines) . '</pre>';
         $table = self::lay_l . $me->lnum . self::lay_m . '<pre style="margin:0">' . implode('', $lines) . '</pre>' . self::lay_r;
         return sprintf('<div class="php">%s</div>', str_replace('%', '&#37;', $table));
     }
