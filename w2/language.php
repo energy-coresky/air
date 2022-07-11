@@ -27,7 +27,7 @@ class Language
     }
 
     static function all() {
-        return unserialize(trim(view('_lng.array', [1])));
+        return unserialize(trim(view('_lng.array', [])));
     }
 
     function __construct() {
@@ -36,8 +36,7 @@ class Language
             $lg && ($this->list = $lg) or $this->error = 2;
         $this->error or DEFAULT_LG && in_array(DEFAULT_LG, $this->list) or $this->error = 3;
         if ($this->list)
-            $this->toname = ['en' => 'English', 'ru'=>'Russian'];
-        //trace(Language::all());
+            $this->toname = Language::all();
     }
 
     function c_list($lg) {

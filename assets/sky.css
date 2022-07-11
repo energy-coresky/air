@@ -92,6 +92,8 @@ div#box div#box-in {
     position: fixed;
     background-color: rgba(255,255,255, 1);
     overflow: hidden;
+    width: calc(100vw - 100px);
+    height: calc(100vh - 100px);
 }
 #box-in pre span:hover, #box-in td span:hover, #err-top pre span:hover {
     color: red;

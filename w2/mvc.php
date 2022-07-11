@@ -281,6 +281,7 @@ class MVC extends MVC_BASE
     public $body = '';
     public $ob;
     public $is_sub;
+    public $return;
 
     static $vars;
     static $_y = []; # layout vars

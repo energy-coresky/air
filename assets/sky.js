@@ -396,13 +396,13 @@ function dev(addr, pf) {
 }
 
 function box(html, c) {
-    var w = $(window).width() - 100,
-        h = $(window).height() - 100, css, box, el = $('#box-in div.error:eq(0)').get(0);
+    var el = $('#box-in div.error:eq(0)').get(0),
+        h = $(window).height() - 100, css, box, w = $(window).width() - 100;
     switch (c) {
         case 't': css = {backgroundColor:'#005', color:'#7ff', width:w, height:h}; break;
         case 'x': css = {backgroundColor:'#000', color:'#0f0', width:w, height:h}; break;
         case 'e': css = {backgroundColor:'#fff', color:'#000', width:500, height:500}; break;
-        default: css = c || {backgroundColor:'#fff', color:'#111', width:w, height:h}; break;
+        default: css = c || {backgroundColor:'#fff', color:'#111'}; break;
     }
     box = $('#box').click(sky.true).show(); //html(html).
     if (null !== html)

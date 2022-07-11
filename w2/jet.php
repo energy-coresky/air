@@ -8,6 +8,7 @@ class Jet
     private $files = [];
     private $div = '<div style="display:none" id="err-top"></div>';
     private $occupied;
+    private $loop = [];
 
     private static $directive = false;
     private static $custom = [];
@@ -23,7 +24,6 @@ class Jet
     private static $depth = [];
 
     static $tpl = [];
-    static $loop = [];
     static $fn;
 
     static function directive($name, $func = null) {
@@ -40,7 +40,6 @@ class Jet
             Jet::$fn = explode('-', basename($fn), 2)[1];
             $this->occupied = ['k', 'e', 'y'];
         }
-        $this->loop_base = count(Jet::$loop);
         if ($layout) {
             $this->body = $name;
             $name = '_' == $layout[0] ? $layout : "y_$layout";
@@ -72,15 +71,14 @@ class Jet
             array_walk_recursive($jet->parsed, function (&$v, $id) use (&$s) {
                 if (is_string($id)) { # nested @block or @use
                     $pv =& Jet::$ptr[$v];
-                    $px =& Jet::$ptr[$this->x_id];
                     if ($this->u_last) {
                         $pv[5] = Jet::$id;
                         $this->parsed[++Jet::$id] = '';
                     } else {
                         $pv[5] = $this->b_id;
                     }
-                    $pv[3] += $px[3]; # in loop
-                    $pv[4] += $px[4]; # in if
+                    $pv[3] += $this->b_loop; # in loop
+                    $pv[4] += $this->b_if + $this->u_if; # in if
                     return;
                 }
                 if ($this->b_loop)
@@ -132,13 +130,10 @@ class Jet
                 continue;
             }
             $pb =& Jet::$ptr[$id];
-            $this->x_id = $id;
             $this->b_id = $pb[5] ?: $id;
             $this->b_loop = $pb[3];
             $this->b_if = $pb[4];
-            $this->b_is = true;
-            $this->u_if = $this->u_last = false;
-            $this->u_loop = 0;
+            $this->u_if = $this->u_last = 0;
 
             if (isset(Jet::$use[$name])) { # has @use
                 usort(Jet::$use[$name], function ($a, $b) {
@@ -147,32 +142,25 @@ class Jet
                     return $a < $b ? -1 : 1;
                 });
                 $skip = [];
-                foreach (Jet::$use[$name] as $j => $use) { // 2do @inject ?
+                foreach (Jet::$use[$name] as $j => $use) {
                     $pu =& Jet::$ptr[$use[0]];
                     $last_id = $pu[5] ?: $use[0];
                     if (!$this->u_if = $pu[4]) {
                         $skip[] = $j;
                         $jet = $use[1];
-                        $this->x_id = $use[0];
-                        $this->u_loop = $pu[3];
-                        $this->b_is = false;
                     }
                 }
                 if ($this->u_if) { # @use IN IF
                     $set0[] = $bv = '$_b' . $id;
                     $this->u_last = $last_id > $this->b_id;
                     $if = ['else: ?>', $code($name, $jet), '<?php endif'];
-                    for ($j = 0, $cnt = count(Jet::$use[$name]); $j < $cnt; $j++) {
-                        if (in_array($j, $skip))
+                    foreach (Jet::$use[$name] as $k => $use) {
+                        if (in_array($k, $skip))
                             continue;
-                        list ($use_id, $jet) = Jet::$use[$name][$j]; # @use code to add
-                        $this->x_id = $use_id;
-                        $this->b_is = false;
-                        $this->u_loop = Jet::$ptr[$use_id][3];
+                        list ($use_id, $jet) = $use; # @use code to add
                         Jet::$ptr[$use_id][1] = "<?php $bv = $use_id ?>";
                         $if = ["if ($use_id == $bv): ?>", $code($name, $jet), '<?php ', $if];
-                        if ($cnt - 1 != $j)
-                            $if = ['else', $if];
+                        $k == $j or $if = ['else', $if];
                     }
                     if (!$this->u_last) {
                         $pb[1] = ['<?php ', $if, ' ?>'];
@@ -250,7 +238,7 @@ class Jet
     private function fix2(&$str, $loopd = -1) {
         if (is_array($str)) {
             return array_walk_recursive($str, function (&$v) {
-                $this->fix2($v, count(Jet::$loop));
+                $this->fix2($v, count($this->loop));
             });
         }
         $buf = [];
@@ -384,9 +372,9 @@ class Jet
             case 'break':
                 return $arg ? "<?php if ($arg): break; endif ?>" : '<?php break ?>';
             case 'empty':
-                if ('do' == end(Jet::$loop))
+                if ('do' == end($this->loop))
                     throw new Error('Jet: no @empty statement for `do-while`');
-                Jet::$empty[] = $i = count(Jet::$loop) - 1;
+                Jet::$empty[] = $i = count($this->loop) - 1;
                 Jet::$if[count(Jet::$if) - 1] = 1;
                 array_push(Jet::$if, 0);
                 return $this->_loop(true, '') . '<?php if (!' . ($i ? '$_' . (1 + $i) : '$_') . '): ?>';
@@ -540,11 +528,11 @@ class Jet
     }
 
     private function _loop($end, $arg) {
-        $cnt = count(Jet::$loop) - $this->loop_base;
+        $cnt = count($this->loop);
         if ($end) {
             $iv = $cnt - 1 ? '$_' . $cnt : '$_';
             if ('' !== $arg) { # do-while
-                array_pop(Jet::$loop);
+                array_pop($this->loop);
                 return sprintf("<?php $iv++; } while (%s); ?>", preg_match('/^\$e_\w+$/', $arg) ? "\$row = $arg->one()" : $arg);
             } elseif (end(Jet::$empty) == $cnt) {
                 array_pop(Jet::$empty);
@@ -552,11 +540,11 @@ class Jet
                 return '<?php endif ?>';
             }
             array_pop(Jet::$if);
-            return sprintf('<?php %s++; end%s ?>', $iv, array_pop(Jet::$loop));
+            return sprintf('<?php %s++; end%s ?>', $iv, array_pop($this->loop));
         }
         $iv = $cnt ? '$_' . (1 + $cnt) : '$_';
-        if (!$arg) { # do-while
-            Jet::$loop[] = 'do';
+        if ('' === $arg) { # do-while
+            $this->loop[] = 'do';
             return "<?php $iv = 0; do { ?>";
         }
         array_push(Jet::$if, 0);
@@ -569,7 +557,7 @@ class Jet
             $is_foreach = true;
             $arg .= ' as $row'; # eVar style cycle
         }
-        Jet::$loop[] = ($loop = $is_foreach ? 'foreach' : ($is_for ? 'for' : 'while'));
+        $this->loop[] = ($loop = $is_foreach ? 'foreach' : ($is_for ? 'for' : 'while'));
         return "<?php $iv = 0; $loop ($arg): ?>";
     }
 
@@ -599,7 +587,7 @@ class Jet
         $jet = new Jet($tpl);
         $this->files += $jet->files;
         $this->parsed[++Jet::$id] = $jet->parsed;
-        if (count(Jet::$loop))
+        if (count($this->loop))
             $this->fix2($this->parsed[Jet::$id]);
         $this->parsed[++Jet::$id] = '';
         $this->save($red);
@@ -611,7 +599,7 @@ class Jet
         $get_id = function ($name) use ($is_block) {
             $id = ++Jet::$id;
             $this->parsed[$id] = [$name => $id];
-            Jet::$ptr[$id] = [$is_block, &$this->parsed[$id], count(Jet::$depth), count(Jet::$loop), count(Jet::$if), 0];
+            Jet::$ptr[$id] = [$is_block, &$this->parsed[$id], count(Jet::$depth), count($this->loop), count(Jet::$if), 0];
             $this->parsed[++Jet::$id] = '';
             return $id;
         };
