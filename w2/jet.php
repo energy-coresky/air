@@ -6,18 +6,15 @@ class Jet
 {
     private $parsed = [];
     private $files = [];
-    private $div = '<div style="display:none" id="err-top"></div>';
-    private $occupied;
     private $loop = [];
 
-    private static $directive = false;
     private static $custom = [];
     private static $verb;
     private static $inc;
+    private static $block;
     private static $use;
     private static $ptr;
     private static $top;
-    private static $block;
     private static $id;
     private static $empty = [];
     private static $if = [];
@@ -31,14 +28,15 @@ class Jet
     }
 
     function __construct($name, $layout = false, $fn = false, $return = null) {
-        global $sky;
-
         if ($fn) {
             Jet::$block = Jet::$use = Jet::$ptr = Jet::$inc = Jet::$verb = [];
             $this->parsed[Jet::$id = 1] = '';
             Jet::$top =& $this->parsed[1];
             Jet::$fn = explode('-', basename($fn), 2)[1];
             $this->occupied = ['k', 'e', 'y'];
+            if (MVC::$mc) # not console!
+                MVC::handle('jet_c');
+            Plan::_rq('app/jet.php');
         }
         if ($layout) {
             $this->body = $name;
@@ -46,12 +44,6 @@ class Jet
         }
         if (is_string($name) && strpos($name, '.'))
             list($name, $marker) = explode('.', $name, 2);
-        if (!Jet::$directive) {
-            if (MVC::$mc) # not console!
-                MVC::handle('jet_c');
-            Plan::_rq('app/jet.php');
-            Jet::$directive = true;
-        }
 
         $this->parsed[++Jet::$id] = '';
         $this->parse($name, $marker ?? '');
@@ -64,9 +56,9 @@ class Jet
             return $a[0] > $b[0] ? 1 : -1;
         });
         $tail = false;
-        $set0 = $this->first = $this->second = [];
+        $set0 = $this->first = $second = [];
 
-        $sort = function ($name, $mode = false) {
+        $ok = function ($name, $mode = false) {
             foreach (Jet::$use[$name] as $k => $use) {
                 $pu =& Jet::$ptr[$use[0]];
                 if ($pu[2] && !$pu[5]) {
@@ -79,22 +71,17 @@ class Jet
         };
         foreach (Jet::$block as $name => $block) {
             $id = $block[0];
-            if ($id && !Jet::$ptr[$id][2]) // root block
+            if ($id && !Jet::$ptr[$id][2]) # root block
                 $this->first[] = $name;
         }
-        while ($this->first || $this->second) {
+        while ($this->first || $second) {
             while ($this->first) {
-                $name = array_shift($this->first);
-                if (!isset(Jet::$use[$name]) || $sort($name)) {
-                    $this->block($name, $tail, $set0);
-                } else {
-                    $this->second[] = $name;
-                }
+                $no_use = !isset(Jet::$use[$name = array_shift($this->first)]);
+                $no_use || $ok($name) ? $this->block($name, $tail, $set0, $no_use) : ($second[] = $name);
             }
-            if ($this->second) {
-                $name = array_shift($this->second);
-                $sort($name, true);
-                $this->block($name, $tail, $set0);
+            if ($second) {
+                $ok($name = array_shift($second), true);
+                $this->block($name, $tail, $set0, false);
             }
         }
 
@@ -126,7 +113,7 @@ class Jet
             $out .= $tail ? '<?php echo implode("", $_ob); return "";' : "<?php return '';";
         }
 
-        return strtr($this->fix1($out), Jet::$verb) . "\n";
+        return strtr(Rare::optimize($out), Jet::$verb) . "\n";
     }
 
     private function code($name, $jet) {
@@ -145,15 +132,14 @@ class Jet
                 }
                 $pv[3] += $this->b_loop; # in loop
                 $pv[4] += $this->b_if + $this->u_if; # in if
-                return;
+            } else {
+                if ($this->b_loop)
+                    $this->correct($v, $this->b_loop);
+                $s .= $v;
             }
-            if ($this->b_loop)
-                $this->fix2($v, $this->b_loop);
-            $s .= $v;
         });
 
-        $pf = $jet->pf;
-        if ($pf && ' ' == $pf[1]) { # space
+        if (($pf = $jet->pf) && ' ' == $pf[1]) { # space
             if ($closure = strpos($s, '?'))
                 $closure = preg_match("/\\$\w+/s", $s);
             $s = $closure ? '$_a = SKY::$vars; ' : '';
@@ -182,95 +168,70 @@ class Jet
         return $jet->parsed;
     }
 
-    private function block($name, &$tail, &$set0) {
+    private function block($name, &$tail, &$set0, $no_use) {
         list ($id, $jet) = Jet::$block[$name];
         $pb =& Jet::$ptr[$id];
         $this->b_id = $pb[5] ?: $id;
         $this->b_loop = $pb[3];
         $this->b_if = $pb[4];
         $this->u_if = $this->u_last = 0;
+        if ($no_use)
+            return $pb[1] = $this->code($name, $jet);
 
-        if (isset(Jet::$use[$name])) { # has @use
-            usort(Jet::$use[$name], function ($a, $b) {
-                $a = Jet::$ptr[$a[0]][5] ?: $a[0];
-                $b = Jet::$ptr[$b[0]][5] ?: $b[0];
-                return $a > $b ? 1 : -1;
-            });
-            $skip = [];
-            foreach (Jet::$use[$name] as $j => $use) {
-                $pu =& Jet::$ptr[$use[0]];
-                $last_id = $pu[5] ?: $use[0];
-                if (!$this->u_if = $pu[4]) {
-                    $skip[] = $j;
-                    $jet = $use[1];
-                }
+        usort(Jet::$use[$name], function ($a, $b) {
+            $a = Jet::$ptr[$a[0]][5] ?: $a[0];
+            $b = Jet::$ptr[$b[0]][5] ?: $b[0];
+            return $a > $b ? 1 : -1;
+        });
+        $skip = [];
+        foreach (Jet::$use[$name] as $j => $use) {
+            $pu =& Jet::$ptr[$use[0]];
+            $last_id = $pu[5] ?: $use[0];
+            if (!$this->u_if = $pu[4]) {
+                $skip[] = $j;
+                $jet = $use[1];
             }
-            if ($this->u_if) { # @use IN IF
-                $set0[] = $bv = '$_b' . $id;
-                $this->u_last = $last_id > $this->b_id;
-                $if = ['else: ?>', $this->code($name, $jet), '<?php endif'];
-                foreach (Jet::$use[$name] as $k => $use) {
-                    if (in_array($k, $skip))
-                        continue;
-                    list ($use_id, $jet) = $use; # @use code to add
-                    Jet::$ptr[$use_id][1] = "<?php $bv = $use_id ?>";
-                    $if = ["if ($use_id == $bv): ?>", $this->code($name, $jet), '<?php ', $if];
-                    $k == $j or $if = ['else', $if];
-                }
-                if (!$this->u_last) { # @block last
-                    $pb[1] = ['<?php ', $if, ' ?>'];
-                    return;
-                }
-                if ($this->b_loop)
-                    $set0[] = $iv = '$_i' . $id;
-                $ob = sprintf('$_ob[%s]', $this->b_loop ? "\"$id-$iv\"" : -$id);
-                $pb[1] = "<?php \$_ob[] = ob_get_clean(); $ob = ''; "
-                    . 'ob_start()' . ($this->b_loop ? "; $iv++ ?>" : ' ?>');
-                $if = ['ob_start(); ', $if, "; $ob = ob_get_clean();"];
-                if (!$tail) {
-                    $tail = true;
-                    $this->save("<?php \$_ob[] = ob_get_clean()");
-                }
-                if ($this->b_loop) {
-                    $this->save(";\nfor ($iv = 0; isset($ob); $iv++): ");
-                } else {
-                    $this->save($this->b_if ? ";\nif (isset($ob)): " : ";\n");
-                }
-                $this->parsed[++Jet::$id] = $if;
-                $this->parsed[++Jet::$id] = $this->b_loop ? ' endfor' : ($this->b_if ? ' endif' : '');
-                return;
-            } # @use IN IF
-        } # has @use
-        $pb[1] = $this->code($name, $jet);
-    }
-
-    private function save($in) {
-        $this->parsed[Jet::$id] .= $in;
-        return '';
-    }
-
-    private function fix1($in) {
-        $str = $ct = ''; /* optimize `?><?php` in parsed templates */
-        $buf = [];      // 2do: $_, $_2.. delete if not used !
-        foreach (token_get_all($in) as $tn) {
-            is_array($tn) or $tn = [0, $tn];
-            if ($tn[0] == T_OPEN_TAG && $ct) {
-                array_pop($buf);
-                T_WHITESPACE != end($buf)[0] or array_pop($buf);
-                $tn = [0, in_array(end($buf)[1], [':', ';']) ? "\n" : ";\n"];
-            }
-            $buf[] = $tn;
-            $ct = T_CLOSE_TAG == $tn[0];
         }
-        while ($buf)
-            $str .= array_shift($buf)[1];
-        return $str;
+        if (!$this->u_if)
+            return $pb[1] = $this->code($name, $jet);
+
+        $set0[] = $bv = '$_b' . $id;
+        $this->u_last = $last_id > $this->b_id;
+        $if = ['else: ?>', $this->code($name, $jet), '<?php endif'];
+        foreach (Jet::$use[$name] as $k => $use) {
+            if (in_array($k, $skip))
+                continue;
+            list ($use_id, $jet) = $use; # @use code to add
+            Jet::$ptr[$use_id][1] = "<?php $bv = $use_id ?>";
+            $if = ["if ($use_id == $bv): ?>", $this->code($name, $jet), '<?php ', $if];
+            $k == $j or $if = ['else', $if];
+        }
+        if (!$this->u_last) # @block last
+            return $pb[1] = ['<?php ', $if, ' ?>'];
+
+        if ($this->b_loop)
+            $set0[] = $iv = '$_i' . $id;
+        $ob = sprintf('$_ob[%s]', $this->b_loop ? "\"$id-$iv\"" : -$id);
+        $pb[1] = "<?php \$_ob[] = ob_get_clean(); $ob = ''; "
+            . 'ob_start()' . ($this->b_loop ? "; $iv++ ?>" : ' ?>');
+        $if = ['ob_start(); ', $if, "; $ob = ob_get_clean();"];
+        if (!$tail) {
+            $tail = true;
+            $this->parsed[Jet::$id] .= "<?php \$_ob[] = ob_get_clean()";
+        }
+        if ($this->b_loop) {
+            $this->parsed[Jet::$id] .= ";\nfor ($iv = 0; isset($ob); $iv++): ";
+        } else {
+            $this->parsed[Jet::$id] .= $this->b_if ? ";\nif (isset($ob)): " : ";\n";
+        }
+        $this->parsed[++Jet::$id] = $if;
+        $this->parsed[++Jet::$id] = $this->b_loop ? ' endfor' : ($this->b_if ? ' endif' : '');
     }
 
-    private function fix2(&$str, $loopd = -1) {
-        if (is_array($str)) {
+    private function correct(&$str, $loopd = -1) {
+        if (is_array($str)) {      // 2do: $_, $_2.. delete if not used !
             return array_walk_recursive($str, function (&$v) {
-                $this->fix2($v, count($this->loop));
+                $this->correct($v, count($this->loop));
             });
         }
         $buf = [];
@@ -320,25 +281,23 @@ class Jet
             $offset = $this->_block($pos, $in, false);
         while (preg_match('/^(.*?)(~|@)([a-z]+)(.*)$/s', $in, $m)) {
             if ($m[1] && '~' == $m[1][-1]) {
-                $this->save($this->echos(substr($m[1], 0, -1) . $m[2] . $m[3]));
+                $this->parsed[Jet::$id] .= $this->echos(substr($m[1], 0, -1) . $m[2] . $m[3]);
                 $in = $m[4];
             } else {
-                $this->save($this->echos($m[1]));
+                $this->parsed[Jet::$id] .= $this->echos($m[1]);
                 $in = substr($m[4], strlen($br = Rare::bracket($m[4])));
                 $code = $this->statements($m[3], $br ? substr($br, 1, -1) : '', '~' == $m[2], $in, $br);
-                $this->save(null === $code ? $m[2] . $m[3] . $br : $code);
+                $this->parsed[Jet::$id] .= null === $code ? $m[2] . $m[3] . $br : $code;
             }
         }
-        $this->save($this->echos($in));
+        $this->parsed[Jet::$id] .= $this->echos($in);
         $inline or array_pop(Jet::$tpl);
     }
 
     private function statements($tag, $arg, $end, &$str, &$br) {
-        $q = function ($pattern, $arg) {
-            return sprintf("<?php $pattern ?>", in_array(@$arg[0], [false, "'", '"'])
-                ? $arg
-                : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"'
-            );
+        $q = function ($p, $arg) {
+            $ok = '' !== $arg && in_array($arg[0], ["'", '"']);
+            return sprintf("<?php $p ?>", $ok ? $arg : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"');
         };
         switch ($tag) {
             case 'php':
@@ -388,7 +347,6 @@ class Jet
             case 'dump':
                 return "<?php echo '<pre>' . html(print_r($arg, true)) . '</pre>' ?>";
             case 'mime':
-                $this->div = '';
                 return $q('MVC::doctype(%s)', $arg);
             case 'href':
                 return 'href="javascript:;" onclick="' . $this->echos($arg) . '"';
@@ -605,13 +563,14 @@ class Jet
     private function _inc($tpl) {
         $red = '';
         if ('*' == $tpl) {
-            $this->save($this->div);
-            if ('_' === $this->body)
-                return $this->save('<?php echo $sky->ob ?>');
+            if ('_' === $this->body) {
+                $this->parsed[Jet::$id] .= '<?php echo $sky->ob ?>';
+                return '';
+            }
             $tpl = $this->body;
         } elseif (DEV && 'r_' == substr($tpl, 0, 2)) { # red label
             $red = '<?php if ($sky->s_red_label): ?>' . tag("@inc($tpl)", 'class="red_label"');
-            $this->save($red . '<?php else: ?>');
+            $this->parsed[Jet::$id] .= $red . '<?php else: ?>';
             $red = '<?php endif ?>';
         }
 
@@ -620,9 +579,8 @@ class Jet
         $this->files += $jet->files;
         $this->parsed[++Jet::$id] = $jet->parsed;
         if (count($this->loop))
-            $this->fix2($this->parsed[Jet::$id]);
-        $this->parsed[++Jet::$id] = '';
-        $this->save($red);
+            $this->correct($this->parsed[Jet::$id]);
+        $this->parsed[++Jet::$id] = $red;
         return '';
     }
 
@@ -648,7 +606,7 @@ class Jet
             $exist = isset(Jet::$block[$name]);
             if ($exist && Jet::$block[$name][0])
                 throw new Error("Jet: duplicated @block($name)");
-            Jet::$block[$name][0] = $id = $get_id($name);
+            Jet::$block[$name][0] = $get_id($name);
             if ($exist)
                 return ''; // @block(..) already overloaded by #use(..)
             $type = 2;
@@ -671,7 +629,7 @@ class Jet
         } else {
             $this->test_cycled($tpl, $is_block ? '@block' : ($type ? '#use' : '@use'));
         }
-        Jet::$depth[] = $id ?? $name;
+        Jet::$depth[] = 1;
         $jet = new Jet($tpl);
         $jet->pf = $pf;
         $this->parsed[++Jet::$id] = '';

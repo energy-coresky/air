@@ -64,6 +64,23 @@ class Rare
         return '';
     }
 
+    static function optimize($in) {
+        $ct = false; /* optimize `?><?php` in parsed templates */
+        $buf = [];
+        foreach (token_get_all($in) as $tn) {
+            is_array($tn) or $tn = [0, $tn];
+            if ($tn[0] == T_OPEN_TAG && $ct) {
+                array_pop($buf);
+                T_WHITESPACE != end($buf)[0] or array_pop($buf);
+                $tn = [0, in_array(end($buf)[1], [':', ';']) ? "\n" : ";\n"];
+            }
+            $buf[] = $tn;
+            $ct = T_CLOSE_TAG == $tn[0];
+        }
+        for ($str = ''; $buf; $str .= array_shift($buf)[1]);
+        return $str;
+    }
+
     static function cache($name = false, $func = '', $ttl = -3) {
         global $sky;
         static $cache = [];
