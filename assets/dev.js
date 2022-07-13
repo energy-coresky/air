@@ -2,6 +2,10 @@
 sky.d.top = function(tr) {
 };
 
+sky.d.close_box = function() {
+    $(window.parent.document.getElementById('box')).find('.esc a:first').click();
+};
+
 sky.d.drop_cache = function(r, el) {
     var s = $(el).html(), ok = 'OK' == r;
     $(el).html(ok ? 'Dropped OK' : r).css({background: ok ? '#dfd' : '#fdd'});

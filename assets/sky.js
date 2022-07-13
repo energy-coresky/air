@@ -393,6 +393,7 @@ function dev(addr, pf) {
     if ($.isArray(addr))
         return ajax(addr, {}, 'v-body');
     box('<iframe src="' + sky.home + addr + '" style="width:100%; height:100%;vertical-align:middle;border:0;"></iframe>');
+    $('#box a:first').hide();
 }
 
 function box(html, c) {

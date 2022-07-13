@@ -320,7 +320,8 @@ class Jet
 
         switch ($tag) {
             case 'inc':
-                return $this->_inc('' === $arg ? '*' : $arg);
+                $this->_inc('' === $arg ? '*' : $arg);
+                return '';
             case 'block':
             case 'use':
                 return !$arg ? null : $this->_block($arg, $str, 'block' == $tag);
@@ -563,10 +564,8 @@ class Jet
     private function _inc($tpl) {
         $red = '';
         if ('*' == $tpl) {
-            if ('_' === $this->body) {
-                $this->parsed[Jet::$id] .= '<?php echo $sky->ob ?>';
-                return '';
-            }
+            if ('_' === $this->body)
+                return $this->parsed[Jet::$id] .= '<?php echo $sky->ob ?>';
             $tpl = $this->body;
         } elseif (DEV && 'r_' == substr($tpl, 0, 2)) { # red label
             $red = '<?php if ($sky->s_red_label): ?>' . tag("@inc($tpl)", 'class="red_label"');
@@ -581,7 +580,6 @@ class Jet
         if (count($this->loop))
             $this->correct($this->parsed[Jet::$id]);
         $this->parsed[++Jet::$id] = $red;
-        return '';
     }
 
     private function _block($arg, &$str, $is_block) {
