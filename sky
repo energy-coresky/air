@@ -1,23 +1,15 @@
 #!/usr/bin/env php
 <?php
 
-if (1 == $argc) {
-    echo <<<DOC
+if (1 == $argc)
+    $argv = [0, 'commands', <<<DOC
 Usage: sky command [param ...]
 Commands are:
-  s - run PHP web-server
-  d - list dirs (from current dir)
-  php - lint PHP files (from current dir)
-
-  m [id] - read tmemo cell from memory
-  c - Reparse controllers list
-  cache - Drop all cache
-  a - show actions
-  g - check globals
-
-DOC;
-    exit;
-}
+  s - Run PHP web-server
+  d - List dirs (from current dir)
+  php - Lint PHP files (from current dir)
+DOC
+];
 
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
@@ -40,7 +32,6 @@ if ($d || 'php' == $argv[1]) {
             return false;
         return strpos(file_get_contents($fn), 'DIR_M');
     };
-
     $m = basename(__DIR__);
     do {
         if ($test($cd = getcwd(), $m) || $test($cd, $m = 'main'))
