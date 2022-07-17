@@ -102,7 +102,7 @@ class DEV
             DEV::$vars[] = [$i++, "\$$k", $v];
         }
     }
-    
+
     static function ed_sql($sql, $ts, $depth, $err) {
         static $i = 1;
         $j = 0;

@@ -496,7 +496,7 @@ function a($anchor, $href = null, $x = '') {
     return sprintf('<a href="%s"%s>%s</a>', $href, $x ? ' ' . trim($x) : '', $anchor);
 }
 
-function js($x = '', $p2 = true) {
+function js($x = '') {
     global $sky;
 
     if (is_string($x))
@@ -508,11 +508,11 @@ function js($x = '', $p2 = true) {
     return $js;
 }
 
-function css($x = '', $p2 = 'screen') {
+function css($x = '') {
     global $sky;
 
     if (is_string($x))
-        return '<style>' . $x . ($x && $p2 ? '</style>' : '');
+        return '<style>' . $x . '</style>';
     $pref = ($sky->surl ? PATH : '') . ($sky->s_statp ?: '1000p');
     $css = '';
     foreach ($x as $src)

@@ -389,7 +389,7 @@ class MVC extends MVC_BASE
                         echo DEV ? a('P', PROTO . '://' . _PUBLIC) : sprintf(span_r, 'P');
                     if (DEV) {
                         echo '_venus' == $sky->d_last_page
-                            ? a('V', PATH . '_venus')
+                            ? a('V', PATH . '_venus?ware=' . rawurlencode(URI))
                             : a('D', ["dev('" . ($sky->d_last_page ?: '_dev') . "')"]);
                     }
                     echo a('A', PATH . $link);

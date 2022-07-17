@@ -1,3 +1,10 @@
+
+*,
+::before,
+::after {
+  box-sizing: border-box;
+}
+
 .bg-wx {
     width: calc(100% - 10px);
     padding-left: 10px;
@@ -148,7 +155,7 @@ a[active].inner-menu {
     font-size:16px;
     font-weight:bold;
     display: inline-flex;
-    width: calc(100% - 23px);
+    width: 100%;
 }
 .other-info {
     padding:12px;

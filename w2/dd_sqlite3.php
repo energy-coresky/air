@@ -86,6 +86,11 @@ class dd_sqlite3 implements Database_driver
     static function end($par = true) {
     }
 
+    function _xtrace() {
+        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=15) where id=16');
+        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=1) where id=15');
+    }
+
     static function show($what = 'tables') {
         switch ($what) {
             case 'tables': sqlf('@select name from sqlite_master where type ="table" and name not like "sqlite_%"');
@@ -93,16 +98,20 @@ class dd_sqlite3 implements Database_driver
         }
     }
 
-    function _xtrace() {
-        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=15) where id=16');
-        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=1) where id=15');
-    }
-
     function _tables($table = false) {
         $select = 'SELECT name FROM sqlite_master WHERE type = "table" AND name';
         if ($table)
             return (bool)sqlf("+$select LIKE %s", $this->pref . $table);
         return sqlf("@$select NOT LIKE 'sqlite_%'");
+    }
+
+    function _struct($table = false) {
+        $data = $this->sql(1, '@pragma table_info($_`)', $table);
+        $out = [];
+        array_walk($data, function(&$v, $k) use (&$out) {
+            $out[$v[0]] = $v[1]; # default value or empty string
+        });
+        return $out;
     }
 
     function _rows_count($table) {

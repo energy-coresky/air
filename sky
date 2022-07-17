@@ -8,7 +8,7 @@ Commands are:
   s - run PHP web-server
   d - list dirs (from current dir)
   php - lint PHP files (from current dir)
-  jet - lint Jet files
+
   m [id] - read tmemo cell from memory
   c - Reparse controllers list
   cache - Drop all cache
@@ -33,24 +33,27 @@ if ($d || 'php' == $argv[1]) {
 } elseif ('s' == $argv[1]) {
     system("php -S localhost:" . ($argv[2] ?? 8888));
 } else {
+
     define('DIR_R', getcwd());
-    $dir_m = 'main';
+    $test = function ($cd, $m) {
+        if (!is_file($fn = "$cd/$m/conf.php"))
+            return false;
+        return strpos(file_get_contents($fn), 'DIR_M');
+    };
+
+    $m = basename(__DIR__);
     do {
-        $dir = getcwd();
-        if ($found = is_file("$dir_m/gate.php") && is_dir('var'))
+        if ($test($cd = getcwd(), $m) || $test($cd, $m = 'main'))
             break;
-        $dir_m = basename($dir);
+        $m = basename($cd);
         chdir('..');
-    } while($dir != getcwd());
+        if ($cd == getcwd())
+            exit("SKY application not found\n");
+    } while(true);
 
-    if (!$found)
-        exit("SKY application not found\n");
-    define('DIR', $dir);
-    define('DIR_M', $dir_m);
-    require "$dir_m/conf.php";
-
-    $sky  = new SKY;
-    $sky->load();
+    define('DIR', $cd);
+    require "$m/conf.php";
+    $sky = new SKY;
     new Console($argv);
 }
 

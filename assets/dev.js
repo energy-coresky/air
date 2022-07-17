@@ -81,6 +81,9 @@ $(function() {
     });*/
 
     //if ('_trace' == sky.a._0)
-        sky.d.trace();
+    sky.d.trace();
 
+    sky.key[27] = function() { // Escape
+        sky.d.close_box();
+    };
 });
