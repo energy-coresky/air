@@ -20,6 +20,8 @@ class Console
         echo SKY::CORE . " (current)\n" . implode(' ', $v) . "\nCreate new? [n] ";
         $q = trim(fgets(STDIN));
         chdir(DIR_S);
+        if ('y' == strtolower($q))
+            file_put_contents('sky.php', str_replace(SKY::CORE, implode(' ', $v), file_get_contents('sky.php')));
         echo "\n>git status\n";
         system('git status');
         echo 'Commit text [tiny fix] ';
