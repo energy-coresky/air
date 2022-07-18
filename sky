@@ -2,14 +2,11 @@
 <?php
 
 if (1 == $argc)
-    $argv = [0, 'commands', <<<DOC
-Usage: sky command [param ...]
-Commands are:
-  s - Run PHP web-server
-  d - List dirs (from current dir)
-  php - Lint PHP files (from current dir)
-DOC
-];
+    $argv = [0, 'commands', "Usage: sky command [param ...]\nCommands are:\n", [
+        's' => 'Run PHP web-server',
+        'd' => 'List dirs (from current dir)',
+        'php' => 'Lint PHP files (from current dir)',
+    ]];
 
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
@@ -22,10 +19,11 @@ if ($d || 'php' == $argv[1]) {
         foreach($files as $one)
             system("php -l $one");
     }
+
 } elseif ('s' == $argv[1]) {
     system("php -S localhost:" . ($argv[2] ?? 8888));
-} else {
 
+} else {
     define('DIR_R', getcwd());
     $test = function ($cd, $m) {
         if (!is_file($fn = "$cd/$m/conf.php"))
