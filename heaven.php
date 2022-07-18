@@ -50,6 +50,7 @@ class HEAVEN extends SKY
         define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
         define('SNAME', $_SERVER['SERVER_NAME']);
+        define('PORT', 80 == $_SERVER['SERVER_PORT'] ? '' : ':' . $_SERVER['SERVER_PORT']);
     }
 
     private function extra_file($sname) {

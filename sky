@@ -21,7 +21,8 @@ if ($d || 'php' == $argv[1]) {
     }
 
 } elseif ('s' == $argv[1]) {
-    system("php -S localhost:" . ($argv[2] ?? 8888));
+    system('explorer "http://localhost:' . ($argv[2] ?? 8888) . '"');
+    system("php -S localhost:" . ($argv[2] ?? 8888) . ' index.php');
 
 } else {
     define('DIR_R', getcwd());

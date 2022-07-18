@@ -22,7 +22,7 @@ class Root
                     'Default site title' => $sky->s_title,
                     'Primary configuration' => sprintf('DEV = %d, DEBUG = %d, ENC = %s, PHPDIR = %s', DEV, DEBUG, ENC, PHP_BINDIR),
                     'System' => PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a'),
-                    'Server IP' => $_SERVER['SERVER_ADDR'],
+                    'Server IP' => $_SERVER['SERVER_ADDR'] ?? '::1',
                     'Server localtime' => $ltime . ' ' . ($sky->date(NOW) . ' ' == $ltime ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
                     'Server uptime' => $utime,    # $_exec('uptime')
                     'Zend engine version:' => zend_version(),

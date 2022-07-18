@@ -52,7 +52,7 @@ class standard_c extends Controller
             #if ('WINNT' == PHP_OS)
             #    $ary += ['adm?get_dev' => 'Open DEV.SKY.'];
             $sky->k_static = [[], ["~/dev.js"], ["~/dev.css"]];
-            defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PATH);
+            defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             return $this->_y + [
                 'tx' => '_trace' == $sky->_0 ? URI : '_x0',
                 'tasks' => [
