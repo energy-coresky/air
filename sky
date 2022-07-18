@@ -1,12 +1,13 @@
 #!/usr/bin/env php
 <?php
 
+$usage = [0, 'commands', "Usage: sky command [param ...]\nCommands are:\n", [
+    's' => 'Run PHP web-server',
+    'd' => 'List dirs (from current dir)',
+    'php' => 'Lint PHP files (from current dir)',
+]];
 if (1 == $argc)
-    $argv = [0, 'commands', "Usage: sky command [param ...]\nCommands are:\n", [
-        's' => 'Run PHP web-server',
-        'd' => 'List dirs (from current dir)',
-        'php' => 'Lint PHP files (from current dir)',
-    ]];
+    $argv = $usage;
 
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
@@ -26,10 +27,13 @@ if ($d || 'php' == $argv[1]) {
 
 } else {
     define('DIR_R', getcwd());
-    $test = function ($cd, $m) {
-        if (!is_file($fn = "$cd/$m/conf.php"))
-            return false;
-        return strpos(file_get_contents($fn), 'DIR_M');
+    $found = [];
+    $test = function ($cd, $m) use (&$found) {
+        $app = is_file($fn = "$m/conf.php") && strpos(file_get_contents($fn), 'DIR_M');
+        $git = is_dir('.git');
+        $ware = is_file('conf.php') && strpos(file_get_contents('conf.php'), '$plans');
+        $found = [$app, $git, $ware];
+        return $app || $git || $ware;
     };
     $m = basename(__DIR__);
     do {
@@ -37,14 +41,22 @@ if ($d || 'php' == $argv[1]) {
             break;
         $m = basename($cd);
         chdir('..');
-        if ($cd == getcwd())
-            exit("SKY application not found\n");
+        if ($cd == getcwd()) {
+            chdir(DIR_R);
+            break;
+        }
     } while(true);
 
-    define('DIR', $cd);
-    require "$m/conf.php";
-    $sky = new SKY;
-    new Console($argv);
+    if ($found[0]) {
+        define('DIR', $cd);
+        require "$m/conf.php";
+        $sky = new SKY;
+    } else {
+        define('DIR_S', __DIR__);
+        date_default_timezone_set('Europe/Kiev');
+        require __DIR__ . '/w2/console.php';
+    }
+    new Console($argv, $found);
 }
 
 echo "\n";
