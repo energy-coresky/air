@@ -4,22 +4,25 @@ class Console
 {
     function __construct($argv, $found) {
         global $sky, $usage;
+
         $this->git = 'new CORESKY version';
-        if ($na = $found[1] && 'air' != basename(getcwd()))
+        if ($ns = $found[1] && 'air' != basename(getcwd()))
             $this->git = $found[2] ? "ware `" . basename(getcwd()) . "`" : 'repository';
+        $this->git = $usage[3] + ['master' => "Push $this->git to remote origin master"];
+
         if ($found[0] && 'master' != $argv[1]) {
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
                 $sky->load();
             return call_user_func_array([$this, "_$argv[1]"], array_slice($argv, 2));
         } elseif ('master' == $argv[1]) {
-            return $this->_master(!$na);
+            return $this->_master(!$ns);
         }
-        $ary = $usage[3] + ['master' => "Push $this->git to remote origin master"];
+
         if ('commands' != $argv[1])
             echo "\nCommand `$argv[1]` not found\n\n";
-        print "$usage[2]  " . implode("\n  ", array_map(function($k, $v) {
+        echo "$usage[2]  " . implode("\n  ", array_map(function($k, $v) {
             return str_pad($k, 15, ' ') . $v;
-        }, array_keys($ary), $ary));
+        }, array_keys($this->git), $this->git));
     }
 
     function __call($name, $args) {
@@ -37,7 +40,7 @@ class Console
             if ($s = $v->getDocComment())
                 $ary[($i > $cnt ? 'app ' : '') . substr($v->name, 1)] = trim($s, "*/ \n\r");
         });
-        $ary += ['master' => "Push $this->git to remote origin master"];
+        $ary += $this->git;
         ksort($ary);
         echo "$etc  " . array_join($ary, function ($k, $v) {
             return str_pad($k, 15, ' ') . $v;
@@ -49,20 +52,21 @@ class Console
             chdir(DIR_S);
         echo "\n>git remote get-url origin\n";
         system('git remote get-url origin');
-        echo "\n";
         if ($air) {
             if (!preg_match("/'(\d+\.\d+[^']+? energy)'/s", $php = file_get_contents('sky.php'), $m))
                 throw new Error('Wrong preg_match');
             $v = explode(' ', $m[1]);
             $v[0] += 0.001;
             $v[1] = date('c');
-            echo $m[1] . " (current)\n" . implode(' ', $v) . "\nCreate new? [n] ";
+            echo "\n$m[1] (current)\n" . implode(' ', $v) . "\nCreate new? [n] ";
             $q = trim(fgets(STDIN));
             if ('y' == strtolower($q))
                 file_put_contents('sky.php', str_replace($m[1], implode(' ', $v), $php));
         }
         echo "\n>git status\n";
-        system('git status');
+        $line = system('git status');
+        if ('nothing to commit, working tree clean' == trim($line))
+            return;
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
         echo "\n>git add *\n";
