@@ -2,48 +2,58 @@
 
 class Console
 {
-    function __construct($argv, $found) {
+    static $d;
+
+    function __construct($argv = [], $found = []) {
         global $sky;
 
-        $this->found = $found + [3 => $ns = $found[1] && 'air' != basename(getcwd())];
+        if ('Console' != get_class($this))
+            return $argv && call_user_func_array([$this, $argv], $found);
+
+        self::$d = $found + [3 => $ns = $found[1] && 'air' != basename(getcwd())];
 
         if ($found[0] && 'master' != $argv[1]) {
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
                 $sky->load();
-            return call_user_func_array([$this, "_$argv[1]"], array_slice($argv, 2));
+            return call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
         } elseif ('master' == $argv[1] && ($ns || is_dir(DIR_S . '/.git'))) {
-            return $this->_master(!$ns);
+            return $this->master(!$ns);
         }
 
         $this->__call("_$argv[1]", []);
     }
 
     function __call($name, $args) {
-        if ('_app' == $name && $this->found[0] && class_exists('App'))
-            return new App($args);
+        if ('c_app' == $name && self::$d[0] && class_exists('App'))
+            return new App(array_shift($args), $args);
 
-        if ('_' != $name)
-            echo "\nCommand `" . substr($name, 1) . "` not found\n\n";
+        if ('c_' != $name) {
+            echo "\nCommand `";
+            echo 'Console' != get_class($this) ? "app $name" : substr($name, 2);
+            echo "` not found\n\n";
+        }
 
         $ary = [
             's' => 'Run PHP web-server',
             'd' => 'List dirs (from current dir)',
             'php' => 'Lint PHP files (from current dir)',
         ];
-        if ($this->found[3] || is_dir(DIR_S . '/.git')) {
+        if (self::$d[3] || is_dir(DIR_S . '/.git')) {
             $repo = 'new CORESKY version';
-            if ($this->found[3])
-                $repo = $this->found[2] ? "ware `" . basename(getcwd()) . "`" : 'repository';
+            if (self::$d[3])
+                $repo = self::$d[2] ? "ware `" . basename(getcwd()) . "`" : 'repository';
             $ary += ['master' => "Push $repo to remote origin master"];
         }
-        if ($this->found[0]) {
-            $m = (new ReflectionObject($this))->getMethods(ReflectionMethod::IS_PUBLIC);
+        if (self::$d[0]) {
+            $m = (new ReflectionClass('Console'))->getMethods(ReflectionMethod::IS_PUBLIC);
             $cnt = count($m);
             if (is_file(DIR_M . '/w3/app.php'))
-                $m = array_merge($m, (new ReflectionObject(new App))->getMethods(ReflectionMethod::IS_PUBLIC));
+                $m = array_merge($m, (new ReflectionClass('App'))->getMethods(ReflectionMethod::IS_PUBLIC));
             array_walk($m, function ($v, $i) use (&$ary, $cnt) {
+                if ($i >= $cnt && 'c_' == substr($v->name, 0, 2))
+                    return;
                 if ($s = $v->getDocComment())
-                    $ary[($i > $cnt ? 'app ' : '') . substr($v->name, 1)] = trim($s, "*/ \n\r");
+                    $ary[($i >= $cnt ? 'app ' : '') . substr($v->name, $i >= $cnt ? 0 : 2)] = trim($s, "*/ \n\r");
             });
         }
         ksort($ary);
@@ -53,7 +63,7 @@ class Console
         }, array_keys($ary), $ary));
     }
 
-    function _master($air) {
+    function master($air) {
         if ($air)
             chdir(DIR_S);
         echo "\n>git remote get-url origin\n";
@@ -84,24 +94,24 @@ class Console
     }
 
     /** Read tmemo cell from $_memory */
-    function _m($id = 3, $unhtml = false) {
+    function c_m($id = 3, $unhtml = false) {
         $s = sqlf('+select tmemo from $_memory where id=%d', $id);
         echo !$unhtml ? $s : (1 == $unhtml ? unhtml($s) : unhtml(unhtml($s)));
     }
 
     /** Check globals */
-    function _g() {
+    function c_g() {
         (new Globals)->dirs();
     }
 
     /** Show controllers */
-    function _c() {
+    function c_c() {
         echo "Rescanned:\n  " . array_join(Gate::controllers(), ' => ', "\n  ");
         echo "\nFrom SKY::\$plans:\n  " . array_join(SKY::$plans['main']['ctrl'], ' => ', "\n  ");
     }
 
     /** Show top-view actions (routes) */
-    function _a() {
+    function c_a() {
        Gate::$cshow = true;
        foreach (SKY::$plans['main']['ctrl'] as $k => $_) {
            $e = new eVar(DEV::gate($mc = '*' != $k ? "c_$k" : 'default_c'));
@@ -111,23 +121,23 @@ class Console
     }
 
     /** Drop all cache */
-    function _cache() {
+    function c_cache() {
         echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
     }
 
     /** Warm all cache */
-    function _warm() {
+    function c_warm() {
         echo '2do';
     }
 
     /** Execute SQL, example: sky sql "+select 1+1" */
-    function _sql($sql) {
+    function c_sql($sql) {
         $r = sqlf($sql);
         echo 'result: ' . print_r($r, 1);
     }
 
     /** Eval PHP code, example: sky eval "SKY::s('statp','1011p');" */
-    function _eval($php) {
+    function c_eval($php) {
         global $sky;
         eval($php);
     }
