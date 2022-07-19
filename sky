@@ -1,13 +1,8 @@
 #!/usr/bin/env php
 <?php
 
-$usage = [0, 'commands', "Usage: sky command [param ...]\nCommands are:\n", [
-    's' => 'Run PHP web-server',
-    'd' => 'List dirs (from current dir)',
-    'php' => 'Lint PHP files (from current dir)',
-]];
 if (1 == $argc)
-    $argv = $usage;
+    $argv = [0, ''];
 
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {

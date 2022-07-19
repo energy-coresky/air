@@ -3,48 +3,54 @@
 class Console
 {
     function __construct($argv, $found) {
-        global $sky, $usage;
+        global $sky;
 
-        $this->git = 'new CORESKY version';
-        if ($ns = $found[1] && 'air' != basename(getcwd()))
-            $this->git = $found[2] ? "ware `" . basename(getcwd()) . "`" : 'repository';
-        $this->git = $usage[3] + ['master' => "Push $this->git to remote origin master"];
+        $this->found = $found + [3 => $ns = $found[1] && 'air' != basename(getcwd())];
 
         if ($found[0] && 'master' != $argv[1]) {
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
                 $sky->load();
             return call_user_func_array([$this, "_$argv[1]"], array_slice($argv, 2));
-        } elseif ('master' == $argv[1]) {
+        } elseif ('master' == $argv[1] && ($ns || is_dir(DIR_S . '/.git'))) {
             return $this->_master(!$ns);
         }
 
-        if ('commands' != $argv[1])
-            echo "\nCommand `$argv[1]` not found\n\n";
-        echo "$usage[2]  " . implode("\n  ", array_map(function($k, $v) {
-            return str_pad($k, 15, ' ') . $v;
-        }, array_keys($this->git), $this->git));
+        $this->__call("_$argv[1]", []);
     }
 
     function __call($name, $args) {
-        if ('_app' == $name && class_exists('App'))
+        if ('_app' == $name && $this->found[0] && class_exists('App'))
             return new App($args);
-        echo "Command `" . substr($name, 1) . "` not found";
-    }
 
-    function _commands($etc, $ary) {
-        $m = (new ReflectionObject($this))->getMethods(ReflectionMethod::IS_PUBLIC);
-        $cnt = count($m);
-        if (is_file(DIR_M . '/w3/app.php'))
-            $m = array_merge($m, (new ReflectionObject(new App))->getMethods(ReflectionMethod::IS_PUBLIC));
-        array_walk($m, function ($v, $i) use (&$ary, $cnt) {
-            if ($s = $v->getDocComment())
-                $ary[($i > $cnt ? 'app ' : '') . substr($v->name, 1)] = trim($s, "*/ \n\r");
-        });
-        $ary += $this->git;
+        if ('_' != $name)
+            echo "\nCommand `" . substr($name, 1) . "` not found\n\n";
+
+        $ary = [
+            's' => 'Run PHP web-server',
+            'd' => 'List dirs (from current dir)',
+            'php' => 'Lint PHP files (from current dir)',
+        ];
+        if ($this->found[3] || is_dir(DIR_S . '/.git')) {
+            $repo = 'new CORESKY version';
+            if ($this->found[3])
+                $repo = $this->found[2] ? "ware `" . basename(getcwd()) . "`" : 'repository';
+            $ary += ['master' => "Push $repo to remote origin master"];
+        }
+        if ($this->found[0]) {
+            $m = (new ReflectionObject($this))->getMethods(ReflectionMethod::IS_PUBLIC);
+            $cnt = count($m);
+            if (is_file(DIR_M . '/w3/app.php'))
+                $m = array_merge($m, (new ReflectionObject(new App))->getMethods(ReflectionMethod::IS_PUBLIC));
+            array_walk($m, function ($v, $i) use (&$ary, $cnt) {
+                if ($s = $v->getDocComment())
+                    $ary[($i > $cnt ? 'app ' : '') . substr($v->name, 1)] = trim($s, "*/ \n\r");
+            });
+        }
         ksort($ary);
-        echo "$etc  " . array_join($ary, function ($k, $v) {
+        echo "Usage: sky command [param ...]\nCommands are:\n  ";
+        echo implode("\n  ", array_map(function($k, $v) {
             return str_pad($k, 15, ' ') . $v;
-        }, "\n  ");
+        }, array_keys($ary), $ary));
     }
 
     function _master($air) {
