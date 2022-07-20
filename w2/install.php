@@ -248,7 +248,7 @@ class Install
         } elseif (WWW . 'pub' == $path && is_dir($assets = DIR_S . '/assets')) {
             $assets = Rare::list_path($assets, 'is_file');
             foreach ($assets as $one) {
-                $one = WWW . 'pub/' . basename($one);
+                $one = WWW . 'm/' . basename($one);
                 in_array($one, $list) or $list[] = $one;
             }
         }

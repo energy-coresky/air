@@ -130,7 +130,7 @@ class Root
         $TOP = menu($i, $menu, TPL_MENU . ($edit ? '&edit' : '&show'), ' &nbsp; ');
         if ($etc) {
             $char = 'f';
-            $path = WWW . 'pub/etc';
+            $path = WWW . 'm/etc';
             if ($edit) {
                 $_GET['fn'] = str_replace('/', '', $_GET['fn']);
                 $ary = ['etc_file' => '' === $_GET['fn'] ? '' : file_get_contents("$path/$_GET[fn]")];

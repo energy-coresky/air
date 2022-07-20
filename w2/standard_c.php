@@ -51,7 +51,7 @@ class standard_c extends Controller
                 $sky->d_last_page = URI;
             #if ('WINNT' == PHP_OS)
             #    $ary += ['adm?get_dev' => 'Open DEV.SKY.'];
-            $sky->k_static = [[], ["~/dev.js"], ["~/dev.css"]];
+            $sky->k_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
             defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             return $this->_y + [
                 'tx' => '_trace' == $sky->_0 ? URI : '_x0',
@@ -119,7 +119,7 @@ class standard_c extends Controller
             is_file($fn = DIR_S . "/assets/$sky->_1")
                 or $fn = Plan::_t([$this->d_last_ware, "assets/$sky->_1"]);
         } else {
-            $fn = WWW . "pub/etc/$sky->_1";
+            $fn = WWW . "m/etc/$sky->_1";
         }
         if (is_file($fn)) {
             switch ($ext) {

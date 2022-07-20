@@ -225,7 +225,7 @@ trait HOOK
 
     static function re_dev($cnt, &$surl) {
         global $sky;
-        if (DEV && 2 == $cnt && $sky->s_statp == $surl[0])
+        if (DEV && $cnt && 'm' == $surl[0]) // $sky->s_statp == $surl[0]
             return $surl[0] = '_etc';
     }
 
@@ -422,13 +422,13 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         }
         if (!$sky->k_static) {
             $fn = ($sky->style ? "$sky->style/" : '') . ($sky->is_mobile ? 'mobile' : 'desktop');
-            $sky->k_static = [[], ["~/$fn.js"], ["~/$fn.css"]]; # default app meta_tags, js, css files
+            $sky->k_static = [[], ["~/m/$fn.js"], ["~/m/$fn.css"]]; # default app meta_tags, js, css files
         }
         $plus = "<title>$sky->k_title</title>$plus";
         $csrf = isset($user) ? $user->v_csrf : '';
         $plus .= tag($sky->k_static[0] + ['csrf-token' => $csrf, 'sky.home' => LINK]); # meta tags
-        $plus .= js([-2 => '~/jquery.min.js', -1 => '~/sky.js'] + $sky->k_static[1]);
-        $plus .= css($sky->k_static[2] + [-1 => '~/sky.css']) . js($js);
+        $plus .= js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->k_static[1]);
+        $plus .= css($sky->k_static[2] + [-1 => '~/m/sky.css']) . js($js);
         echo $plus . '<link href="' . PATH . 'favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
     }
 

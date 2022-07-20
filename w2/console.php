@@ -20,16 +20,16 @@ class Console
             return $this->master(!$ns);
         }
 
-        $this->__call("_$argv[1]", []);
+        $this->__call("c_$argv[1]", []);
     }
 
     function __call($name, $args) {
         if ('c_app' == $name && self::$d[0] && class_exists('App'))
-            return new App(array_shift($args), $args);
+            return new App('a_' . array_shift($args), $args);
 
         if ('c_' != $name) {
             echo "\nCommand `";
-            echo 'Console' != get_class($this) ? "app $name" : substr($name, 2);
+            echo ('Console' != get_class($this) ? "app " : '') . substr($name, 2);
             echo "` not found\n\n";
         }
 
@@ -53,7 +53,7 @@ class Console
                 if ($i >= $cnt && 'c_' == substr($v->name, 0, 2))
                     return;
                 if ($s = $v->getDocComment())
-                    $ary[($i >= $cnt ? 'app ' : '') . substr($v->name, $i >= $cnt ? 0 : 2)] = trim($s, "*/ \n\r");
+                    $ary[($i >= $cnt ? 'app ' : '') . substr($v->name, 2)] = trim($s, "*/ \n\r");
             });
         }
         ksort($ary);
@@ -121,7 +121,7 @@ class Console
     }
 
     /** Drop all cache */
-    function c_cache() {
+    function c_drop() {
         echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
     }
 

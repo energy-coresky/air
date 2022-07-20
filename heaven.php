@@ -502,10 +502,10 @@ function js($x = '') {
 
     if (is_string($x))
         return "<script>$x</script>";
-    $pref = ($sky->surl ? PATH : '') . ($sky->s_statp ?: '1000p');
+    $pf = '?' . ($sky->s_statp ?: '1000p');
     $js = '';
     foreach ($x as $src)
-        $js .= '<script src="' . ('~' == $src[0] ? $pref . substr($src, 1) : $src) . '"></script>';
+        $js .= '<script src="' . ('~' == $src[0] ? PATH . substr($src, 2) . $pf : $src) . '"></script>';
     return $js;
 }
 
@@ -514,10 +514,10 @@ function css($x = '') {
 
     if (is_string($x))
         return '<style>' . $x . '</style>';
-    $pref = ($sky->surl ? PATH : '') . ($sky->s_statp ?: '1000p');
+    $pf = '?' . ($sky->s_statp ?: '1000p');
     $css = '';
     foreach ($x as $src)
-        $css .= '<link rel="stylesheet" href="' . ('~' == $src[0] ? $pref . substr($src, 1) : $src) . '" />';
+        $css .= '<link rel="stylesheet" href="' . ('~' == $src[0] ? PATH . substr($src, 2) . $pf : $src) . '" />';
     return $css;
 }
 

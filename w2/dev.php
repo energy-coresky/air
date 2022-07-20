@@ -23,7 +23,7 @@ class DEV
         global $sky;
 
         if ($sky->s_init_needed) {
-            $js = (DESIGN ? DESIGN : WWW) . 'pub/' . basename(DEV::js);
+            $js = (DESIGN ? DESIGN : WWW) . 'm/' . basename(DEV::js);
             file_exists($js) or file_put_contents($js, file_get_contents(DEV::js)) or exit("Cannot save `$js`");
             DEV::init_reset(sql('+select tmemo from memory where id=5'));
             SKY::s('init_needed', null); # run once only
@@ -592,7 +592,7 @@ class DEV
             'cron'  => ['Run cron when click on DEV instance', 'chk'],
             ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
             Form::X([], '<hr>'),
-            ['Check static files for changes (file or path to *.js & *.css files), example: `pub,C:/web/air/assets`', 'li'],
+            ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
             'static' => ['', '', 'size="50"'],
             'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
             ['Save', 'submit'],
