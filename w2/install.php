@@ -32,7 +32,7 @@ class Install
         } else {
             if (!is_file($orig = $fn)) {
                 $base = basename($fn);
-                $fn = 'main/w2/' == substr($orig, 0, 8)
+                $fn = DIR_M . '/w2/' == substr($orig, 0, 8)
                     ? DIR_S . "/w2/$base"
                     : (WWW == substr($orig, 0, strlen(WWW))
                         ? DIR_S . "/assets/$base"
@@ -42,7 +42,7 @@ class Install
                     throw new Error("Install: file `$orig` not exists");
             }
             $bin = file_get_contents($fn);
-            if ('main/conf.php' == $fn) {
+            if (DIR_M . '/conf.php' == $fn) {
                 $s = ['', '', ''];
                 $i = 0;
                 foreach (token_get_all($bin) as $x) {
@@ -239,7 +239,7 @@ class Install
 
     function filelist($path) {
         $list = Rare::list_path($path, 'is_file');
-        if ('main' == $path || 'main/w2' == $path) {
+        if (DIR_M == $path || DIR_M . '/w2' == $path) {
             $coresky = Rare::list_path(DIR_S . substr($path, 4), 'is_file');
             foreach ($coresky as $one) {
                 $one = "$path/" . basename($one);
@@ -265,7 +265,7 @@ class Install
         });
         if ($mode) {
             $all = Rare::walk_dirs('.');
-            in_array('main/w2', $all) or $all[] = 'main/w2';
+            in_array(DIR_M . '/w2', $all) or $all[] = DIR_M . '/w2';
             $saved[2] = array_filter($all, function($one) use ($saved) {
                 $ary = explode('/', $one);
                 while ($ary) {

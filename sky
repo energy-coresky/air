@@ -6,7 +6,7 @@ if (1 == $argc)
 
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
-    require __DIR__ . '/w2/rare.php'; # add dir to the PATH where sky.bat placed
+    require __DIR__ . '/w2/rare.php';
     $dirs = Rare::walk_dirs('.');
     if ($d) {
         print_r($dirs);
@@ -31,8 +31,9 @@ if ($d || 'php' == $argv[1]) {
         return $app || $git || $ware;
     };
     $m = basename(__DIR__);
+    $m2 = 'air' == $m ? 'main' : $m;
     do {
-        if ($test($cd = getcwd(), $m) || $test($cd, $m = 'main'))
+        if ($test($cd = getcwd(), $m) || $test($cd, $m = $m2))
             break;
         $m = basename($cd);
         chdir('..');

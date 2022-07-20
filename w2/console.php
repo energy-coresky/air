@@ -24,7 +24,7 @@ class Console
     }
 
     function __call($name, $args) {
-        if ('c_app' == $name && self::$d[0] && class_exists('App'))
+        if ('c_app' == $name && self::$d[0] && is_file(DIR_M . '/w3/app.php'))
             return new App('a_' . array_shift($args), $args);
 
         if ('c_' != $name) {
