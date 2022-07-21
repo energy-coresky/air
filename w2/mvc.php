@@ -224,7 +224,7 @@ trait HOOK
     }
 
     static function re_dev($cnt, &$surl) {
-        global $sky;
+        //global $sky;
         if (DEV && $cnt && 'm' == $surl[0]) // $sky->s_statp == $surl[0]
             return $surl[0] = '_etc';
     }

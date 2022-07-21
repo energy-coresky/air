@@ -8,7 +8,7 @@ class Plan
         'jet' => ['path' => 'var/jet'],
         'gate' => ['path' => 'var/gate'],
         'glob' => ['path' => 'var/glob'],
-        'sql' => ['path' => 'var/sql'],
+        'sql' => ['path' => 'var/sql'], //2do
     ];
     static $wares = ['main'];
     static $ware = 'main';

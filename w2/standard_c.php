@@ -195,7 +195,7 @@ class standard_c extends Controller
         if (isset(SKY::$plans[$name])) {////////////////////
             Plan::$ware = Plan::$view = $name;
             trace(Plan::$ware, 'WARE');
-            define('LINK', PROTO . '://' . DOMAIN . PATH);
+            define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             if (DEV)
                 $this->d_last_ware = Plan::$ware;
             $class = $name . '_c';

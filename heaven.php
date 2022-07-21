@@ -325,9 +325,12 @@ class HEAVEN extends SKY
             jump($this->alt_jump = true, 302, false); # no exit, alt jump (special case)
         parent::tail_ghost();
         if ($this->jump && $this->debug) {
-            $plus = $this->tracing("JUMP[$user->jump_n]: $this->jump\n\n", !$user->jump_n);
-            if ($user->jump_n)
-                sqlf('update $_memory set tmemo=' . SKY::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");
+            #$plus = $this->tracing("JUMP[$user->jump_n]: $this->jump\n\n", !$user->jump_n);
+            #if ($user->jump_n)
+            #    sqlf('update $_memory set tmemo=' . SKY::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");
+            $plus = $this->tracing("JUMP[]: $this->jump\n\n", true);
+  #          if (1)
+          #      sqlf('update $_memory set tmemo=' . SKY::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");
         }
     }
 }
@@ -336,22 +339,25 @@ class HEAVEN extends SKY
 function jump($uri = '', $code = 302, $exit = true) {
     global $sky, $user;
 
-    $sky->alt_jump ? ($uri = $user->jump_alt) : ($user->jump_path[] = '. ' . LINK . URI);
+    if ($ut = isset($user))
+        $sky->alt_jump ? ($uri = $user->jump_alt) : ($user->jump_path[] = '. ' . LINK . URI);
     $alt = [];
     if (is_array($uri)) # jump to the next link if an error 404 or exception
         $uri = ($alt = $uri) ? array_shift($alt) : '';
     $sky->is_front or '' === $uri or '?' != $uri[0] or $uri = "adm$uri";
     $sky->jump = preg_match("@^https?://@i", $uri) ? $uri : LINK . $uri;
-    $user->jump_path[] = "! $sky->jump";
-    if ($user->jump_n > 7) {
-        $user->jump_alt = []; # no more jumps
-        if ($exit && !$sky->alt_jump)
-            throw new Error('22 Too much jumps');
-        trace("Too much jumps:\n" . implode("\n", $user->jump_path), true);
-        return;
+    if ($ut) {
+        $user->jump_path[] = "! $sky->jump";
+        if ($user->jump_n > 7) {
+            $user->jump_alt = []; # no more jumps
+            if ($exit && !$sky->alt_jump)
+                throw new Error('22 Too much jumps');
+            trace("Too much jumps:\n" . implode("\n", $user->jump_path), true);
+            return;
+        }
+        array_unshift($alt, $user->jump_n, $user->jump_path);
+        $user->v_jump_alt = serialize($alt);
     }
-    array_unshift($alt, $user->jump_n, $user->jump_path);
-    $user->v_jump_alt = serialize($alt);
     header("Location: $sky->jump", true, $code);
     $sky->tailed = true;
     if ($exit)
