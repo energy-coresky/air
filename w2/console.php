@@ -12,12 +12,15 @@ class Console
 
         self::$d = $found + [3 => $ns = $found[1] && 'air' != basename(getcwd())];
 
-        if ($found[0] && 'master' != $argv[1]) {
+        if ('master' == $argv[1]) {
+            if ($ns || is_dir(DIR_S . '/.git'))
+                return $this->master(!$ns);
+        } elseif ('s' == $argv[1]) {
+            return $this->s($argv[2] ?? 8000);
+        } elseif ($found[0]) {
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
                 $sky->load();
             return call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
-        } elseif ('master' == $argv[1] && ($ns || is_dir(DIR_S . '/.git'))) {
-            return $this->master(!$ns);
         }
 
         $this->__call("c_$argv[1]", []);
@@ -61,6 +64,35 @@ class Console
         echo implode("\n  ", array_map(function($k, $v) {
             return str_pad($k, 15, ' ') . $v;
         }, array_keys($ary), $ary));
+    }
+
+    function s($port) {
+        if (self::$d[0]) {
+            if (!DEV)
+                return print("Cannot run php-server on production");
+            echo "\n";
+            $this->c_drop();
+            echo "\n";
+        }
+        if (function_exists('socket_create')) {
+            for ($i = 0; $i < 9; $i++, $port++) {
+                $sock = socket_create(AF_INET6, SOCK_STREAM, SOL_TCP);
+                $busy = @socket_connect($sock, '::1', $port);
+                socket_close($sock);
+                if (!$busy)
+                    break;
+            }
+        }
+        chdir(DIR_R);
+        if (!file_exists($fn = '../s.php')) {
+            echo "File `$fn` written\n\n";
+            file_put_contents($fn, "<?php\n\n"
+                . '$uri = urldecode(parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH));'
+                . "\nif ('/' !== \$uri && file_exists(getcwd() . \$uri))\n\treturn false;\n"
+                . '$_SERVER["SCRIPT_NAME"] = "/index.php"; require "index.php";');
+        }
+        system("explorer \"http://localhost:$port\"");
+        system("php -S localhost:$port $fn");
     }
 
     function master($air) {
