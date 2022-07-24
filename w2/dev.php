@@ -35,9 +35,9 @@ class DEV
             global $sky;
 
             $sky->dev = new DEV;
-            $vars = Plan::glob_gq('dev_vars.txt');
+            $vars = Plan::mem_gq('dev_vars.txt');
             SKY::ghost('d', $vars, function ($s) {
-                Plan::glob_p(['main', 'dev_vars.txt'], $s);
+                Plan::mem_p(['main', 'dev_vars.txt'], $s);
             });
             if (!$static = $sky->d_static)
                 return;
@@ -218,8 +218,8 @@ class DEV
     }
 
     static function atime() { # search ctrl with last access time
-        $glob = Plan::_b('app/c_*.php');
-        if ($fn = Plan::_t('app/default_c.php'))
+        $glob = Plan::_b('mvc/c_*.php');
+        if ($fn = Plan::_t('mvc/default_c.php'))
             array_unshift($glob, $fn);
         $max = $c = 0;
         foreach ($glob as $fn) {
@@ -265,7 +265,7 @@ class DEV
         Gate::$ware = $cfg[substr($class, 2)] ?? 'main';
         $ary = Gate::load_array($class);
         $me = Gate::instance();
-        $src = Plan::_t([Gate::$ware, $fn = "app/$class.php"]) ? $me->parse($fn) : [];
+        $src = Plan::_t([Gate::$ware, $fn = "mvc/$class.php"]) ? $me->parse($fn) : [];
         if ($diff = array_diff_key($ary, $src))
             $src = $diff + $src;
         if ($has_func = is_string($func)) {
@@ -395,10 +395,10 @@ class DEV
         global $sky;
         $cr = [1 => 1, 2 => 15, 3 => 16];
         if ($_POST)
-            Plan::glob_p('dev_trace.txt', $_POST['t0']);
+            Plan::mem_p('dev_trace.txt', $_POST['t0']);
         $trace = $x
             ? sqlf('+select tmemo from $_memory where id=%d', $cr[$x])
-            : Plan::glob_g('dev_trace.txt');
+            : Plan::mem_g('dev_trace.txt');
         preg_match("/^WARE: (\w+)/m", $trace, $m);
         $ware = $m[1] ?? 'main';
         $top = $header = '';
@@ -423,10 +423,10 @@ class DEV
         $php = '';
         if (2 == $sky->_6) {
             $ctrl = explode('::', $list[$nv][1]);
-            $fn = ($w2 = 'standard_c' == $ctrl[0]) ? "w2/standard_c.php" : "app/$ctrl[0].php";
+            $fn = ($w2 = 'standard_c' == $ctrl[0]) ? "w2/standard_c.php" : "mvc/$ctrl[0].php";
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
-            $we = 'app/common_c.php' != $fn ? $ware : 'main';
+            $we = 'mvc/common_c.php' != $fn ? $ware : 'main';
             $php .= Display::php_method(Plan::_g([$we, $fn], $w2), substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
             $tpl = $list[$nv][2];
@@ -530,6 +530,18 @@ class DEV
         echo 'OK';
     }
 
+    function desc($path) {
+        if (!is_file($fn = "$path/README.md"))
+            return false;
+        foreach (file($fn) as $line) {
+            $line = trim($line);
+            if (!$line || '#' == $line[0])
+                continue;
+            return $line;
+        }
+        return '-';
+    }
+
     function c_ware() {
         global $sky;
         $works = array_keys($installed = SKY::$plans);
@@ -550,7 +562,7 @@ class DEV
                         'type' => $ware['app']['type'],
                         'class' => $wares[$name]['class'],
                         'cnt' => count($wares[$name]['class']),
-                        'desc' => Plan::_t($_ = [$name, 'desc.txt']) ? Plan::_g($_) : false,
+                        'desc' => $this->desc(Plan::_obj([$name])->path),
                     ];
                 },
             ],
@@ -564,7 +576,7 @@ class DEV
                         'name' => ucfirst($ware),
                         'type' => $plans['app']['type'],
                         'path' => $path,
-                        'desc' => is_file($fn = "$path/desc.txt") ? file_get_contents($fn) : false,
+                        'desc' => $this->desc($path),
                     ];
                 },
             ],

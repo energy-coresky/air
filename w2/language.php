@@ -115,7 +115,7 @@ class Language
     }
 
     function c_test() { //Plan::_t
-        $place = ['view', DIR_M . '/app', DIR_M . '/w3'];
+        $place = ['view', DIR_M . '/mvc', DIR_M . '/w3'];
         list($i, $d, $n) = explode(' ', $_POST['v'] ? $_POST['v'] : '0  ');
         for ($flag = 0; true; ) {
             foreach (Rare::walk_dirs($place[$i]) as $dir) if ('' === $d || $dir == $d || $flag) {

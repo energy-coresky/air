@@ -1,0 +1,8 @@
+#.jet core template
+
+#.list //////////////////////////////////////////////////////////////////////////////
+<h1>To do</h1>
+Search & install code from https://packagist.org/
+and others sources with web-interface
+
+#.list

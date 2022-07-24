@@ -6,7 +6,7 @@
 }
 
 .bg-wx {
-    width: calc(100% - 10px);
+    width: 100%;
     padding-left: 10px;
     height:41px;
     display: inline-flex;
@@ -269,7 +269,7 @@ td {
     display: inline-block;
 }
 .were-desc {
-    width:170px;
+    width:150px;
     height:150px;
     overflow:auto;
 }

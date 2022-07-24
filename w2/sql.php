@@ -85,7 +85,7 @@ final class SQL
         } else {
             if ($main = '' === $name) {
                 require DIR_S . '/w2/mvc.php';
-                Plan::_r('app/common_c.php');
+                Plan::_r('mvc/common_c.php');
             }
             $main && !isset(SKY::$databases[''])? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
             $driver = "dd_$cfg[driver]";

@@ -61,6 +61,7 @@ class standard_c extends Controller
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Compile Project',
                     '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
+                    '_vend?list' => 'Browse All Vendors',
                 ],
                 'wares' => $this->dev->wares_menu(),
             ];
@@ -159,7 +160,7 @@ class standard_c extends Controller
     }
 
     function j_crop_code() {
-        $sizes = Plan::_t('app/t_file.php') ? $this->t_file->img_sizes() : ['100 x 100'];
+        $sizes = Plan::_t('mvc/t_file.php') ? $this->t_file->img_sizes() : ['100 x 100'];
         return ['opt' => option(0, array_combine($sizes, $sizes))];
     }
 
@@ -193,12 +194,12 @@ class standard_c extends Controller
     function __call($name, $args) {
         list ($x, $name) = explode('_', $name, 2);
         if (isset(SKY::$plans[$name])) {////////////////////
-            Plan::$ware = Plan::$view = $name;
-            trace(Plan::$ware, 'WARE');
+            trace($name, 'WARE');
             define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             if (DEV)
-                $this->d_last_ware = Plan::$ware;
+                $this->d_last_ware = $name;
             $class = $name . '_c';
+            Plan::_r([Plan::$ware = Plan::$view = $name, "mvc/$class.php"]);
             MVC::$cc = MVC::$mc;
             MVC::$mc = new $class;
             $action = '' == $this->_1 ? 'empty_' . $x : $x . "_$this->_1";
@@ -267,6 +268,15 @@ class standard_c extends Controller
     function j_lang() {
         MVC::body('_lng.' . substr($this->_c, 2));
         return call_user_func([new Language, $this->_c], $this->_a);
+    }
+
+    function a_vend() { /* ====================================== */
+        return $this->j_vend();
+    }
+
+    function j_vend() {
+        MVC::body('_vend.' . substr($this->_c, 2));
+        return call_user_func([new Vendor, $this->_c], $this->_a);
     }
 
     function a_glob() { /* ====================================== */

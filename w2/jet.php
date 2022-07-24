@@ -36,7 +36,7 @@ class Jet
             $this->occupied = ['k', 'e', 'y'];
             if (MVC::$mc) # not console!
                 MVC::handle('jet_c');
-            Plan::_rq('app/jet.php');
+            Plan::_rq('mvc/jet.php');
         }
         if ($layout) {
             $this->body = $name;
@@ -456,7 +456,7 @@ class Jet
             static $ary;
             if (null === $ary) {
                 $ary = [':_0' => '$sky->_0', ':_1' => '$sky->_1', ':_2' => '$sky->_2'];
-                $lines = ($txt = Plan::_gq('app/jet.let')) ? explode("\n", $txt) : [];
+                $lines = ($txt = Plan::_gq('mvc/jet.let')) ? explode("\n", $txt) : [];
                 foreach ($lines as $one) {
                     if (preg_match("/^(:\w+)\s+(.+)/", $one, $m))
                         $ary[$m[1]] = $m[2];

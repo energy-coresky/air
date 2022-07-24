@@ -32,8 +32,8 @@ class Gate
     }
 
     static function controllers($in = false) {
-        $glob = Plan::_b([Gate::$ware, 'app/c_*.php']);
-        if ($fn = Plan::_t('app/default_c.php'))
+        $glob = Plan::_b([Gate::$ware, 'mvc/c_*.php']);
+        if ($fn = Plan::_t('mvc/default_c.php'))
             array_unshift($glob, $fn);
         $list = $deleted = [];
         $val = $in ? 1 : Plan::$ware;

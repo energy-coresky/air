@@ -62,7 +62,7 @@
     <h2>{{$row->name}}<sup>{{$row->type}}</sup></h2>
     <div class="were-desc">
         @if($row->desc){{$row->desc}}@else
-            This ware don't has desc.txt file
+            This ware don't has README.md file
         ~if
     </div>
     <div style="height:50px">
@@ -73,7 +73,7 @@
             @if($row->cnt>2)...~if
         ~if
     </div>
-    <div style="width:150px;position:relative;top:20px">
+    <div style="width:150px;position:relative;top:0px">
     @if(!$bg_ware)
         <button onclick="sky.d.attach('{{$row->name}}','un')">Uninstall</button>
     @else
@@ -83,7 +83,7 @@
 </div>
 #.single.wares_memu ------------------------------------------------------------------------------
     <br><div class="other-task">Wares</div>
-    <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse all..</a>
+    <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse All..</a>
     @loop($y_wares as $uri => $name)
         <a href="{{$uri}}?ware"@active($uri == URI)>{{$name}}</a>
     ~loop

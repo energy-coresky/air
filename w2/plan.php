@@ -3,11 +3,11 @@
 class Plan
 {
     static $defaults = [
-        'view' => ['path' => DIR_M . '/app/view'],
+        'view' => ['path' => DIR_M . '/mvc/view'],
         'cache' => ['path' => 'var/cache'],
         'jet' => ['path' => 'var/jet'],
         'gate' => ['path' => 'var/gate'],
-        'glob' => ['path' => 'var/glob'],
+        'mem' => ['path' => 'var/mem'],
         'sql' => ['path' => 'var/sql'], //2do
     ];
     static $wares = ['main'];
@@ -56,7 +56,7 @@ class Plan
         static $old_obj = false;
         list ($pn, $op) = explode('_', $func);
         $pn or $pn = 'app';
-        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] : [Plan::$ware, $arg[0]];
+        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] + [1 => 1] : [Plan::$ware, $arg[0]];
 
         if ('jet' == $pn) {
             $a0 = Plan::$view . '-' . $a0;
@@ -105,9 +105,9 @@ class Plan
                 $low = strtolower($a0);
                 $cfg =& SKY::$plans['main']['class'];
                 if (in_array(substr($a0, 0, 2), ['m_', 'q_', 't_'])) {
-                    if (is_file($fn = $obj->path . "/app/$a0.php"))
+                    if (is_file($fn = $obj->path . "/mvc/$a0.php"))
                         return require $fn;
-                    if ('main' != $ware && ($fn = Plan::_t(['main', "app/$a0.php"])))
+                    if ('main' != $ware && ($fn = Plan::_t(['main', "mvc/$a0.php"])))
                         return require $fn;
                     return eval("class $a0 extends Model_$a0[0] {}");
                 } elseif (isset($cfg[$a0])) {
@@ -118,7 +118,7 @@ class Plan
             case 'da':
             case 'dq':
             case 'd':
-                if (in_array($pn, ['view', 'glob', 'app']))
+                if (in_array($pn, ['view', 'mem', 'app']))
                     throw new Error("Failed when Plan::{$pn}_$op(..)");
                 return 'da' == $op ? $obj->con->drop_all($a0) : $obj->con->drop($a0);
             default: throw new Error("Plan::$func(..) - method not exists");
