@@ -43,20 +43,22 @@ class Install
             }
             $bin = file_get_contents($fn);
             if (DIR_M . '/conf.php' == $fn) {
-                $s = ['', '', ''];
-                $i = 0;
-                foreach (token_get_all($bin) as $x) {
-                    list ($lex, $x) = is_array($x) ? $x : [0, $x];
-                    if (!$i && T_VARIABLE == $lex && '$databases' == $x)
-                        $i++;
-                    if (1 == $i && ';' == $x)
-                        $i++;
-                    $s[$i] .= $x;
+                if ('SQLite3' != SKY::$dd->name) {
+                    $s = ['', '', ''];
+                    $i = 0;
+                    foreach (token_get_all($bin) as $x) {
+                        list ($lex, $x) = is_array($x) ? $x : [0, $x];
+                        if (!$i && T_VARIABLE == $lex && '$databases' == $x)
+                            $i++;
+                        if (1 == $i && ';' == $x)
+                            $i++;
+                        $s[$i] .= $x;
+                    }
+                    eval("$s[1];");
+                    $databases['pref'] = $databases['dsn']  = '';
+                    $s[1] = '$databases = ' . var_export($databases, true);
+                    $bin = implode('', $s);
                 }
-                eval("$s[1];");
-                $databases['pref'] = $databases['dsn']  = '';
-                $s[1] = '$databases = ' . var_export($databases, true);
-                $bin = implode('', $s);
                 $bin = preg_replace("/(DIR_S')[^\)]+\)/", '$1, \'main\')', $bin);
                 $size = strlen($bin);
             } else {
@@ -245,7 +247,7 @@ class Install
                 $one = "$path/" . basename($one);
                 in_array($one, $list) or $list[] = $one;
             }
-        } elseif (WWW . 'pub' == $path && is_dir($assets = DIR_S . '/assets')) {
+        } elseif (WWW . 'm' == $path && is_dir($assets = DIR_S . '/assets')) {
             $assets = Rare::list_path($assets, 'is_file');
             foreach ($assets as $one) {
                 $one = WWW . 'm/' . basename($one);

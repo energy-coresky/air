@@ -60,7 +60,7 @@ class standard_c extends Controller
                     '_gate' => 'Open SkyGate',
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Compile Project',
-                    '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals report',
+                    '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals Report',
                     '_vend?list' => 'Browse All Vendors',
                 ],
                 'wares' => $this->dev->wares_menu(),

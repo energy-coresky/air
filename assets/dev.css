@@ -133,7 +133,8 @@ a[active] {
 }
 .inner-menu {
     line-height:12px;
-    padding-left: 22px !important;
+    padding-left: 20px !important;
+    padding-right: 10px !important;
     background-color: #e0e7ff;
 }
 a[active].inner-menu {

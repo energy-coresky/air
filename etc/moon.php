@@ -3,15 +3,16 @@
 class Moon
 {
     const chunk = 8192;
+
     private $conn = false;
     private $log_fh = false;
     private $moved = [];
     private $mode;
+
     public $dir;
     public $web;
-    public $mnm;
 
-    private $json = [
+    public $json = [
         'step' => [
             'func' => 'test',
             'fn' => '',
@@ -28,18 +29,44 @@ class Moon
     ];
 
     function __construct() {
-        $this->mnm = basename(__FILE__);
         ob_get_level() or ob_start();
         ini_set('log_errors', 0);
         ini_set('display_errors', 1);
         ini_set('error_reporting', -1);
-        set_error_handler([$this, 'error']);
-        register_shutdown_function([$this, 'shutdown']);
+        set_error_handler(function ($no, $message, $file, $line) {
+            if (error_reporting() & $no) {
+                $error = "moon.php^$line $message";
+                $_POST ? ($this->err = $error) : print($error);
+            }
+            return true;
+        });
+        register_shutdown_function(function () {
+            $stdout = ob_get_clean();
+            $error = '' === $stdout || !$_POST ? false : "Stdout: $stdout";
+            $e = error_get_last();
+            if ($e && $e['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR))
+                $error = "moon.php^$e[line] $e[message]";
+            if ($error)
+                $_POST ? ($this->err = $error) : print($error);
+            if ($this->err)
+                $this->log($this->err);
+            if ('cli' != PHP_SAPI)
+                echo $_POST ? json_encode($this->json) : $stdout;
+            if ($this->err && $this->moved) {
+                ob_start();
+                $this->log("Try move to initial state...");
+                foreach($this->moved as $v)
+                    $this->log("RENAME: $v[0] to $v[1] - " . (@rename($v[0], $v[1]) ? 'OK' : 'FAIL'));
+                ob_get_clean();
+            }
+            if ($this->log_fh)
+                fclose($this->log_fh);
+        });
         $this->dir = $this->path(dirname(__DIR__));
         $this->web = basename(__DIR__);
         if ($_POST) {
-            $this->mode = $_POST['mode'] % 2;
             header('Content-Type: application/json; charset=UTF-8');
+            $this->mode = $_POST['mode'] % 2;
             parse_str($_POST['step'], $step);
             key($step) ? ($this->step = $step) : ($this->_fn = current($step));
             $this->{"_$this->_func"}();
@@ -57,36 +84,6 @@ class Moon
         }
         if (!@fwrite($this->log_fh, "$str\n"))
             $this->err = "Cannot write LOG file";
-    }
-
-    function error($no, $message, $file, $line) {
-        if (error_reporting() & $no) {
-            $error = "$this->mnm^$line $message";
-            $_POST ? ($this->err = $error) : print($error);
-        }
-        return true;
-    }
-
-    function shutdown() {
-        $stdout = ob_get_clean();
-        $error = '' === $stdout || !$_POST ? false : "Stdout: $stdout";
-        $e = error_get_last();
-        if ($e && $e['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR))
-            $error = "$this->mnm^$e[line] $e[message]";
-        if ($error)
-            $_POST ? ($this->err = $error) : print($error);
-        if ($this->err)
-            $this->log($this->err);
-        echo $_POST ? json_encode($this->json) : $stdout;
-        if ($this->err && $this->moved) {
-            ob_start();
-            $this->log("Try move to initial state...");
-            foreach($this->moved as $v)
-                $this->log("RENAME: $v[0] to $v[1] - " . (@rename($v[0], $v[1]) ? 'OK' : 'FAIL'));
-            ob_get_clean();
-        }
-        if ($this->log_fh)
-            fclose($this->log_fh);
     }
 
     function mv($oldname, $newname) {
@@ -150,17 +147,20 @@ class Moon
             if (false === $v[1])
                 return $this->err = "Parent or public directory is not empty";
         }
-        $new = isset($_POST['create']);
-        $q = $this->sql($new ? 'show databases' : 'show tables');
-        if ($this->err)
-            return;
-        for ($ary = [], $n = trim($_POST['name']); $r = mysqli_fetch_row($q); $ary[] = $r[0]);
-        if ($new && !in_array($n, $ary)) {
-            $this->sql("create database `$n`");
-            $this->msg = "Database `$n` created";
-        } else {
-            $this->msg = "Database `$n` exists";
-            $new or $this->msg .= ', ' . count($ary) . ' tables inside';
+
+        if (isset($_POST['name'])) {
+            $new = isset($_POST['create']);
+            $q = $this->sql($new ? 'show databases' : 'show tables');
+            if ($this->err)
+                return;
+            for ($ary = [], $n = trim($_POST['name']); $r = mysqli_fetch_row($q); $ary[] = $r[0]);
+            if ($new && !in_array($n, $ary)) {
+                $this->sql("create database `$n`");
+                $this->msg = "Database `$n` created";
+            } else {
+                $this->msg = "Database `$n` exists";
+                $new or $this->msg .= ', ' . count($ary) . ' tables inside';
+            }
         }
         if (!$this->err) {
             $this->_func = 'dir';
@@ -234,6 +234,8 @@ class Moon
             if ("END:\n" !== $data)
                 return $err("File `$this->_fn` is corrupted");
             $this->_pos = $this->_cnt = 0;
+            if (!isset($_POST['name']))
+                return $this->success = 1;
             $this->msg = "Execute SQLs...";
             $this->_func = 'sql'; # next step
         } else {
@@ -245,7 +247,7 @@ class Moon
             if (false === ($write = @fopen($fn, 'wb')))
                 return $err("Cannot open file `$fn` for writing");
             $len = strlen($data = substr($data, $len_m0 = strlen($m[0])));
-            if ($conf = 'main/conf.php' == $m[1])
+            if ($conf = 'main/conf.php' == $m[1] && isset($_POST['name']))
                 $this->conf($data, $m[2]);
             if (false === @fwrite($write, $data, $conf ? strlen($data) : $m[2]))
                 return $err("Error writing file `$fn`", $write);
@@ -287,13 +289,14 @@ class Moon
             $this->msg = "-Executed SQL query $this->_cnt of $this->_toq";
         }
         fclose($read);
+
         if ($s && !$len) {
             $files = [$this->path(__FILE__), $this->path($this->_fn), $this->path($fn)];
             if ($this->log_fh)
                 $files[] = $this->path($log = "$this->_fn.txt") . ' <a target="_blank" href="' . $log . '">open LOG</a>';
             $this->msg = 'Completed successfully';
             $this->success = "You may delete or move unnecessary files:<br>" . implode('<br>', $files);
-            $this->success .= '<br><br><a href="' . substr($_SERVER['SCRIPT_NAME'], 0, -strlen($this->mnm)) . '">open ' . "$this->_fn app</a>";
+            $this->success .= '<br><br><a href="' . substr($_SERVER['SCRIPT_NAME'], 0, -strlen('moon.php')) . '">open ' . "$this->_fn app</a>";
             $flag = false;
             $q = $this->sql("select tmemo from {$pref}memory where id=3");
             $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", mysqli_fetch_row($q)[0]));
@@ -397,7 +400,7 @@ class Moon
             $spec = $nem = false;
             if ($one == $this->web)
                 $spec = sprintf($t1, $dir, "(public directory)");
-            if (basename($one) == $this->mnm)
+            if (basename($one) == 'moon.php')
                 $spec = sprintf($t1, $dir, "(Moon script)");
             if (substr($one, -4) == '.sky')
                 $spec = sprintf($t1, $dir, "(SKY Package)");
@@ -521,7 +524,52 @@ class Rare
 
 $moon = new Moon;
 
-?><!doctype html>
+if ('cli' == PHP_SAPI):
+    ob_end_flush();
+    if (version_compare(PHP_VERSION, '7.0.0') < 0) {
+        echo "\nPHP version required >= 7.0.0\n";
+        exit;
+    }
+    if (1 == $argc) {
+        echo "Usage: php moon.php packagename.sky [user:password@databasehost:3306/databasename]\n";
+        echo "  dsn example: root:@localhost/testdb\nor.. use web-interface\n";
+        exit;
+    }
+    $moon->mode = 0;
+    $moon->_fn = $argv[1];
+    $_POST = ['log' => '00'];
+    if (3 == $argc) {
+        if (!preg_match("~^(\w+):([^@]*)@([^:/]+):?(\d+|)/(\w+)$~", $argv[2], $m))
+            exit("\nDSN don't match\n");
+        $_POST += [
+            'user' => $m[1],
+            'password' => $m[2],
+            'host' => $m[3],
+            'port' => $m[4] ?: 3306,
+            'name' => $m[5],
+            'prefix' => 't_',
+        ];
+    }
+    while (true) {
+        $moon->{"_$moon->_func"}();
+        if ($moon->json['err'] || $moon->success)
+            break;
+        if ($moon->json['msg'])
+            echo $moon->json['msg'] . "\r";
+    }
+    if ($moon->json['err'])
+        echo "\n" . $moon->json['err'] . "\n";
+
+    //print_r($moon->json);
+    if ($moon->success) {
+        echo "\nsuccess\n";
+        system("php ../main/sky s");
+    }
+    exit;
+
+
+
+else: ?><!doctype html>
 <html>
 <head><title>Install SKY applications</title>
 <meta http-equiv="content-type" content="text/html; charset=utf-8" />
@@ -529,10 +577,6 @@ $moon = new Moon;
 <link href="favicon.ico" rel="shortcut icon" type="image/x-icon" />
 <script>
 var $$ = {
-    resize: function() {
-        var h = $(window).height();
-        $('#page').css({minHeight:h - 55});
-    },
     s1: [
         'install to the production<sup>1</sup>',
         'install to the `anew` directory first<sup>2</sup>',
@@ -540,7 +584,7 @@ var $$ = {
         'move from `anew` to production<sup>4</sup>'
     ],
     s2: [
-        "<sup>1</sup> This is usial installation. Files extracts from the\npackage to there working places (production).\n"
+        "<sup>1</sup> This is usual installation. Files extracts from the\npackage to there working places (production).\n"
             + "Parent and public directory must be empty",
         "<sup>2</sup> Package files extract to the `anew` directory, then old\ninstallation moves to the `aold` directory, "
             + "then new installation\nfrom `anew` directory moves to the production.\n"
@@ -616,7 +660,7 @@ var $$ = {
             exf: $('#parent').serialize().replace(/exf=/g, ''),
             success: success
         };
-        $.post('<?php echo $moon->mnm ?>', $.param(q) + $$.log(), function(r) {
+        $.post('moon.php', $.param(q) + $$.log(), function(r) {
             $$.response(r, 'move' == com);
             $('#parent').html(r.pd);
             $$.parent_div();
@@ -642,7 +686,7 @@ var $$ = {
             $(el).html(($$.stop = !$$.stop) ? 'Continue' : 'Pause');
             $$.button = el;
         }
-        $$.stop || $.post('<?php echo $moon->mnm ?>', $('#f3').serialize() + $$.log(), function(r) {
+        $$.stop || $.post('moon.php', $('#f3').serialize() + $$.log(), function(r) {
             $$.response(r, true);
             $('input[name=step]').val($.param(r.step));
             r.success || $$.run();
@@ -655,8 +699,6 @@ var $$ = {
     }
 };
 $(function() {
-    $(window).resize($$.resize);
-    $$.resize();
     var div = $('#foo').next();
     $$.form_html = div.html();
     $('#p2').html(div.next().html());
@@ -665,7 +707,7 @@ $(function() {
 });
 </script>
 <style>
-#page { margin:8px auto 0 auto; width:600px; padding:5px 100px; border-bottom:2px solid lightblue; }
+#page { margin:8px auto 0 auto; width:600px; padding:5px 100px; border-bottom:2px solid lightblue; min-height:calc(100vh - 55px) }
 #foo { margin:0 auto;width:790px; font-size:14px; padding:5px; background:white; text-align:center; }
 #log { clear:both; margin-top:20px; }
 .r, .g, .y, .w { padding:7px; margin-top:5px; border-bottom:2px solid silver; }
@@ -684,7 +726,7 @@ dd { text-align: left; margin-left: 35%; }
 </head>
 <body style="margin:0; display:inline-block; width:100%; background:lightblue;">
 <div id="page">
-    <h1 onclick="location.href='<?php echo $moon->mnm ?>'">Install <span class="fn">SKY applications</span></h1>
+    <h1 onclick="location.href='moon.php'">Install <span class="fn">SKY applications</span></h1>
     <div><?php $moon->packages() ?></div>
     <div style="display:none">
         <div id="p2"></div>
@@ -736,4 +778,4 @@ This install script creates multiple directories in the
 </fieldset>
 </div>
 </body>
-</html>
+</html><?php endif;
