@@ -1,8 +1,8 @@
 ### Application list
 
 1. AB.SKY application
-2. MED.CRM.SKY app
-3. .. others comming soon
+2. MED.CRM.SKY application
+3. HOLE.SKY - empty application
 
 AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
 After installation and using MySQL database try switch to SQLite (edit main/conf.php)
@@ -14,7 +14,12 @@ Extract files from ab.zip.
 Put in the last folder this two files: **ab.sky** and **moon.php**.
 Open in browser similar like `http://my-apache.local/ab/web/moon.php`, then follow the instructions.
 
-### To do
+### Just PHP >7 required
 
-Only PHP required.. Install apps from console this way: `php moon.php ab.sky`.
-After finish, you will see opened web-browser with working application. Will used internal PHP's web-server and Sqlite database.
+Create an empty dir somewhere: `mkdir hole`, +one more `mkdir hole/public`. Extract files from hole.zip to the last.
+
+For HOLE.SKY only: you can just type in console (will work embedded into PHP's SQLite3 database and PHP's web-server):
+
+```
+php moon.php hole.sky
+```
