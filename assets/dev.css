@@ -5,14 +5,6 @@
   box-sizing: border-box;
 }
 
-.bg-wx {
-    width: 100%;
-    padding-left: 10px;
-    height:41px;
-    display: inline-flex;
-    align-items: center;
-}
-
 html {
     overflow: hidden;
 }
@@ -226,6 +218,14 @@ td {
     text-align:center;
 }
 
+.bg-wx {
+    width: 100%;
+    padding-left: 10px;
+    height:41px;
+    display: inline-flex;
+    align-items: center;
+}
+
 .bg-r {
     background-color: #fdd;
 }
@@ -240,6 +240,10 @@ td {
 }
 .bg-x {
     background-color: #e0e7ff;
+}
+.bg-a {
+    background-color: #818cf8;
+    color: #fff;
 }
 .norm {}
 .p-20 {
@@ -273,6 +277,25 @@ td {
     width:150px;
     height:150px;
     overflow:auto;
+}
+
+.vend-x {
+    display:inline-block;
+    position: relative;
+    width:170px;
+    height:170px;
+    overflow:hidden;
+    margin:10px 0 0 10px;
+    padding:10px;
+    background-color:#e0e7ff;
+    border-radius: 10px;
+}
+.vend-x:hover {
+    background-color:#c7d2fe;
+}
+#vend-pk div.active {
+    background-color:#818cf8 !important;
+    color:#fff !important;
 }
 
 #doc_div, #doc_div pre {

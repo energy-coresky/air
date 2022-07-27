@@ -29,7 +29,7 @@
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
 </div><br>
-<div class="other-task" style="border-bottom:1px solid #4338ca;">
+<div class="other-task">
     <div class="fs16">Wares directory: wares/ + 
         <input name="dir" size="25" value="{{$sky->d_second_wares}}" placeholder="Second wares directory">
         <input type="button" value="Save" onclick="sky.d.second_dir(this)">
@@ -48,7 +48,7 @@
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
 </div><br>
-<div class="other-task" style="border-bottom:1px solid #4338ca;">
+<div class="other-task">
     <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{DIR_M}}</span>.SKY. application:</div>
 </div>
 <div class="" style="padding:10px;">
@@ -175,6 +175,7 @@
     <a @href(var x=this;ajax('',function(r) { sky.d.drop_cache(r,x) },'_drop'))>Drop All Cache</a>
     #end
     @block(.wares_memu as menu)
+    <div id="dev-empty"></div>
 #end
 </div>
 

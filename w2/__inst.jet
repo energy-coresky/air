@@ -12,7 +12,7 @@
 <div id="inst">
 <form>
 <div class="bg-wx bg-x" style="position:sticky; top:0px">
-    <div style="font-weight:bold;font-size:16px;">@block(`var/project.sky` as cp_b) &nbsp; </div>
+    <div class="fs16">@block(`var/project.sky` as cp_b) &nbsp; </div>
     @block(cp_h)<input type="button" value="save" onclick="sky.g.save(this)">
         <input type="hidden" name="step" value="">
         <progress style="display:none"></progress> @block(`` as cp_x)

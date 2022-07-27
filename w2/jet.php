@@ -4,6 +4,8 @@
 
 class Jet
 {
+    const version = '1.0';
+
     private $parsed = [];
     private $files = [];
     private $loop = [];

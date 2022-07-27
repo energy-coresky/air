@@ -1,0 +1,21 @@
+{
+  "name": "energy/air",
+  "description": "The SKY Framework.",
+  "keywords": [
+    "coresky",
+    "sky",
+    "air",
+    "php",
+    "framework"
+  ],
+  "license": "MIT",
+  "require": {
+    "php": "~7.0"
+  },
+  "authors": [
+    {
+      "name": "Energy",
+      "homepage": "http://coresky.net/"
+    }
+  ]
+}

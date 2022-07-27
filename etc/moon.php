@@ -161,6 +161,8 @@ class Moon
                 $this->msg = "Database `$n` exists";
                 $new or $this->msg .= ', ' . count($ary) . ' tables inside';
             }
+        } else {
+            $this->msg = "Started ..";
         }
         if (!$this->err) {
             $this->_func = 'dir';
@@ -235,7 +237,7 @@ class Moon
                 return $err("File `$this->_fn` is corrupted");
             $this->_pos = $this->_cnt = 0;
             if (!isset($_POST['name']))
-                return $this->success = 1;
+                return $this->finish();
             $this->msg = "Execute SQLs...";
             $this->_func = 'sql'; # next step
         } else {
@@ -262,6 +264,15 @@ class Moon
             fclose($write);
         }
         fclose($read);
+    }
+
+    function finish($sql_fn = []) {
+        $files = [$this->path(__FILE__), $this->path($this->_fn)] + $sql_fn;
+        if ($_POST['log'][0])
+            $files[] = $this->path($log = "$this->_fn.txt") . ' <a target="_blank" href="' . $log . '">open LOG</a>';
+        $this->msg = 'Completed successfully';
+        $this->success = "You may delete or move unnecessary files:<br>" . implode('<br>', $files);
+        $this->success .= '<br><br><a href="' . substr($_SERVER['SCRIPT_NAME'], 0, -strlen('moon.php')) . '">open ' . "$this->_fn app</a>";
     }
 
     function _sql() {
@@ -291,12 +302,7 @@ class Moon
         fclose($read);
 
         if ($s && !$len) {
-            $files = [$this->path(__FILE__), $this->path($this->_fn), $this->path($fn)];
-            if ($this->log_fh)
-                $files[] = $this->path($log = "$this->_fn.txt") . ' <a target="_blank" href="' . $log . '">open LOG</a>';
-            $this->msg = 'Completed successfully';
-            $this->success = "You may delete or move unnecessary files:<br>" . implode('<br>', $files);
-            $this->success .= '<br><br><a href="' . substr($_SERVER['SCRIPT_NAME'], 0, -strlen('moon.php')) . '">open ' . "$this->_fn app</a>";
+            $this->finish([2 => $this->path($fn)]);
             $flag = false;
             $q = $this->sql("select tmemo from {$pref}memory where id=3");
             $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", mysqli_fetch_row($q)[0]));
@@ -531,7 +537,7 @@ if ('cli' == PHP_SAPI):
         exit;
     }
     if (1 == $argc) {
-        echo "Usage: php moon.php packagename.sky [user:password@databasehost:3306/databasename]\n";
+        echo "Usage: php moon.php packagename.sky [user:password@databasehost:3306/databasename:pref_]\n";
         echo "  dsn example: root:@localhost/testdb\nor.. use web-interface\n";
         exit;
     }
@@ -539,7 +545,7 @@ if ('cli' == PHP_SAPI):
     $moon->_fn = $argv[1];
     $_POST = ['log' => '00'];
     if (3 == $argc) {
-        if (!preg_match("~^(\w+):([^@]*)@([^:/]+):?(\d+|)/(\w+)$~", $argv[2], $m))
+        if (!preg_match("~^(\w+):([^@]*)@([^:/]+):?(\d+|)/(\w+):?(\w+|)$~", $argv[2], $m))
             exit("\nDSN don't match\n");
         $_POST += [
             'user' => $m[1],
@@ -547,7 +553,7 @@ if ('cli' == PHP_SAPI):
             'host' => $m[3],
             'port' => $m[4] ?: 3306,
             'name' => $m[5],
-            'prefix' => 't_',
+            'prefix' => $m[6],
         ];
     }
     while (true) {
@@ -560,7 +566,6 @@ if ('cli' == PHP_SAPI):
     if ($moon->json['err'])
         echo "\n" . $moon->json['err'] . "\n";
 
-    //print_r($moon->json);
     if ($moon->success) {
         echo "\nsuccess\n";
         system("php ../main/sky s");
@@ -614,7 +619,7 @@ var $$ = {
         var a = '<a href="javascript:;" onclick="$(this).parent().hide()" style="float:right">hide [X]</a>';
         div.find('pre:eq(1)').html(a + $$.s2[$$.mode]);
     },
-    fd: [], // fn f tr d
+    fd: [], // [fn,f,tr,d]
     select: function(fd) {
         $$.fd = fd;
         $('#page div:eq(0)').hide().next().show();
@@ -645,22 +650,24 @@ var $$ = {
                 $('#log').append('<div class="w">' + r.success + '</div>');
         }
     },
-    log: function() {
+    postfields: function(v) {
         var log = $('input[name=log]').is(':checked') ? '1' : '0';
             log += $('input[name=reset]').is(':checked') ? '1' : '0';
-        return '&log=' + log + '&mode=' + $$.mode;
+        if (v)
+            log += '&' + $('#f3').serialize();
+        return 'mode=' + $$.mode + '&log=' + log;
     },
-    etc: function(com, success) { // refresh n o move
+    etc: function(com, success, el) { // refresh n o move
         if (1 == com.length && !confirm('Are you sure? Drop ' + ('n' == com ? 'anew' : 'aold') + ' directory?'))
             return;
-        if ('move' == com && $$.mode < 2 && $$.fd[2])
-            return $('#p2').hide().next().show();
+        if ('move' == com && $$.mode < 2)
+            return $$.fd[2] ? $('#p2').hide().next().show() : $$.run(el);
         var q = {
             step: $.param({func:'etc', com:com, fn:$$.fd[0]}),
             exf: $('#parent').serialize().replace(/exf=/g, ''),
             success: success
         };
-        $.post('moon.php', $.param(q) + $$.log(), function(r) {
+        $.post('moon.php', $.param(q) + '&' + $$.postfields(0), function(r) {
             $$.response(r, 'move' == com);
             $('#parent').html(r.pd);
             $$.parent_div();
@@ -686,7 +693,7 @@ var $$ = {
             $(el).html(($$.stop = !$$.stop) ? 'Continue' : 'Pause');
             $$.button = el;
         }
-        $$.stop || $.post('moon.php', $('#f3').serialize() + $$.log(), function(r) {
+        $$.stop || $.post('moon.php', $$.postfields(1), function(r) {
             $$.response(r, true);
             $('input[name=step]').val($.param(r.step));
             r.success || $$.run();
@@ -769,7 +776,7 @@ This install script creates multiple directories in the
     <label><input name="type" type="radio" onclick="$$.type(1)"> <span></span></label><hr>
     <label><input name="log" type="checkbox" checked> write installation log file</label> &nbsp;
     <label><input name="reset" type="checkbox"> reset log from start</label><br><br>
-    <button onclick="$$.etc('move')"></button>
+    <button onclick="$$.etc('move','',this)"></button>
     <pre style="background:#ff9; padding:10px; font-size:15px"></pre>
 </fieldset>
 <fieldset style="margin:10px 0"><legend>Parent directory contain now:</legend>
