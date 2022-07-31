@@ -19,16 +19,16 @@
     ~block
 </div>
 <div style="margin:10px">
-#if('system' == :_1)
+#if('system' == :1)
     @inc(.system)
-#elseif('files' == :_1)
+#elseif('files' == :1)
     @inc(.files)
 #else
     @inc(.database)
 #end
 <pre id="log" style="display:none"></pre>
 </div>
-#if('system' == :_1)
+#if('system' == :1)
     <div class="bg-wx bg-x">
         New app version: &nbsp; <input name="vapp" size="7" value="{{$vapp}}"> &nbsp; &nbsp; Coresky version: <b>{{$vcore}}</b>
     </div>
@@ -43,7 +43,7 @@
 var c_ = false, r_ = false, proc = false;
 sky.g.save = function(el) {
     if (el) { // button hit
-        #if('system' == :_1)
+        #if('system' == :1)
             if (!$('input[name=do]').is(':checked'))
                 return ajax('system', $('#inst form').serialize(), sky.false);
         #end

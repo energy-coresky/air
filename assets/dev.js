@@ -25,6 +25,12 @@ sky.d.attach = function(s, m, form) {
     });
 };
 
+sky.d.download = function(n) {
+    ajax('download', {n:n}, function(r) {
+        'OK' == r ? (location.href = '_dev?ware') : alert(r);
+    });
+};
+
 sky.d.second_dir = function(el) {
     var s = $(el).prev().val();
     if (s) ajax('second_dir', {s:s}, function(r) {

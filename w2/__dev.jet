@@ -51,11 +51,18 @@
 <div class="other-task">
     <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{DIR_M}}</span>.SKY. application:</div>
 </div>
-<div class="" style="padding:10px;">
+<div id="inet-wares" style="padding:10px;">
     <h1>Connecting ...</h1>
-    @loop($_< 0)@eat
+#.inet
+#if(:-)
+    @loop($e_inet)@eat
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
+#end
+#.inet
+<script>
+  ajax('inet',{},'inet-wares');
+</script>
 </div>
 #.ware.single ------------------------------------------------------------------------------
 <div class="ware" style="background:{{$bg_ware}}">
@@ -76,8 +83,10 @@
     <div style="width:150px;position:relative;top:0px">
     @if(!$bg_ware)
         <button onclick="sky.d.attach('{{$row->name}}','un')">Uninstall</button>
-    @else
+    @elseif('#e0e7ff' == $bg_ware)
         <button onclick="sky.d.attach('{{$row->type . '.' . $row->path}}',1)">Install</button>
+    @else
+        <button onclick="sky.d.download('{{$row->name}}')">Download</button>
     ~if
     </div>
 </div>
@@ -155,9 +164,9 @@
 </div>
 
 <div id="v-menu">
-#if('_trace'!=:_0)
+#if('_trace'!=:0)
     <div class="other-task" style="position:sticky; top:0px">Tasks</div>
-    #if('view'==:_1 || 'min'==Plan::$ware)
+    #if('view'==:1 || 'min'==Plan::$ware)
         <a href="_dev">Show</a>
     #else
     @loop($y_tasks as $uri => $name)
@@ -199,7 +208,7 @@
     </div>
     <div style="text-align:right; width:25%"><b>{{$sky->d_app}}.SKY. {{SKY::version()['app'][3]}}</b></div>
 </div>
-#if('_trace'!=:_0)
+#if('_trace'!=:0)
     <style>#v-menu { width: 170px; } #v-body { width: calc(100vw - 170px); }</style>
 #end
 </div>

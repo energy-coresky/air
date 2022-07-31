@@ -31,8 +31,8 @@
     <dl><dt>Url</dt><dd>{{$url}}</dd></dl>
     <dl><dt>Repository</dt><dd>{{$repo}}</dd></dl>
     <div id="vend-detail">
-#.detail ------------------------------------------------------------------------------ #if(:this)
-#if('detail'== Jet::$tpl[count(Jet::$tpl) - 1][1])
+#.detail ------------------------------------------------------------------------------
+#if(:-)
     <dl><dt>Type</dt><dd>{{$row->type ?? 'library'}}, PHP {{$row->require->php ?? '?'}}</dd></dl>
     <dl><dt>Versions ({{$cnt}})</dt><dd>{{$cnt ? $row->version . $ver : '-'}}</dd></dl>
     @if($row && $row->homepage)<dl><dt>Homepage</dt><dd>{{$row->homepage}}</dd></dl>~if

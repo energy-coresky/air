@@ -460,7 +460,7 @@ function json($in, $return = false, $off_layout = true) {
     if ($off_layout)
         MVC::$layout = '';
     header('Content-Type: application/json; charset=' . ENC);
-    defined('JSON_PARTIAL_OUTPUT_ON_ERROR') or define('JSON_PARTIAL_OUTPUT_ON_ERROR', 0); # SKY work from PHP 5.4 this const from PHP 5.5
+    //defined('JSON_PARTIAL_OUTPUT_ON_ERROR') or define('JSON_PARTIAL_OUTPUT_ON_ERROR', 0); # SKY work from PHP 5.4 this const from PHP 5.5
     $out = json_encode($in, $return ? JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR : 0);
     false === $out ? trace('json error: ' . json_last_error(), true, 1) : trace($in, 'json()', 1);
     return $return ? $out : print($out);
@@ -473,6 +473,15 @@ function unjson($in, $assoc = false) {
         trace("unjson() error=$err, in=$in", true);
     }
     return $out;
+}
+
+function api($addr, $in) {
+    $response = file_get_contents($addr, false, stream_context_create(['http' => [
+        'method' => "POST",
+        'header' => "Content-Type: application/json; charset=UTF-8\r\n",
+        'content' => json_encode($in),
+    ]]));
+    return unjson($response, true);
 }
 
 function option($selected, $table, $order = 'id') {

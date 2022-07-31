@@ -454,10 +454,10 @@ class Jet
         }
         $p[] = $tmp . $in;
 
-        $eval = function ($arg) {
+        $eval = function ($arg, $out) {
             static $ary;
             if (null === $ary) {
-                $ary = [':_0' => '$sky->_0', ':_1' => '$sky->_1', ':_2' => '$sky->_2'];
+                $ary = [':0' => '$sky->_0', ':1' => '$sky->_1', ':2' => '$sky->_2', ':-' => '""===trim($out)'];
                 $lines = ($txt = Plan::_gq('mvc/jet.let')) ? explode("\n", $txt) : [];
                 foreach ($lines as $one) {
                     if (preg_match("/^(:\w+)\s+(.+)/", $one, $m))
@@ -465,8 +465,8 @@ class Jet
                 }
             }
             for ($i = 0; $i < 22; $arg = $new, $i++) {
-                $new = preg_replace_callback("/:\w+/", function ($m) use (&$ary) {
-                    return isset($ary[$m[0]]) ? '(' . $ary[$m[0]] . ')' : $m[0];
+                $new = preg_replace_callback("/(:\-|:\w+)/", function ($m) use (&$ary) {
+                    return isset($ary[$m[1]]) ? '(' . $ary[$m[1]] . ')' : $m[1];
                 }, $arg);
                 if ($arg === $new)
                     break;
@@ -497,7 +497,7 @@ class Jet
                     }
                     if ($ok && !$len)
                         $len = $i - $ok - 1;
-                    if (!$ok && '(' === $el[0] && $eval($el))
+                    if (!$ok && '(' === $el[0] && $eval($el, $out))
                         $ok = $i;
                 }
                 if ($ce > 2 || 'end' !== end($v)) { # reassemble on wrong syntax

@@ -542,13 +542,18 @@ class DEV
         return '-';
     }
 
-    function c_ware() {
+    function wares($merge = false) {
         global $sky;
         $works = array_keys($installed = SKY::$plans);
         array_shift($installed);
         $wares = array_map('basename', glob('wares/*'));
         if ($sky->d_second_wares && is_dir($sky->d_second_wares))
             $wares = array_merge($wares, array_map('basename', glob("$sky->d_second_wares/*")));
+        return $merge ? array_merge($wares, $works) : [$works, $wares, $installed];
+    }
+
+    function c_ware() {
+        list ($works, $wares, $installed) = $this->wares();
         $dir = array_diff($wares, $works);
         $wares = Plan::_rq('wares.php');
         return [
@@ -567,16 +572,71 @@ class DEV
                 },
             ],
             'e_dir' => [
-                'row_c' => function ($row) use (&$dir, $sky) {
+                'row_c' => function ($row) use (&$dir) {
+                    global $sky;
                     if (!$ware = array_shift($dir))
                         return false;
                     $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
+                    if (!is_dir($path))
+                        return true;
                     require "$path/conf.php";
                     return [
                         'name' => ucfirst($ware),
                         'type' => $plans['app']['type'],
                         'path' => $path,
                         'desc' => $this->desc($path),
+                    ];
+                },
+            ],
+        ];
+    }
+
+    const repository = 'https://coresky.net/api';
+
+    function j_download() {
+        $name = strtolower($_POST['n']);
+        is_dir('wares') or mkdir('wares');
+        if (!class_exists('ZipArchive', false)) {
+            echo 'class ZipArchive not exists';
+            return;
+        }
+        $zip = file_get_contents(DEV::repository . "?get=$name.zip");
+        file_put_contents($fn = "wares/$name.zip", $zip);
+
+        $zip = new ZipArchive;
+        if ($ok = $zip->open($fn) === true) {
+            mkdir($dir = "wares/$name");
+            $zip->extractTo("$dir/");
+            $zip->close();
+            unlink($fn);
+        }
+        echo $ok ? 'OK' : 'Error in ZIP archive';
+    }
+
+    function j_inet() {
+        $inet = api(DEV::repository, ['search']);
+        if ('OK' != @$inet['result']) {
+            echo '<h1>Error in remote call</h1>';
+            return;
+        }
+        $inet = $inet['wares'];
+        $wares = $this->wares(true);
+        //echo '<pre>';print_r($inet);echo '</pre>';
+        return [
+            'bg_ware' => '#e0e7fe',
+            'e_inet' => [
+                'row_c' => function ($row) use (&$inet, &$wares) {
+                    $name = $inet ? key($inet) : 0;
+                    if (!$ware = array_shift($inet))
+                        return false;
+                    if (in_array($name, $wares))
+                        return true;
+                    return [
+                        'name' => ucfirst($name),
+                        'type' => $ware['type'],
+                        'class' => $cls = ($ware['classes'] ?? 0) ? explode(' ', $ware['classes']) : [],
+                        'cnt' => !$cls ? 0 : count($cls),
+                        'desc' => $ware['desc'],
                     ];
                 },
             ],
@@ -616,10 +676,6 @@ class DEV
     }
 
     function c_system() {
-    }
-
-    function c_documentation() {
-        
     }
 }
 
