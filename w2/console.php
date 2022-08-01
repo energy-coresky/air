@@ -103,6 +103,7 @@ class Console
         if ($air) {
             if (!preg_match("/'(\d+\.\d+[^']+? energy)'/s", $php = file_get_contents('sky.php'), $m))
                 throw new Error('Wrong preg_match');
+            date_default_timezone_set('Europe/Kiev');
             $v = explode(' ', $m[1]);
             $v[0] += 0.001;
             $v[1] = date('c');

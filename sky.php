@@ -315,7 +315,7 @@ class SKY implements PARADISE
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.134 2022-07-31T12:58:21+03:00 energy';
+    const CORE = '0.135 2022-08-01T11:12:27+03:00 energy';
 
     static function version() {
         global $sky;

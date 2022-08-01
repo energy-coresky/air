@@ -45,8 +45,7 @@ if ($d || 'php' == $argv[1]) {
         $sky = new SKY;
     } else {
         define('DIR_S', __DIR__);
-        date_default_timezone_set('Europe/Kiev');
-        require __DIR__ . '/w2/console.php';
+        require DIR_S . '/w2/console.php';
     }
     new Console($argv, $found);
 }
