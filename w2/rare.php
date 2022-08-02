@@ -184,17 +184,6 @@ class Rare
         return $_51 >= $i8 ? 'cp1251' : 'koi8';
     }
 
-    static function root_menu($sky) {
-        $files = array_map(function ($v) {
-            return substr(basename($v), 1, -4);
-        }, glob('admin/_*.php'));
-        $files = array_merge(array_splice($files, array_search('main', $files), 1), $files);
-        $buttons = implode("\t", array_map('ucfirst', $files));
-        $root_access = ceil(count($files) / 7) . "\t" . implode("\t", array_keys($files));
-        SKY::a('menu', serialize([-2 => $uris = implode("\t", $files), -1 => $buttons, $uris, $root_access]));
-        $sky->is_front or jump('?main=3');
-    }
-
     private $err = [];
     private $ai_name;
 

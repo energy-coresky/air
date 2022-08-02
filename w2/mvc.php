@@ -220,7 +220,7 @@ trait HOOK
     static function rewrite_h($cnt, &$surl) {
         if (1 == $cnt && 'robots.txt' == $surl[0] && !$_GET)
             return array_unshift($surl, '_etc');
-        HOOK::re_dev($cnt, $surl);
+        return HOOK::re_dev($cnt, $surl);
     }
 
     static function re_dev($cnt, &$surl) {

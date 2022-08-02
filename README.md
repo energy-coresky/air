@@ -1,5 +1,5 @@
 
-# PHP framework CORESKY
+# The Coresky PHP Framework
 
 Wellcome for contributors!
 This project is my favorite "oil painting"! Not finished yet, but you can use it.

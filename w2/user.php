@@ -68,7 +68,8 @@ class USER
                 AND $this->row = $row + $this->row;
 
             $_ = $this->flags & ~self::NOT_TAILED; # reset flag "not tailed" each click
-            if (self::BANNED & $_) {
+            //if (self::BANNED & $_) {
+            if (0 && self::BANNED & $_) {
                 if (!$this->banend)
                     throw new Stop('403 You are banned'); # hard ban by visitor row
                 $_ &= ~self::BANNED;
