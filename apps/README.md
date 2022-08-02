@@ -14,7 +14,7 @@ Extract files from ab.zip.
 Put in the last folder this two files: **ab.sky** and **moon.php**.
 Open in browser similar like `http://my-apache.local/ab/web/moon.php`, then follow the instructions.
 
-### Just PHP >7 required
+### Just PHP required
 
 Create an empty dir somewhere: `mkdir hole`, +one more `mkdir hole/public`. Extract files from hole.zip to the last.
 
@@ -22,6 +22,14 @@ For HOLE.SKY only: you can just type in console (will work embedded into PHP's S
 
 ```
 php moon.php hole.sky
+```
+
+Or.. install & run HOLE.SKY via **composer**:
+
+```
+composer create-project coresky/hole test
+cd test/public
+php ../vendor/energy/air/sky s
 ```
 
 <hr>

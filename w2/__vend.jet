@@ -11,7 +11,7 @@
         </select>
     </div>
     <div class="fs16" style="padding-left:20px;">
-        <input name="dir" size="12" value="{{$sky->d_vend_s ?: 'sky'}}">
+        <input name="dir" size="12" value="{{$sky->d_vend_s ?: 'coresky'}}">
         <input type="button" value="search" onclick="sky.d.vend(this)">
     </div>
     <div class="fs16" style="padding-left:50px;"></div>

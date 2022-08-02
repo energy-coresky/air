@@ -38,7 +38,7 @@ class Vendor
     }
 
     function c_search() {
-        SKY::d('vend_s', $s = $_POST['s'] ?? 'sky');
+        SKY::d('vend_s', $s = $_POST['s'] ?? 'coresky');
         $response = file_get_contents('https://packagist.org/search.json?per_page=100&q=' . urlencode($s));
         $std = unjson($response);
         $name = $std->total ? $std->results[0]->name : '';
