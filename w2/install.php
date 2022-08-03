@@ -59,7 +59,7 @@ class Install
                     $s[1] = '$databases = ' . var_export($databases, true);
                     $bin = implode('', $s);
                 }
-                $bin = preg_replace("/(DIR_S')[^\)]+\)/", '$1, \'main\')', $bin);
+                $bin = preg_replace("/(DIR_S')[^;]+;/", '$1, \'main\');', $bin);
                 $size = strlen($bin);
             } else {
                 $size = filesize($fn);
