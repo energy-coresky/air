@@ -13,7 +13,7 @@ class SVG {
 
     function __toString() { # compile image
         global $sky;
-        $tpl = unl(Plan::mem_g([$sky->d_last_ware ?: 'main', $this->pack]));
+        $tpl = unl(Plan::view_g([$sky->d_last_ware ?: 'main', $this->pack]));
         preg_match("/\n:$this->name(| [^\n]+)\n(.+?)\n:/s", $tpl, $m);
         return sprintf('<svg %s xmlns="http://www.w3.org/2000/svg">%s</svg>', $m[1], $m[2]);
     }

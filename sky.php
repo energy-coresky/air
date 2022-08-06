@@ -357,7 +357,7 @@ interface Cache_driver
     function get($name);
     function run($name);
     function mtime($name);
-    function put($name, $data);
+    function put($name, $data, $is_append = false);
     function glob($mask = '*');
     function drop($name);
     function drop_all($mask = '*');

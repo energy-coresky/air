@@ -34,11 +34,11 @@ class dc_file implements Cache_driver
         return stat($this->path . $name)['mtime'];
     }
 
-    function put($name, $data) {
+    function put($name, $data, $is_append = false) {
         global $sky;
         if (!is_dir($this->obj->path))
             mkdir($this->obj->path, (int)($sky->s_mkdir_mode ?: 0777), true);
-        return file_put_contents($this->path . $name, $data);
+        return file_put_contents($this->path . $name, $data, $is_append ? FILE_APPEND : null);
     }
 
     function glob($mask = '*') {

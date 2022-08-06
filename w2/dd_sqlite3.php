@@ -101,21 +101,26 @@ class dd_sqlite3 implements Database_driver
     function _tables($table = false) {
         $select = 'SELECT name FROM sqlite_master WHERE type = "table" AND name';
         if ($table)
-            return (bool)sqlf("+$select LIKE %s", $this->pref . $table);
-        return sqlf("@$select NOT LIKE 'sqlite_%'");
+            return (bool)$this->sqlf("+$select LIKE %s", $this->pref . $table);
+        return $this->sqlf("@$select NOT LIKE 'sqlite_%'");
     }
 
     function _struct($table = false) {
         $data = $this->sql(1, '@pragma table_info($_`)', $table);
         $out = [];
         array_walk($data, function(&$v, $k) use (&$out) {
-            $out[$v[0]] = $v[1]; # default value or empty string
-        });
+            $d = "$this->quote$v[0]$this->quote $v[1] ";
+            $d .= $v[4]
+                ? 'PRIMARY KEY AUTOINCREMENT NOT NULL'
+                : (!$v[2] ? 'DEFAULT NULL' : (null === $v[3] ? 'NOT NULL' : 'NOT NULL DEFAULT ' . $v[3]));
+            $default = !$v[2] ? null : (null === $v[3] ? 0 : $v[3]);
+            $out[$v[0]] = [$v, $default, $d, 0];
+        });    # 0-original, 1-defvalue, 2-definition
         return $out;
     }
 
     function _rows_count($table) {
-        return sql('+select count(1) from $_`', $table);
+        return $this->sql('+select count(1) from $_`', $table);
     }
 
     function f_fmt($in) {

@@ -160,8 +160,13 @@ class dd_mysqli implements Database_driver
     function _struct($table = false) {
         $data = $this->sql(1, '@explain $_`', $table);
         array_walk($data, function(&$v, $k) {
-            $v = is_null($v[3]) ? '' : $v[3]; # default value or empty string
-        });
+            $d = "$this->quote$k$this->quote $v[0] ";
+            $d .= $v[4]
+                ? 'NOT NULL AUTO_INCREMENT'
+                : (null === $v[3] ? ('YES' === $v[1] ? 'DEFAULT NULL' : 'NOT NULL') : 'NOT NULL DEFAULT ' . var_export($v[3], 1));
+            $default = null === $v[3] ? ('YES' === $v[1] ? NULL : 0) : $v[3];
+            $v = [$v, $default, $d, $v[4] ? "PRIMARY KEY ($this->quote$k$this->quote)" : 0];
+        });    # 0-original, 1-defvalue, 2-definition
         return $data;
     }
 

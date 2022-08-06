@@ -79,8 +79,9 @@ class Plan
                 return $obj;
             case 'b':
                 return $obj->con->glob($a0); # mask
+            case 'a': # append
             case 'p':
-                return $obj->con->put($a0, $arg[1]);
+                return $obj->con->put($a0, $arg[1], 'a' == $op);
             case 'gq':
             case 'g':
                 return $obj->con->get($a0);
