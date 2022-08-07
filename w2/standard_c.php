@@ -202,7 +202,8 @@ class standard_c extends Controller
             Plan::_r([Plan::$ware = Plan::$view = $name, "mvc/$class.php"]);
             MVC::$cc = MVC::$mc;
             MVC::$mc = new $class;
-            $action = '' == $this->_1 ? 'empty_' . $x : $x . "_$this->_1";
+            if (!method_exists(MVC::$mc, $action = '' == $this->_1 ? 'empty_' . $x : $x . "_$this->_1"))
+                $action = 'default_' . $x;
             if (method_exists(MVC::$mc, 'head_y'))
                 MVC::instance()->set(MVC::$mc->head_y($action), true);
             MVC::body("$name." . ($this->_1 ? $this->_1 : 'empty'));
