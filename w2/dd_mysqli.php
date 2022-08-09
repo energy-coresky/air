@@ -21,7 +21,7 @@ class dd_mysqli implements Database_driver
     function info() {
         $ary = [
             'name' => $this->name,
-            'version' => sqlf('+select version()'),
+            'version' => $this->sqlf('+select version()'),
             'charset' => mysqli_character_set_name($this->conn),
         ];
         return $ary + ['str' => implode(', ', $ary)];
@@ -128,7 +128,7 @@ class dd_mysqli implements Database_driver
         if (!$sky->begin_transaction && $sky->debug_begin)
             $sky->s_prod_error = $sky->debug_begin = false;
         if ($sky->begin_transaction && ($sky->lock_table = $lock_table))
-            sql('lock tables $$', $lock_table);
+            $this->sql('lock tables $$', $lock_table);
         return $sky->begin_transaction;
     }
 
@@ -141,20 +141,20 @@ class dd_mysqli implements Database_driver
             return;
         ($ok = !$sky->was_error && mysqli_commit($this->conn)) ? mysqli_autocommit($this->conn, true) : mysqli_rollback($this->conn);
         if ($sky->lock_table)
-            sql('unlock tables');
+            $this->sql('unlock tables');
         trace('transaction finished', false, 1);
         $sky->begin_transaction = $sky->lock_table = false;
         return !$ok && is_callable($par) ? $par() : $ok && $par;
     }
 
     function _xtrace() {
-        sqlf('update $_memory d left join $_memory s on (s.id= if(d.id=15, 1, 15)) set d.tmemo=s.tmemo where d.id in (15, 16)');
+        $this->sqlf('update $_memory d left join $_memory s on (s.id= if(d.id=15, 1, 15)) set d.tmemo=s.tmemo where d.id in (15, 16)');
     }
 
     function _tables($table = false) {
         if ($table)
-            return (bool)sqlf('+show tables like %s', $this->pref . $table);
-        return sqlf('@show tables');
+            return (bool)$this->sqlf('+show tables like %s', $this->pref . $table);
+        return $this->sqlf('@show tables');
     }
 
     function _struct($table = false) {
@@ -171,7 +171,7 @@ class dd_mysqli implements Database_driver
     }
 
     function _rows_count($table) {
-        $row = sqlf("-show table status like %s", $this->pref . $table);
+        $row = $this->sqlf("-show table status like %s", $this->pref . $table);
         return $row[4];
     }
 
