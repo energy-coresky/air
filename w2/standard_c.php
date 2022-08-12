@@ -55,6 +55,7 @@ class standard_c extends Controller
             defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             return $this->_y + [
                 'tx' => '_trace' == $sky->_0 ? URI : '_x0',
+                'ware_dir' => '',
                 'tasks' => [
                     '_dev' => 'Development',
                     '_gate' => 'Open SkyGate',
@@ -193,7 +194,7 @@ class standard_c extends Controller
 
     function __call($name, $args) {
         list ($x, $name) = explode('_', $name, 2);
-        if (isset(SKY::$plans[$name])) {////////////////////
+        if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
             define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             if (DEV)
@@ -207,6 +208,8 @@ class standard_c extends Controller
             if (method_exists(MVC::$mc, 'head_y'))
                 MVC::instance()->set(MVC::$mc->head_y($action), true);
             MVC::body("$name." . ($this->_1 ? $this->_1 : 'empty'));
+            if (MVC::$layout)
+                $this->_y += ['ware_dir' => Plan::_obj(0)->path];
             return MVC::$mc->$action();
         }
         return parent::__call($name, $args);

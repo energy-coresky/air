@@ -146,6 +146,7 @@
 #.menu
 
 #.layout //////////////////////////////////////////////////////////////////////////////
+@if($y_ware_dir)@use(`Ware` as bottom)~if
 <!doctype html><html>
 <head>@head<script>sky.a._0 = sky.a.div = '{{$sky->_0}}'; sky.a._1 = '{{$sky->_1}}'; sky.a.uri = '{{URI}}'</script>
 </head>
@@ -194,17 +195,19 @@
 </div>
 
 <div id="v-tail">
-    <span style="width:40%" id="master">@block(`` as top_tpl)</span>
+    <span style="width:40%" id="master">@block(`{{$y_ware_dir}}` as top_tpl)</span>
     <div style="width:35%" id="tpl-list">
+        @block(bottom)
         <form method="post" style="display:inline-block"><input type="hidden" name="t0">
         <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}}))@active('_dev?view=' == substr(URI, 0, 10))>
-            ▲ Views (<span>@block(views)?~block</span>)
+            ▲ Views (<span>@block(`?` as views)</span>)
         </a>&nbsp; &nbsp;
         <a href="#">
             ▲ SQLs (?)
         </a>&nbsp; &nbsp;
         <a href="#">▲ Classes (?)</a>
         </form>
+        ~block
     </div>
     <div style="text-align:right; width:25%"><b>{{$sky->d_app}}.SKY. {{SKY::version()['app'][3]}}</b></div>
 </div>

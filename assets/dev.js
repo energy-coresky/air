@@ -41,7 +41,7 @@ sky.d.second_dir = function(el) {
 sky.d.trace_t = '';
 
 sky.d.trace = function() {
-    if ('view' == sky.a._1)
+    if ('' != $('#master').html())
         return;
     sky.d.trace_t = window.parent.document.getElementById('trace-t').innerHTML
     if ('_x0' == sky.a.uri) {
