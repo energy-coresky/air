@@ -311,8 +311,6 @@ class MVC extends MVC_BASE
 
     static function fn_parsed($layout, $body) {
         global $sky;
-        //$p = (DESIGN ? 'd' : '') . ($sky->is_mobile ? 'm' : '') . '_';
-        //return Plan::$view . '-' . ($sky->is_mobile ? 'm_' : '_') . "{$sky->style}-{$layout}-{$body}.php";
         return Plan::$view . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
     }
 
