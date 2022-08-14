@@ -1,6 +1,6 @@
 <?php
 
-# For Licence and Disclaimer of this code, see http://coresky.net/license
+# For Licence and Disclaimer of this code, see https://coresky.net/license
 
 function view($_in, $return = false, &$_vars = null) {
     if (!$_in) {
