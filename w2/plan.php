@@ -58,11 +58,8 @@ class Plan
         $pn or $pn = 'app';
         list ($ware, $a0) = is_array($arg[0]) ? $arg[0] + [1 => 1] : [Plan::$ware, $arg[0]];
 
-        if ('jet' == $pn) {
-            $a0 = Plan::$view . '-' . $a0;
-        } elseif ('view' == $pn && 'main' == $ware && !is_array($arg[0])) {
+        if ('view' == $pn && 'main' == $ware && !is_array($arg[0]))
             $ware = Plan::$view;
-        }
 
         if ($old_ware == $ware && $old_obj->pn == $pn) {
             $obj = $old_obj;

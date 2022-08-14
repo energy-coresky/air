@@ -12,7 +12,7 @@ After installation and using MySQL database try switch to SQLite (edit main/conf
 
 Create an empty dir in the Apache root: `mkdir ab`, then `mkdir ab/web`.
 Extract files from ab.zip.
-Put in the last folder this two files: **ab.sky** and **moon.php**.
+Put to the last folder this two files: **ab.sky** and **moon.php**.
 Open in browser similar like `http://my-apache.local/ab/web/moon.php`, then follow the instructions.
 
 ### Just PHP & console required

@@ -23,7 +23,7 @@ class DEV
         global $sky;
 
         if ($sky->s_init_needed) {
-            $js = (DESIGN ? DESIGN : WWW) . 'm/' . basename(DEV::js);
+            $js = WWW . 'm/' . basename(DEV::js);
             file_exists($js) or file_put_contents($js, file_get_contents(DEV::js)) or exit("Cannot save `$js`");
             DEV::init_reset(sql('+select tmemo from memory where id=5'));
             SKY::s('init_needed', null); # run once only

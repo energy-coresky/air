@@ -42,7 +42,6 @@ class HEAVEN extends SKY
         parent::__construct();
 
         header('Content-Type: text/html; charset=' . ENC);
-        defined('DESIGN') or define('DESIGN', false);
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
         if (false === $this->method)
             throw new Error('Unknown request method');

@@ -34,7 +34,7 @@ class Jet
             Jet::$block = Jet::$use = Jet::$ptr = Jet::$inc = Jet::$verb = [];
             $this->parsed[Jet::$id = 1] = '';
             Jet::$top =& $this->parsed[1];
-            Jet::$fn = explode('-', basename($fn), 2)[1];
+            Jet::$fn = explode('-', basename($fn));
             $this->occupied = ['k', 'e', 'y'];
             if (MVC::$mc) # not console!
                 MVC::handle('jet_c');

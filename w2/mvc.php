@@ -311,8 +311,9 @@ class MVC extends MVC_BASE
 
     static function fn_parsed($layout, $body) {
         global $sky;
-        $p = (DESIGN ? 'd' : '') . ($sky->is_mobile ? 'm' : '') . '_';
-        return "$p{$sky->style}-{$layout}-{$body}.php";
+        //$p = (DESIGN ? 'd' : '') . ($sky->is_mobile ? 'm' : '') . '_';
+        //return Plan::$view . '-' . ($sky->is_mobile ? 'm_' : '_') . "{$sky->style}-{$layout}-{$body}.php";
+        return Plan::$view . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
     }
 
     static function vars(&$all, &$new, $pref = false) {
@@ -344,9 +345,9 @@ class MVC extends MVC_BASE
             $vars['sky'] = $mvc;
         }
         $fn = MVC::fn_parsed($layout, $name);
-        $dev = DEV || DESIGN;
-        $ok = Plan::jet_tp($fn) && ($sky->s_jet_cact || !$dev);
-        if ($ok && ($dev || $sky->s_jet_prod)) { # this `if` can be skipped on the production by the config
+     //   $dev = DEV || DESIGN;
+        $ok = Plan::jet_tp($fn) && ($sky->s_jet_cact || !DEV);
+        if ($ok && (DEV || $sky->s_jet_prod)) { # this `if` can be skipped on the production by the config
             list ($mtime, $files) = Plan::jet_mf($fn); # to get max speed (avoid mtime checking)
             foreach ($files as $one) {
                 $ok &= Plan::view_('m', "$one.jet") < $mtime; # check for file mtime
@@ -421,7 +422,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             $sky->k_head = $sky->k_head . sprintf('<meta http-equiv="refresh" content="%d%s">', $secs, $link ? ";url=$link" : '');
         }
         if (!$sky->k_static) {
-            $fn = ($sky->style ? "$sky->style/" : '') . ($sky->is_mobile ? 'mobile' : 'desktop');
+            $fn = $sky->is_mobile ? 'mobile' : 'desktop';
             $sky->k_static = [[], ["~/m/$fn.js"], ["~/m/$fn.css"]]; # default app meta_tags, js, css files
         }
         $plus = "<title>$sky->k_title</title>$plus";
