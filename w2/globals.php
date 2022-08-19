@@ -272,7 +272,7 @@ class Globals
         foreach ($this->definitions as &$definition)
             ksort($definition); # natcasesort($definition);
 
-        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []);  //req
+        $nap = Plan::mem_rq('report.nap');
         $cnts = [0, 0]; # no-problem, ok, unchecked
 
         return [
@@ -326,9 +326,9 @@ class Globals
     }
 
     function c_mark() {
-        is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []); //req
+        $nap = Plan::mem_rq('report.nap');
         $nap[$_POST['ident']] = $_POST['desc'];
-        file_put_contents($fn, "<?php \$nap = " . var_export($nap, 1) . ';');
+        Plan::mem_p('report.nap', DEV::auto($nap));
         return $this->c_report();
     }
 
