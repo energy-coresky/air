@@ -6,7 +6,7 @@
   Comment: <input value="Not a problem" size="100">
   <button onclick="sky.g.mark(this,'{{$ident}}')">Mark</button>
   <br><br>
-  <button onclick="dev(['_glob','report'])">&lt;&lt; Back</button>
+  <button onclick="dev(['_glob','back'])">&lt;&lt; Back</button>
 </div>
 #.form
 
@@ -38,21 +38,19 @@
     <br><div class="other-task">Globals report</div>
     <div class="other-info">
     <table cellspacing="0" cellpadding="0" width="100%">
-        <tr><td>Total definitions:</td><td>200</td></tr>
+        <tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
         @loop($defs as $key => $ary)
             <tr><td style="padding-left:10px"{{'EVAL' == $key ? '' : ' noborder'}}>
                 {{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}:
             </td><td{{'EVAL' == $key ? '' : ' noborder'}}>{{count($ary)}}</td></tr>
         ~loop
-        <tr><td>No problem:</td><td>163</td></tr>
-        <tr><td>Marked OK:</td><td>17</td></tr>
-        <tr><td>Unchecked definitions:</td><td class="bg-r">20</td></tr>
     </table>
     </div>
-#.menu.report.mark.save ----------------------------------------------------------------------------------------------------------
+#.menu.report ----------------------------------------------------------------------------------------------------------
 #use(`<h4>GLOBALS REPORT</h4>` as header)
 #use(.menu)
 @use(.m_glob)
+#.mark.save.back
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
     <div class="fs16">
         App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
@@ -98,9 +96,12 @@
 <br>
 Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$cnt[1]}} directories
 </div>
-#.save
+#.mark.save.back
 @inc(.jscss)
-#.report.mark
+<script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
+<tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
+<tr><td>Unchecked definitions:</td><td class="bg-r">{{$cnts(2)}}</td></tr>`)</script>
+#.report
 
 #.jscss ==========================================================================================================
 <script>

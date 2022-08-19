@@ -184,7 +184,7 @@ class Globals
         static $dirs;
         if (null === $dirs) {
             $tmemo = sqlf('+select tmemo from $_memory where id=6');
-            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=now(), tmemo=%s where id=6');
+            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=6');
             $dirs = isset($mem['gr_dirs']) ? explode(' ', $mem['gr_dirs']) : [];
         }
         if ($dir) {
@@ -197,7 +197,7 @@ class Globals
 
     function c_dirs() {
         $dirs = Rare::walk_dirs('.');
-        if ('c:/web/air' == DIR_S)
+        if (DIR_M != DIR_S)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
         SKY::s('gr_start', 0);
         return [
@@ -222,6 +222,10 @@ class Globals
     static function ware($dir) {
         $glb = new Globals($dir);
         return array_keys($glb->c_report()['CLASS']);
+    }
+
+    function c_back() {
+        return $this->c_report();
     }
 
     function c_report() {
@@ -269,16 +273,22 @@ class Globals
             ksort($definition); # natcasesort($definition);
 
         is_file($fn = 'var/report.nap') ? (require $fn) : ($nap = []);  //req
+        $cnts = [0, 0]; # no-problem, ok, unchecked
 
         return [
             'defs' => $this->definitions,
+            'cnts' => function($i) use (&$cnts) {
+                return 2 == $i ? array_sum(array_map('count', $this->definitions)) - $cnts[0] - $cnts[1] : $cnts[$i];
+            },
             'e_idents' => [
                 'max_i' => -1, // infinite
-                'row_c' => function($in, $evar = false) use ($nap) {
+                'row_c' => function($in, $evar = false) use ($nap, &$cnts) {
                     static $ary, $gt, $id, $num, $err_msg, $def_prev = '';
                     if ($evar) {
                         $gt = count($ary = $in[0]) > 1;
                         $id = $in[1];
+                        if (isset($nap[$id]))
+                            $cnts[1]++;
                         list ($def) = explode('.', $id);
                         if ($def_prev != $def)
                             $num = 1;
@@ -293,8 +303,10 @@ class Globals
                     if ($x && $x[0] == '-')
                          $x = substr($x, 1);
                     $ok = isset($nap[$id]);
+                    if (!$gt = $gt || $c[2])
+                        $cnts[0]++;
                     return [
-                        'class' => $c[2] || $gt ? ($ok ? 'bg-y' : 'bg-r') : 'norm', //bg-b
+                        'class' => $gt ? ($ok ? 'bg-y' : 'bg-r') : 'norm', //bg-b
                         'pos' => "$c[0]^$c[1]",
                         'desc' => $x,
                         'nap' => $ok ? $nap[$id] : '',
