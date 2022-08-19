@@ -39,6 +39,24 @@ php moon.php hole.sky
 
 Try download & install DEV-wares (using development tools) after HOLE.SKY. running.
 
+Or download all with git:
+
+```bash
+# the app
+git clone https://github.com/energy-coresky/empty-app.git
+# the framework
+git clone https://github.com/energy-coresky/air.git
+# the wares
+mkdir empty-app/wares
+cd empty-app/wares
+git clone https://github.com/energy-coresky/parsedown.git
+git clone https://github.com/energy-coresky/earth.git
+git clone https://github.com/energy-coresky/mercury.git
+# then run PHP's embedded web-server:
+cd ../public
+php ../../air/sky s
+```
+
 <hr>
 
 Installer **moon.php** uses files with the **.sky** extension. These files contain all the application files and
