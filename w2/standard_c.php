@@ -79,7 +79,7 @@ class standard_c extends Controller
         if (!$user->root && !DEBUG)
             return 404;
         $this->load();
-        $sky->debug = false;
+        $sky->debug = 0;
         $this->_y = ['page' => 2 == $id ? 'trace-t' : 'trace-x'];
         if (2 != $id)
             $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
@@ -90,7 +90,7 @@ class standard_c extends Controller
         global $sky, $user;
         if (!$user->root && !DEV)
             return 404;
-        $sky->debug = false;
+        $sky->debug = 0;
         list($file, $line) = explode('^', $_POST['name']);
         $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
         echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
@@ -197,7 +197,7 @@ class standard_c extends Controller
         if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
             define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
-            if (DEV)
+            if (DEV)//??
                 $this->d_last_ware = $name;
             $class = $name . '_c';
             Plan::_r([Plan::$ware = Plan::$view = $name, "mvc/$class.php"]);

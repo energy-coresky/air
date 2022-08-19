@@ -158,7 +158,7 @@ class HEAVEN extends SKY
                 $etc = ['err_no' => $this->error_no, 'soft' => (int)('' === $plus)];
                 if ($plus) {
                     $tracing = $this->debug ? $this->errors . $this->tracing($plus, true) : '';
-                    $this->errors = view('_std.404', ['d_tracing' => $tracing]);
+                    $this->errors = view('_std.404', ['tracing' => $tracing]);
                 } else {
                     $this->errors = $stdout;
                 }

@@ -246,13 +246,13 @@ class Globals
         $this->all_lc = array_change_key_case($this->all);
 
         $dirs = Rare::walk_dirs($this->path, $this->exclude_dirs());
-        if ('c:/web/air' == DIR_S && '.' == $this->path)
+        if (DIR_M != DIR_S && '.' == $this->path)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
-
         foreach ($dirs as $dir) {
             $this->cnt[1]++;
             foreach (Rare::list_path($dir, 'is_file') as $fn) {
-                list (,$this->ext) = explode('.', $fn) + [1 => ''];
+                $ary = explode('.', $fn);
+                $this->ext = end($ary);
                 if (in_array($this->ext, $this->exts))
                     $this->parse($fn);
             }
@@ -260,7 +260,7 @@ class Globals
         if ('.' != $this->path)
             return $this->definitions;
 
-        if ('c:/web/air' == DIR_S) {
+        if (DIR_M != DIR_S) {
             $this->parse(DIR_S . '/heaven.php');
             $this->parse(DIR_S . '/sky.php');
         }

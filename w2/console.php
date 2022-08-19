@@ -91,7 +91,11 @@ class Console
                 . "\nif ('/' !== \$uri && file_exists(getcwd() . \$uri))\n\treturn false;\n"
                 . '$_SERVER["SCRIPT_NAME"] = "/index.php"; require "index.php";');
         }
-        system("explorer \"http://localhost:$port\"");
+        if ('WINNT' == PHP_OS) {
+            system("explorer \"http://localhost:$port\"");
+        } else {
+            echo "Now open browser at http://localhost:$port\n\n";
+        }
         system("php -S localhost:$port $fn");
     }
 

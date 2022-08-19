@@ -284,7 +284,7 @@ class SKY implements PARADISE
                 $plus .= DEV::trace();
                 SKY::$dd->_xtrace();
             }
-            sqlf('update $_memory set tmemo=%s where id=1', $plus);
+            SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $plus);
         }
         return $plus;
     }
@@ -333,7 +333,7 @@ class SKY implements PARADISE
     function log($mode, $data) {
         if (!in_array($this->s_test_mode, [$mode, 'all']))
             return;
-        sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
+        SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
     }
 }
 
