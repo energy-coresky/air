@@ -320,10 +320,9 @@ class SKY implements PARADISE
     static function version() {
         global $sky;
         $core = explode(' ', SKY::CORE);    # timestamp CS-ver   APP-ver
-        $sky->s_version or $sky->s_version = time() . " $core[0] 0.0001";
-        $app = explode(' ', $sky->s_version, 3);
+        $app = explode(' ', $sky->s_version) + [time(), $core[0], '0.0001', 'APP'];
         $len = strlen(substr($app[2], 1 + strpos($app[2], '.')));
-        $app[3] = $app[2] . ($len < 3 ? '' : ($len < 4 ? '-beta' : '-alfa'));
+        $app[3] = ($len < 3 ? '' : ($len < 4 ? 'βῆτα.' : 'ἄλφα-')) . "$app[2].$app[3].SKY.";
         return [
             'core' => $core,
             'app' => $app,

@@ -106,7 +106,6 @@
 <fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
 {! $form !}
 </fieldset>
-{! Root::_overview(0) !}
 </div>
 #.overview.m_dev ------------------------------------------------------------------------------
 @php $task_act = $sky->_1 ?: 'overview' ~php
@@ -118,6 +117,12 @@
 #.system //////////////////////////////////////////////////////////////////////////////
 #use(`<h4>ADJUST SYSTEM CONFIGURATION</h4>` as header)
 @use(.m_dev)
+<div style="padding:10px 0 0 10px">
+<fieldset><legend>App name & versions</legend>
+{! $form !}
+</fieldset>
+{! Root::_overview(0) !}
+</div>
 #.system
 
 
@@ -190,7 +195,7 @@
 </div>
 
 <div id="v-body">
-    <div style="display:table-cell; width:inherit;" class="{{$y_page}}">@inc(*)</div>
+    <div style="display:table-cell; width:inherit;" id="dev-{{$y_page}}">@inc(*)</div>
     <div id="trace-h" style="display:none">{!$err_ajax ?? ''!}</div>
 </div>
 
@@ -209,7 +214,7 @@
         </form>
         ~block
     </div>
-    <div style="text-align:right; width:25%"><b>{{$sky->d_app}}.SKY. {{SKY::version()['app'][3]}}</b></div>
+    <div style="text-align:right; width:25%"><b>{{SKY::version()['app'][3]}}</b></div>
 </div>
 #if('_trace'!=:0)
     <style>#v-menu { width: 170px; } #v-body { width: calc(100vw - 170px); }</style>

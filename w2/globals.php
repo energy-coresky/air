@@ -273,7 +273,7 @@ class Globals
             ksort($definition); # natcasesort($definition);
 
         $nap = Plan::mem_rq('report.nap');
-        $cnts = [0, 0]; # no-problem, ok, unchecked
+        $cnts = [0, 0]; # no-problem, ok
 
         return [
             'defs' => $this->definitions,
@@ -333,7 +333,7 @@ class Globals
     }
 
     function c_save() {
-        file_put_contents('var/report.html', $_POST['html']) ? 'Saved' : 'Error';
+        Plan::mem_p("report_" . substr(NOW, 0, 10) . '.html', $_POST['html']);
         return $this->c_report();
     }
 }

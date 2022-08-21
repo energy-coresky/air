@@ -11,10 +11,9 @@
 #.form
 
 #.m_glob ==========================================================================================================
-@loop(['report' => 'Show Report', 'dirs' => 'Select Dirs', 'save' => 'Save Report'] as $name => $title)
-    <a class="inner-menu" href="_glob?{!$name!}"@active($sky->_1 == $name)>{!$title!}</a>
-    ~{- sky.g.save() -}
-~loop
+<a class="inner-menu" href="_glob?report"@active($sky->_1 == 'report')>Show Report</a>
+<a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Select Dirs</a>
+<a class="inner-menu" @href(sky.g.save())>Save Report</a>
 #.m_glob.dirs.skip ----------------------------------------------------------------------------------------------------------
 #use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
 @use(.m_glob)
@@ -61,7 +60,7 @@
         Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
     </div>
 </div>
-<div style="margin:0 10px 10px 10px" id="report-inner">
+<div style="margin:0 10px 10px 10px">
 <fieldset id="gr-modules"><legend>Modules in current PHP Version: {{PHP_VERSION}}</legend>
     {!implode('', $modules)!}
 </fieldset>
@@ -100,16 +99,15 @@ Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$c
 @inc(.jscss)
 <script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
 <tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
-<tr><td>Unchecked definitions:</td><td class="bg-r">{{$cnts(2)}}</td></tr>`)</script>
+<tr><td>Unchecked definitions:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)</script>
 #.report
 
 #.jscss ==========================================================================================================
 <script>
 sky.set_file_clk('#box-in');
 sky.g.save = function() {
-    $('#box-in a, #box-in button').remove();
-    let html = $('#box-in').html();
-    ajax('save', {html:html}, 'report-inner');
+    //$('#box-in a, #box-in button').remove();
+    ajax('save', {html:$('#dev-glob').html()}, 'dev-glob');
 }
 sky.g.form = function(s) {
     dev('form', {ident:s});

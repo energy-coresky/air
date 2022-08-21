@@ -654,8 +654,7 @@ class DEV
 
     function c_overview() {
         $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
-        $form = [ # visitor data
-            'app' => ['App name', ''],
+        $form = [
             'dev' => ['Set debug=0 for DEV-tools', 'chk'],
             'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
             'sql' => ['Show SQLs in the tracing', 'chk'],
@@ -676,6 +675,21 @@ class DEV
     }
 
     function c_system() {
+        if ($_POST)
+            SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
+        $this->_y = ['page' => 'dev'];
+        global $sky;
+        $val = explode(' ', $sky->s_version) + ['', '', '0.0001', 'APP'];
+        $key = [0, 1, 'ver', 'app'];
+        return ['form' => Form::A(array_combine($key, $val), [
+            ['Application', [
+                'app' => ['', '', 'size="11"'],
+                'ver' => ['', '', 'size="11"'],
+                [tag(SKY::version()['app'][3] . ' ' . date('c', SKY::version()['app'][0])), 'ni'],
+            ]],
+            ['Core', 'ni', SKY::CORE],
+            ['Save', 'submit'],
+        ])];
     }
 }
 
