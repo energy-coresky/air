@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 class Rare
 {
     static public $u_svn_skips = ['.git', '.svn'];

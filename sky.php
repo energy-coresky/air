@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 interface PARADISE
 {
 }
@@ -303,7 +301,7 @@ class SKY implements PARADISE
         define('DATE_DT', 'Y-m-d H:i:s');
         define('I_YEAR', 365 * 24 * 3600);
         define('span_r', '<span style="color:red">%s</span>');
-        define('span_g', '<span style="color:green">%s</span>');
+        define('span_g', '<span style="color:#2b3">%s</span>');
         define('span_b', '<span style="color:blue">%s</span>');
         define('RE_LOGIN', '/^[a-z][a-z_\d]{1,19}$/i');
         define('RE_PASSW', '/^\S{3,15}$/');
@@ -319,10 +317,10 @@ class SKY implements PARADISE
 
     static function version() {
         global $sky;
-        $core = explode(' ', SKY::CORE);    # timestamp CS-ver   APP-ver
+        $core = explode(' ', SKY::CORE);    # timestamp, CS-ver, APP-ver, APP-name
         $app = explode(' ', $sky->s_version) + [time(), $core[0], '0.0001', 'APP'];
         $len = strlen(substr($app[2], 1 + strpos($app[2], '.')));
-        $app[3] = ($len < 3 ? '' : ($len < 4 ? 'βῆτα.' : 'ἄλφα-')) . "$app[2].$app[3].SKY.";
+        $app[3] = ($len < 3 ? '' : ($len < 4 ? 'βῆτα.' : 'ἄλφα.')) . "$app[2].$app[3].SKY.";
         return [
             'core' => $core,
             'app' => $app,

@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 class Schedule
 {
     private $single_thread; # function popen() disabled by security reasons, exec all in one process

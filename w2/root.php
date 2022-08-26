@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 class Root
 {
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -11,8 +9,8 @@ class Root
         $top = menu($i, $menu);
         switch ($menu[$i]) {
             case 'Summary':
-                $_exec = function_exists('shell_exec') ? 'shell_exec' : function ($arg) {
-                    return $arg;
+                $_exec = function_exists('shell_exec') ? 'shell_exec' : function ($arg, $default = false) {
+                    return $default === false ? $arg : $default;
                 };
 
                 $ltime = PHP_OS == 'WINNT' ? preg_replace("@[\r\n\t ]+@", ' ', $_exec('date /t & time /t')) : $_exec('date'); # 2do - MAC PC
@@ -21,7 +19,7 @@ class Root
                 echo Admin::out([
                     'Default site title' => $sky->s_title,
                     'Primary configuration' => sprintf('DEV = %d, DEBUG = %d, DIR_S = %s, ENC = %s, PHPDIR = %s', DEV, DEBUG, DIR_S, ENC, PHP_BINDIR),
-                    'System' => PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a'),
+                    'System' => PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a', PHP_OS),
                     'Server IP' => $_SERVER['SERVER_ADDR'] ?? '::1',
                     'Server localtime' => $ltime . ' ' . ($sky->date(NOW) . ' ' == $ltime ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
                     'Server uptime' => $utime,    # $_exec('uptime')

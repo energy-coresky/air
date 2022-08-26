@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 function e() {
     global $sky;
     $sky->error_no = 1;
@@ -685,7 +683,7 @@ class DEV
             ['Application', [
                 'app' => ['', '', 'size="11"'],
                 'ver' => ['', '', 'size="11"'],
-                [tag(SKY::version()['app'][3] . ' ' . date('c', SKY::version()['app'][0])), 'ni'],
+                [tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0])), 'ni'],
             ]],
             ['Core', 'ni', SKY::CORE],
             ['Save', 'submit'],

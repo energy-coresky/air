@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 class File_t extends MVC_BASE
 {
     private $img_t = [

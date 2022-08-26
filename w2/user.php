@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 /*
  * $user->id $user->vid $user->pid $user->gid $user->auth
  */

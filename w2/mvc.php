@@ -1,7 +1,5 @@
 <?php
 
-# For Licence and Disclaimer of this code, see https://coresky.net/license
-
 function view($_in, $return = false, &$_vars = null) {
     if (!$_in) {
         return require Plan::$parsed_fn;
