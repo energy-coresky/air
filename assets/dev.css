@@ -161,17 +161,17 @@ a[active].inner-menu {
     z-index:0;
 }
 
-.trace-x {
+#dev-trace-x {
     background-color:#000;
     color: #0f0;
     width:100vw;
 }
-.trace-t {
+#dev-trace-t {
     background-color:#005;
     color: #7ff;
     width:100vw;
 }
-.trace-x pre, .trace-t pre {
+#dev-trace-x pre, #dev-trace-t pre {
     padding: 10px;
     background-color: #fff;
     color: #000;
@@ -180,7 +180,7 @@ pre#trace {
     background-color: transparent;
     color: currentColor;
 }
-.trace-x h1, .trace-t h1 {
+#dev-trace-x h1, #dev-trace-t h1 {
     margin: 0;
     padding: 0 10px;
     background-color: #efe;

@@ -45,9 +45,9 @@ sky.d.trace = function() {
         return;
     sky.d.trace_t = window.parent.document.getElementById('trace-t').innerHTML
     if ('_x0' == sky.a.uri) {
-        $('.trace-t').html(sky.d.trace_t);
+        $('#dev-trace-t').html(sky.d.trace_t);
     } else if ('_x1' == sky.a.uri) {
-        $('.trace-x').prepend(window.parent.document.getElementById('trace-x').innerHTML);
+        $('#dev-trace-x').prepend(window.parent.document.getElementById('trace-x').innerHTML);
     }
     if ('_trace' != sky.a._0 && '' === $('#trace-h').html())
         $('#trace-h').html(sky.d.trace_t);
