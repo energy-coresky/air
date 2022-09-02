@@ -12,7 +12,7 @@
 <div id="inst">
 <form>
 <div class="bg-wx bg-x" style="position:sticky; top:0px">
-    <div class="fs16">@block(`var/project.sky` as cp_b) &nbsp; </div>
+    <div class="fs16">@block(`var/{{$row->fn or 'app'}}.sky` as cp_b) &nbsp; </div>
     @block(cp_h)<input type="button" value="save" onclick="sky.g.save(this)">
         <input type="hidden" name="step" value="">
         <progress style="display:none"></progress> @block(`` as cp_x)
@@ -30,7 +30,8 @@
 </div>
 #if('system' == :1)
     <div class="bg-wx bg-x">
-        New app version: &nbsp; <input name="vapp" size="7" value="{{$vapp}}"> &nbsp; &nbsp; Coresky version: <b>{{$vcore}}</b>
+        New app version: &nbsp; <input name="vapp" type="number" step="0.0001" style="width:77px" value="{{$vapp}}">
+        &nbsp; &nbsp; Coresky version:&nbsp;<b>{{$vcore}}</b>
     </div>
 #end
 </form>
@@ -85,7 +86,6 @@ Current table's prefix: <input value="{{SQL::$dd->pref}}" name="pref" size="5">
 
 #.system //////////////////////////////////////////////////////////////////////////////
 <p>Filename <input name="fn" size="7" value="{{$row->fn or 'app'}}">
-&nbsp; &nbsp; <label><input type="checkbox" name="do"> do make</label>
 &nbsp; &nbsp; <label><input type="checkbox" name="bz2"> compress data using bz2</label>
 <p>SQL compiled {{date(DATE_DT, $row->ts_sql??0)}} ^<b>TR:</b> {{$row->count_tr??'-'}}
 &nbsp; &nbsp; <label><input@checked($row->count_tr??0) type="checkbox" name="sql"> include</label>

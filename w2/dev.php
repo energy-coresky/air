@@ -677,12 +677,13 @@ class DEV
             SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
         $this->_y = ['page' => 'dev'];
         global $sky;
-        $val = explode(' ', $sky->s_version) + ['', '', '0.0001', 'APP'];
+        $val = explode(' ', $sky->s_version) + ['', '', '0', 'APP'];
+        $val[2] += 0.0001;
         $key = [0, 1, 'ver', 'app'];
         return ['form' => Form::A(array_combine($key, $val), [
             ['Application', [
                 'app' => ['', '', 'size="11"'],
-                'ver' => ['', '', 'size="11"'],
+                'ver' => ['', 'number', 'style="width:77px" step="0.0001"'],
                 [tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0])), 'ni'],
             ]],
             ['Core', 'ni', SKY::CORE],

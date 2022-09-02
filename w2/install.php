@@ -178,10 +178,6 @@ class Install
                 'bz2' => (int)isset($_POST['bz2']),
             ]);
             $sky->s_version = time() . ' ' . SKY::version()['core'][0] . ' ' . $_POST['vapp'];
-            if (!isset($_POST['do'])) {
-                echo 1;
-                return;
-            }
             $n = $cf = $max = 0;
             $this->fn = 'var/' . $_POST['fn'] . '.sky';
             list(, $exf, $mkdir, $dirs) = $this->get_files(1);
