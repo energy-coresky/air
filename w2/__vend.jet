@@ -14,7 +14,7 @@
     </div>
     <div class="fs16" style="padding-left:20px;">
         <input name="s" size="11" value="{{$sky->d_vend_s ?: 'coresky'}}">
-        <input type="button" value="search" onclick="sky.d.vend()">
+        <input type="button" value="search" onclick="sky.d.vend(1)">
     </div>
     <div class="fs16" style="padding-left:50px;"></div>
     </form>
@@ -68,8 +68,7 @@
 sky.d.act = 0;
 sky.d.packs = [];
 sky.d.vend = function(next) {
-    if (next)
-        $('#f1 input:eq(0)').val(next);
+    $('#f1 input:eq(0)').val(next);
     ajax('search', $('#f1').serialize(), function (r) {
         //$('#dev-empty').html(r.raw);
         $('.fs16:eq(2)').html(r.total);
