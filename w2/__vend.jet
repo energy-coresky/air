@@ -5,6 +5,7 @@
 <div class="bg-wx bg-x" style="position:sticky; top:0px; z-index:2;">
     <form style="display:inline-flex" id="f1">
     <input name="p" type="hidden" value="1">
+    <input name="g" type="hidden" value="">
     <div class="fs16">Type:
         <select name="t" style="width:80px">
         @loop($types as $type)
@@ -40,8 +41,13 @@
     @if($row && $row->homepage)<dl><dt>Homepage</dt><dd>{{$row->homepage}}</dd></dl>~if
     <dl><dt>License</dt><dd>{{implode(', ', $row->license ?? []) ?: '-'}}</dd></dl>
     @if($authors)<dl><dt>Authors</dt><dd>{!$authors!}</dd></dl>~if
-    <dl><dt>Last version</dt><dd>{{$row->time ?? ''}}</dd></dl>
+    <dl><dt>Last version</dt><dd>{{$row->time ?? '-'}}</dd></dl>
     @if(0)<pre>{{$sky->_1.' authors '.$detail}}</pre>~if
+    <hr>
+    <pre> composer {{$composer}}</pre>
+    <br>
+    &nbsp; <input type="button" value="exec" onclick="sky.d.exec('{{$composer}}',this)">
+    <pre></pre>
 #else{!$row->html!}#end
 #.detail
     </div>
@@ -67,14 +73,22 @@
 <script>
 sky.d.act = 0;
 sky.d.packs = [];
-sky.d.vend = function(next) {
+sky.d.vend = function(next, tag) {
     $('#f1 input:eq(0)').val(next);
+    if (tag)
+        $('#f1 input:eq(1)').val(1 === tag ? '' : tag);
     ajax('search', $('#f1').serialize(), function (r) {
         //$('#dev-empty').html(r.raw);
         $('.fs16:eq(2)').html(r.total);
         $('#vend-pk').html(r.packages);
         sky.d.act = 0;
         sky.d.walk();
+    });
+};
+sky.d.exec = function(s, el) {
+    $(el).hide();
+    ajax('exec', {s: s}, function (r) {
+        $(el).next().html(r);
     });
 };
 sky.d.detail = function(el) {
