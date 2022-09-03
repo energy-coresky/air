@@ -37,11 +37,22 @@ class Vendor
 
     function c_search() {
         SKY::d('vend_s', $s = $_POST['s'] ?? 'coresky');
-        $response = file_get_contents('https://packagist.org/search.json?per_page=100&q=' . urlencode($s));
+        $q = urlencode($s) . '&page=' . ($p = $_POST['p']);
+        if ('all' != $_POST['t'])
+            $q .= "&type=$_POST[t]";
+        $response = file_get_contents('https://packagist.org/search.json?per_page=100&q=' . $q);
         $std = unjson($response);
-        $name = $std->total ? $std->results[0]->name : '';
+        $name = '';
+        $total = 'Found: 0';
+        if ($std->total) {
+            $name = $std->results[0]->name;
+            $nl = $std->total > 100 * $p;
+            $total = (1 + 100 * ($p - 1)) . '-' . ($nl ? 100 * $p : $std->total) . " of $std->total";
+            if ($nl)
+                $total .= ' <input type="button" value="next" onclick="sky.d.vend(' . (1 + $p) . ')"/>';
+        }
         json([
-            'total' => "Total: $std->total",
+            'total' => $total,
             'next' => $std->next ?? 0,
             'packages' => view('_vend.packages', [
                 'act_name' => $name,
