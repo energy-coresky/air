@@ -75,6 +75,19 @@ class Display
         return '<div class="php">' . $table . '</div>';
     }
 
+    static function md($text) {
+        if (isset(SKY::$plans['main']['class']['Parsedown'])) {
+            $md = new Parsedown();
+            $re = '<pre><code class="language\-(jet|php)">(.*?)</code></pre>';
+            return preg_replace_callback("@$re@s", function ($m) {
+                if ('php' == $m[1])
+                    return Display::php(unhtml($m[2]), '', true);
+                return Display::jet(unhtml($m[2]), '-', true);
+            }, $md->text($text));
+        }
+        return $text;
+    }
+
     static function php_method($fn, $method) {
         $php = unl($fn);
         $bc = '';

@@ -48,6 +48,17 @@
     <br>
     &nbsp; <input type="button" value="exec" onclick="sky.d.exec('{{$composer}}',this)">
     <pre></pre>
+    <hr>
+    <h3>&nbsp; Vendor dir:</h3>
+    @loop($vendors as $one)
+    &nbsp; <a @href($('input[name=s]').val('{{$one}}'); sky.d.vend(1))>{{$one}}</a>
+    ~loop
+    <h3>&nbsp; Documentation:</h3>
+    <div style="padding:0 7px 7px 7px;">
+    @loop($mds as $one)
+      <a @href(sky.d.md('{{$one}}'))>{{substr($one,7)}}</a><br>
+    ~loop
+    </div>
 #else{!$row->html!}#end
 #.detail
     </div>
@@ -89,6 +100,11 @@ sky.d.exec = function(s, el) {
     $(el).hide();
     ajax('exec', {s: s}, function (r) {
         $(el).next().html(r);
+    });
+};
+sky.d.md = function(fn) {
+    ajax('md', {fn: fn}, function (r) {
+        $('div#vend-pk > div:eq(0) > div:eq(1)').html(r);
     });
 };
 sky.d.detail = function(el) {
