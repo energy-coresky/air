@@ -115,14 +115,16 @@
 @use(`<h4>{{$h4}}</h4>` as header)
 @use(.m_dev)
 @if($sky->_2)
+@if($sky->_2 < 7)
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
     @block(`` as menus)
 </div>
+~if
 <div style="padding:10px 0 0 10px">
 @if($menus = Root::run($sky->_2, $sky->_4 ?: 0))@use(`{!$menus!}` as menus)~if
 </div>
 <style>
-#table, .fl  {
+#table, .fl {
     width:95%;
     margin-top:10px;
 }

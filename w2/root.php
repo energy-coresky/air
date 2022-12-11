@@ -4,7 +4,6 @@ class Root
 {
     static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Database'];
     static $menu2 = [7 => 'Special', 'Log CRON', 'Log CRASH', 'Log ERROR'];
-    ///static $menu = ['Overview', 'phpinfo()', 'Config', 'Menu', 'Cache', 'Guard', 'Database', 'Special', 'Log CRON', 'Log CRASH', 'Log ERROR'];
     static $h4 = ['',
         'OVERVIEW SYSTEM INFORMATION',
         'PHP CORE INFORMATION',
@@ -12,11 +11,10 @@ class Root
         'SYSTEM CACHE',
         'SYSTEM GUARD PAGE',
         'DATABASE MIGRATIONS',
-        'ADJUST SYSTEM CONFIGURATION',
-        'ADJUST SYSTEM CONFIGURATION',
-        'ADJUST SYSTEM CONFIGURATION',
-        'ADJUST SYSTEM CONFIGURATION',
-        'ADJUST SYSTEM CONFIGURATION',
+        'USER LOG',
+        'LOG CRON',
+        'LOG CRASH',
+        'LOG ERROR',
     ];
 
     static function admin($sky) {
@@ -74,10 +72,14 @@ class Root
     }
 
     static function run($n, $id) {
-        define('TPL_MENU', "?main=$n&id=%d");
-        $funs = array_map('strtolower', Root::$menu1);
-        $funs[2] = substr($funs[2], 0, 7);
-        return call_user_func(['Root', '_' . $funs[$n]], $id);
+        if ($n < 7) {
+            define('TPL_MENU', "?main=$n&id=%d");
+            $funs = array_map('strtolower', Root::$menu1);
+            $funs[2] = substr($funs[2], 0, 7);
+            return call_user_func(['Root', '_' . $funs[$n]], $id);
+        }
+        $cr = [7 => 10, 2, 11, 4];
+        echo '<pre>' . sqlf('+select tmemo from $_memory where id=%d', $cr[$n]) . '</pre>';
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -166,7 +168,7 @@ class Root
         $menu = [-1 => 'ALL', 'General', 'Credits', 'Configuration', 'Modules', 'Environment', 'Variables', 'License'];
         printf('<iframe src="?main=INFO_%s" id="phpinfo"></iframe>', strtoupper($menu[$i]));
         return menu($i, $menu);
-    }//#phpinfo width:100%%; height:100%%; border:0
+    }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     static function _config($i) {
