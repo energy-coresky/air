@@ -66,17 +66,6 @@ class Admin
         }
     }
 
-    static function root_menu($sky) {
-        $files = array_map(function ($v) {
-            return substr(basename($v), 1, -4);
-        }, glob('admin/_*.php'));
-        $files = array_merge(array_splice($files, array_search('main', $files), 1), $files);
-        $buttons = implode("\t", array_map('ucfirst', $files));
-        $root_access = ceil(count($files) / 7) . "\t" . implode("\t", array_keys($files));
-        SKY::a('menu', serialize([-2 => $uris = implode("\t", $files), -1 => $buttons, $uris, $root_access]));
-        $sky->is_front or jump('?main=3');
-    }
-
     static function top_menu($pid) {
         global $user;
         if ($user->pid != $pid) {
@@ -94,7 +83,7 @@ class Admin
 
         list(, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=8');
         SKY::ghost('a', $tmemo, 'update $_memory set dt=now(), tmemo=%s where id=8');
-        $menu = SKY::$mem['a'][3]['menu'] or self::root_menu($sky);
+        $menu = SKY::$mem['a'][3]['menu'] or Root::admin($sky);
         self::$menu = unserialize($menu);
         self::$adm = [
             'files' => explode("\t", self::$menu[-2]),

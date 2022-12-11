@@ -2,9 +2,88 @@
 
 class Root
 {
+    static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Database'];
+    static $menu2 = [7 => 'Special', 'Log CRON', 'Log CRASH', 'Log ERROR'];
+    ///static $menu = ['Overview', 'phpinfo()', 'Config', 'Menu', 'Cache', 'Guard', 'Database', 'Special', 'Log CRON', 'Log CRASH', 'Log ERROR'];
+    static $h4 = ['',
+        'OVERVIEW SYSTEM INFORMATION',
+        'PHP CORE INFORMATION',
+        'SYSTEM CONFIGURATION',
+        'SYSTEM CACHE',
+        'SYSTEM GUARD PAGE',
+        'DATABASE MIGRATIONS',
+        'ADJUST SYSTEM CONFIGURATION',
+        'ADJUST SYSTEM CONFIGURATION',
+        'ADJUST SYSTEM CONFIGURATION',
+        'ADJUST SYSTEM CONFIGURATION',
+        'ADJUST SYSTEM CONFIGURATION',
+    ];
+
+    static function admin($sky) {
+        $files = array_map(function ($v) {
+            return substr(basename($v), 1, -4);
+        }, glob('admin/_*.php'));
+        $files = array_merge(array_splice($files, array_search('main', $files), 1), $files);
+        $buttons = implode("\t", array_map('ucfirst', $files));
+        $root_access = ceil(count($files) / 7) . "\t" . implode("\t", array_keys($files));
+        SKY::a('menu', serialize([-2 => $uris = implode("\t", $files), -1 => $buttons, $uris, $root_access]));
+        $sky->is_front or jump('?main=0');
+    }
+
+    static function dev() {
+        global $sky;
+
+        $val = explode(' ', $sky->s_version) + ['', '', '0', 'APP'];
+        $val[2] += 0.0001;
+        $key = [0, 1, 'ver', 'app'];
+        $form1 = [
+            ['Application', [
+                'app' => ['', '', 'size="11"'],
+                'ver' => ['', 'number', 'style="width:77px" step="0.0001"'],
+                [tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0])), 'ni'],
+            ]],
+            ['Core', 'ni', SKY::CORE],
+            ['Save', 'submit'],
+        ];
+
+        $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
+        $form2 = [
+            'dev' => ['Set debug=0 for DEV-tools', 'chk'],
+            'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
+            'sql' => ['Show SQLs in the tracing', 'chk'],
+            'const' => ['Show user-defined global CONSTANTs in the tracing,' . $br, 'chk'],
+            'class' => ['Show CLASSEs', 'chk'],
+            'cron'  => ['Run cron when click on DEV instance', 'chk'],
+            ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
+            Form::X([], '<hr>'),
+            ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
+            'static' => ['', '', 'size="50"'],
+            'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
+            ['Save', 'submit'],
+        ];
+        if (isset($_POST['app'])) {
+            SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
+        } elseif ($_POST) {
+            SKY::d($_POST);
+        }
+        return [
+            'form1' => Form::A(array_combine($key, $val), $form1),
+            'form2' => Form::A(SKY::$mem['d'][3], $form2),
+            'h4' => '',
+        ];
+    }
+
+    static function run($n, $id) {
+        define('TPL_MENU', "?main=$n&id=%d");
+        $funs = array_map('strtolower', Root::$menu1);
+        $funs[2] = substr($funs[2], 0, 7);
+        return call_user_func(['Root', '_' . $funs[$n]], $id);
+    }
+
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     static function _overview($i) {
         global $sky;
+
         $menu = ['Summary', 'Objects', 'Functions', 'Variables', 'Constants'];
         $top = menu($i, $menu);
         switch ($menu[$i]) {
@@ -75,11 +154,99 @@ class Root
                 $list = array_keys($ary = get_defined_constants(true));
                 $_GET['c'] = isset($_GET['c']) ? intval($_GET['c']) : array_search('user', $list);
                 echo Admin::out($ary[$list[$_GET['c']]]);
-                $top .= sprintf('<form>%s<select name="c" id="sm-select">%s</select></form>', hidden(['main' => 0, 'id' => 4]), option($_GET['c'], $list));
+                $top .= sprintf('<form>%s<select name="c" id="sm-select">%s</select></form>', hidden(['main' => 1, 'id' => 4]), option($_GET['c'], $list));
             case '':
                 break;
         }
         return $top;
+    }
+
+    # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    static function _phpinfo($i) {
+        $menu = [-1 => 'ALL', 'General', 'Credits', 'Configuration', 'Modules', 'Environment', 'Variables', 'License'];
+        printf('<iframe src="?main=INFO_%s" id="phpinfo"></iframe>', strtoupper($menu[$i]));
+        return menu($i, $menu);
+    }//#phpinfo width:100%%; height:100%%; border:0
+
+    # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    static function _config($i) {
+        global $sky;
+        $menu = ['System', 'Admin', 'Cron', '/etc/'];
+        $etc = 3 == $i;
+        $edit = $etc ? isset($_GET['fn']) : !isset($_GET['show']);
+        $TOP = menu($i, $menu, TPL_MENU . ($edit ? '&edit' : '&show'), ' &nbsp; ');
+        if ($etc) {
+            $char = 'f';
+            $path = WWW . 'm/etc';
+            if ($edit) {
+                $_GET['fn'] = str_replace('/', '', $_GET['fn']);
+                $ary = ['etc_file' => '' === $_GET['fn'] ? '' : file_get_contents("$path/$_GET[fn]")];
+            } else {
+                $ary = array_flip(Rare::list_path($path, 'is_file'));
+                array_walk($ary, function(&$v, $k) use ($path) {
+                    $size = filesize($k);
+                    $v = date(DATE_DT, filemtime($k)) . ' ';
+                    $v .= $size > 1024 ? "- $size bytes" : a('edit', "?main=3&id=3&fn=" . substr($k, 1 + strlen($path)));
+                });
+            }
+        } else {
+           new Admin;
+            $ary = [['s' => 3], ['a' => 8], ['n' => 9]];
+            $sid = $ary[$i];
+            $char = key($sid);
+            $sky->memory();
+            $ary = SKY::$mem[$char][3];
+            list ($imemo, $dt) = sql('-select imemo, dt from $_memory where id=$.', current($sid));
+            $TOP .= pad() . "imemo=$imemo, dt=$dt" . pad() . a($edit ? 'Show' : 'Edit', "?main=3&id=$i&" . ($edit ? 'show' : 'edit'));
+        }
+
+        if ($_POST) {
+            if ($etc) {
+                $fn = "$path/" . (isset($_POST['fn']) ? $_POST['fn'] : $_GET['fn']);
+                file_put_contents($fn, $_POST['etc_file']);
+            } else {
+                $ary = $_POST + $ary;
+                if ('s' == $char) {
+                    $chk = ['trace_single', 'trace_cli', 'prod_error', 'trace_root', 'error_403', 'error_404', 'quiet_eerr', 'crash_log', 'dev_cron', 'jet_prod'];
+                    foreach ($chk as $v) $ary[$v] = (int)isset($_POST[$v]);
+                }
+                ksort($ary);
+                SKY::$char($ary);
+            }
+            isset($_POST['fn']) ? jump('?main=3&id=3') : jump(URI);
+        }
+
+        if (!$edit) {
+            echo Admin::out($ary, !$etc);
+            if ($etc)
+                echo '<br>' . a('Write new file', '?main=3&id=3&fn');
+            return $TOP;
+        }
+
+        switch ($char) {
+            case 's':
+                $form = Root::form_conf();
+                break;
+            case 'a':
+                $form = [
+                    'qq' => ['', 'QQ', '', '+2:00'],
+                ];
+                break;
+            case 'n':
+                $form = [
+                    'clear_nc' => ['Visitor\'s cleaning (no cookie), days', '', '', 2],
+                    'clear_hc' => ['Visitor\'s cleaning (has cookie), days', '', '', 10],
+                    'clear_ua' => ['Visitor\'s cleaning (authed), days', '', '', 1000],
+                    'www'   => ['Index file directory', '', '', 'web~public_html'],
+                ];
+                break;
+            default: 
+                $form = '' === $_GET['fn'] ? ['fn' => ['New filename', '']] : ["<b>$_GET[fn]</b><br>"];
+                $form += ['etc_file' => ['', 'textarea', 'style="width:90%" rows="20"']];
+            break;
+        }
+        echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style="width:75%"');
+        return $TOP;
     }
 
     static function form_conf() {
@@ -117,86 +284,6 @@ class Root
         #       'jet_1php' => ['Allow @php Jet command', 'checkbox'],
             '</fieldset>',
         ];
-    }
-
-    # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    static function _config($i) {
-        global $sky;
-        $menu = ['System', 'Admin', 'Cron', '/etc/'];
-        $etc = 3 == $i;
-        $edit = $etc ? isset($_GET['fn']) : !isset($_GET['show']);
-        $TOP = menu($i, $menu, TPL_MENU . ($edit ? '&edit' : '&show'), ' &nbsp; ');
-        if ($etc) {
-            $char = 'f';
-            $path = WWW . 'm/etc';
-            if ($edit) {
-                $_GET['fn'] = str_replace('/', '', $_GET['fn']);
-                $ary = ['etc_file' => '' === $_GET['fn'] ? '' : file_get_contents("$path/$_GET[fn]")];
-            } else {
-                $ary = array_flip(Rare::list_path($path, 'is_file'));
-                array_walk($ary, function(&$v, $k) use ($path) {
-                    $size = filesize($k);
-                    $v = date(DATE_DT, filemtime($k)) . ' ';
-                    $v .= $size > 1024 ? "- $size bytes" : a('edit', "?main=2&id=3&fn=" . substr($k, 1 + strlen($path)));
-                });
-            }
-        } else {
-            $ary = [['s' => 3], ['a' => 8], ['n' => 9]];
-            $sid = $ary[$i];
-            $char = key($sid);
-            $sky->memory();
-            $ary = SKY::$mem[$char][3];
-            list ($imemo, $dt) = sql('-select imemo, dt from $_memory where id=$.', current($sid));
-            $TOP .= pad() . "imemo=$imemo, dt=$dt" . pad() . a($edit ? 'Show' : 'Edit', "?main=2&id=$i&" . ($edit ? 'show' : 'edit'));
-        }
-
-        if ($_POST) {
-            if ($etc) {
-                $fn = "$path/" . (isset($_POST['fn']) ? $_POST['fn'] : $_GET['fn']);
-                file_put_contents($fn, $_POST['etc_file']);
-            } else {
-                $ary = $_POST + $ary;
-                if ('s' == $char) {
-                    $chk = ['trace_single', 'trace_cli', 'prod_error', 'trace_root', 'error_403', 'error_404', 'quiet_eerr', 'crash_log', 'dev_cron', 'jet_prod'];
-                    foreach ($chk as $v) $ary[$v] = (int)isset($_POST[$v]);
-                }
-                ksort($ary);
-                SKY::$char($ary);
-            }
-            isset($_POST['fn']) ? jump('?main=2&id=3') : jump(URI);
-        }
-
-        if (!$edit) {
-            echo Admin::out($ary, !$etc);
-            if ($etc)
-                echo '<br>' . a('Write new file', '?main=2&id=3&fn');
-            return $TOP;
-        }
-
-        switch ($char) {
-            case 's':
-                $form = Root::form_conf();
-                break;
-            case 'a':
-                $form = [
-                    'qq' => ['', 'QQ', '', '+2:00'],
-                ];
-                break;
-            case 'n':
-                $form = [
-                    'clear_nc' => ['Visitor\'s cleaning (no cookie), days', '', '', 2],
-                    'clear_hc' => ['Visitor\'s cleaning (has cookie), days', '', '', 10],
-                    'clear_ua' => ['Visitor\'s cleaning (authed), days', '', '', 1000],
-                    'www'   => ['Index file directory', '', '', 'web~public_html'],
-                ];
-                break;
-            default: 
-                $form = '' === $_GET['fn'] ? ['fn' => ['New filename', '']] : ["<b>$_GET[fn]</b><br>"];
-                $form += ['etc_file' => ['', 'textarea', 'style="width:90%" rows="20"']];
-            break;
-        }
-        echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style="width:75%"');
-        return $TOP;
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -252,7 +339,9 @@ class Root
                     ['Made new prefix', 'submit', 'name=u'],
                 ]);
             break;
-            case 5: Admin::drop_all_cache(); jump('?main=4');
+            case 5:
+                Admin::drop_all_cache();
+                jump('?main=4');
             break;
         }
         return menu($i, $menu);

@@ -612,7 +612,7 @@ class DEV
     }
 
     function j_inet() {
-        $inet = api(DEV::repository, ['search']);
+        $inet = @api(DEV::repository, ['search']);
         if ('OK' != @$inet['result']) {
             echo '<h1>Error in remote call</h1>';
             return;
@@ -650,45 +650,11 @@ class DEV
         return $menu;
     }
 
-    function c_overview() {
-        $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
-        $form = [
-            'dev' => ['Set debug=0 for DEV-tools', 'chk'],
-            'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
-            'sql' => ['Show SQLs in the tracing', 'chk'],
-            'const' => ['Show user-defined global CONSTANTs in the tracing,' . $br, 'chk'],
-            'class' => ['Show CLASSEs', 'chk'],
-            'cron'  => ['Run cron when click on DEV instance', 'chk'],
-            ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
-            Form::X([], '<hr>'),
-            ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
-            'static' => ['', '', 'size="50"'],
-            'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
-            ['Save', 'submit'],
-        ];
-        if ($_POST)
-            SKY::d($_POST);
+    function c_main($n) {
         $this->_y = ['page' => 'dev'];
-        return ['form' => Form::A(SKY::$mem['d'][3], $form)];
-    }
-
-    function c_system() {
-        if ($_POST)
-            SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
-        $this->_y = ['page' => 'dev'];
-        global $sky;
-        $val = explode(' ', $sky->s_version) + ['', '', '0', 'APP'];
-        $val[2] += 0.0001;
-        $key = [0, 1, 'ver', 'app'];
-        return ['form' => Form::A(array_combine($key, $val), [
-            ['Application', [
-                'app' => ['', '', 'size="11"'],
-                'ver' => ['', 'number', 'style="width:77px" step="0.0001"'],
-                [tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0])), 'ni'],
-            ]],
-            ['Core', 'ni', SKY::CORE],
-            ['Save', 'submit'],
-        ])];
+        if ('INFO_' == substr($n, 0, 5) && phpinfo(constant($n)))
+            throw new Stop;
+        return $n ? ['h4' => Root::$h4[$n]] : Root::dev();
     }
 }
 

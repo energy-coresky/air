@@ -149,6 +149,7 @@ class HEAVEN extends SKY
         $this->ghost or $this->tail_ghost();
         for ($i = 0; ob_get_level(); $i++, $stdout .= ob_get_clean()); # grab if this is unexpected break
         if ($flag = !headers_sent() && 1 === $this->ajax) { # CSN-AJAX template only
+            http_response_code(200);
             $etc = is_array($this->ca_path) ? $this->ca_path : [];
             if ($this->except && 11 == $this->except['code'])
                 $etc = ['ky' => $this->error_no];
@@ -478,7 +479,7 @@ function api($addr, $in) {
         'header' => "Content-Type: application/json; charset=UTF-8\r\n",
         'content' => json_encode($in),
     ]]));
-    return unjson($response, true);
+    return $response ? unjson($response, true) : false;
 }
 
 function option($selected, $table, $order = 'id') {
@@ -565,7 +566,7 @@ function hidden($set = '_csrf', $r = 0) {
             $val = isset($r[$name]) ? $r[$name] : '';
         } elseif ('_csrf' == $name && 0 === $r) {
             global $user;
-            $val = $user->v_csrf;
+            $val = DEV ? 0 : $user->v_csrf;
         }
         $out .= sprintf(TPL_HIDDEN, $name, html($val));
     }

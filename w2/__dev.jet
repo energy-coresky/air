@@ -99,31 +99,59 @@
 #.wares_memu
 
 
-#.overview //////////////////////////////////////////////////////////////////////////////
-#use(`<h4><u>DEV INSTANCE ONLY</u> CONFIGURATION AND INFORMATION</h4>` as header)
-@use(.m_dev)
-<div style="padding:10px 0 0 10px">
-<fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
-{! $form !}
-</fieldset>
-</div>
-#.overview.m_dev ------------------------------------------------------------------------------
-@php $task_act = $sky->_1 ?: 'overview' ~php
-@loop(['overview', 'system'] as $name)
-    <a class="inner-menu" href="_dev?{!$name!}"@active($task_act == $name)>{!ucfirst($name)!}</a>
-~loop
-#.m_dev
-
-#.system //////////////////////////////////////////////////////////////////////////////
-#use(`<h4>ADJUST SYSTEM CONFIGURATION</h4>` as header)
-@use(.m_dev)
+#.development //////////////////////////////////////////////////////////////////////////////
+@use(`<h4><u>DEV INSTANCE</u> CONFIGURATION</h4>` as header)
 <div style="padding:10px 0 0 10px">
 <fieldset><legend>App name & versions</legend>
-{! $form !}
+{! $form1 !}
+</fieldset><br>
+<fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
+{! $form2 !}
 </fieldset>
-{! Root::_overview(0) !}
 </div>
-#.system
+#.development
+
+#.main //////////////////////////////////////////////////////////////////////////////
+@use(`<h4>{{$h4}}</h4>` as header)
+@use(.m_dev)
+@if($sky->_2)
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
+    @block(`` as menus)
+</div>
+<div style="padding:10px 0 0 10px">
+@if($menus = Root::run($sky->_2, $sky->_4 ?: 0))@use(`{!$menus!}` as menus)~if
+</div>
+<style>
+#table, .fl  {
+    width:95%;
+    margin-top:10px;
+}
+.bg-x a {
+    padding: 0 10px;
+    display: inline-block;
+    line-height: 24px;
+}
+#phpinfo {
+    border:0;
+    width: 100%;
+    height: calc(100vh - 110px);
+}
+</style>
+<script>
+$(function() {
+    $('#sm-select').change(function() {
+        $(this).parent().submit();
+    });
+});
+</script>
+@else
+@inc(.development)
+~if
+#.main.m_dev ------------------------------------------------------------------------------
+@loop(['Development'] + Root::$menu1 + Root::$menu2 as $i => $name)
+    <a class="inner-menu" href="_dev?main={!$i!}"@active($i == $sky->_2)>{!$name!}</a>
+~loop
+#.m_dev
 
 
 #.view //////////////////////////////////////////////////////////////////////////////

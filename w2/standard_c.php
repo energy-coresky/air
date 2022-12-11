@@ -55,7 +55,7 @@ class standard_c extends Controller
                 'tx' => '_trace' == $sky->_0 ? URI : '_x0',
                 'ware_dir' => '',
                 'tasks' => [
-                    '_dev' => 'Development',
+                    '_dev?main=0' => 'Main',
                     '_gate' => 'Open SkyGate',
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Compile Project',
@@ -299,7 +299,7 @@ class standard_c extends Controller
     }
 
     function j_dev($x = 'j') {
-        MVC::body('_dev.' . ($page = $this->_1 ? $this->_1 : 'overview'));
+        MVC::body('_dev.' . ($page = $this->_1 ?: 'main'));
         return (array)$this->dev->{"{$x}_$page"}($this->_2);
     }
 

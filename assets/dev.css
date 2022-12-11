@@ -118,7 +118,7 @@ a {
 [noborder] {
     border:0px !important;
 }
-a[active] {
+a[active], a.active {
     border-bottom: 3px solid #4338ca !important;
     background-color: #818cf8;
     color: #fff !important;

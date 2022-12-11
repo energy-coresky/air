@@ -76,16 +76,19 @@ class Display
     }
 
     static function md($text) {
-        if (isset(SKY::$plans['main']['class']['Parsedown'])) {
-            $md = new Parsedown();
-            $re = '<pre><code class="language\-(jet|php)">(.*?)</code></pre>';
+        $code = function ($text, $re) {
             return preg_replace_callback("@$re@s", function ($m) {
                 if ('php' == $m[1])
                     return Display::php(unhtml($m[2]), '', true);
-                return Display::jet(unhtml($m[2]), '-', true);
-            }, $md->text($text));
+                return 'jet' == $m[1] ? Display::jet(unhtml($m[2]), '-', true) : tag(html($m[2]), '', 'pre');
+            }, $text);
+        };
+        if (isset(SKY::$plans['main']['class']['Parsedown'])) {
+            $md = new Parsedown;
+            return $code($md->text($text), '<pre><code class="language\-(jet|php)">(.*?)</code></pre>');
         }
-        return $text;
+        $text = str_replace("\n\n", '<p>', unl($text));
+        return $code($text, "```(jet|php|)(.*?)```");
     }
 
     static function php_method($fn, $method) {
