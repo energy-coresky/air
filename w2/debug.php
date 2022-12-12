@@ -13,7 +13,7 @@ class Debug
     }
 
     static function table($in, $no_h = true) {
-        $hash = is_string(key($in));
+        $hash = !is_num(key($in));
         
         $out = th($hash ? ['', 'NAME', 'VALUE'] : array_shift($in), 'class="debug-table"');
         $i = 1;

@@ -129,14 +129,18 @@ a[active], a.active {
     padding-right: 10px !important;
     background-color: #e0e7ff;
 }
+#v-menu a:hover, #v-head a:hover, #v-tail a:hover, #r-menu a:hover {
+    background-color: #ddd;
+    color: #000 !important;
+}
 a[active].inner-menu {
     border-bottom: 1px solid #3b82f6 !important;
     background-color: #bfdbfe;
     color: #1e40af !important;
 }
-#v-menu a:hover, #v-head a:hover, #v-tail a:hover, #r-menu a:hover {
-    background-color: #ddd;
-    color: #000 !important;
+
+a[active].inner-menu:hover {
+    background-color: #bfdbfe !important;
 }
 
 .other-task {

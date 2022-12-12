@@ -14,8 +14,6 @@ class DEV
     static $static = false;
     static $sqls = [['##', 'Time', 'Query']];
     static $vars = [['##', 'Name', 'Value']];
-    //static $consts = [['##', 'Name', 'Value']];
-    //static $classes = [['##', 'Name', 'Value']];
 
     static function start() {
         global $sky;
@@ -150,37 +148,6 @@ class DEV
                     }
                 break;
             }
-        }
-    }
-
-    static function dummy_txt($chars = 0) {
-        $s = 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua';
-        $ary = explode(' ', $s);
-        for ($j = 0, $str = '', $cnt = rand(2, 10); $chars ? true : $j < $cnt; $j++) {
-            $str .= $chars ? $ary[rand(0, count($ary) - 1)] . ' ' : "<p>$s</p>";
-            if ($chars && strlen($str) > $chars) return substr($str, 0, $chars);
-        }
-        return $str;
-    }
-
-    static function dummy_gen($table, $size = null) {
-        $ary = [];
-        $txt = 0;
-        foreach (sql('@explain $_' . ($table = preg_replace("/`/u", '', $table))) as $c => $r) {
-            $ary[$c] = "return ";
-            if ('auto_increment' == $r[4]) $ary[$c] .= "null;";
-            elseif (preg_match("/^[a-z]*text$/i", $r[0])) $ary[$c] .= 'DEV::dummy_txt();' and $txt = 1;
-            elseif ('datetime' == $r[0]) $ary[$c] .= 'date(DATE_DT, time() - rand(0, 3600 * 24 * 7));';
-            elseif (preg_match("/varchar\((\d+)\)/", $r[0], $m)) $ary[$c] .= "DEV::dummy_txt($m[1] > 15 ? rand(9, $m[1] - 5) : $m[1]);";
-            elseif ('YES' == $r[1]) $ary[$c] .= "null;";
-            elseif (!is_null($r[3])) $ary[$c] .= "'$r[3]';";
-            else $ary[$c] .= "rand(0, 9);";
-        }
-        if (is_null($size)) $size = $txt ? 300 : 5;
-        for ($i = 0; $i < $size; $i++) {
-            $ins = $ary;
-            foreach ($ins as &$v) $v = eval($v);
-            sql('insert into $_` @@', $table, $ins);
         }
     }
 

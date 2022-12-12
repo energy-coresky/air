@@ -100,12 +100,12 @@
 
 
 #.development //////////////////////////////////////////////////////////////////////////////
-@use(`<h4><u>DEV INSTANCE</u> CONFIGURATION</h4>` as header)
+@use(`<h4><u>DEVELOPMENT</u> CONFIGURATION</h4>` as header)
 <div style="padding:10px 0 0 10px">
 <fieldset><legend>App name & versions</legend>
 {! $form1 !}
 </fieldset><br>
-<fieldset><legend>DEV instance settings, {{$_SERVER['REMOTE_ADDR']}}</legend>
+<fieldset><legend>DEV instance configuration, {{$_SERVER['REMOTE_ADDR']}}</legend>
 {! $form2 !}
 </fieldset>
 </div>

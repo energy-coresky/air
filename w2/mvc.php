@@ -341,7 +341,6 @@ class MVC extends MVC_BASE
             $vars['sky'] = $mvc;
         }
         $fn = MVC::fn_parsed($layout, $name);
-     //   $dev = DEV || DESIGN;
         $ok = Plan::jet_tp($fn) && ($sky->s_jet_cact || !DEV);
         if ($ok && (DEV || $sky->s_jet_prod)) { # this `if` can be skipped on the production by the config
             list ($mtime, $files) = Plan::jet_mf($fn); # to get max speed (avoid mtime checking)

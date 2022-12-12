@@ -86,8 +86,10 @@ class Root
     static function _overview($i) {
         global $sky;
 
-        $menu = ['Summary', 'Objects', 'Functions', 'Variables', 'Constants'];
+        $menu = ['Summary', 'Constants', 'Functions', 'Classes', 'Other'];
         $top = menu($i, $menu);
+        $tpl = '<h4 style="margin-left:55px;">Subset</h4> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
+        $ext = get_loaded_extensions();
         switch ($menu[$i]) {
             case 'Summary':
                 $_exec = function_exists('shell_exec') ? 'shell_exec' : function ($arg, $default = false) {
@@ -120,44 +122,59 @@ class Root
                     'Table `users`, rows:' => sql('+select count(1) from $_users'),
                     'E-Mail days count:' => $sky->s_email_cnt,
                     'func `shell_exec`:' => function_exists('shell_exec') ? sprintf(span_g, 'exists') : sprintf(span_r, 'not exists'),
+                    'Loaded extensions:' => menu('', $ext),
                 ], false);
                 break;
 
-            case 'Objects':
-            case 'Variables':
-                $out = [];
-                $list_vars = 3 == $i;
-                $_out = get_defined_vars();
-                array_splice($_out, 0, 5);
-                $_out = array_filter($_out, function($v) use ($list_vars) {
-                    return (bool)($list_vars ^ is_object($v));
-                });
-      //trace(get_defined_vars(),'xxx');
-                foreach ($_out as $k => $v) if (!$list_vars) {
-                    $methods = get_class_methods($v);
-                    $vars = get_object_vars($v);
-                    $v = '<pre>' . implode("</b>()\n", array_values($methods)) . "\n--\n$" . implode("\n$", array_keys($vars));
-                    $out[$k] = "$v</pre>";
-                } else {
-                    is_string($v) or is_int($v) or $v = print_r($v, true);
-                    $v = html($v);
-                    if (strlen($v) > 500) $v = substr($v, 0, 500) . sprintf(span_r, ' cutted...');
-                    $out[$k] = $v;
-                }
-                echo Debug::table($out);
+            case 'Constants':
+                $types = array_keys($ary = get_defined_constants(true));
+                $t = isset($_GET['t']) ? intval($_GET['t']) : array_search('user', $types);
+                echo Admin::out($ary[$types[$t]]);
+                $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 1]), option($t, $types));
                 break;
 
             case 'Functions':
-                $out = get_defined_functions();
-                echo Admin::out(print_r($out['user'], true));
+                $types = array_keys($ary = get_defined_functions());
+                $types = array_merge($types, array_filter($ext, function ($v) use (&$ary) {
+                    if (!$func = get_extension_funcs($v))
+                        return false;
+                    $ary[$v] = $func;
+                    return true;
+                }));
+                $t = isset($_GET['t']) ? intval($_GET['t']) : array_search('user', $types);
+                $out = $ary[$types[$t]];
+                sort($out);
+                echo Admin::out(array_flip($out));
+                $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 2]), option($t, $types));
                 break;
 
-            case 'Constants':
-                $list = array_keys($ary = get_defined_constants(true));
-                $_GET['c'] = isset($_GET['c']) ? intval($_GET['c']) : array_search('user', $list);
-                echo Admin::out($ary[$list[$_GET['c']]]);
-                $top .= sprintf('<form>%s<select name="c" id="sm-select">%s</select></form>', hidden(['main' => 1, 'id' => 4]), option($_GET['c'], $list));
-            case '':
+            case 'Classes':
+                $t = isset($_GET['t']) ? intval($_GET['t']) : -2;
+                $all = get_declared_classes();
+                $ary = [];
+                $types = array_filter($ext, function ($v) use (&$ary, $t) {
+                    if (!$cls = (new ReflectionExtension($v))->getClassNames())
+                        return false;
+                    $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
+                    return true;
+                });
+                $types += [-1 => 'all', -2 => 'user'];
+                $out = -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]]));
+                //$out = -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : $ary[$types[$t]]);
+                sort($out);
+                echo Admin::out(array_flip($out));
+                $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $types));
+                break;
+
+            case 'Other':
+                echo tag('Traits', '', 'h3');
+                $out = get_declared_traits();
+                sort($out);
+                echo Admin::out(array_flip($out));
+                echo tag('Interfaces', '', 'h3');
+                $out = get_declared_interfaces();
+                sort($out);
+                echo Admin::out(array_flip($out));
                 break;
         }
         return $top;
@@ -292,7 +309,8 @@ class Root
     static function _cache($i = null) {
         global $sky;
 
-        $menu = ['Hard cache', 'Jet cache', 'Gate cache', 'Extra cache', 'Static cache', 'Drop ALL cache'];
+        $menu = ['Hard cache', 'Jet cache', 'Gate cache', 'Extra cache', 'Static cache'];
+        '_dev' == $sky->_0 or $menu += [5 => 'Drop ALL cache'];
         switch ($i) {
             case 3:
                 $extra = tag(is_file($fn = 'var/extra.txt') ? html(file_get_contents($fn)) : '', 'rows="20" cols="70" name="extra"', 'textarea');
@@ -410,6 +428,35 @@ class Root
         }
         return ' ' . a('Migrations', "?main=6&");
     }
+
+    static function dummy_txt($chars = 0) {
+        $s = 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua';
+        $ary = explode(' ', $s);
+        for ($j = 0, $str = '', $cnt = rand(2, 10); $chars ? true : $j < $cnt; $j++) {
+            $str .= $chars ? $ary[rand(0, count($ary) - 1)] . ' ' : "<p>$s</p>";
+            if ($chars && strlen($str) > $chars) return substr($str, 0, $chars);
+        }
+        return $str;
+    }
+
+    static function dummy_gen($table, $size = null) {
+        $ary = [];
+        $txt = 0;
+        foreach (sql('@explain $_' . ($table = preg_replace("/`/u", '', $table))) as $c => $r) {
+            $ary[$c] = "return ";
+            if ('auto_increment' == $r[4]) $ary[$c] .= "null;";
+            elseif (preg_match("/^[a-z]*text$/i", $r[0])) $ary[$c] .= 'Root::dummy_txt();' and $txt = 1;
+            elseif ('datetime' == $r[0]) $ary[$c] .= 'date(DATE_DT, time() - rand(0, 3600 * 24 * 7));';
+            elseif (preg_match("/varchar\((\d+)\)/", $r[0], $m)) $ary[$c] .= "Root::dummy_txt($m[1] > 15 ? rand(9, $m[1] - 5) : $m[1]);";
+            elseif ('YES' == $r[1]) $ary[$c] .= "null;";
+            elseif (!is_null($r[3])) $ary[$c] .= "'$r[3]';";
+            else $ary[$c] .= "rand(0, 9);";
+        }
+        if (is_null($size)) $size = $txt ? 300 : 5;
+        for ($i = 0; $i < $size; $i++) {
+            $ins = $ary;
+            foreach ($ins as &$v) $v = eval($v);
+            sql('insert into $_` @@', $table, $ins);
+        }
+    }
 }
-
-
