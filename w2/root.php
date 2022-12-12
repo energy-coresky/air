@@ -129,7 +129,9 @@ class Root
             case 'Constants':
                 $types = array_keys($ary = get_defined_constants(true));
                 $t = isset($_GET['t']) ? intval($_GET['t']) : array_search('user', $types);
-                echo Admin::out($ary[$types[$t]]);
+                $out = $ary[$types[$t]];
+                ksort($out);
+                echo Admin::out($out);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 1]), option($t, $types));
                 break;
 
