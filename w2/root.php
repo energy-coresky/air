@@ -16,6 +16,8 @@ class Root
         'LOG CRASH',
         'LOG ERROR',
     ];
+    
+    const js = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js';
 
     static function admin($sky) {
         $files = array_map(function ($v) {
@@ -88,8 +90,13 @@ class Root
 
         $menu = ['Summary', 'Constants', 'Functions', 'Classes', 'Other'];
         $top = menu($i, $menu);
-        $tpl = '<h4 style="margin-left:55px;">Subset</h4> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
+        $tpl = '<span style="margin-left:55px;"><u>Subset</u></span> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
         $ext = get_loaded_extensions();
+        $echo = function ($ary) {
+            sort($ary);
+            $val = a('show') . ' | ' . a('search') . ' | ' . a('stack');
+            echo Admin::out(array_fill_keys($ary, $val), false);
+        };
         switch ($menu[$i]) {
             case 'Summary':
                 $_exec = function_exists('shell_exec') ? 'shell_exec' : function ($arg, $default = false) {
@@ -122,7 +129,6 @@ class Root
                     'Table `users`, rows:' => sql('+select count(1) from $_users'),
                     'E-Mail days count:' => $sky->s_email_cnt,
                     'func `shell_exec`:' => function_exists('shell_exec') ? sprintf(span_g, 'exists') : sprintf(span_r, 'not exists'),
-                    'Loaded extensions:' => menu('', $ext),
                 ], false);
                 break;
 
@@ -144,9 +150,7 @@ class Root
                     return true;
                 }));
                 $t = isset($_GET['t']) ? intval($_GET['t']) : array_search('user', $types);
-                $out = $ary[$types[$t]];
-                sort($out);
-                echo Admin::out(array_flip($out));
+                $echo($ary[$types[$t]]);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 2]), option($t, $types));
                 break;
 
@@ -161,22 +165,17 @@ class Root
                     return true;
                 });
                 $types += [-1 => 'all', -2 => 'user'];
-                $out = -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]]));
-                //$out = -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : $ary[$types[$t]]);
-                sort($out);
-                echo Admin::out(array_flip($out));
+                $echo(-2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]])));
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $types));
                 break;
 
             case 'Other':
                 echo tag('Traits', '', 'h3');
-                $out = get_declared_traits();
-                sort($out);
-                echo Admin::out(array_flip($out));
+                $echo(get_declared_traits());
                 echo tag('Interfaces', '', 'h3');
-                $out = get_declared_interfaces();
-                sort($out);
-                echo Admin::out(array_flip($out));
+                $echo(get_declared_interfaces());
+                echo tag('Loaded extensions', '', 'h3');
+                $echo($ext);
                 break;
         }
         return $top;
@@ -283,7 +282,7 @@ class Root
                 'error_403'     => ['Use 403 code for `die`', 'checkbox'],
                 'prod_error'    => ['Use Log ERROR', 'checkbox'],
                 'crash_log'     => ['Use Log CRASH', 'checkbox'],
-                ['', [['<br>See also ' . a('DEV instance', '_dev') . ' settings', 'li']]],
+       #         ['', [['<br>See also ' . a('DEV instance', '_dev') . ' settings', 'li']]],
             '</fieldset>',
             '<fieldset><legend>Visitor\'s & users settings</legend>',
                 'c_manda'   => ['Hide all content if no cookies', 'radio', ['No', 'Yes']],
@@ -294,13 +293,13 @@ class Root
                 'reg_req'   => ['Users required for registrations', 'radio', ['Both', 'Login', 'E-mail']],
             '</fieldset>',
             '<fieldset><legend>Cache & Jet settings</legend>',
-                'cache_act' => ['Hard cache active', 'radio', ['No', 'Yes']],
+                'cache_act' => ['Hard cache', 'radio', ['Off', 'On']],
                 'cache_sec' => ['Default TTL, seconds', '', '', 300],
                 'red_label' => ['Red label', 'radio', ['Off', 'On'], 1],
                 ['', [['<b><u>The Jet compiller</u></b>', 'li']]],
-                'jet_cact' => ['Jet cache active', 'radio', ['No', 'Yes'], 1],
-                'jet_swap' => ['Swap @inc & @require commands', 'checkbox'],
-                'jet_prod' => ['Recompile Jet-files on production when edit tpls', 'checkbox'],
+                'jet_cact' => ['Jet cache', 'radio', ['Off', 'On'], 1],
+         #       'jet_swap' => ['Swap @inc & @require commands', 'checkbox'],
+          #      'jet_prod' => ['Recompile Jet-files on production when edit tpls', 'checkbox'],
         #       'jet_0php' => ['Allow native PHP', 'checkbox'],
         #       'jet_1php' => ['Allow @php Jet command', 'checkbox'],
             '</fieldset>',
@@ -429,6 +428,47 @@ class Root
             Admin::out($m, false);
         }
         return ' ' . a('Migrations', "?main=6&");
+    }
+
+    static function start() {
+        global $sky;
+
+        if ($sky->s_init_needed) {
+            $js = WWW . 'm/' . basename(Root::js);
+            file_exists($js) or file_put_contents($js, file_get_contents(Root::js)) or exit("Cannot save `$js`");
+            Root::init_reset(sql('+select tmemo from memory where id=5'));
+            SKY::s('init_needed', null); # run once only
+        }
+    }
+
+    static function init_reset($code) {
+        if (!DEV)
+            return;
+
+        foreach (explode("\n", unl($code)) as $line) {
+            if ($line) list($key, $val) = explode(' ', $line, 2); else continue;
+            switch ($key) {
+                case 'htaccess':
+                    foreach (explode(' ', $line) as $dir)
+                        if ($dir && file_exists($dir) && !file_exists($file = "$dir/.htaccess"))
+                            file_put_contents($file, "deny from all\n");
+                break;
+                case 'index':
+                    foreach (explode(' ', $line) as $dir)
+                        if ($dir && file_exists($dir) && !file_exists($file = "$dir/index.htm"))
+                            file_put_contents($file, "<html><body>Forbidden folder</body></html>\n");
+                break;
+                case 'php':
+                    if (is_numeric($val)) {
+                        $php = sqlf('+select tmemo from $_memory where id=%d union select 0 as tmemo', $val)
+                            and sqlf('delete from $_memory where id=%d', $val)
+                            and eval($php);
+                    } elseif (is_file($val)) {
+                        require $val;//req
+                    }
+                break;
+            }
+        }
     }
 
     static function dummy_txt($chars = 0) {

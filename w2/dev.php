@@ -9,22 +9,9 @@ function e() {
 
 class DEV
 {
-    const js = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js';
-
     static $static = false;
     static $sqls = [['##', 'Time', 'Query']];
     static $vars = [['##', 'Name', 'Value']];
-
-    static function start() {
-        global $sky;
-
-        if ($sky->s_init_needed) {
-            $js = WWW . 'm/' . basename(DEV::js);
-            file_exists($js) or file_put_contents($js, file_get_contents(DEV::js)) or exit("Cannot save `$js`");
-            DEV::init_reset(sql('+select tmemo from memory where id=5'));
-            SKY::s('init_needed', null); # run once only
-        }
-    }
 
     static function init() {
         if (DEV && !CLI && SKY::$dd) {
@@ -119,36 +106,6 @@ class DEV
             }
         }
         DEV::$sqls[] = [$i++, sprintf('%01.3f sec', $ts), "$file:$line:\n$table"];
-    }
-
-    static function init_reset($code) {
-        if (!DEV)
-            return;
-
-        foreach (explode("\n", unl($code)) as $line) {
-            if ($line) list($key, $val) = explode(' ', $line, 2); else continue;
-            switch ($key) {
-                case 'htaccess':
-                    foreach (explode(' ', $line) as $dir)
-                        if ($dir && file_exists($dir) && !file_exists($file = "$dir/.htaccess"))
-                            file_put_contents($file, "deny from all\n");
-                break;
-                case 'index':
-                    foreach (explode(' ', $line) as $dir)
-                        if ($dir && file_exists($dir) && !file_exists($file = "$dir/index.htm"))
-                            file_put_contents($file, "<html><body>Forbidden folder</body></html>\n");
-                break;
-                case 'php':
-                    if (is_numeric($val)) {
-                        $php = sqlf('+select tmemo from $_memory where id=%d union select 0 as tmemo', $val)
-                            and sqlf('delete from $_memory where id=%d', $val)
-                            and eval($php);
-                    } elseif (is_file($val)) {
-                        require $val;//req
-                    }
-                break;
-            }
-        }
     }
 
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////

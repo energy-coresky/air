@@ -57,8 +57,9 @@ class Admin
             $i = 0;
             foreach ($out as $k => $v) {
                 is_string($v) or is_int($v) or $v = print_r($v, true);
-                if ($is_html) $v = html($v);
-                echo td([1 + $i, [$k, 'style="min-width:100px"'], $v], eval(zebra));
+                if ($is_html)
+                    $v = html($v);
+                echo td([[1 + $i, 'style="width:5%"'], [$k, 'style="width:30%"'], $v], eval(zebra));
             }
             echo '</table>';
         } else {
