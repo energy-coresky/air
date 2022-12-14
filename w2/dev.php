@@ -580,5 +580,9 @@ class DEV
             throw new Stop;
         return $n ? ['h4' => Root::$h4[$n]] : Root::dev();
     }
+
+    function j_reflect() {
+        echo Display::reflect($_POST['n'], $_POST['t']);
+    }
 }
 

@@ -92,9 +92,9 @@ class Root
         $top = menu($i, $menu);
         $tpl = '<span style="margin-left:55px;"><u>Subset</u></span> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
         $ext = get_loaded_extensions();
-        $echo = function ($ary) {
+        $echo = function ($ary, $type = 'c') {
             sort($ary);
-            $val = a('show') . ' | ' . a('search') . ' | ' . a('stack');
+            $val = a('show', ["sky.d.reflect(this, '$type')"]) . ' | ' . a('search') . ' | ' . a('stack');
             echo Admin::out(array_fill_keys($ary, $val), false);
         };
         switch ($menu[$i]) {
@@ -150,7 +150,7 @@ class Root
                     return true;
                 }));
                 $t = isset($_GET['t']) ? intval($_GET['t']) : array_search('user', $types);
-                $echo($ary[$types[$t]]);
+                $echo($ary[$types[$t]], 'f');
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 2]), option($t, $types));
                 break;
 
@@ -164,18 +164,18 @@ class Root
                     $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
                     return true;
                 });
-                $types += [-1 => 'all', -2 => 'user'];
+                $types = [-1 => 'all', -2 => 'user'] + $types;
                 $echo(-2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]])));
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $types));
                 break;
 
             case 'Other':
                 echo tag('Traits', '', 'h3');
-                $echo(get_declared_traits());
+                $echo(get_declared_traits(), 't');
                 echo tag('Interfaces', '', 'h3');
-                $echo(get_declared_interfaces());
+                $echo(get_declared_interfaces(), 'i');
                 echo tag('Loaded extensions', '', 'h3');
-                $echo($ext);
+                $echo($ext, 'e');
                 break;
         }
         return $top;

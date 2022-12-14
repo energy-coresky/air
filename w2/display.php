@@ -146,4 +146,55 @@ class Display
             $val .= '<div class="code" style="background:#eee">&nbsp;</div>';
         }
     }
+
+    static function reflect($name, $type = 'c') {
+        $params = function ($func) {
+            return array_map(function ($p) use ($func) {
+                $pre = $p->hasType() ? ($p->allowsNull() ? '?' : '') . $p->getType()->getName() . ' ' : '';
+                if ($var = $p->isVariadic())
+                    $pre .= '...';
+                if (!$var && $p->isOptional()) {
+                    $p->name .= $func->isInternal() && PHP_VERSION_ID < 80000
+                        ? sprintf(span_r, " =err")
+                        : ' = ' . ($p->isDefaultValueConstant()
+                            ? $p->getDefaultValueConstantName()
+                            : var_export($p->getDefaultValue(), true)
+                        );
+                }
+                return $pre . ($p->isPassedByReference() ? '&' : '') . '$' . $p->name;
+            }, $func->getParameters());
+        };
+
+        if ('f' == $type) { // function
+            $fnc = new ReflectionFunction($name);
+            return "<br>function " . $fnc->name . '(' . implode(', ', $params($fnc)) . ')';
+        
+        } elseif ('e' == $type) { // extensions
+            return 'e';
+        } else { // class
+            $mds = function ($obj) {
+                $s = ReflectionMethod::IS_PUBLIC;
+                $s = implode(' ', Reflection::getModifierNames(~$s & $obj->getModifiers()));
+                return $s ? "$s " : '';
+            };
+            
+            $cls = new ReflectionClass($name);
+            $consts = $cls->getConstants();
+            $props = $cls->getProperties();
+            $methods = $cls->getMethods();
+            $type .= 't' == $type ? 'rait' : ('i' == $type ? 'nterface' : 'lass');
+            $name = $mds($cls) . $type . ' ' . $cls->getName();
+            if ($x = $cls->getParentClass())
+                $name .= " extends " . $x->getName();
+            if ($x = $cls->getInterfaceNames())
+                $name .= ' implements ' . implode(', ', $x);
+            $out = "<pre>$name\n{\n    ";
+            return $out . implode("\n    ", array_map(function ($v) use ($params, $mds) {
+                $m = $mds($v) . 'function ';
+                if ($v->returnsReference())
+                    $m .= '&';
+                return $m . $v->name . '(' . implode(', ', $params($v)) . ')';
+            }, $methods)) . "\n}</pre>";
+        }
+    }
 }

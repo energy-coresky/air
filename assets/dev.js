@@ -78,6 +78,13 @@ sky.d.view = function(x) {
     $('#v-tail form').attr('action', sky.home + '_dev?view=' + x).submit();
 };
 
+sky.d.reflect = function(el, type) {
+    var td = $(el).parent(), name = td.prev().text();
+    ajax('reflect', {t:type, n:name}, function(r) {
+        td.append(r);
+    });
+};
+
 $(function() {
     /*$('#v-menu a').each(function () {
         $(this).click(function () {
