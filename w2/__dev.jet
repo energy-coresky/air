@@ -109,14 +109,15 @@
 {! $form2 !}
 </fieldset>
 </div>
-#.development
+#.development.pp
+#.pp
 
 #.main //////////////////////////////////////////////////////////////////////////////
 @use(`<h4>{{$h4}}</h4>` as header)
 @use(.m_dev)
 @if($sky->_2)
 @if($sky->_2 < 7)
-<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
     @block(`` as menus)
 </div>
 ~if

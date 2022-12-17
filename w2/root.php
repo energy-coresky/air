@@ -47,6 +47,17 @@ class Root
         ];
 
         $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
+        $phpman = [
+            'en' => 'English',
+            'pt_BR' => 'Brazilian Portuguese',
+            'zh' => 'Chinese (Simplified)',
+            'fr' => 'French',
+            'de' => 'German',
+            'ja' => 'Japanese',
+            'ru' => 'Russian',
+            'es' => 'Spanish',
+            'tr' => 'Turkish',
+        ];
         $form2 = [
             'dev' => ['Set debug=0 for DEV-tools', 'chk'],
             'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
@@ -54,11 +65,14 @@ class Root
             'const' => ['Show user-defined global CONSTANTs in the tracing,' . $br, 'chk'],
             'class' => ['Show CLASSEs', 'chk'],
             'cron'  => ['Run cron when click on DEV instance', 'chk'],
-            ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
+       //     ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
             Form::X([], '<hr>'),
             ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
             'static' => ['', '', 'size="50"'],
             'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
+            'manual' => ['PHP manual laguage', 'select', $phpman],
+            'se' => ['Search engine tpl', '', 'size="50"'],
+            //'se4so' => ['SE for stackoveflow site', '', 'size="50"'],
             ['Save', 'submit'],
         ];
         if (isset($_POST['app'])) {
@@ -90,12 +104,27 @@ class Root
 
         $menu = ['Summary', 'Constants', 'Functions', 'Classes', 'Other'];
         $top = menu($i, $menu);
-        $tpl = '<span style="margin-left:55px;"><u>Subset</u></span> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
+        $ml = 'style="margin-left:55px;"';
+        $tpl = '<span ' . $ml . '><u>Extension</u></span> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
+        $priv = tag('<input ' . ($sky->d_pp ? 'checked ' : '') . $ml . ' type="checkbox" onchange="sky.d.pp(this)"> show private & protected', '', 'label');
         $ext = get_loaded_extensions();
-        $echo = function ($ary, $type = 'c') {
-            sort($ary);
-            $val = a('show', ["sky.d.reflect(this, '$type')"]) . ' | ' . a('search') . ' | ' . a('stack');
-            echo Admin::out(array_fill_keys($ary, $val), false);
+        sort($ext);
+        $echo = function ($ary, $t = 'c') {
+            'e' == $t or sort($ary);
+            $val = array_map(function ($v) use ($t) {
+                global $sky;
+                if ('e' == $t)
+                    $v = explode(' ', $v)[2];
+                $sky->d_manual or $sky->d_manual = 'en';
+                $sky->d_se or $sky->d_se = 'https://yandex.ru/search/?text=%s';
+                $vv = str_replace('_', '-', strtolower($v));
+                $q = ('f' == $t ? 'function.' : ('e' == $t ? 'book.' : 'class.')) . $vv;
+                $m = a('manual', "https://www.php.net/manual/$sky->d_manual/$q.php", 'target="_blank"');
+                $s = a('stackoverflow', sprintf($sky->d_se, urlencode("php $v site:stackoverflow.com")), 'target="_blank"');
+                return a('show', ["sky.d.reflect(this, '$t')"]) . " | $m | $s";
+            }, $ary);
+            // . ' | ' . a('');
+            echo Admin::out(array_combine($ary, $val), false);
         };
         switch ($menu[$i]) {
             case 'Summary':
@@ -134,7 +163,10 @@ class Root
 
             case 'Constants':
                 $types = array_keys($ary = get_defined_constants(true));
-                $t = isset($_GET['t']) ? intval($_GET['t']) : array_search('user', $types);
+                sort($types);
+                unset($types[array_search('user', $types)]);
+                $types = [-1 => 'user'] + $types;
+                $t = isset($_GET['t']) ? intval($_GET['t']) : -1;
                 $out = $ary[$types[$t]];
                 ksort($out);
                 echo Admin::out($out);
@@ -166,7 +198,8 @@ class Root
                 });
                 $types = [-1 => 'all', -2 => 'user'] + $types;
                 $echo(-2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]])));
-                $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $types));
+//                $echo(-2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : $ary[$types[$t]]));
+                $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $types)) . $priv;
                 break;
 
             case 'Other':
@@ -174,8 +207,21 @@ class Root
                 $echo(get_declared_traits(), 't');
                 echo tag('Interfaces', '', 'h3');
                 $echo(get_declared_interfaces(), 'i');
-                echo tag('Loaded extensions', '', 'h3');
-                $echo($ext, 'e');
+                echo tag('Loaded extensions, Dependencies, Constants/Functions/Classes', '', 'h3');
+                $echo(array_map(function ($v) {
+                    $e = new ReflectionExtension($v);
+                    if ($d = $e->getDependencies()) {
+                        array_walk($d, function (&$v, $k) {
+                            $set = ['Conflicts' => span_r, 'Required' => span_g, 'Optional' => span_b];
+                            $v = sprintf($set[$v], $k);
+                        });
+                        $v .= ('Phar' == $v ? ' <br>' : ' ') . implode(' ', $d);
+                    }
+                    return tag(count($e->getConstants())
+                        . '/' . count($e->getFunctions())
+                        . '/' . count($e->getClassNames()) . '&nbsp;') . " $v ";
+                }, $ext), 'e');
+                $top .= $priv;
                 break;
         }
         return $top;

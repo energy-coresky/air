@@ -315,7 +315,7 @@ class SKY implements PARADISE
 
     const CORE = '0.207 2022-12-11T07:26:19+02:00 energy';
 
-    static function version() {
+    static function version() : array {
         global $sky;
         $core = explode(' ', SKY::CORE);    # timestamp, CS-ver, APP-ver, APP-name
         $app = explode(' ', $sky->s_version) + [time(), $core[0], '0.0001', 'APP'];

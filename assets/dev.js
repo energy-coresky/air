@@ -78,6 +78,13 @@ sky.d.view = function(x) {
     $('#v-tail form').attr('action', sky.home + '_dev?view=' + x).submit();
 };
 
+sky.d.pp = function(el) {
+    var checked = $(el).is(':checked') ? 1 : 0;
+    ajax('pp', {pp:checked}, function(r) {
+        location.href = location.href;
+    });
+};
+
 sky.d.reflect = function(el, type) {
     var td = $(el).parent(), name = td.prev().text();
     ajax('reflect', {t:type, n:name}, function(r) {

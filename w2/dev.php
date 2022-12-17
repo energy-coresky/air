@@ -581,8 +581,14 @@ class DEV
         return $n ? ['h4' => Root::$h4[$n]] : Root::dev();
     }
 
+    function j_pp() {
+        SKY::d('pp', (int)$_POST['pp']);
+    }
+
     function j_reflect() {
-        echo Display::reflect($_POST['n'], $_POST['t']);
+        $name = explode(' ', $_POST['n'], 3);
+        $name = 'e' == ($type = $_POST['t']) ? $name[1] : $name[0];
+        echo Display::reflect($name, $type);
     }
 }
 

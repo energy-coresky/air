@@ -147,7 +147,18 @@ class Display
         }
     }
 
-    static function reflect($name, $type = 'c') {
+    static function var($v, $html = true) { # tune var_export
+        $var = @var_export($v, true);
+        if (strlen($var) > 50)
+            $var = sprintf(span_r, '>50 chars, ' . gettype($v));
+        if ("array (\n)" == $var)
+            $var = '[]';
+        return $html ? html($var) : $var; // need more
+    }
+
+    static function reflect($name, $type, $pp = null) {
+        global $sky;
+
         $params = function ($func) {
             return array_map(function ($p) use ($func) {
                 $pre = $p->hasType() ? ($p->allowsNull() ? '?' : '') . $p->getType()->getName() . ' ' : '';
@@ -156,21 +167,22 @@ class Display
                 if (!$var && $p->isOptional()) {
                     $p->name .= $func->isInternal() && PHP_VERSION_ID < 80000
                         ? sprintf(span_r, " =err")
-                        : ' = ' . ($p->isDefaultValueConstant()
-                            ? $p->getDefaultValueConstantName()
-                            : var_export($p->getDefaultValue(), true)
-                        );
+                        : ' = ' . ($p->isDefaultValueConstant() ? $p->getDefaultValueConstantName() : Display::var($p->getDefaultValue()));
                 }
                 return $pre . ($p->isPassedByReference() ? '&' : '') . '$' . $p->name;
             }, $func->getParameters());
         };
+        null !== $pp or $pp = $sky->d_pp;
 
         if ('f' == $type) { // function
             $fnc = new ReflectionFunction($name);
-            return "<br>function " . $fnc->name . '(' . implode(', ', $params($fnc)) . ')';
+            $rt = ($rt = $fnc->getReturnType()) ? " : " . $rt->getName() : '';
+            return "<pre>function " . $fnc->name . '(' . implode(', ', $params($fnc)) . ")$rt</pre>";
         
         } elseif ('e' == $type) { // extensions
-            return 'e';
+            $ext = new ReflectionExtension($name);
+            return $ext->info();
+
         } else { // class
             $mds = function ($obj) {
                 $s = ReflectionMethod::IS_PUBLIC;
@@ -179,22 +191,41 @@ class Display
             };
             
             $cls = new ReflectionClass($name);
-            $consts = $cls->getConstants();
-            $props = $cls->getProperties();
-            $methods = $cls->getMethods();
             $type .= 't' == $type ? 'rait' : ('i' == $type ? 'nterface' : 'lass');
+            $q = "class." . strtolower($cls->getName()) . '.php';
             $name = $mds($cls) . $type . ' ' . $cls->getName();
             if ($x = $cls->getParentClass())
                 $name .= " extends " . $x->getName();
             if ($x = $cls->getInterfaceNames())
                 $name .= ' implements ' . implode(', ', $x);
-            $out = "<pre>$name\n{\n    ";
-            return $out . implode("\n    ", array_map(function ($v) use ($params, $mds) {
+
+            $data = array_map(function ($v, $k) {
+                return "const $k = " . Display::var($v);
+            }, $c = $cls->getConstants(), array_keys($c));
+            $dp = $cls->getDefaultProperties();
+            $props = array_map(function ($v) use ($dp) {
+                $m = $v->getModifiers();
+                if ($m != ReflectionProperty::IS_PUBLIC)
+                    $m &= ~ReflectionProperty::IS_PUBLIC;
+                $s = implode(' ', Reflection::getModifierNames($m)) . ' $';
+                if (null !== $dp[$v->name] && $v->isDefault())
+                    $v->name .= " = " . Display::var($dp[$v->name]);
+                return $s . $v->name;
+            }, $cls->getProperties($pp ? null : ReflectionProperty::IS_PUBLIC));
+            $data = array_merge($data, $props);
+            sort($data);
+
+            $methods = array_map(function ($v) use ($params, $mds) {
                 $m = $mds($v) . 'function ';
                 if ($v->returnsReference())
                     $m .= '&';
-                return $m . $v->name . '(' . implode(', ', $params($v)) . ')';
-            }, $methods)) . "\n}</pre>";
+                $rt = ($rt = $v->getReturnType()) ? " : " . $rt->getName() : '';
+                return $m . $v->name . '(' . implode(', ', $params($v)) . ")$rt";
+            }, $cls->getMethods($pp ? null : ReflectionMethod::IS_PUBLIC));
+            sort($methods);
+            $traits = implode(', ', $cls->getTraitNames());
+            $data = array_merge($traits ? ['use ' . $traits] : [], $data, $data && $methods ? [''] : [], $methods);
+            return "<pre>$name\n{\n    " . implode("\n    ", $data) . "\n}</pre>";
         }
     }
 }
