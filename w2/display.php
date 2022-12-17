@@ -149,11 +149,11 @@ class Display
 
     static function var($v, $html = true) { # tune var_export
         $var = @var_export($v, true);
-        if (strlen($var) > 50)
+        if ($len = strlen($var) > 50)
             $var = sprintf(span_r, '>50 chars, ' . gettype($v));
         if ("array (\n)" == $var)
             $var = '[]';
-        return $html ? html($var) : $var; // need more
+        return $html && !$len ? html($var) : $var; // need more
     }
 
     static function reflect($name, $type, $pp = null) {
