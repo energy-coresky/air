@@ -16,7 +16,7 @@ class Schedule
         global $argv, $sky;
 
         'WINNT' == PHP_OS or $this->script = PHP_BINDIR . '/php ';
-        $this->script .= $argv[0];
+        $this->script .= $argv[0] ?? 0;
         $this->single_thread = !function_exists('popen') || $single_thread;
         $this->max_exec_sec = 60 * $max_exec_minutes;
 

@@ -123,7 +123,6 @@ class Root
                 $s = a('stackoverflow', sprintf($sky->d_se, urlencode("php $v site:stackoverflow.com")), 'target="_blank"');
                 return a('show', ["sky.d.reflect(this, '$t')"]) . " | $m | $s";
             }, $ary);
-            // . ' | ' . a('');
             echo Admin::out(array_combine($ary, $val), false);
         };
         switch ($menu[$i]) {
@@ -149,7 +148,7 @@ class Root
                     'Visitors online:' => $sky->s_online,
                     'PHP NOW:' => NOW . ' (' . PHP_TZ . '), ' . gmdate(DATE_DT) . ' (GMT)',
                     'SQL NOW:' => ($t = sql('+select $now')) . ' ' . (NOW == $t ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
-//                    'Cron layer last tick:' => (new Schedule)->n_cron_dt,
+                    'Cron layer last tick:' => (new Schedule)->n_cron_dt,
                     'Backup settings:' => sql('+select dt from $_memory where id=7'),
                     'Timestamp NOW:' => time(),
                     'Max timestamp:' => sprintf('%d (PHP_INT_MAX), GMT: %s', PHP_INT_MAX, gmdate(DATE_DT, PHP_INT_MAX)),
@@ -198,7 +197,6 @@ class Root
                 });
                 $types = [-1 => 'all', -2 => 'user'] + $types;
                 $echo(-2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]])));
-//                $echo(-2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : $ary[$types[$t]]));
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $types)) . $priv;
                 break;
 

@@ -153,47 +153,46 @@ class Display
             $var = sprintf(span_r, '>50 chars, ' . gettype($v));
         if ("array (\n)" == $var)
             $var = '[]';
+        if ("'\n'" == $var)
+            $var = '"\n"';
         return $html && !$len ? html($var) : $var; // need more
     }
 
     static function reflect($name, $type, $pp = null) {
         global $sky;
 
+        null !== $pp or $pp = $sky->d_pp;
         $params = function ($func) {
             return array_map(function ($p) use ($func) {
-                $pre = $p->hasType() ? ($p->allowsNull() ? '?' : '') . $p->getType()->getName() . ' ' : '';
+                $one = $p->hasType() ? ($p->allowsNull() ? '?' : '') . $p->getType()->getName() . ' ' : '';
                 if ($var = $p->isVariadic())
-                    $pre .= '...';
-                if (!$var && $p->isOptional()) {
-                    $p->name .= $func->isInternal() && PHP_VERSION_ID < 80000
-                        ? sprintf(span_r, " =err")
-                        : ' = ' . ($p->isDefaultValueConstant() ? $p->getDefaultValueConstantName() : Display::var($p->getDefaultValue()));
-                }
-                return $pre . ($p->isPassedByReference() ? '&' : '') . '$' . $p->name;
+                    $one .= '...';
+                $one .= ($p->isPassedByReference() ? '&' : '') . '$' . $p->getName();
+                if ($var || !$p->isOptional())
+                    return $one;
+                return "$one = " . ($func->isInternal() && PHP_VERSION_ID < 80000
+                    ? sprintf(span_r, 'err')
+                    : ($p->isDefaultValueConstant() ? $p->getDefaultValueConstantName() : Display::var($p->getDefaultValue())));
             }, $func->getParameters());
         };
-        null !== $pp or $pp = $sky->d_pp;
 
         if ('f' == $type) { // function
             $fnc = new ReflectionFunction($name);
-            $rt = ($rt = $fnc->getReturnType()) ? " : " . $rt->getName() : '';
-            return "<pre>function " . $fnc->name . '(' . implode(', ', $params($fnc)) . ")$rt</pre>";
+            return "<pre>function $fnc->name(" . implode(', ', $params($fnc)) . ')'
+                . (($rt = $fnc->getReturnType()) ? ": " . $rt->getName() : '') . '</pre>';
         
         } elseif ('e' == $type) { // extensions
             $ext = new ReflectionExtension($name);
             return $ext->info();
 
-        } else { // class
-            $mds = function ($obj) {
-                $s = ReflectionMethod::IS_PUBLIC;
-                $s = implode(' ', Reflection::getModifierNames(~$s & $obj->getModifiers()));
-                return $s ? "$s " : '';
+        } else { // class, interface, trait
+            $modifiers = function ($obj) {
+                $m = Reflection::getModifierNames(~ReflectionMethod::IS_PUBLIC & $obj->getModifiers());
+                return $m ? implode(' ', $m) . ' ' : '';
             };
-            
+
             $cls = new ReflectionClass($name);
-            $type .= 't' == $type ? 'rait' : ('i' == $type ? 'nterface' : 'lass');
-            $q = "class." . strtolower($cls->getName()) . '.php';
-            $name = $mds($cls) . $type . ' ' . $cls->getName();
+            $name = ('t' == $type ? 'trait' : ('i' == $type ? 'interface' : 'class')) . " $cls->name";
             if ($x = $cls->getParentClass())
                 $name .= " extends " . $x->getName();
             if ($x = $cls->getInterfaceNames())
@@ -202,30 +201,27 @@ class Display
             $data = array_map(function ($v, $k) {
                 return "const $k = " . Display::var($v);
             }, $c = $cls->getConstants(), array_keys($c));
-            $dp = $cls->getDefaultProperties();
-            $props = array_map(function ($v) use ($dp) {
-                $m = $v->getModifiers();
-                if ($m != ReflectionProperty::IS_PUBLIC)
-                    $m &= ~ReflectionProperty::IS_PUBLIC;
-                $s = implode(' ', Reflection::getModifierNames($m)) . ' $';
-                if (null !== $dp[$v->name] && $v->isDefault())
-                    $v->name .= " = " . Display::var($dp[$v->name]);
-                return $s . $v->name;
-            }, $cls->getProperties($pp ? null : ReflectionProperty::IS_PUBLIC));
-            $data = array_merge($data, $props);
+            $defs = $cls->getDefaultProperties();
+            $props = $cls->getProperties($pp ? null : ReflectionProperty::IS_PUBLIC);
+            $data = array_merge($data, array_map(function ($p) use ($defs) {
+                $m = $p->getModifiers();
+                ReflectionProperty::IS_PUBLIC == $m or $m &= ~ReflectionProperty::IS_PUBLIC;
+                $one = $p->getName();
+                if (null !== $defs[$one] && $p->isDefault())
+                    $one .= " = " . Display::var($defs[$one]);
+                return implode(' ', Reflection::getModifierNames($m)) . ' $' . $one;
+            }, $props));
             sort($data);
 
-            $methods = array_map(function ($v) use ($params, $mds) {
-                $m = $mds($v) . 'function ';
-                if ($v->returnsReference())
-                    $m .= '&';
-                $rt = ($rt = $v->getReturnType()) ? " : " . $rt->getName() : '';
-                return $m . $v->name . '(' . implode(', ', $params($v)) . ")$rt";
+            $funcs = array_map(function ($v) use ($params, $modifiers) {
+                return $modifiers($v) . 'function ' . ($v->returnsReference() ? '&' : '')
+                    . $v->name . '(' . implode(', ', $params($v)) . ')'
+                    . (($rt = $v->getReturnType()) ? ': ' . $rt->getName() : '');
             }, $cls->getMethods($pp ? null : ReflectionMethod::IS_PUBLIC));
-            sort($methods);
+            sort($funcs);
             $traits = implode(', ', $cls->getTraitNames());
-            $data = array_merge($traits ? ['use ' . $traits] : [], $data, $data && $methods ? [''] : [], $methods);
-            return "<pre>$name\n{\n    " . implode("\n    ", $data) . "\n}</pre>";
+            $data = array_merge($traits ? ['use ' . $traits] : [], $data, $data && $funcs ? [''] : [], $funcs);
+            return tag($modifiers($cls) . "$name\n{\n    " . implode("\n    ", $data) . "\n}", '', 'pre');
         }
     }
 }
