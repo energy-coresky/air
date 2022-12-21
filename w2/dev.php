@@ -581,6 +581,15 @@ class DEV
         return $n ? ['h4' => Root::$h4[$n]] : Root::dev();
     }
 
+    function j_drop() {
+        global $sky;
+        if (!DEV)
+            return;
+        list ($char, $id) = explode('.', $_POST['cid']);
+        $sky->memory($id, $char);
+        call_user_func("SKY::$char", $_POST['v'], null);
+    }
+
     function j_pp() {
         SKY::d('pp', (int)$_POST['pp']);
     }

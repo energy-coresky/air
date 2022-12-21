@@ -238,6 +238,7 @@ class Root
         $menu = ['System', 'Admin', 'Cron', '/etc/'];
         $etc = 3 == $i;
         $edit = $etc ? isset($_GET['fn']) : !isset($_GET['show']);
+        $show = $edit ? false : ($_GET['show'] ?? true);
         $TOP = menu($i, $menu, TPL_MENU . ($edit ? '&edit' : '&show'), ' &nbsp; ');
         if ($etc) {
             $char = 'f';
@@ -250,17 +251,20 @@ class Root
                 array_walk($ary, function(&$v, $k) use ($path) {
                     $size = filesize($k);
                     $v = date(DATE_DT, filemtime($k)) . ' ';
-                    $v .= $size > 1024 ? "- $size bytes" : a('edit', "?main=3&id=3&fn=" . substr($k, 1 + strlen($path)));
+                    $v .= $size > 1024 ? "- $size bytes" : tag(a('edit &nbsp;', "?main=3&id=3&fn=" . substr($k, 1 + strlen($path))));
                 });
             }
         } else {
            new Admin;
             $ary = [['s' => 3], ['a' => 8], ['n' => 9]];
-            $sid = $ary[$i];
-            $char = key($sid);
-            $sky->memory();
-            $ary = SKY::$mem[$char][3];
-            list ($imemo, $dt) = sql('-select imemo, dt from $_memory where id=$.', current($sid));
+            list ($imemo, $dt) = sqlf('-select imemo, dt from $_memory where id=%d', $id = current($ary = $ary[$i]));
+            $ary = $sky->memory($id, $char = key($ary));
+            $edit or array_walk($ary, function(&$v, $k) use ($i) {
+                $v = html($v) . (DEV ? tag(a('drop &nbsp;', "?main=3&id=$i&show=$k")) : '');
+            });
+            $str = 'This action can damage application. Are you sure drop variable';
+            if ($show)
+                echo tag("$str `" . tag($show, 'cid="' . "$char.$id" . '"', 'span') . "`?", 'id="drop-var"');
             $TOP .= pad() . "imemo=$imemo, dt=$dt" . pad() . a($edit ? 'Show' : 'Edit', "?main=3&id=$i&" . ($edit ? 'show' : 'edit'));
         }
 
@@ -281,7 +285,7 @@ class Root
         }
 
         if (!$edit) {
-            echo Admin::out($ary, !$etc);
+            echo Admin::out($ary, false);
             if ($etc)
                 echo '<br>' . a('Write new file', '?main=3&id=3&fn');
             return $TOP;

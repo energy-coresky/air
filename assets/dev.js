@@ -78,6 +78,13 @@ sky.d.view = function(x) {
     $('#v-tail form').attr('action', sky.home + '_dev?view=' + x).submit();
 };
 
+sky.d.drop = function() {
+    var s = $('#drop-var span')
+    ajax('drop', {v:s.text(), cid:s.attr('cid')}, function(r) {
+        location.href = location.href.replace(/^(.*?&show)=\w+$/, '$1');
+    });
+};
+
 sky.d.pp = function(el) {
     var checked = $(el).is(':checked') ? 1 : 0;
     ajax('pp', {pp:checked}, function(r) {
@@ -106,4 +113,8 @@ $(function() {
     sky.key[27] = function() { // Escape
         sky.d.close_box();
     };
+
+    $('#drop-var').after('<input type="button" value="Yes" onclick="sky.d.drop()" />');
 });
+
+

@@ -55,7 +55,7 @@ class Debug
             E_COMPILE_ERROR => 'Compile fatal error',
             E_RECOVERABLE_ERROR => 'Recoverable error',
         ];
-        return isset($list[$no]) ? $list[$no] : "ErrorNo_$no";
+        return $list[$no] ?? "ErrorNo_$no";
     }
 
     static function context($ary = -1, $depth = 1) {

@@ -310,3 +310,16 @@ td, .bb {
 .upper-case {
     text-transform:uppercase;
 }
+
+#drop-var span {
+    font-weight:bold;
+}
+
+#drop-var {
+    background-color:pink;
+    padding:10px;
+    margin-right:10px;
+    font-size:18px;
+}
+
+
