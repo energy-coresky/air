@@ -47,13 +47,17 @@ class Debug
 
     static function error_name($no) {
         $list = [
-            E_NOTICE => 'Notice',
-            E_WARNING => 'Warning',
             E_ERROR => 'Fatal error',
+            E_WARNING => 'Warning',
             E_PARSE => 'Parse error',
+            E_NOTICE => 'Notice',
             E_CORE_ERROR => 'Core fatal error',
+            E_CORE_WARNING => 'Core warning',
             E_COMPILE_ERROR => 'Compile fatal error',
+            E_COMPILE_WARNING => 'Compile warning',
+            E_STRICT => 'Strict',
             E_RECOVERABLE_ERROR => 'Recoverable error',
+            E_DEPRECATED => 'Deprecated',
         ];
         return $list[$no] ?? "ErrorNo_$no";
     }

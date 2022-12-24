@@ -106,7 +106,7 @@ $(function() {
     <span style="color:#000">{{strtoupper($h1)}}.PHP</span>
 @else
     <span style="color:red">{{strtoupper($h1)}}.PHP</span> (not exists)
-    <a @href(ajax('{{$y_1}}','v-body','_delete'))>delete</a>
+    <a @href(ajax('{{$y_1}}',{},'v-body','_delete'))>delete</a>
 ~if
 </b></h4>
 #.header.gate.delete ------------------------------------------------------------------------------
@@ -156,7 +156,7 @@ $(function() {
         @if(!$row->code)
         <div class="fr" style="text-align:right">
             @if($row->delete)
-                <input type="button" class="edit" value="delete" onclick="ajax('{{$y_1}}.{{$row->func}}','v-body','_delete')"/>
+                <input type="button" class="edit" value="delete" onclick="ajax('{{$y_1}}.{{$row->func}}',{},'v-body','_delete')"/>
             ~if
             <input type="button" class="edit" value="edit" onclick="sky.g.edit(this,'{{$y_1}}.{{$row->func}}')"/>
         </div>

@@ -259,8 +259,8 @@ class Root
             $ary = [['s' => 3], ['a' => 8], ['n' => 9]];
             list ($imemo, $dt) = sqlf('-select imemo, dt from $_memory where id=%d', $id = current($ary = $ary[$i]));
             $ary = $sky->memory($id, $char = key($ary));
-            $edit or array_walk($ary, function(&$v, $k) use ($i) {
-                $v = html($v) . (DEV ? tag(a('drop &nbsp;', "?main=3&id=$i&show=$k")) : '');
+            $edit or array_walk($ary, function(&$v, $k) use ($i, $sky) {
+                $v = html($v) . (DEV && '_dev' == $sky->_0 ? tag(a('drop &nbsp;', "?main=3&id=$i&show=$k")) : '');
             });
             $str = 'This action can damage application. Are you sure drop variable';
             if ($show)
