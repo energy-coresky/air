@@ -403,7 +403,7 @@ class Form
         $em = tag('drag file (or click) here', '', 'span')
             . tag('', 'value="0" style="display:none"', 'progress');
         if ($id) {
-            $del = '<a href="javascript:;" class="delete-%s" onclick="sky.file_delete(this, ' . $id . ')">[X]</a>';
+            $del = '<a href="javascript:;" class="delete-%s" onclick="upload.file_delete(this, ' . $id . ')">[X]</a>';
             $in = $is_img
                 ? '<img style="position:absolute" src="file?id' . $id . '"/>' . sprintf($del, 'img')
                 : tag($id_name, 'class="doc-file-name"') . sprintf($del, 'doc');

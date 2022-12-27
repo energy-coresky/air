@@ -566,7 +566,8 @@ function hidden($set = '_csrf', $r = 0) {
             $val = isset($r[$name]) ? $r[$name] : '';
         } elseif ('_csrf' == $name && 0 === $r) {
             global $user;
-            $val = DEV ? 0 : $user->v_csrf;
+            //$val = DEV ? 0 : $user->v_csrf;
+            $val = $user->v_csrf;
         }
         $out .= sprintf(TPL_HIDDEN, $name, html($val));
     }

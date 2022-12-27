@@ -27,6 +27,12 @@ class Plan
         use    => '' by default ( => 'plan_name') - use selected connection
     */
 
+    static function set($ware) {
+        $prev = Plan::$ware;
+        Plan::$ware = $ware;
+        return $prev;
+    }
+
     static function main() {
         Plan::$ctrl += Gate::controllers();
         SKY::$plans['main'] += ['ctrl' => Plan::$ctrl];

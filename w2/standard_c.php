@@ -12,10 +12,6 @@ class standard_c extends Controller
             'j_file',
 //            'a_exception',
             'j_init',
-            'j_crop_code',
-            'j_crop',
-            'j_file_tmp',
-            'j_file_delete',
         ];
         if ('a_etc' == $action)
             return;
@@ -156,24 +152,6 @@ class standard_c extends Controller
                 echo 'main';
         }
         return true;
-    }
-
-    function j_crop_code() {
-        $sizes = Plan::_t('mvc/t_file.php') ? $this->t_file->img_sizes() : ['100 x 100'];
-        return ['opt' => option(0, array_combine($sizes, $sizes))];
-    }
-
-    function j_crop() {
-        File_t::crop($_POST['id'], $_POST['x0'], $_POST['y0'], $_POST['x1'], $_POST['y1'], $_POST['szx'], $_POST['szy']);
-        return true;
-    }
-
-    function j_file_tmp() {
-        File_t::tmp();
-    }
-
-    function j_file_delete() {
-        File_t::delete_one();
     }
 
     # functions below for DEV only
