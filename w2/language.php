@@ -105,7 +105,7 @@ class Language
                 if ('' === $const) {
                     $lgt[$val] = $def ? 0 : $val2;
                 } else {
-                    $file .= sprintf("define('L_$const', %s);\n", var_export($val2, true));
+                    $file .= sprintf("const L_$const=%s;\n", var_export($val2, true));
                 }
             }
             if ($lgt)
@@ -266,31 +266,34 @@ class Language
     }
 
     private function listing($lg) {
-        $char = $prev = $ary = '';
         $dary = $this->load(DEFAULT_LG, isset($_POST['sort']));
-        $lg == DEFAULT_LG or $ary = $this->load($lg);
+        $ary = $lg == DEFAULT_LG ? [] : $this->load($lg);
+        $chars = '';
         return [
             'cnt' => count($dary),
-            'row_c' => function($row) use ($lg, &$dary, &$char, &$prev, $ary) {
+            'chars' => function() use (&$chars) {
+                return $chars;
+            },
+            'row_c' => function($row) use (&$dary, &$ary, &$chars) {
+                static $char = '', $prev = '';
                 if (false === ($v = current($dary)))
                     return false;
                 $id = key($dary);
                 list ($k, $v) = explode(' ', $v, 2);
                 next($dary);
-                $v2 = '';
-                $def = $lg == DEFAULT_LG or list (,$v2) = explode(' ', $ary[$id], 2);
                 $cmp = '%' == $char ? '%' : strtoupper($v[0]);
-                $ord = ord($cmp);
-                0x40 < $ord && $ord < 0x5B or $cmp = '%';
+                0x40 < ($ord = ord($cmp)) && $ord < 0x5B or $cmp = '%';
+                if ($char != $cmp)
+                    $chars .= ' ' . a($cmp, "#" . strtolower($cmp));
                 return [
+                    'red' => $prev === $v, // duplicated
+                    'val' => $prev = $v,
+                    'val2' => $v2 = $ary ? explode(' ', $ary[$id], 2)[1] : '',
+                    'pink' => $ary && $v == $v2, // not translated
+                    'yell' => strlen($v) < strlen($k),
+                    'key' => $k,
                     'id' => $id,
                     'char' => $char != $cmp ? ($char = $cmp) : false,
-                    'pink' => !$def && $v == $v2,
-                    'yell' => strlen($v) < strlen($k),
-                    'red' => $v === $prev,
-                    'key' => $k,
-                    'val' => $prev = $v,
-                    'val2' => $v2,
                 ];
             },
         ];
