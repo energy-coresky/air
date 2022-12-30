@@ -29,20 +29,23 @@ class Language
     }
 
     function __construct() {
-        $lg = MVC::$cc->setLG_h();
-        if (!$this->error = (int)(1 !== DEBUG))
-            $lg && ($this->list = $lg) or $this->error = 2;
-        $this->error or DEFAULT_LG && in_array(DEFAULT_LG, $this->list) or $this->error = 3;
-        if ($this->list)
-            $this->toname = Language::all();
+        global $sky;
+        $this->toname = Language::all();
+        MVC::$cc->setLG_h();
+
+        if (1 !== DEBUG) {
+            $this->error = 1;
+        } elseif (!$this->list = $sky->lg) {
+            $this->error = 2;
+        } elseif (!DEFAULT_LG || !in_array(DEFAULT_LG, $this->list)) {
+            $this->error = 3;
+        }
     }
 
     function c_list($lg) {
-        global $sky;
-        $err = $this->error || 'list' == $sky->_1 && $this->fail_rows();
         return [
             'obj' => $this,
-            'e_list' => ($this->lg = $lg) && !$err ? $this->listing($lg) : [],
+            'e_list' => !$lg && $this->check_table() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
         ];
     }
 
@@ -192,7 +195,9 @@ class Language
         return false;
     }
 
-    private function fail_rows() {
+    private function check_table() {
+        if ($this->error)
+            return true;
         if (!SKY::$dd->_tables('language')) {
             $this->sql = array_join($this->list, function($k, $v) {
                 return 'insert into ' . SQL::$dd->pref . "language values(null, '$v', '*', 1, '', now());";

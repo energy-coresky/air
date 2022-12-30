@@ -76,51 +76,44 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             </tr></table>
         </div>
     </fieldset>
-    @if(!$obj->lg)
-        <h1>Sky Languages: you will redirected..</h1>
-        <script>setTimeout("location.href='{{PATH}}?_lang=list.{{DEFAULT_LG}}'", 500)</script>
-    @else
-        <p>
-        <div class="fr" style="margin:0 15px 10px 0;">
-            <input value="parse application" type="button" onclick="sky.g.parse()"/>
-            <input value="generate files" type="button" onclick="sky.g.generate()"/>
-            <input value="add new item" type="button" onclick="sky.g.all(0, 0)"/>
-        </div>
-        <div class="fl" style="margin:0 0 10px 15px;">
-            
+    <p>
+    <div class="fr" style="margin:0 15px 10px 0;">
+        <input value="parse application" type="button" onclick="sky.g.parse()"/>
+        <input value="generate files" type="button" onclick="sky.g.generate()"/>
+        <input value="add new item" type="button" onclick="sky.g.all(0, 0)"/>
+    </div>
+    <div class="fl" style="margin:0 0 10px 15px;">
 
-
-        </div>
-        <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
-        <tr id="lang-head">
-        <th colspan="2" width="2%"></th>
-        <th width="39%">{{DEFAULT_LG}} (default)</th>
-        <th width="7%" style="text-align:center">ID</th>
-        <th width="1%"></th>
-        <th width="37%">{{$obj->lg}}</th>
-        <th width="14%">KEY</th>
-        </tr>
-        @loop($e_list)
-            @if($row->char)
-                <tr>
-                <td colspan="2"></td>
-                <td style="text-align:right"><a style="font:bold 17px arial" name="{{strtolower($row->char)}}">{{$row->char}}</a></td>
-                <td colspan="4"></td>
-                </tr>
-            ~if
+    </div>
+    <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
+    <tr id="lang-head">
+    <th colspan="2" width="2%"></th>
+    <th width="39%">{{DEFAULT_LG}} (default)</th>
+    <th width="7%" style="text-align:center">ID</th>
+    <th width="1%"></th>
+    <th width="37%">{{$obj->lg}}</th>
+    <th width="14%">KEY</th>
+    </tr>
+    @loop($e_list)
+        @if($row->char)
             <tr>
-            <td{!$row->yell and ' bgcolor="yellow"'!}></td>
-            <td{!$row->red and ' bgcolor="red"'!}></td>
-            <td><a @href(sky.g.delete({{$row->id}}))><img src="img/a_del.gif"/></a> {{$row->val}}</td>
-            <td style="text-align:right">{{$row->id}} <a @href(sky.g.edit(this, {{$row->id}}))><img src="img/a_upd.gif"/></a></td>
-            <td{!$row->pink and ' bgcolor="pink"'!}></td>
-            <td>{{$row->val2}}</td>
-            <td><a @href(sky.g.const(this,{{$row->id}}))><img src="img/a_upd.gif"/></a> {{$row->key}}</td>
+            <td colspan="2"></td>
+            <td style="text-align:right"><a style="font:bold 17px arial" name="{{strtolower($row->char)}}">{{$row->char}}</a></td>
+            <td colspan="4"></td>
             </tr>
-        ~loop
-        </table>
-        Items: {{$e_list->cnt}}
-    ~if
+        ~if
+        <tr>
+        <td{!$row->yell and ' bgcolor="yellow"'!}></td>
+        <td{!$row->red and ' bgcolor="red"'!}></td>
+        <td><a @href(sky.g.delete({{$row->id}}))><img src="img/a_del.gif"/></a> {{$row->val}}</td>
+        <td style="text-align:right">{{$row->id}} <a @href(sky.g.edit(this, {{$row->id}}))><img src="img/a_upd.gif"/></a></td>
+        <td{!$row->pink and ' bgcolor="pink"'!}></td>
+        <td>{{$row->val2}}</td>
+        <td><a @href(sky.g.const(this,{{$row->id}}))><img src="img/a_upd.gif"/></a> {{$row->key}}</td>
+        </tr>
+    ~loop
+    </table>
+    Items: {{$e_list->cnt}}
 ~if
 </div>
 @inc(.jscss)
