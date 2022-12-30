@@ -60,7 +60,20 @@ class Language
     }
 
     function c_all($id) {
-        return ['e_list' => $this->items($this->list, $id), 'id' => $id];
+        return [
+            'id' => $id,
+            'e_list' => ['row_c' => function() use ($id) {
+                if (false === ($lg = current($this->list)))
+                    return false;
+                list (,$const, $val) = $id ? $this->act($lg, $id) : [0, '', ''];
+                next($this->list);
+                return [
+                    'lg' => $lg,
+                    'const' => $const,
+                    'val' => escape($val, true),
+                ];
+            }],
+        ];
     }
 
     function c_store($id) {
@@ -215,21 +228,6 @@ class Language
             });
         }
         return $this->sql ? ($this->error = 5) : false;
-    }
-
-    private function items($list, $id) {
-        return ['row_c' => function($row) use (&$list, $id) {
-            $lg = current($list);
-            if (false === $lg)
-                return false;
-            list (,$const, $val) = $id ? $this->act($lg, $id) : [0, '', ''];
-            next($list);
-            return [
-                'lg' => $lg,
-                'const' => $const,
-                'val' => escape($val, true),
-            ];
-        }];
     }
 
     private function &load($lg, $is_sort = false, $is_sync = false) {
