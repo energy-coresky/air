@@ -3,7 +3,7 @@
 class Language
 {
     public $list;
-    public $toname;
+    public $names;
     public $error;  //TODO: rerr
     public $lg;
     public $sql;
@@ -24,13 +24,13 @@ class Language
         $lang->c_generate(null, false); # without sorting
     }
 
-    static function all() {
+    static function names() {
         return unserialize(trim(view('_lng.array', [])));
     }
 
     function __construct() {
         global $sky;
-        $this->toname = Language::all();
+        $this->names = Language::names();trace($this->names);
         MVC::$cc->setLG_h();
 
         if (1 !== DEBUG) {
