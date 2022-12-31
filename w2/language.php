@@ -30,7 +30,7 @@ class Language
 
     function __construct() {
         global $sky;
-        $this->names = Language::names();trace($this->names);
+        $this->names = Language::names();
         MVC::$cc->setLG_h();
 
         if (1 !== DEBUG) {
