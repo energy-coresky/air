@@ -270,6 +270,7 @@ sky.g.parse = function(v) {
 
 <style>
 #lang { margin:10px }
+#lang h1 { color:red }
 #legend-tbl {display:inline-table;}
 #legend-tbl td { padding-right:10px; border-bottom:none; }
 </style>

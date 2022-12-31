@@ -40,6 +40,7 @@ class SKY implements PARADISE
         $this->constants();
         $this->cli = CLI;
         date_default_timezone_set(PHP_TZ);
+        mb_internal_encoding(ENC);
         define('NOW', date(DATE_DT));
         srand((double) microtime() * 1e6);
 
@@ -595,9 +596,9 @@ function unl($str) {
 }
 
 function strcut($str, $n = 300) {
-    $text = mb_substr($str, 0, $n, ENC);
-    return mb_strlen($str, ENC) > $n
-        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', 0, ENC) - mb_strlen($text, ENC), ENC), '.,?!') . '&nbsp;...'
+    $text = mb_substr($str, 0, $n);
+    return mb_strlen($str) > $n
+        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', 0) - mb_strlen($text)), '.,?!') . '&nbsp;...'
         : $text;
 }
 

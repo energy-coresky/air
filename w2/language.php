@@ -239,17 +239,13 @@ class Language
         $ary =& SKY::ghost($def ? 'i' : 'j', $tmemo, $def ? 'update $_language set tmemo=%s where id=' . $id : '');
         if ($sorted = $is_sort && $this->nsort) {
             uasort(SKY::$mem['i'][3], function($a, $b) {
-                $a = explode(' ', $a, 2);
-                $b = explode(' ', $b, 2);
-                $a0 = ord($a = strtolower($a[1]));
-                $b0 = ord($b = strtolower($b[1]));
-                if ($a0 < 0x61) {
-                    $a0 += 96;
-                    if ($b0 < 0x61)
-                        $b0 += 96;
-                    return $a0 < $b0 ? -1 : 1;
-                }
-                if ($b0 < 0x61)
+                $a0 = ord($a = mb_strtolower(explode(' ', $a, 2)[1]));
+                $b0 = ord($b = mb_strtolower(explode(' ', $b, 2)[1]));
+                $a_alfa = 'en' != DEFAULT_LG ? $a0 > 0x7F : 0x60 < $a0 && $a0 < 0x7B;
+                $b_alfa = 'en' != DEFAULT_LG ? $b0 > 0x7F : 0x60 < $b0 && $b0 < 0x7B;
+                if (!$a_alfa && $b_alfa)
+                    return 1;
+                if (!$b_alfa && $a_alfa)
                     return -1;
                 return $a === $b ? 0 : ($a < $b ? -1 : 1);
             });
@@ -266,11 +262,11 @@ class Language
     private function listing($lg) {
         $dary = $this->load(DEFAULT_LG, isset($_POST['sort']));
         $ary = $lg == DEFAULT_LG ? [] : $this->load($lg);
-        $chars = '';
+        $chars = [];
         return [
             'cnt' => count($dary),
             'chars' => function() use (&$chars) {
-                return $chars;
+                return ' ' . implode(' ', $chars);
             },
             'row_c' => function($row) use (&$dary, &$ary, &$chars) {
                 static $char = '', $prev = '';
@@ -279,10 +275,16 @@ class Language
                 $id = key($dary);
                 list ($k, $v) = explode(' ', $v, 2);
                 next($dary);
-                $cmp = '%' == $char ? '%' : strtoupper($v[0]);
-                0x40 < ($ord = ord($cmp)) && $ord < 0x5B or $cmp = '%';
-                if ($char != $cmp)
-                    $chars .= ' ' . a($cmp, "#" . strtolower($cmp));
+                $cmp = '%';
+                if ('%' != $char) {
+                    $ord = ord($c0 = mb_strtoupper(mb_substr($v, 0, 1)));
+                    if ('en' != DEFAULT_LG ? $ord > 0x7F : 0x40 < $ord && $ord < 0x5B)
+                        $cmp = $c0;
+                }
+                if ($char != $cmp) {
+                    count($chars) < 34 or $cmp = '%';
+                    $chars[] = a($cmp, "#" . mb_strtolower($cmp));
+                }
                 return [
                     'red' => $prev === $v, // duplicated
                     'val' => $prev = $v,
