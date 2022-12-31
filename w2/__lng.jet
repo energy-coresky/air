@@ -96,10 +96,10 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <th width="15%">KEY</th>
     </tr>
     @loop($e_list)
-        @if($row->char)
+        @if($row->chr)
             <tr>
             <td colspan="3"></td>
-            <td style="text-align:right;padding-top:15px;"><a style="font:bold 17px arial" name="{{strtolower($row->char)}}">{{$row->char}}</a></td>
+            <td style="text-align:right;padding-top:15px;"><a style="font:bold 17px arial" name="_{{$row->chr[1]}}">{{$row->chr[0]}}</a></td>
             <td colspan="4"></td>
             </tr>
         ~if

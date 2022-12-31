@@ -275,15 +275,15 @@ class Language
                 $id = key($dary);
                 list ($k, $v) = explode(' ', $v, 2);
                 next($dary);
-                $cmp = '%';
+                $nc = '%';
                 if ('%' != $char) {
                     $ord = ord($c0 = mb_strtoupper(mb_substr($v, 0, 1)));
                     if ('en' != DEFAULT_LG ? $ord > 0x7F : 0x40 < $ord && $ord < 0x5B)
-                        $cmp = $c0;
+                        $nc = $c0;
                 }
-                if ($char != $cmp) {
-                    count($chars) < 34 or $cmp = '%';
-                    $chars[] = a($cmp, "#" . mb_strtolower($cmp));
+                if ($char != $nc) {
+                    34 > ($sz = count($chars)) or $nc = '%';
+                    $chars[] = a($nc, "#_$sz");
                 }
                 return [
                     'red' => $prev === $v, // duplicated
@@ -293,7 +293,7 @@ class Language
                     'yell' => strlen($v) < strlen($k),
                     'key' => $k,
                     'id' => $id,
-                    'char' => $char != $cmp ? ($char = $cmp) : false,
+                    'chr' => $char != $nc ? [$char = $nc, $sz] : false,
                 ];
             },
         ];
