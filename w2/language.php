@@ -15,15 +15,18 @@ class Language
 
     private $t;
 
-    static function translate($coll) { # format: "ID CONST VAL"
+    static function translate($ary) { # format: "ID CONST VAL"
         $me = new Language;
-        trace($coll, 'Collected new translations');
-        $next_id = 0x7FFF & $this->t->cell($where = qp('lg=$+ and name="*"', DEFAULT_LG), 'flag');
-        $new = array_join($coll, function($k) use (&$next_id) {
+        if ($me->error)
+            throw new Error("class Language error=$me->error");
+        trace($ary, 'Collected new translations');
+        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name="*"', DEFAULT_LG), 'flag');
+        $new = array_join($ary, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k);
         });
-        $this->t->update(['$tmemo' => qp('$cc($+, tmemo)', "$new\n")], qp('name="*"'));
-        $this->t->update(['.flag' => $next_id | self::NON_SORT], $where);
+        // qp('$cc($+, tmemo)', "$new\n") not work !
+        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name="*"'));
+        $me->t->update(['.flag' => $next_id | self::NON_SORT], $where);
         $me->c_generate(null, false); # without sorting
     }
 
@@ -183,7 +186,7 @@ class Language
 
     private function act($lg, &$id, $mode = 'read', $s = '', $test = false) {
         $row = $this->t->one(qp('lg=$+ and name="*"', $lg));
-        $mem = rtrim($row['mem'], "\n");
+        $mem = rtrim($row['tmemo'], "\n");
         $new = false;
         if (is_array($s))
             list($s, $val, $new) = $s;
@@ -210,8 +213,7 @@ class Language
                 if ('' !== $s && $test && $_POST['const-prev'] != $s) {
                     $ary = SKY::ghost('k', $mem);
                     foreach ($ary as $v) {
-                        list ($const) = explode(' ', $v, 2);
-                        if ($const === $s) {
+                        if (explode(' ', $v, 2)[0] === $s) {
                             echo 1; # non unique
                             return true;
                         }
