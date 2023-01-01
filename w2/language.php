@@ -5,23 +5,26 @@ class Language
     public $list;
     public $names;
     public $error;  //TODO: rerr
-    public $lg;
+    public $lg; # selected
     public $sql;
     public $nsort = 0;
     public $nsync = 0;
+
     const NON_SORT = 0x8000; # bit no 16
     const NON_SYNC = 0x10000; # bit no 17
 
+    private $t;
+
     static function translate($coll) { # format: "ID CONST VAL"
+        $me = new Language;
         trace($coll, 'Collected new translations');
-        $next_id = 0x7FFF & sqlf('+select flag from $_language where lg=%s and name="*"', DEFAULT_LG);
-        $new = array_join($coll, function($k, $v) use (&$next_id) {
+        $next_id = 0x7FFF & $this->t->cell($where = qp('lg=$+ and name="*"', DEFAULT_LG), 'flag');
+        $new = array_join($coll, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k);
         });
-        sqlf('update $_language set tmemo=trim("\n" from concat(%s, tmemo)) where name="*"', "$new\n");
-        sqlf('update $_language set flag=%d where lg=%s and name="*"', $next_id | self::NON_SORT, DEFAULT_LG);
-        $lang = new Language;
-        $lang->c_generate(null, false); # without sorting
+        $this->t->update(['$tmemo' => qp('$cc($+, tmemo)', "$new\n")], qp('name="*"'));
+        $this->t->update(['.flag' => $next_id | self::NON_SORT], $where);
+        $me->c_generate(null, false); # without sorting
     }
 
     static function names() {
@@ -30,7 +33,6 @@ class Language
 
     function __construct() {
         global $sky;
-        $this->names = Language::names();
         MVC::$cc->setLG_h();
 
         if (1 !== DEBUG) {
@@ -39,7 +41,36 @@ class Language
             $this->error = 2;
         } elseif (!DEFAULT_LG || !in_array(DEFAULT_LG, $this->list)) {
             $this->error = 3;
+        } elseif (!$sky->d_lgt) {
+            $this->error = 6;
+        } else {
+            $this->names = Language::names();
+            $this->t = MVC::$cc->{"t_$sky->d_lgt"};
         }
+    }
+
+    private function check_table() {
+        if ($this->error)
+            return true;
+        global $sky;
+        $ins = qp('insert into $_`', $sky->d_lgt);
+        if (!SKY::$dd->_tables($sky->d_lgt)) {
+            $this->sql = array_join($this->list, function($k, $v) use ($ins) {
+                return qp('$$ values(null, $+, "*", 1, "", $now);', $ins, $v);
+            });
+            return $this->error = 4;
+        }
+        $list = $this->t->all(qp('name="*"'), 'lg');
+        $this->sql = '';
+        if ($diff = array_diff($list, $this->list))
+            $this->sql .= qp('delete from $_` where lg in ($@);', $sky->d_lgt, $diff);
+        if ($diff = array_diff($this->list, $list)) {
+            $this->sql .= "\n" . array_join($diff, function($k, $v) use ($ins, $sky) {
+                $tpl = '$$ select null, $+, name, 1, tmemo, $now from $_` where lg=$+;';
+                return qp($tpl, $ins, $v, $sky->d_lgt, DEFAULT_LG);
+            });
+        }
+        return $this->sql ? ($this->error = 5) : false;
     }
 
     function c_list($lg) {
@@ -88,7 +119,7 @@ class Language
 
     function c_fix($lg) {
         if (isset($_POST['sql'])) {
-            multi_sql(qp($_POST['sql']));
+            multi_sql(qp($_POST['sql']));/////////////////////////////////////////
         } elseif (isset($_POST['save'])) {
             if ('~' != $_POST['const-prev']) {
                 $const = strtoupper($_POST['save']);
@@ -105,25 +136,23 @@ class Language
         return $this->c_list($lg);
     }
     
-    function c_generate($lg, $is_user = true) {
+    function c_generate($_, $is_user = true) {
         $dary = $this->load(DEFAULT_LG, $is_user, $is_user);
-        foreach ($this->list as $v) {
-            $lgt = [];
-            $def = $v == DEFAULT_LG or $ary = $this->load($v);
+        foreach ($this->list as $lg) {
+            $out = [];
+            $ary = $lg == DEFAULT_LG ? [] : $this->load($lg);
             $file = "<?php\n\n# This is auto-generated file. Do not edit!\n\n";
             foreach ($dary as $k => $one) {
                 list ($const, $val) = explode(' ', $one, 2);
-                $val2 = $val;
-                $def or list(,$val2) = explode(' ', $ary[$k], 2);
+                $val2 = $ary ? explode(' ', $ary[$k], 2)[1] : 0;
                 if ('' === $const) {
-                    $lgt[$val] = $def ? 0 : $val2;
+                    $out[$val] = $val2;
                 } else {
-                    $file .= sprintf("const L_$const=%s;\n", var_export($val2, true));
+                    $file .= sprintf("const L_$const=%s;\n", var_export($ary ? $val2 : $val, true));
                 }
             }
-            if ($lgt)
-                $file .= "\n\$lgt = " . var_export($lgt, true) . ";\n\n";
-            Plan::_p("lng/$v.php", $file);
+            $file .= "\nreturn " . var_export($out, true) . ";\n\n";
+            Plan::_p("lng/$lg.php", $file);
         }
         return [];
     }
@@ -153,9 +182,9 @@ class Language
     }
 
     private function act($lg, &$id, $mode = 'read', $s = '', $test = false) {
+        $row = $this->t->one(qp('lg=$+ and name="*"', $lg));
+        $mem = rtrim($row['mem'], "\n");
         $new = false;
-        list($row_id, $mem, $flag) = sqlf('-select id, tmemo, flag from $_language where lg=%s and name="*"', $lg);
-        $upd = '';
         if (is_array($s))
             list($s, $val, $new) = $s;
         if (!$new) {
@@ -164,20 +193,20 @@ class Language
                 $pos = 1 + strpos($mem, "\n$id ");
             $end = strpos($mem, "\n", $pos + 2);
         }
+        $upd_flag = ['.flag' => $row['flag'] | self::NON_SYNC];
         switch ($mode) {
             case 'read':
                 $mem = $end ? substr($mem, $pos, $end - $pos) : substr($mem, $pos);
                 return explode(' ', $mem, 3);
             case 'delete':
                 $mem = $end ? substr_replace($mem, '', $pos, 1 + $end - $pos) : substr_replace($mem, '', $pos - 1);
-                $upd = ", flag=" . ($flag | self::NON_SYNC);
                 break;
             case 'text':
                 $pos = 1 + strpos($mem, ' ', 1 + strpos($mem, ' ', $pos));
                 $mem = $end ? substr_replace($mem, $s, $pos, $end - $pos) : substr_replace($mem, $s, $pos);
-                $upd = ", flag=" . ($flag | self::NON_SYNC);
                 break;
-            case 'const': case 'all':
+            case 'const':
+            case 'all':
                 if ('' !== $s && $test && $_POST['const-prev'] != $s) {
                     $ary = SKY::ghost('k', $mem);
                     foreach ($ary as $v) {
@@ -188,10 +217,9 @@ class Language
                         }
                     }
                 }
-                $upd = ", flag=" . ($flag | self::NON_SYNC);
                 if (!$id) {
-                    $id = 0x7FFF & $flag; # max 32767 items
-                    $upd = ", flag=" . (($id + 1) | self::NON_SORT | self::NON_SYNC);
+                    $id = 0x7FFF & $row['flag']; # max 32767 items
+                    $upd_flag = ['.flag' => ($id + 1) | self::NON_SORT | self::NON_SYNC];
                 }
                 if ($new) {
                     $mem = $mem ? "$id $s $val\n$mem" : "$id $s $val";
@@ -203,40 +231,22 @@ class Language
                     $mem = substr_replace($mem, $s, $pos, strpos($mem, ' ', $pos) - $pos);
                 }
         }
-        $lg == DEFAULT_LG or $upd = '';
-        sqlf('update $_language set tmemo=%s' . $upd . ' where id=%d', $mem, $row_id);
+        $lg == DEFAULT_LG or $upd_flag = [];
+        $this->t->update(['tmemo' => $mem] + $upd_flag);
         return false;
     }
 
-    private function check_table() {
-        if ($this->error)
-            return true;
-        if (!SKY::$dd->_tables('language')) {
-            $this->sql = array_join($this->list, function($k, $v) {
-                return 'insert into ' . SQL::$dd->pref . "language values(null, '$v', '*', 1, '', now());";
-            });
-            return $this->error = 4;
-        }
-        $list = sqlf('@select lg from $_language where name="*"');
-        $this->sql = ($diff = array_diff($list, $this->list))
-            ? (string)qp('delete from $_language where lg in ($@);', $diff)
-            : '';
-        if ($diff = array_diff($this->list, $list)) {
-            $this->sql .= "\n" . array_join($diff, function($k, $v) {
-                return qp('insert into $_language select null, $+, name, 1, tmemo, now()'
-                    . ' from $_language where lg=$+;', $v, DEFAULT_LG);
-            });
-        }
-        return $this->sql ? ($this->error = 5) : false;
-    }
-
     private function &load($lg, $is_sort = false, $is_sync = false) {
-        list($id, $flag, $tmemo) = sqlf('-select id, flag, tmemo from $_language where lg=%s and name="*"', $lg);
+        global $sky;
+        $row = $this->t->one(qp('lg=$+ and name="*"', $lg));
+        $flag = $row['flag'];
+        $update = '';
         if ($def = $lg == DEFAULT_LG) {
             $this->nsort = $flag & self::NON_SORT;
             $this->nsync = $flag & self::NON_SYNC;
+            $update = "update \$_$sky->d_lgt set tmemo=%s where id=$row[id]";
         }
-        $ary =& SKY::ghost($def ? 'i' : 'j', $tmemo, $def ? 'update $_language set tmemo=%s where id=' . $id : '');
+        $ary =& SKY::ghost($def ? 'i' : 'j', rtrim($row['tmemo'], "\n"), $update);
         if ($sorted = $is_sort && $this->nsort) {
             uasort(SKY::$mem['i'][3], function($a, $b) {
                 $a0 = ord($a = mb_strtolower(explode(' ', $a, 2)[1]));
@@ -255,7 +265,7 @@ class Language
             $this->nsort = 0;
         }
         if ($is_sync || $sorted)
-            sqlf('update $_language set flag=%d where id=%d', $is_sync ? $flag & ~self::NON_SYNC : $flag, $id);
+            $this->t->update(['flag' => $is_sync ? $flag & ~self::NON_SYNC : $flag]);
         return $ary;
     }
 

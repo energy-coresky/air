@@ -69,6 +69,7 @@ class Root
             Form::X([], '<hr>'),
             ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
             'static' => ['', '', 'size="50"'],
+            'lgt' => ['Language table name', '', 'size="25"'],
             'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
             'manual' => ['PHP manual laguage', 'select', $phpman],
             'se' => ['Search engine tpl', '', 'size="50"'],
