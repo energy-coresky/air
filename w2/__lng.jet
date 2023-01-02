@@ -40,20 +40,23 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     ~loop
 #.menu.m_lang -------------------------------------------------------------------------
 @if(!$obj->error)
-    <br><div class="other-task">Languages</div>
+    <br><div class="other-task">I18N</div>
     <div class="other-info">
-    <table cellspacing="0" cellpadding="0" width="100%">
-        <tr><td>sorted:</td><td><b><u>{{$obj->nsort?'no':'yes'}}</u></b></td></tr>
-        <tr><td>sync: </td><td><b><u id="sync">{{$obj->nsync?'no':'yes'}}</u></b></td></tr>
+    <table cellspacing="0" cellpadding="0" id="t-i18n">
+        <tr><td>Sorted:</td><td><b>{{$obj->nsort?'NO':'YES'}}</b></td><td><a @href(dev('list.{{DEFAULT_LG}}',{sort:1}))><span style="font-family:Verdana;">►</span> sort</a></td></tr>
+        <tr><td>Sync7d:</td><td><b id="sync">{{$obj->nsync?'NO':'YES'}}</b></td><td><a @href(sky.g.generate())><span style="font-family:Verdana;">►</span> sync</a></td></tr>
     </table>
     </div>
-    <a class="inner-menu" onclick="dev('list.{{DEFAULT_LG}}',{sort:1})">Sort items</a>
-    <a class="inner-menu" onclick="sky.g.generate()">Generate files</a>
     <a class="inner-menu" onclick="sky.g.all(0, 0)">Add new item</a>
+    <a class="inner-menu" onclick="sky.g.page()">Add new page</a>
     <a class="inner-menu" onclick="sky.g.parse()">Parse application</a>
 ~if
-#.menu.list.fix.store -------------------------------------------------------------------------
-#use(`<h4>LANGUAGE: {{$obj->lg and strtoupper($obj->names[$obj->lg])}} ({{$e_list->cnt}})</h4>` as header)
+#.menu.select ------------------------------------------------------------------------------
+<select onchange="sky.g.page(this,1)">
+@loop($obj->pages as $k => $v)<option value="{{$k}}"@selected($k==$sky->d_lng_page)>{{$v}}</option>~loop
+</select>
+#.select.list.fix.store -------------------------------------------------------------------------
+#use(`<h4>LANGUAGE: {{$obj->lg and strtoupper($obj->names[$obj->lg])}} ({{$e_list->cnt}}) @inc(.select)</h4>` as header)
 #use(.menu)
 @if(!$obj->error)
     <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
@@ -136,6 +139,19 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <input onclick="sky.g.save({{$_POST['id']}}, 0)" type="button" value="OK"/>
 #.edit
 
+#.page /////////////////////////////////////////////////////////////////////////
+<td colspan="7">
+<form id="all-edit">
+    <dl><dt><u>new page name</u>:</dt>
+    <dd>
+        <input size="30" />
+        <input type="button" onclick="sky.g.page(this)" value="save"/>
+    </dd>
+    </dl>
+</form>
+</td>
+#.page
+
 #.all /////////////////////////////////////////////////////////////////////////
 <td colspan="7">
 <form id="all-edit">
@@ -200,6 +216,23 @@ sky.g.all = function(el, id, is_save) {
         });
     }
 };
+sky.g.page = function(el, is_set) {
+    if (el) {
+        var s = is_set ? $(el).val() : $(el).prev().val();
+        //if (!s && !is_set || !s.match(/^[a-z\d_]+$/))
+          //  return alert('Use identifiers chars only!'+s);
+        ajax('page.' + s, is_set ? {s:s} : {}, function(r) {
+            if ('1' == r)
+                return alert('Error!');
+            location.href = location.href;
+        });
+    } else {
+        sky.head();///
+        ajax('page.', {}, function(r) {
+            $('#lang-head').before('<tr></tr>').prev().html(r);
+        });
+    }
+};
 sky.g.edit = function(el, id) {
     if (sky.g.editing)
         return alert(sky.g.info);
@@ -236,8 +269,8 @@ sky.g.save = function(id, is_const) {
     });
 };
 sky.g.generate = function() {
-    ajax('generate.{{$obj->lg}}', function(r) {
-        $('#sync').html('yes').css('background', '#afa');
+    ajax('generate.{{$obj->page}}', function(r) {
+        $('#sync').html('YES').css('background', '#afa');
         setTimeout("$('#sync').css('background', '')", 500);
     });
 };
@@ -274,6 +307,9 @@ sky.g.parse = function(v) {
 #lang h1 { color:red }
 #legend-tbl {display:inline-table;}
 #legend-tbl td { padding-right:10px; border-bottom:none; }
+#t-i18n { width:100% }
+#t-i18n td { vertical-align:middle; }
+#t-i18n a { border-bottom:none;padding:1px 3px }
 </style>
 #.jscss
 

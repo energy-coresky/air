@@ -9,6 +9,8 @@ class Language
     public $sql;
     public $nsort = 0;
     public $nsync = 0;
+    public $pages = ['*' => '* common'];
+    public $page = '*';
 
     const NON_SORT = 0x8000; # bit no 16
     const NON_SYNC = 0x10000; # bit no 17
@@ -22,14 +24,14 @@ class Language
         if ($me->error)
             throw new Error("class Language error=$me->error");
         trace($ary, 'Collected new translations');
-        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name="*"', DEFAULT_LG), 'flag');
+        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name=$+', DEFAULT_LG, $this->page), 'flag');
         $new = array_join($ary, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k);
         });
         // qp('$cc($+, tmemo)', "$new\n") not work !
-        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name="*"'));
+        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $this->page));
         $me->t->update(['.flag' => $next_id | self::NON_SORT], $where);
-        $me->c_generate(null, false); # without sorting
+        $me->c_generate('', false); # without sorting
     }
 
     static function names() {
@@ -49,17 +51,20 @@ class Language
         } else {
             $this->names = Language::names();
             $this->t = MVC::$cc->{"t_$sky->d_lgt"};
+            $this->page = $sky->d_lng_page ?: '*';
+            $list = $this->t->all(qp('name<>"*" group by name'), 'name');
+            $this->pages += array_combine($list, $list);
         }
     }
 
-    private function check_table() {
+    private function check_table($page = '*') {
         if ($this->error)
             return true;
         global $sky;
         $ins = qp('insert into $_`', $sky->d_lgt);
-        if (!SKY::$dd->_tables($sky->d_lgt)) {
-            $this->sql = array_join($this->list, function($k, $v) use ($ins) {
-                return qp('$$ values(null, $+, "*", 1, "", $now);', $ins, $v);
+        if (!SKY::$dd->_tables($sky->d_lgt) || '*' != $page) {
+            $this->sql = array_join($this->list, function($k, $v) use ($ins, $page) {
+                return qp('$$ values(null, $+, "' . $page . '", 1, "", $now);', $ins, $v);
             });
             return $this->error = 4;
         }
@@ -91,6 +96,19 @@ class Language
     function c_const($lg) {
         $ary = $this->act($lg, $_POST['id']);
         return ['val' => escape($ary[1], true)];
+    }
+
+    function c_page($name) {
+        if ($name) {
+            //$this->pages
+            SKY::d('lng_page', (string)$name);
+            if ($_POST)
+                return [];
+            $this->check_table($name);
+            foreach (explode(';', $this->sql) as $sql)
+                !trim($sql) or sql($sql);
+        }
+        return [];
     }
 
     function c_all($id) {
@@ -139,7 +157,7 @@ class Language
         return $this->c_list($lg);
     }
 
-    function c_generate($_, $is_user = true) {
+    function c_generate($page, $is_user = true) {
         $dary = $this->load(DEFAULT_LG, $is_user, $is_user);
         foreach ($this->list as $lg) {
             $out = [];
@@ -156,8 +174,9 @@ class Language
             }
             $fp = fopen(__FILE__, 'r');
             fseek($fp, __COMPILER_HALT_OFFSET__);
-            $file .= stream_get_contents($fp) . "\nreturn " . var_export($out, true) . ";\n\n";
-            Plan::_p("lng/$lg.php", $file);
+            $page or $file .= stream_get_contents($fp);
+            $file .= "\nreturn " . var_export($out, true) . ";\n\n";
+            Plan::_p("lng/$lg$page.php", $file);
         }
         return [];
     }
@@ -187,7 +206,7 @@ class Language
     }
 
     private function act($lg, &$id, $mode = 'read', $s = '', $test = false) {
-        $row = $this->t->one(qp('lg=$+ and name="*"', $lg));
+        $row = $this->t->one(qp('lg=$+ and name=$+', $lg, $this->page));
         $mem = trim($row['tmemo'], "\n");
         $new = false;
         if (is_array($s))
@@ -242,7 +261,7 @@ class Language
 
     private function &load($lg, $is_sort = false, $is_sync = false) {
         global $sky;
-        $row = $this->t->one(qp('lg=$+ and name="*"', $lg));
+        $row = $this->t->one(qp('lg=$+ and name=$+', $lg, $this->page));
         $flag = $row['flag'];
         $update = '';
         if ($def = $lg == DEFAULT_LG) {
