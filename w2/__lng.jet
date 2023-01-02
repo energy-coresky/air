@@ -70,7 +70,8 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 ~if
 <div id="lang">
 @if(1 == $obj->error)
-    <h1>Please setup constant DEBUG to 1</h1>
+    <h1>Languages table name not set</h1>
+    <a href="_dev?main=0">fix</a>
 @elseif(2 == $obj->error)
     <h1>Array $sky->lg is not set :(</h1>
 @elseif(3 == $obj->error)
@@ -83,9 +84,6 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <h1>Languages not match (table and $sky->lg). Fix?</h1>
     <pre>{!$obj->sql!}</pre>
     <input value="Yes!" type="button" onclick="dev('fix',{sql:$(this).prev().text()})"/>
-@elseif(6 == $obj->error)
-    <h1>Languages table name not set</h1>
-    <a href="_dev?main=0">fix</a>
 @else
     @use(.m_lang)
     <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
@@ -109,7 +107,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <tr>
         <td{!$row->yell and ' bgcolor="yellow"'!}></td>
         <td{!$row->red and ' bgcolor="red"'!}></td>
-        <td><a @href(sky.g.delete({{$row->id}}))><img src="img/a_del.gif"/></a> {{$row->val}}</td>
+        <td><a @href(sky.g.delete({{$row->id}}, {{(int)$row->red}}))><img src="img/a_del.gif"/></a> {{$row->val}}</td>
         <td style="text-align:right">{{$row->id}} <a @href(sky.g.edit(this, {{$row->id}}))><img src="img/a_upd.gif"/></a></td>
         <td{!$row->pink and ' bgcolor="pink"'!}></td>
         <td>{{$row->val2}}</td>
@@ -176,8 +174,8 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <script>
 sky.g.editing = false;
 sky.g.info = 'Please finish current editing before open new one';
-sky.g.delete = function(id) {
-    if (confirm('Are you sure? Delete item?'))
+sky.g.delete = function(id, force) {
+    if (force || confirm('Are you sure? Delete item?'))
         dev('fix.{{$obj->lg}}', {delete:id});
 };
 sky.g.all = function(el, id, is_save) {

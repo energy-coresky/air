@@ -297,6 +297,15 @@ class SKY implements PARADISE
         return $error;
     }
 
+    static function lang($lg, $page = false) {
+        define('LG', $lg);
+        SKY::$reg['trans_late'] = Plan::_r("lng/$lg.php");
+        if ($page)
+            SKY::$reg['trans_late'] += Plan::_r("lng/{$lg}_$page.php");
+        if (DEV)
+            SKY::$reg['trans_coll'] = [];
+    }
+
     function constants() {
         define('zebra', 'return @$i++ % 2 ? \'bgcolor="#eee"\' : "";');
         define('DATE_DT', 'Y-m-d H:i:s');

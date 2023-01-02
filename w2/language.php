@@ -15,8 +15,10 @@ class Language
 
     private $t;
 
-    static function translate($ary) { # format: "ID CONST VAL"
-        $me = new Language;
+    static function translate($ary) {
+        if (!DEV)
+            return;
+        $me = new Language; # format: "ID CONST VAL"
         if ($me->error)
             throw new Error("class Language error=$me->error");
         trace($ary, 'Collected new translations');
@@ -38,14 +40,12 @@ class Language
         global $sky;
         MVC::$cc->setLG_h();
 
-        if (1 !== DEBUG) {
+        if (!$sky->d_lgt) {
             $this->error = 1;
         } elseif (!$this->list = $sky->lg) {
             $this->error = 2;
         } elseif (!DEFAULT_LG || !in_array(DEFAULT_LG, $this->list)) {
             $this->error = 3;
-        } elseif (!$sky->d_lgt) {
-            $this->error = 6;
         } else {
             $this->names = Language::names();
             $this->t = MVC::$cc->{"t_$sky->d_lgt"};
@@ -138,7 +138,7 @@ class Language
         }
         return $this->c_list($lg);
     }
-    
+
     function c_generate($_, $is_user = true) {
         $dary = $this->load(DEFAULT_LG, $is_user, $is_user);
         foreach ($this->list as $lg) {
@@ -154,7 +154,9 @@ class Language
                     $file .= sprintf("const L_$const=%s;\n", var_export($ary ? $val2 : $val, true));
                 }
             }
-            $file .= "\nreturn " . var_export($out, true) . ";\n\n";
+            $fp = fopen(__FILE__, 'r');
+            fseek($fp, __COMPILER_HALT_OFFSET__);
+            $file .= stream_get_contents($fp) . "\nreturn " . var_export($out, true) . ";\n\n";
             Plan::_p("lng/$lg.php", $file);
         }
         return [];
@@ -186,7 +188,7 @@ class Language
 
     private function act($lg, &$id, $mode = 'read', $s = '', $test = false) {
         $row = $this->t->one(qp('lg=$+ and name="*"', $lg));
-        $mem = rtrim($row['tmemo'], "\n");
+        $mem = trim($row['tmemo'], "\n");
         $new = false;
         if (is_array($s))
             list($s, $val, $new) = $s;
@@ -202,7 +204,7 @@ class Language
                 $mem = $end ? substr($mem, $pos, $end - $pos) : substr($mem, $pos);
                 return explode(' ', $mem, 3);
             case 'delete':
-                $mem = $end ? substr_replace($mem, '', $pos, 1 + $end - $pos) : substr_replace($mem, '', $pos - 1);
+                $mem = $end ? substr_replace($mem, '', $pos, 1 + $end - $pos) : substr_replace($mem, '', $pos);
                 break;
             case 'text':
                 $pos = 1 + strpos($mem, ' ', 1 + strpos($mem, ' ', $pos));
@@ -248,7 +250,7 @@ class Language
             $this->nsync = $flag & self::NON_SYNC;
             $update = "update \$_$sky->d_lgt set tmemo=%s where id=$row[id]";
         }
-        $ary =& SKY::ghost($def ? 'i' : 'j', rtrim($row['tmemo'], "\n"), $update);
+        $ary =& SKY::ghost($def ? 'i' : 'j', trim($row['tmemo'], "\n"), $update);
         if ($sorted = $is_sort && $this->nsort) {
             uasort(SKY::$mem['i'][3], function($a, $b) {
                 $a0 = ord($a = mb_strtolower(explode(' ', $a, 2)[1]));
@@ -311,4 +313,30 @@ class Language
         ];
     }
 }
+
+__halt_compiler();
+
+function t(...$in) {
+    global $sky;
+    static $n = 0;
+
+    if ($args = (bool)$in) {
+        $str = array_shift($in);
+        if ($in && is_array($in[0]))
+            $in = $in[0];
+    } elseif ($n++ % 2) {
+        $str = ob_get_clean();
+    } else {
+        return ob_start();
+    }
+
+    if (isset($sky->trans_late[$str])) {
+        DEFAULT_LG == LG or $str = $sky->trans_late[$str];
+    } elseif (DEV && 1 == $sky->d_trans) {
+        SKY::$reg['trans_coll'][$str] = 0;
+    }
+    $args or print $str;
+    return $in ? vsprintf($str, $in) : $str;
+}
+
 

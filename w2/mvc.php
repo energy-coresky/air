@@ -25,29 +25,6 @@ function view($_in, $return = false, &$_vars = null) {
     return MVC::tail($mvc, $layout);
 }
 
-function t(...$in) { # situational translation
-    global $sky;
-    static $n = 0;
-
-    if ($args = (bool)$in) {
-        $str = array_shift($in);
-        if ($in && is_array($in[0]))
-            $in = $in[0];
-    } elseif ($n++ % 2) {
-        $str = ob_get_clean();
-    } else {
-        return ob_start();
-    }
-
-    if (isset($sky->trans_late[$str])) {
-        DEFAULT_LG == LG or $str = $sky->trans_late[$str];
-    } elseif (DEV && 1 == $sky->d_trans) {
-        SKY::$reg['trans_coll'][$str] = 0;
-    }
-    $args or print $str;
-    return $in ? vsprintf($str, $in) : $str;
-}
-
 //////////////////////////////////////////////////////////////////////////
 abstract class MVC_BASE
 {
