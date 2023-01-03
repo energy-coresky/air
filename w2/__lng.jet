@@ -37,13 +37,15 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         >{{$one}} - {{$lg_names[$one]}}
     </a>
     ~loop
-#.menu.m_lang -------------------------------------------------------------------------
+#.m_lang.arw -------------------------------------------------------------------------
+<span style="font-family:Verdana;">►</span>
+#.menu.arw
 @if(!$obj->error)
     <br><div class="other-task">I18N</div>
     <div class="other-info">
     <table cellspacing="0" cellpadding="0" id="t-i18n">
-        <tr><td>Sorted:</td><td><b>{{$obj->nsort?'NO':'YES'}}</b></td><td><a @href(dev('list.{{DEFAULT_LG}}',{sort:1}))><span style="font-family:Verdana;">►</span> sort</a></td></tr>
-        <tr><td>Sync7d:</td><td><b id="sync">{{$obj->nsync?'NO':'YES'}}</b></td><td><a @href(sky.g.generate())><span style="font-family:Verdana;">►</span> sync</a></td></tr>
+        <tr><td>Sorted:</td><td><b>{{$obj->nsort?'NO':'YES'}}</b></td><td><a @href(dev('list.{{DEFAULT_LG}}',{sort:1}))>@inc(.arw) sort</a></td></tr>
+        <tr><td>Sync7d:</td><td><b id="sync">{{$obj->nsync?'NO':'YES'}}</b></td><td><a @href(sky.g.generate())>@inc(.arw) sync</a></td></tr>
     </table>
     </div>
     <a class="inner-menu" onclick="sky.g.all(0, 0)">Add new item</a>

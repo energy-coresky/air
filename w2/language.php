@@ -314,7 +314,7 @@ class Language
             'chars' => function() use (&$chars) {
                 return ' ' . implode(' ', $chars);
             },
-            'row_c' => function($row) use (&$dary, &$ary, &$chars) {
+            'row_c' => function() use (&$dary, &$ary, &$chars) {
                 static $char = '', $prev = '';
                 if (false === ($v = current($dary)))
                     return false;
