@@ -199,25 +199,29 @@ class SKY implements PARADISE
     static function __callStatic($char, $args) {
         if (1 != strlen($char))
             return trace("Method SKY::$char not found", true, 1);
+        $exists = isset(SKY::$mem[$char]);
         if (!$args)
-            return SKY::sql($char, true);
-        $k = $args[0];
-        $v = isset($args[1]) ? $args[1] : null;
-        $old = isset(SKY::$mem[$char]) or SKY::$mem[$char] = [0, null, $v, []];
-        $x =& SKY::$mem[$char];    # s - system conf (hight load) for `read` usage mainly
-        $flag = 1;                 # a - admin conf
-        if (is_array($k)) {        # n - cron conf or low load usage (used in w2/gate.php also)
-            $x[3] = $k + $x[3];    # v - visitor
-        } elseif (is_null($v)) {   # u - user
-            unset($x[3][$k]);      # i,j,k - Language data
-        } elseif (is_null($k)) {   # d - dev conf
-            if ($old)
+            return $exists;
+        $exists or SKY::$mem[$char] = [0, null, $args[1] ?? '', []];
+        $x =& SKY::$mem[$char];
+        if (is_array($k = $args[0])) {  # s - system conf
+            $x[3] = $k + $x[3];         # a - conf for root-admin section
+            return $x[0] |= 1;          # n - cron conf
+        }                               # u - user
+        if (!isset($args[1]))           # i,j,k - used in Language class
+            return $x[$k] ?? '';        # d - development conf
+        $v = $args[1];
+        if (is_null($k)) {
+            if ($exists)
                 if (is_array($v)) $x[2] = $v + $x[2]; else unset($x[2][$v]);
-            $flag = 2;
+            return $x[0] |= 2;
+        }
+        if (is_null($v)) {
+            unset($x[3][$k]);
         } else {
             $x[3][$k] = $v;
         }
-        return $x[0] |= $flag;
+        return $x[0] |= 1;
     }
 
     static function &ghost($char, $original, $tpl = '', $flag = 0) {
@@ -238,7 +242,7 @@ class SKY implements PARADISE
         $flags =& $x[0];
         if ($f1 = $flags & 1) {
             $new = array_join($x[3], function($k, $v) {
-                return "$k " . escape($v);
+                return $k . ' ' . escape($v);
             });
             $new === $x[1] ? ($f1 = 0) : ($x[1] = $new);
             if ($x[2] instanceof Closure)
@@ -300,7 +304,7 @@ class SKY implements PARADISE
     static function lang($lg, $page = false) {
         define('LG', $lg);
         SKY::$reg['trans_late'] = Plan::_r("lng/$lg.php");
-        if ($page)
+        if (SKY::$reg['lg_page'] = $page)
             SKY::$reg['trans_late'] += Plan::_r("lng/{$lg}_$page.php");
         if (DEV)
             SKY::$reg['trans_coll'] = [];

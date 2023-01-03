@@ -3,8 +3,7 @@
 class Language
 {
     public $list;
-    public $names;
-    public $error;  //TODO: rerr
+    public $error;
     public $lg; # selected
     public $sql;
     public $nsort = 0;
@@ -24,14 +23,15 @@ class Language
         if ($me->error)
             throw new Error("class Language error=$me->error");
         trace($ary, 'Collected new translations');
-        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name=$+', DEFAULT_LG, $this->page), 'flag');
+        $page = SKY::$reg['lg_page'] ?: '*';
+        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name=$+', DEFAULT_LG, $page), 'flag');
         $new = array_join($ary, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k);
         });
         // qp('$cc($+, tmemo)', "$new\n") not work !
-        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $this->page));
+        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $page));
         $me->t->update(['.flag' => $next_id | self::NON_SORT], $where);
-        $me->c_generate('', false); # without sorting
+        $me->c_generate($page, false); # without sorting
     }
 
     static function names() {
@@ -49,11 +49,8 @@ class Language
         } elseif (!DEFAULT_LG || !in_array(DEFAULT_LG, $this->list)) {
             $this->error = 3;
         } else {
-            $this->names = Language::names();
             $this->t = MVC::$cc->{"t_$sky->d_lgt"};
             $this->page = $sky->d_lng_page ?: '*';
-            $list = $this->t->all(qp('name<>"*" group by name'), 'name');
-            $this->pages += array_combine($list, $list);
         }
     }
 
@@ -85,6 +82,7 @@ class Language
         return [
             'obj' => $this,
             'e_list' => !$lg && $this->check_table() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
+            'lg_names' => Language::names(),
         ];
     }
 
@@ -101,12 +99,11 @@ class Language
     function c_page($name) {
         if ($name) {
             //$this->pages
-            SKY::d('lng_page', (string)$name);
+            SKY::d('lng_page', $name);
             if ($_POST)
                 return [];
             $this->check_table($name);
-            foreach (explode(';', $this->sql) as $sql)
-                !trim($sql) or sql($sql);
+            $this->multi_sql($this->sql);
         }
         return [];
     }
@@ -138,9 +135,19 @@ class Language
         return $this->c_list(DEFAULT_LG);
     }
 
+    private function multi_sql($sql) {
+        foreach (explode(';', $sql) as $sql) {
+            if ($sql = trim($sql))
+                sql($sql);
+        }
+    }
+
     function c_fix($lg) {
         if (isset($_POST['sql'])) {
-            multi_sql(qp($_POST['sql']));/////////////////////////////////////////
+            $this->multi_sql($_POST['sql']);
+        } elseif (isset($_POST['page'])) {
+            SKY::d('lng_page', $this->page = '*');
+            $this->t->delete(qp('"*"<>name and name=$+', $_POST['page']));
         } elseif (isset($_POST['save'])) {
             if ('~' != $_POST['const-prev']) {
                 $const = strtoupper($_POST['save']);
@@ -159,6 +166,7 @@ class Language
 
     function c_generate($page, $is_user = true) {
         $dary = $this->load(DEFAULT_LG, $is_user, $is_user);
+        $page = '*' === $page ? '' : "_$page";
         foreach ($this->list as $lg) {
             $out = [];
             $ary = $lg == DEFAULT_LG ? [] : $this->load($lg);
@@ -172,9 +180,12 @@ class Language
                     $file .= sprintf("const L_$const=%s;\n", var_export($ary ? $val2 : $val, true));
                 }
             }
-            $fp = fopen(__FILE__, 'r');
-            fseek($fp, __COMPILER_HALT_OFFSET__);
-            $page or $file .= stream_get_contents($fp);
+            if (!$page) {
+                $fp = fopen(__FILE__, 'r');
+                fseek($fp, __COMPILER_HALT_OFFSET__);
+                $file .= stream_get_contents($fp);
+                fclose($fp);
+            }
             $file .= "\nreturn " . var_export($out, true) . ";\n\n";
             Plan::_p("lng/$lg$page.php", $file);
         }
@@ -293,6 +304,8 @@ class Language
     }
 
     private function listing($lg) {
+        $list = $this->t->all(qp('name<>"*" group by name'), 'name');
+        $this->pages += array_combine($list, $list);
         $dary = $this->load(DEFAULT_LG, isset($_POST['sort']));
         $ary = $lg == DEFAULT_LG ? [] : $this->load($lg);
         $chars = [];
@@ -336,26 +349,23 @@ class Language
 __halt_compiler();
 
 function t(...$in) {
-    global $sky;
     static $n = 0;
 
     if ($args = (bool)$in) {
-        $str = array_shift($in);
+        $s = array_shift($in);
         if ($in && is_array($in[0]))
             $in = $in[0];
     } elseif ($n++ % 2) {
-        $str = ob_get_clean();
+        $s = ob_get_clean();
     } else {
         return ob_start();
     }
 
-    if (isset($sky->trans_late[$str])) {
-        DEFAULT_LG == LG or $str = $sky->trans_late[$str];
-    } elseif (DEV && 1 == $sky->d_trans) {
-        SKY::$reg['trans_coll'][$str] = 0;
+    if (isset(SKY::$reg['trans_late'][$s])) {
+        DEFAULT_LG == LG or $s = SKY::$reg['trans_late'][$s];
+    } elseif (DEV && 1 == SKY::d('trans')) {
+        SKY::$reg['trans_coll'][$s] = 0;
     }
-    $args or print $str;
-    return $in ? vsprintf($str, $in) : $str;
+    $args or print $s;
+    return $in ? vsprintf($s, $in) : $s;
 }
-
-

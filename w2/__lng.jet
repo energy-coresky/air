@@ -1,7 +1,6 @@
 #.jet core template
 
 #.table //////////////////////////////////////////////////////////////////////////////
--- {{SKY::$dd->name}}
 #if('MySQLi' == SKY::$dd->name)
 CREATE TABLE `{{SKY::$dd->pref . $sky->d_lgt}}` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
@@ -35,7 +34,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <a href="{{PATH}}?_lang=list.{{$one}}"
         @active($one==$obj->lg) class="inner-menu"
         style="{!$one==DEFAULT_LG and 'font-weight:bold;text-decoration:underline'!}"
-        >{{$one}} - {{$obj->names[$one]}}
+        >{{$one}} - {{$lg_names[$one]}}
     </a>
     ~loop
 #.menu.m_lang -------------------------------------------------------------------------
@@ -51,12 +50,15 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <a class="inner-menu" onclick="sky.g.page()">Add new page</a>
     <a class="inner-menu" onclick="sky.g.parse()">Parse application</a>
 ~if
-#.menu.select ------------------------------------------------------------------------------
-<select onchange="sky.g.page(this,1)">
-@loop($obj->pages as $k => $v)<option value="{{$k}}"@selected($k==$sky->d_lng_page)>{{$v}}</option>~loop
-</select>
-#.select.list.fix.store -------------------------------------------------------------------------
-#use(`<h4>LANGUAGE: {{$obj->lg and strtoupper($obj->names[$obj->lg])}} ({{$e_list->cnt}}) @inc(.select)</h4>` as header)
+#.menu.header ------------------------------------------------------------------------------
+<h4>LANGUAGE: {{$obj->lg and strtoupper($lg_names[$obj->lg])}} ({{$e_list->cnt}})
+    <select onchange="sky.g.page(this,1)">
+        @loop($obj->pages as $k => $v)<option value="{{$k}}"@selected($k==$sky->d_lng_page)>{{$v}}</option>~loop
+    </select>
+    @if('*' != $obj->page)<a @href(sky.g.dp())>delete</a>~if
+</h4>
+#.header.list.fix.store -------------------------------------------------------------------------
+#use(.header)
 #use(.menu)
 @if(!$obj->error)
     <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
@@ -194,6 +196,10 @@ sky.g.delete = function(id, force) {
     if (force || confirm('Are you sure? Delete item?'))
         dev('fix.{{$obj->lg}}', {delete:id});
 };
+sky.g.dp = function() {
+    if (confirm('Are you sure? Delete page?'))
+        dev('fix.{{$obj->lg}}', {page:'{{$sky->d_lng_page}}'});
+};
 sky.g.all = function(el, id, is_save) {
     if (is_save) {
         var s = $('#all-edit input[name=const]').val();
@@ -259,7 +265,7 @@ sky.g.cancel = function() {
 };
 sky.g.save = function(id, is_const) {
     var s = $('#tr-textarea').val();
-    if (is_const && '' !== s && !s.match(/^[a-z\d_]+$/i))
+    if (is_const && !s.match(/^[a-z\d_]+$/i))
         return alert('Use identifiers chars only!');
     var cp = is_const ? $('input[name=const-prev]').val() : '~';
     ajax('fix.{{$obj->lg}}', {save:s, id:id, 'const-prev':cp}, function(r) {
