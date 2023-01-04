@@ -23,15 +23,15 @@ class Language
         if ($me->error)
             throw new Error("class Language error=$me->error");
         trace($ary, 'Collected new translations');
-        $page = SKY::$reg['lg_page'] ?: '*';
-        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name=$+', DEFAULT_LG, $page), 'flag');
+        $me->page = SKY::$reg['lg_page'] ?: '*';
+        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name=$+', DEFAULT_LG, $me->page), 'flag');
         $new = array_join($ary, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k);
         });
         // qp('$cc($+, tmemo)', "$new\n") not work !
-        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $page));
+        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $me->page));
         $me->t->update(['.flag' => $next_id | self::NON_SORT], $where);
-        $me->c_generate($page, false); # without sorting
+        $me->c_sync(false, false); # without sorting
     }
 
     static function names() {
@@ -164,9 +164,19 @@ class Language
         return $this->c_list($lg);
     }
 
-    function c_generate($page, $is_user = true) {
+    function c_sync($lg, $is_user = true) {
+        if ($lg) {
+            $list = $this->t->all(qp('name<>"*" group by name'), 'name');
+            $tmp = $this->page;
+            foreach ([-1 => '*'] + $list as $page) {
+                $this->page = $page;
+                $this->c_sync(false, $is_user);
+            }
+            $this->page = $tmp;
+            return $this->c_list($lg);
+        }
         $dary = $this->load(DEFAULT_LG, $is_user, $is_user);
-        $page = '*' === $page ? '' : "_$page";
+        $page = '*' === $this->page ? '' : "_$this->page";
         foreach ($this->list as $lg) {
             $out = [];
             $ary = $lg == DEFAULT_LG ? [] : $this->load($lg);
@@ -189,7 +199,6 @@ class Language
             $file .= "\nreturn " . var_export($out, true) . ";\n\n";
             Plan::_p("lng/$lg$page.php", $file);
         }
-        return [];
     }
 
     function c_test() { //Plan::_t
@@ -271,18 +280,16 @@ class Language
     }
 
     private function &load($lg, $is_sort = false, $is_sync = false) {
-        global $sky;
         $row = $this->t->one(qp('lg=$+ and name=$+', $lg, $this->page));
         $flag = $row['flag'];
-        $update = '';
-        if ($def = $lg == DEFAULT_LG) {
+        if ($lg == DEFAULT_LG) {
             $this->nsort = $flag & self::NON_SORT;
             $this->nsync = $flag & self::NON_SYNC;
-            $update = "update \$_$sky->d_lgt set tmemo=%s where id=$row[id]";
+            $is_sync AND $flag &= ~self::NON_SYNC;
         }
-        $ary =& SKY::ghost($def ? 'i' : 'j', trim($row['tmemo'], "\n"), $update);
-        if ($sorted = $is_sort && $this->nsort) {
-            uasort(SKY::$mem['i'][3], function($a, $b) {
+        $ary =& SKY::ghost('i', trim($row['tmemo'], "\n"), false, 1);
+        if ($is_sort = $is_sort && $this->nsort) {
+            uasort($ary, function($a, $b) {
                 $a0 = ord($a = mb_strtolower(explode(' ', $a, 2)[1]));
                 $b0 = ord($b = mb_strtolower(explode(' ', $b, 2)[1]));
                 $a_alfa = 'en' != DEFAULT_LG ? $a0 > 0x7F : 0x60 < $a0 && $a0 < 0x7B;
@@ -293,13 +300,14 @@ class Language
                     return -1;
                 return $a === $b ? 0 : ($a < $b ? -1 : 1);
             });
-            trace('Sorted');
+            
             $flag &= ~self::NON_SORT;
-            SKY::$mem['i'][0] = 1; # save
             $this->nsort = 0;
+            $mem = ['tmemo' => SKY::sql('i')];
         }
-        if ($is_sync || $sorted)
-            $this->t->update(['flag' => $is_sync ? $flag & ~self::NON_SYNC : $flag]);
+        trace($is_sort ? 'Sorted' : 'Not sorted', "{$lg}_$this->page");
+        if ($row['flag'] != $flag)
+            $this->t->update(['flag' => $flag] + ($mem ?? []));
         return $ary;
     }
 
@@ -341,6 +349,9 @@ class Language
                     'id' => $id,
                     'chr' => $char != $nc ? [$char = $nc, $sz] : false,
                 ];
+            },
+            'td' => function($v) {
+                return tag($v ? 'NO' : 'YES', 'class="yn-' . ($v ? 'r' : 'g') . '"', 'td');
             },
         ];
     }

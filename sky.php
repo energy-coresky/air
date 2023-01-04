@@ -20,7 +20,7 @@ class SKY implements PARADISE
     public $cnt_error = 0;
     public $cli;
     public $gpc = '';
-    public $lg = DEFAULT_LG;
+    public $lg = DEFAULT_LG;////////////////////
     public $shutdown = [];
 
     static $mem = [];
@@ -166,7 +166,7 @@ class SKY implements PARADISE
         if ($this->s_trace_single)
             $this->s_trace_single = 0; # single click done
         foreach (SKY::$mem as $char => &$v)
-            $v[0] && $v[2] && SKY::sql($char);
+            $v[0] && $v[2] && SKY::sql($char, false);
     }
 
     function __get($name) {
@@ -209,7 +209,7 @@ class SKY implements PARADISE
             return $x[0] |= 1;          # n - cron conf
         }                               # u - user
         if (!isset($args[1]))           # i,j,k - used in Language class
-            return $x[$k] ?? '';        # d - development conf
+            return $x[3][$k] ?? '';        # d - development conf
         $v = $args[1];
         if (is_null($k)) {
             if ($exists)
@@ -235,7 +235,7 @@ class SKY implements PARADISE
         return SKY::$mem[$char][3];
     }
 
-    static function sql($char, $return = false) {
+    static function sql($char, $return = true) {
         $x =& SKY::$mem[$char];
         if ('s' == $char && !$x[1]) # protect if SQL select failed
             return false;
