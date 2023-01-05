@@ -23,14 +23,14 @@ class Language
         if ($me->error)
             throw new Error("class Language error=$me->error");
         trace($ary, 'Collected new translations');
-        $me->page = SKY::$reg['lg_page'] ?: '*';
-        $next_id = 0x7FFF & $me->t->cell($where = qp('lg=$+ and name=$+', DEFAULT_LG, $me->page), 'flag');
+        $where = qp('lg=$+ and name=$+', DEFAULT_LG, $me->page = SKY::$reg['lg_page'] ?: '*');
+        $next_id = 0x7FFF & $me->t->cell($where, 'flag', true);
         $new = array_join($ary, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k);
         });
         // qp('$cc($+, tmemo)', "$new\n") not work !
         $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $me->page));
-        $me->t->update(['.flag' => $next_id | self::NON_SORT], $where);
+        $me->t->update(['.flag' => $next_id | self::NON_SORT]);
         $me->c_sync(false, false); # without sorting
     }
 
@@ -54,7 +54,7 @@ class Language
         }
     }
 
-    private function check_table($page = '*') {
+    private function make_sql($page = '*') {
         if ($this->error)
             return true;
         global $sky;
@@ -81,7 +81,7 @@ class Language
     function c_list($lg) {
         return [
             'obj' => $this,
-            'e_list' => !$lg && $this->check_table() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
+            'e_list' => !$lg && $this->make_sql() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
             'lg_names' => Language::names(),
         ];
     }
@@ -102,7 +102,7 @@ class Language
             SKY::d('lng_page', $name);
             if ($_POST)
                 return [];
-            $this->check_table($name);
+            $this->make_sql($name);
             $this->multi_sql($this->sql);
         }
         return [];

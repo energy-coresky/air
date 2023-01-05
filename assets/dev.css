@@ -40,6 +40,7 @@ hr {
 }
 pre, fieldset {
     width: 95%;
+    margin-bottom:10px;
 }
 pre, .code {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;

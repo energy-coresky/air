@@ -7,39 +7,31 @@ class standard_c extends Controller
     private $_y = [];
 
     function head_y($action) {
-        $head2 = [
-            'a_trace',
-            'j_file',
-//            'a_exception',
-            'j_init',
-        ];
+        global $sky, $user;
+
         if ('a_etc' == $action)
             return;
+        if (in_array($action, ['a_trace', 'j_file', 'j_init']))
+            return $user = new USER;
+        if (!DEV)
+            return 404;
         if ('a_' == substr($action, 0, 2)) {
             $this->_y = ['page' => substr($action, 2)];
             MVC::$layout = '__dev.layout';
         }
-        if (in_array($action, $head2))
-            return $this->head_y2(3);
-        if (!DEV)
-            return 404;
-        $this->load();
-        $v = explode('.', $this->_1, 2);
-        $this->_c = '*' == $v[0] ? 'default_c' : "c_$v[0]";
-        $this->_a = isset($v[1]) ? $v[1] : '';
-        return ['y_1' => $v[0]];
-    }
-
-    function load() {
-        global $sky;
         if ($sky->d_dev) {
             $sky->debug = 0;
             $sky->s_prod_error = 1;
         }
+        $v = explode('.', $this->_1, 2);
+        $this->_c = '*' == $v[0] ? 'default_c' : "c_$v[0]";
+        $this->_a = $v[1] ?? '';
+        return ['y_1' => $v[0]];
     }
 
     function tail_y() {
         global $sky;
+
         if ($this->_y) {
             if (1 == $sky->method && '_trace' != $sky->_0)
                 $sky->d_last_page = URI;
@@ -63,36 +55,9 @@ class standard_c extends Controller
         }
     }
 
-    private function head_y2($x) {
-        global $sky, $user;
-        $user = new USER;
-    }
-
-    function a_trace($id) {
-        global $sky, $user;
-        if (!$user->root && !DEBUG)
-            return 404;
-        $this->load();
-        $sky->debug = 0;
-        $this->_y = ['page' => 2 == $id ? 'trace-t' : 'trace-x'];
-        if (2 != $id)
-            $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
-        echo $body ?? 'err';
-    }
-
-    function j_file() {
-        global $sky, $user;
-        if (!$user->root && !DEV)
-            return 404;
-        $sky->debug = 0;
-        list($file, $line) = explode('^', $_POST['name']);
-        $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
-        echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
-        throw new Stop;
-    }
-
     function a_exception() {
         global $sky;
+
         $no = $sky->_1 or $no = $sky->error_no;
         $sky->error_no < 10000 or $no = 11;
         $no or jump();
@@ -103,6 +68,17 @@ class standard_c extends Controller
             'no' => $no,
             'tracing' => '',
         ];
+    }
+
+    function a_trace($id) {
+        global $sky, $user;
+        if (!$user->root && !DEBUG)
+            return 404;
+        $sky->debug = 0;
+        $this->_y = ['page' => 2 == $id ? 'trace-t' : 'trace-x'];
+        if (2 != $id)
+            $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
+        echo $body ?? 'err';
     }
 
     function a_etc() {
@@ -137,6 +113,17 @@ class standard_c extends Controller
         return 404;
     }
 
+    function j_file() {
+        global $sky, $user;
+        if (!$user->root && !DEV)
+            return 404;
+        $sky->debug = 0;
+        list($file, $line) = explode('^', $_POST['name']);
+        $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
+        echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
+        throw new Stop;
+    }
+
     function j_init() {
         global $sky, $user;
         if (isset($_POST['unload'])) {
@@ -154,12 +141,9 @@ class standard_c extends Controller
         return true;
     }
 
+    #-----------------------------
     # functions below for DEV only
-
-    #function a_get_dev() {
-    #    is_file('dev.php') or file_put_contents('dev.php', file_get_contents('http://coresky.net/download?dev.php'));
-    #    jump(WWW ? '../dev.php' : 'dev.php');
-    #}
+    #-----------------------------
 
     function j_drop() {
         echo Admin::drop_all_cache() ? 'OK' : 'Error';
@@ -168,13 +152,14 @@ class standard_c extends Controller
      /* ====================================== */
 
 
-    function __call($name, $args) {
-        list ($x, $name) = explode('_', $name, 2);
+    function __call($func, $args) {
+        $x = explode('_', $func, 2);
+        $name = $x[1] ?? '';
+        $x = $x[0];
         if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
             define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
-            if (DEV)//??
-                $this->d_last_ware = $name;
+            $this->d_last_ware = $name;
             $class = $name . '_c';
             Plan::_r([Plan::$ware = Plan::$view = $name, "mvc/$class.php"]);
             MVC::$cc = MVC::$mc;
@@ -187,8 +172,10 @@ class standard_c extends Controller
             if (MVC::$layout)
                 $this->_y += ['ware_dir' => Plan::_obj(0)->path];
             return MVC::$mc->$action();
+        } elseif (DEV && 'a' == $x) {
+            return call_user_func([$this, "j_$name"], 'c');
         }
-        return parent::__call($name, $args);
+        return parent::__call($func, $args);
     }
 
     function a_svg() {
@@ -241,8 +228,11 @@ class standard_c extends Controller
         return DEV::ary_c23();
     }
 
-    function a_lang() { /* ====================================== */
-        return $this->j_lang();
+    # ---------------- j_ + a_, see self::__call(..)
+
+    function j_dev($x = 'j') {
+        MVC::body('_dev.' . ($page = $this->_1 ?: 'main'));
+        return (array)$this->dev->{"{$x}_$page"}($this->_2);
     }
 
     function j_lang() {
@@ -250,17 +240,9 @@ class standard_c extends Controller
         return call_user_func([new Language, $this->_c], $this->_a);
     }
 
-    function a_vend() { /* ====================================== */
-        return $this->j_vend();
-    }
-
     function j_vend() {
         MVC::body('_vend.' . substr($this->_c, 2));
         return call_user_func([new Vendor, $this->_c], $this->_a);
-    }
-
-    function a_glob() { /* ====================================== */
-        return $this->j_glob();
     }
 
     function j_glob() {
@@ -268,25 +250,7 @@ class standard_c extends Controller
         return call_user_func([new Globals, $this->_c], $this->_a);
     }
 
-    function a_inst() { /* ====================================== */
-        return $this->j_inst();
-    }
-
     function j_inst() {
         return Install::run($this->_1);
-    }
-
-    function j_dev($x = 'j') {
-        MVC::body('_dev.' . ($page = $this->_1 ?: 'main'));
-        return (array)$this->dev->{"{$x}_$page"}($this->_2);
-    }
-
-    function a_dev() {
-        return $this->j_dev('c');
-    }
-
-    function a_api() { # lang auto translations
-        $this->_y = [];
-        # 2do
     }
 }

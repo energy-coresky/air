@@ -69,9 +69,9 @@ class Root
             Form::X([], '<hr>'),
             ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
             'static' => ['', '', 'size="50"'],
-            'lgt' => ['Language table name', '', 'size="25"'],
-            'trans' => ['Language class mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
-            'manual' => ['PHP manual laguage', 'select', $phpman],
+            'lgt' => ['SkyLang table name', '', 'size="25"'],
+            'trans' => ['SkyLang mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
+            'manual' => ['PHP manual language', 'select', $phpman],
             'se' => ['Search engine tpl', '', 'size="50"'],
             //'se4so' => ['SE for stackoveflow site', '', 'size="50"'],
             ['Save', 'submit'],
@@ -314,7 +314,7 @@ class Root
                 $form += ['etc_file' => ['', 'textarea', 'style="width:90%" rows="20"']];
             break;
         }
-        echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style="width:75%"');
+        echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style=""');
         return $TOP;
     }
 

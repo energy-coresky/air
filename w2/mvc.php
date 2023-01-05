@@ -95,7 +95,12 @@ abstract class Model_t extends Model_m
             return is_int(key($rule)) ? $this->qp('where id in ($@)', $rule) : $this->qp('where @@', $rule);
     }
 
-    function cell($rule = '', String $what = 'count(1)') {
+    function cell($rule = '', String $what = 'count(1)', $use_id = false) {
+        if ($use_id) {
+            $row = $this->sql(1, '~select * from $_ $$', $this->where($rule));
+            $this->id = $row['id'];
+            return $row[$what];
+        }
         return $this->sql(1, '+select ' . $what . ' from $_ $$', !$rule ? '' : $this->where($rule));
     }
 
