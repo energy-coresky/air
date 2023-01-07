@@ -202,10 +202,10 @@ class Language
     }
 
     function c_parse() {
-        $path = Plan::_obj(['main'])->path;
+        $app = Plan::_obj(['main'])->path;
         $const = $tfun = [];
-        foreach (Rare::walk_dirs($path) as $dir) {
-            if ("$path/lng" == $dir)
+        foreach (Rare::walk_dirs($app) as $dir) {
+            if ("$app/lng" == $dir)
                 continue;
             foreach (Rare::list_path($dir, 'is_file') as $fn) {
                 $ext = pathinfo($fn)['extension'] ?? '';
@@ -234,7 +234,6 @@ class Language
                 }
             }
         }
-        $dir = Plan::view_obj(['main'])->path;
         $php = function ($s) {
             if (!in_array($s[0], ["'", '"']))
                 return $s;
@@ -243,7 +242,8 @@ class Language
                     return eval("return $v[1];");
             }
         };
-        foreach (Rare::list_path($dir, 'is_file') as $fn) {
+        $view = Plan::view_obj(['main'])->path;
+        foreach (Rare::list_path($view, 'is_file') as $fn) {
             $ext = pathinfo($fn)['extension'] ?? '';
             if ('jet' != $ext)
                 continue;

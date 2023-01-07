@@ -277,7 +277,7 @@ sky.g.key = function(v) {
 };
 sky.g.parse = function(v) {
     ajax('parse', {}, function(r) {
-        var s = '', a = [], tbl = $('#lang-head').parent();
+        var i, tbl = $('#lang-head').parent();
 
         for (i in r.tfun) {
             tbl.find('tr').each(function() {
@@ -301,7 +301,6 @@ sky.g.parse = function(v) {
                 }
             });
         }
-        //alert(s)
     });
 };
 </script>
