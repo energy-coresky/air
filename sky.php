@@ -20,7 +20,7 @@ class SKY implements PARADISE
     public $cnt_error = 0;
     public $cli;
     public $gpc = '';
-    public $lg = DEFAULT_LG;////////////////////
+    public $lg = [];
     public $shutdown = [];
 
     static $mem = [];
@@ -95,7 +95,6 @@ class SKY implements PARADISE
             call_user_func([$object, 'shutdown']);
 
         $e = error_get_last();
-        //if ($e && $e['type'] & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_RECOVERABLE_ERROR)) {
         if ($e && $e['type'] != $this->error_last) {
             $err = Debug::error_name($e['type']);
             trace("$err: $e[message]", true, $e['line'], $e['file']);

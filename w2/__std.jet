@@ -55,22 +55,6 @@ isset($error) && $error && ($sky->debug || DEV) or $error = isset($list[$no]) ? 
 </svg>
 #.x
 
-#.crop_code //////////////////////////////////////////////////////////////////////////////
-<table width="100%" id="crop" cellpadding="5">
-<tr>
-    <td width="75%">
-        <img style="position:absolute"/><div style="position:relative; z-index:777; border:1px dashed red"></div>
-    </td>
-    <td width="25%" style="border-left:2px solid #bbb; padding:5px;"><h2>Crop an image</h2>
-        Original picture size: <span></span><hr>
-        Required size: <select>{! $opt !}</select><br><br>
-        Region: <input type="range" min="20" max="100" value="50"/><br><br>
-        <button>finish</button> &nbsp; mode: <span style="background:#bfb">move</span>
-    </td>
-</tr>
-</table>
-#.crop_code
-
 ==============================================================================================
 |||||||||||||||||||||||||||||||||||||||||||| GATE ||||||||||||||||||||||||||||||||||||||||||||
 ==============================================================================================

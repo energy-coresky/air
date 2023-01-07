@@ -6,6 +6,7 @@ class Language
     public $error;
     public $lg; # selected
     public $sql;
+    public $all = false;
     public $nsort = 0;
     public $nsync = 0;
     public $pages = ['*' => '* common'];
@@ -79,6 +80,19 @@ class Language
     }
 
     function c_list($lg) {
+        if ($_POST) {
+            if ('-' == $_POST['a']) { # drop
+                $this->t->delete(qp('"*"<>name and name=$+', $this->page));
+                $_POST['page'] = '*';
+            } elseif ('+' == $_POST['a']) { # all pages
+                $lg = $this->all = DEFAULT_LG;
+            } elseif ($_POST['a']) { # add
+                $this->make_sql($_POST['page'] = $_POST['a']);
+                $this->multi_sql($this->sql);
+                $this->error = 0;
+            }
+            SKY::d('lng_page', $this->page = $_POST['page']);
+        }
         return [
             'obj' => $this,
             'e_list' => !$lg && $this->make_sql() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
@@ -88,24 +102,13 @@ class Language
 
     function c_edit($lg) {
         $ary = $this->act($lg, $_POST['id']);
+        $this->c_parse();
         return ['val' => escape($ary[2], true)];
     }
 
     function c_const($lg) {
         $ary = $this->act($lg, $_POST['id']);
         return ['val' => escape($ary[1], true)];
-    }
-
-    function c_page($name) {
-        if ($name) {
-            //$this->pages
-            SKY::d('lng_page', $name);
-            if ($_POST)
-                return [];
-            $this->make_sql($name);
-            $this->multi_sql($this->sql);
-        }
-        return [];
     }
 
     function c_all($id) {
@@ -145,9 +148,6 @@ class Language
     function c_fix($lg) {
         if (isset($_POST['sql'])) {
             $this->multi_sql($_POST['sql']);
-        } elseif (isset($_POST['page'])) {
-            SKY::d('lng_page', $this->page = '*');
-            $this->t->delete(qp('"*"<>name and name=$+', $_POST['page']));
         } elseif (isset($_POST['save'])) {
             if ('~' != $_POST['const-prev']) {
                 $const = strtoupper($_POST['save']);
@@ -201,28 +201,72 @@ class Language
         }
     }
 
-    function c_test() { //Plan::_t
-        $place = ['view', DIR_M . '/mvc', DIR_M . '/w3'];
-        list($i, $d, $n) = explode(' ', $_POST['v'] ? $_POST['v'] : '0  ');
-        for ($flag = 0; true; ) {
-            foreach (Rare::walk_dirs($place[$i]) as $dir) if ('' === $d || $dir == $d || $flag) {
-                $flag or $flag = 1;
-                foreach (Rare::list_path($dir, 'is_file') as $fn) if ('' === $n || 2 == $flag || $fn === $n) {
-                    $flag = 2;
-                    if ($fn === $n)
+    function c_parse() {
+        $path = Plan::_obj(['main'])->path;
+        $const = $tfun = [];
+        foreach (Rare::walk_dirs($path) as $dir) {
+            if ("$path/lng" == $dir)
+                continue;
+            foreach (Rare::list_path($dir, 'is_file') as $fn) {
+                $ext = pathinfo($fn)['extension'] ?? '';
+                if ('php' != $ext)
+                    continue;
+                $php = file_get_contents($fn);
+                $fun = 0;
+                foreach (token_get_all($php) as $v) {
+                    list($id, $v) = is_array($v) ? $v : [0, $v];
+                    if (T_WHITESPACE == $id)
                         continue;
-                    preg_match_all('/L_([A-Z_\d]+)/', file_get_contents($fn), $m);
-                    if ($m[0]) {
-                        echo "$i $dir $fn " . implode(' ', $m[1]);
-                        return;
+                    if (T_STRING == $id) {
+                        $fun = 't' == $v ? 1 : 0;
+                        if (!$fun && preg_match('/^L_([A-Z_\d]+)$/', $v, $m))
+                            $const[$m[1]][] = basename($fn);
+                    } elseif (1 === $fun && !$id && '(' == $v) {
+                        $fun = 2;
+                    } elseif (2 === $fun && T_CONSTANT_ENCAPSED_STRING == $id) {
+                        $fun = $v;
+                    } elseif (is_string($fun) && !$id && in_array($v, [',', ')'])) {
+                        $tfun[eval("return $fun;")][] = basename($fn);
+                        $fun = 0;
+                    } else {
+                        $fun = 0;
                     }
                 }
             }
-            if (++$i == count($place)) {
-                echo '.';
-                return;
+        }
+        $dir = Plan::view_obj(['main'])->path;
+        $php = function ($s) {
+            if (!in_array($s[0], ["'", '"']))
+                return $s;
+            foreach (token_get_all("<?php $s") as $v) {
+                if (is_array($v) && T_CONSTANT_ENCAPSED_STRING == $v[0])
+                    return eval("return $v[1];");
+            }
+        };
+        foreach (Rare::list_path($dir, 'is_file') as $fn) {
+            $ext = pathinfo($fn)['extension'] ?? '';
+            if ('jet' != $ext)
+                continue;
+            // 2do: rewrite jet parser
+            $jet = file_get_contents($fn);
+            if (preg_match_all('/L_([A-Z_\d]+)/', $jet, $m)) {
+                foreach ($m[1] as $c)
+                    $const[$c][] = basename($fn);
+            }
+            if (preg_match_all('/@t\(([^\)]+)\)/', $jet, $m)) {
+                foreach ($m[1] as $c)
+                    $tfun[$php($c)][] = basename($fn);
             }
         }
+        $map = function ($a) {
+            $s = 1 == ($n = count($a)) ? '' : 's';
+            $u = count(array_unique($a));
+            return "$n use$s in " . (1 == $u ? $a[0] : "$u files");
+        };
+        json([
+            'const' => array_map($map, $const),
+            'tfun' => array_map($map, $tfun),
+        ]);
     }
 
     private function act($lg, &$id, $mode = 'read', $s = '', $test = false) {
@@ -279,6 +323,20 @@ class Language
         return false;
     }
 
+    private function sort(&$ary) {
+        uasort($ary, function($a, $b) {
+            $a0 = ord($a = mb_strtolower(explode(' ', $a, 2)[1]));
+            $b0 = ord($b = mb_strtolower(explode(' ', $b, 2)[1]));
+            $a_alfa = 'en' != DEFAULT_LG ? $a0 > 0x7F : 0x60 < $a0 && $a0 < 0x7B;
+            $b_alfa = 'en' != DEFAULT_LG ? $b0 > 0x7F : 0x60 < $b0 && $b0 < 0x7B;
+            if (!$a_alfa && $b_alfa)
+                return 1;
+            if (!$b_alfa && $a_alfa)
+                return -1;
+            return $a === $b ? 0 : ($a < $b ? -1 : 1);
+        });
+    }
+
     private function &load($lg, $is_sort = false, $is_sync = false) {
         $row = $this->t->one(qp('lg=$+ and name=$+', $lg, $this->page));
         $flag = $row['flag'];
@@ -289,18 +347,7 @@ class Language
         }
         $ary =& SKY::ghost('i', trim($row['tmemo'], "\n"), false, 1);
         if ($is_sort = $is_sort && $this->nsort) {
-            uasort($ary, function($a, $b) {
-                $a0 = ord($a = mb_strtolower(explode(' ', $a, 2)[1]));
-                $b0 = ord($b = mb_strtolower(explode(' ', $b, 2)[1]));
-                $a_alfa = 'en' != DEFAULT_LG ? $a0 > 0x7F : 0x60 < $a0 && $a0 < 0x7B;
-                $b_alfa = 'en' != DEFAULT_LG ? $b0 > 0x7F : 0x60 < $b0 && $b0 < 0x7B;
-                if (!$a_alfa && $b_alfa)
-                    return 1;
-                if (!$b_alfa && $a_alfa)
-                    return -1;
-                return $a === $b ? 0 : ($a < $b ? -1 : 1);
-            });
-            
+            $this->sort($ary);
             $flag &= ~self::NON_SORT;
             $this->nsort = 0;
             $mem = ['tmemo' => SKY::sql('i')];
@@ -314,7 +361,17 @@ class Language
     private function listing($lg) {
         $list = $this->t->all(qp('name<>"*" group by name'), 'name');
         $this->pages += array_combine($list, $list);
-        $dary = $this->load(DEFAULT_LG, isset($_POST['sort']));
+        if ($this->all) {
+            $all = $this->t->all(qp('lg=$+', DEFAULT_LG), 'name, tmemo');
+            array_walk($all, function (&$v, $k) {
+                if ('' !== $v)
+                    $v = "$k." . str_replace("\n", "\n$k.", trim($v, "\n")) . "\n";
+            });
+            $dary = SKY::ghost('i', trim(implode('', $all), "\n"));
+            $this->sort($dary);
+        } else {
+            $dary = $this->load(DEFAULT_LG, isset($_POST['sort']));
+        }
         $ary = $lg == DEFAULT_LG ? [] : $this->load($lg);
         $chars = [];
         return [

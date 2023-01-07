@@ -11,13 +11,15 @@ class standard_c extends Controller
 
         if ('a_etc' == $action)
             return;
-        if (in_array($action, ['a_trace', 'j_file', 'j_init']))
-            return $user = new USER;
-        if (!DEV)
-            return 404;
         if ('a_' == substr($action, 0, 2)) {
             $this->_y = ['page' => substr($action, 2)];
             MVC::$layout = '__dev.layout';
+        }
+        if (in_array($action, ['a_trace', 'j_file', 'j_init']))
+            return $user = new USER;
+        if (!DEV) {
+            $this->_y = MVC::$layout = '';
+            return 404;
         }
         if ($sky->d_dev) {
             $sky->debug = 0;
@@ -35,8 +37,6 @@ class standard_c extends Controller
         if ($this->_y) {
             if (1 == $sky->method && '_trace' != $sky->_0)
                 $sky->d_last_page = URI;
-            #if ('WINNT' == PHP_OS)
-            #    $ary += ['adm?get_dev' => 'Open DEV.SKY.'];
             $sky->k_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
             defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             return $this->_y + [
@@ -81,6 +81,17 @@ class standard_c extends Controller
         echo $body ?? 'err';
     }
 
+    function j_file() {
+        global $sky, $user;
+        if (!$user->root && !DEV)
+            return 404;
+        $sky->debug = 0;
+        list($file, $line) = explode('^', $_POST['name']);
+        $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
+        echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
+        throw new Stop;
+    }
+
     function a_etc() {
         global $sky;
         $ext = '';
@@ -111,17 +122,6 @@ class standard_c extends Controller
         }
         $sky->log('etc', "404 $sky->_1");
         return 404;
-    }
-
-    function j_file() {
-        global $sky, $user;
-        if (!$user->root && !DEV)
-            return 404;
-        $sky->debug = 0;
-        list($file, $line) = explode('^', $_POST['name']);
-        $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
-        echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
-        throw new Stop;
     }
 
     function j_init() {
@@ -159,9 +159,9 @@ class standard_c extends Controller
         if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
             define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
-            $this->d_last_ware = $name;
-            $class = $name . '_c';
-            Plan::_r([Plan::$ware = Plan::$view = $name, "mvc/$class.php"]);
+            $this->d_last_ware = Plan::$ware = Plan::$view = $name;
+            //Plan::_r([$name, 'mvc/' . ($class = $name . '_c') . '.php']);
+            Plan::_r('mvc/' . ($class = $name . '_c') . '.php');
             MVC::$cc = MVC::$mc;
             MVC::$mc = new $class;
             if (!method_exists(MVC::$mc, $action = '' == $this->_1 ? 'empty_' . $x : $x . "_$this->_1"))
@@ -169,7 +169,7 @@ class standard_c extends Controller
             if (method_exists(MVC::$mc, 'head_y'))
                 MVC::instance()->set(MVC::$mc->head_y($action), true);
             MVC::body("$name." . ($this->_1 ? $this->_1 : 'empty'));
-            if (MVC::$layout)
+            if ($this->_y)
                 $this->_y += ['ware_dir' => Plan::_obj(0)->path];
             return MVC::$mc->$action();
         } elseif (DEV && 'a' == $x) {
@@ -185,13 +185,9 @@ class standard_c extends Controller
         throw new Stop;
     }
 
-    function a_gate() {
-        if ('c_' == $this->_c)
+    function j_gate($x = 'j') {
+        if ('c_' == $this->_c && 'c' == $x)
             $this->_c = DEV::atime(); # open last access time controller
-        return $this->j_gate();
-    }
-
-    function j_gate() {
         return (!$this->_4 ? [] : [
             'y_tx' => '_x1',
             'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),

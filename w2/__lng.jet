@@ -39,6 +39,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.menu.rar --------
 @if(!$obj->error)
     <br><div class="other-task">I18N</div>
+    @if(!$obj->all)
     <div class="other-info">
     <table cellspacing="0" cellpadding="0" id="t-i18n">
         <tr><td>Sorted:</td>{!$e_list->td($obj->nsort)!}<td><a @href(dev('list.{{$obj->lg}}',{sort:1}))>@inc(.rar) sort</a></td></tr>
@@ -46,15 +47,22 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     </table>
     </div>
     <a class="inner-menu" onclick="sky.g.all(0, 0)">Add new item</a>
-    <a class="inner-menu" onclick="sky.g.page()">Add new page</a>
+    <a class="inner-menu" onclick="$('#new-page').show()">Add new page</a>
+    @if(count($obj->pages)>1)<a class="inner-menu" @href(sky.g.page(0,'+'))>All pages sorted</a>~if
+    ~if
     <a class="inner-menu" onclick="sky.g.parse()">Parse application</a>
 ~if
 #.menu.header --------
 <h4>LANGUAGE: {{$obj->lg and strtoupper($lg_names[$obj->lg])}} ({{$e_list->cnt}})
-    <select onchange="sky.g.page(this,1)">
+    @if($obj->all)ALL PAGES SORTED@else
+    <form style="display:inline" method="post">
+    <select name="page" onchange="this.form.submit()">
         @loop($obj->pages as $k => $v)<option value="{{$k}}"@selected($k==$obj->page)>{{$v}}</option>~loop
     </select>
-    @if('*' != $obj->page)<a @href(sky.g.dp())>delete</a>~if
+    <input type="hidden" name="a" value=""/>
+    @if('*' != $obj->page)<a @href(sky.g.page(0,'-'))>delete</a>~if
+    </form>
+    ~if
 </h4>
 #.header.list.fix.store.sync -------------------------------------------------------------------------
 #use(.header)
@@ -90,6 +98,17 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <input value="Yes!" type="button" onclick="dev('fix',{sql:$(this).prev().text()})"/>
 @else
     @use(.m_lang)
+    <form style="display:none" id="new-page">
+        <dl><dt><u>new page name</u>:</dt>
+        <dd>
+            <input size="30" id="new-page-in" />
+        </dd>
+        </dl><dl><dt>&nbsp;</dt>
+        <dd>
+            <input onclick="$('#new-page').hide()" type="button" value="cancel"/>
+            <input type="button" onclick="sky.g.page($('#new-page-in'))" value="save"/>
+        </dd></dl>
+    </form>
     <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
     <tr id="lang-head">
     <th width="1%" style="padding:0"></th>
@@ -97,7 +116,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <th width="38%">{{DEFAULT_LG}} (default)</th>
     <th width="6%" style="text-align:center">ID</th>
     <th width="1%" style="padding:0"></th>
-    <th width="38%">{{$obj->lg}}</th>
+    <th width="38%">{{$obj->lg == DEFAULT_LG ? '' : $obj->lg}}</th>
     <th width="15%">KEY</th>
     </tr>
     @loop($e_list)
@@ -139,19 +158,6 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <input onclick="sky.g.cancel()" type="button" value="cancel"/>
 <input onclick="sky.g.save({{$_POST['id']}}, 0)" type="button" value="OK"/>
 #.edit
-
-#.page /////////////////////////////////////////////////////////////////////////
-<td colspan="7">
-<form id="all-edit">
-    <dl><dt><u>new page name</u>:</dt>
-    <dd>
-        <input size="30" />
-        <input type="button" onclick="sky.g.page(this)" value="save"/>
-    </dd>
-    </dl>
-</form>
-</td>
-#.page
 
 #.all /////////////////////////////////////////////////////////////////////////
 <td colspan="7">
@@ -195,10 +201,6 @@ sky.g.delete = function(id, force) {
     if (force || confirm('Are you sure? Delete item?'))
         dev('fix.{{$obj->lg}}', {delete:id});
 };
-sky.g.dp = function() {
-    if (confirm('Are you sure? Delete page?'))
-        dev('fix.{{$obj->lg}}', {page:'{{$sky->d_lng_page}}'});
-};
 sky.g.all = function(el, id, is_save) {
     if (is_save) {
         var s = $('#all-edit input[name=const]').val();
@@ -221,22 +223,18 @@ sky.g.all = function(el, id, is_save) {
         });
     }
 };
-sky.g.page = function(el, is_set) {
-    if (el) {
-        var s = is_set ? $(el).val() : $(el).prev().val();
-        //if (!s && !is_set || !s.match(/^[a-z\d_]+$/))
-          //  return alert('Use identifiers chars only!'+s);
-        ajax('page.' + s, is_set ? {s:s} : {}, function(r) {
-            if ('1' == r)
-                return alert('Error!');
-            location.href = location.href;
-        });
+sky.g.page = function(el, s) {
+    var form = $('#top-head form:eq(0)');
+    if (!el) {
+        if ('-' == s && !confirm('Are you sure? Delete page?'))
+            return;
     } else {
-        sky.head();///
-        ajax('page.', {}, function(r) {
-            $('#lang-head').before('<tr></tr>').prev().html(r);
-        });
+        s = el.val();
+        if (!s.match(/^[a-z\d_]+$/))
+            return alert('Use identifiers chars only!');
     }
+    form.find('input[name=a]').val(s);
+    form.submit();
 };
 sky.g.edit = function(el, id) {
     if (sky.g.editing)
@@ -278,25 +276,32 @@ sky.g.key = function(v) {
     sky.g.chk && $('input.ndef-lg').val(v);
 };
 sky.g.parse = function(v) {
-    ajax('test', {v: v || ''}, function(r) {
-        var s, i, a = r.split(' '), tbl = $('#lang-head').parent();
-        if ('.' == r) {
-            tbl.css('background', 'gold');
-            setTimeout(function() {
-                tbl.css('background', '');
-            }, 500);
-        } else {
-            a.shift(), a.shift(), a.shift();
-            for (i in a) {
-                s = a[i];
-                tbl.find('tr').each(function() {
-                    var td = $(this).find('td:eq(6)');
-                    if (td && $.trim(td.text()) == s)
-                        $(this).css('background', '#cfc');
-                });
-            }
-            sky.g.parse(r);
+    ajax('parse', {}, function(r) {
+        var s = '', a = [], tbl = $('#lang-head').parent();
+
+        for (i in r.tfun) {
+            tbl.find('tr').each(function() {
+                var td = $(this).find('td:eq(2)');
+                if (td && $.trim(td.text()) == i) {
+                    $(this).css('background', '#cfc');
+                    @if($obj->lg == DEFAULT_LG)
+                        $(this).find('td:eq(5)').text(r.tfun[i]);
+                    ~if
+                }
+            });
         }
+        for (i in r.const) {
+            tbl.find('tr').each(function() {
+                var td = $(this).find('td:eq(6)');
+                if (td && $.trim(td.text()) == i) {
+                    $(this).css('background', '#cfc');
+                    @if($obj->lg == DEFAULT_LG)
+                        $(this).find('td:eq(5)').text(r.const[i]);
+                    ~if
+                }
+            });
+        }
+        //alert(s)
     });
 };
 </script>

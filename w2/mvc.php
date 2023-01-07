@@ -233,12 +233,11 @@ trait HOOK
     }
 
     function setLG_h() {
-        return [];
     }
 
     static function getLG_h() {
         global $sky;
-        if (!is_array($sky->lg))
+        if (!$sky->lg)
             return DEFAULT_LG;
         $locale = Locale::acceptFromHttp($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? DEFAULT_LG);
         $lg = implode('|', $sky->lg);
@@ -246,7 +245,7 @@ trait HOOK
     }
 
     static function dd_h($name, $dd) {
-        if ('MySQLi' != $dd->name) // dd_sqlite3  dd_mysqli
+        if ('MySQLi' != $dd->name)
             return;
         mysqli_set_charset($dd->conn, 'utf8') or exit('charset');
         $dd->sqlf('set time_zone=%s', date('P'));
