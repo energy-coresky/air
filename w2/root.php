@@ -70,7 +70,6 @@ class Root
             ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
             'static' => ['', '', 'size="50"'],
             'lgt' => ['SkyLang table name', '', 'size="25"'],
-            'trans' => ['SkyLang mode', 'radio', ['manual edit', 'auto-detect items', 'translation api ON']],
             'manual' => ['PHP manual language', 'select', $phpman],
             'se' => ['Search engine tpl', '', 'size="50"'],
             //'se4so' => ['SE for stackoveflow site', '', 'size="50"'],

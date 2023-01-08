@@ -38,14 +38,23 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <span style="font-family:Verdana;">►</span>
 #.menu.rar --------
 @if(!$obj->error)
-    <br><div class="other-task">I18N</div>
-    @if(!$obj->all)
+    <br><div class="other-task">I18N - {{SKY::$dd->pref . $sky->d_lgt}}</div>
     <div class="other-info">
     <table cellspacing="0" cellpadding="0" id="t-i18n">
+        <tr><td>Mode:</td><td colspan="2">
+            <select onchange="ajax('mode.' + $(this).val())">
+                <option@selected(0 == $sky->d_trans) value="0">manual edit</option>
+                <option@selected(1 == $sky->d_trans) value="1">auto-detect</option>
+                <option@selected(2 == $sky->d_trans) value="2">api ON</option>
+            </select>
+        </td></tr>
+        @if(!$obj->all)
         <tr><td>Sorted:</td>{!$e_list->td($obj->nsort)!}<td><a @href(dev('list.{{$obj->lg}}',{sort:1}))>@inc(.rar) sort</a></td></tr>
+        ~if
         <tr><td>Sync7d:</td>{!$e_list->td($obj->nsync)!}<td><a @href(dev('sync.{{$obj->lg}}',{sort:1}))>@inc(.rar) sync</a></td></tr>
     </table>
     </div>
+    @if(!$obj->all)
     <a class="inner-menu" onclick="sky.g.all(0, 0)">Add new item</a>
     <a class="inner-menu" onclick="$('#new-page').show()">Add new page</a>
     @if(count($obj->pages)>1)<a class="inner-menu" @href(sky.g.page(0,'+'))>All pages sorted</a>~if
@@ -91,11 +100,12 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 @elseif(4 == $obj->error)
     <h1>The table `{{SKY::$dd->pref . $sky->d_lgt}}` is absent. Create?</h1>
     <pre>@inc(.table)</pre>
-    <input value="Yes!" type="button" onclick="dev('fix',{sql:$(this).prev().text()})"/>
+    <input value="Yes!" type="button" onclick="sky.g.page(0, '!' + $(this).prev().text())"/>
+    <h3>Note: you can define table name in the <u><a href="_dev">Development</a></u> section</h3>
 @elseif(5 == $obj->error)
     <h1>Languages not match (table and $sky->lg). Fix?</h1>
     <pre>{!$obj->sql!}</pre>
-    <input value="Yes!" type="button" onclick="dev('fix',{sql:$(this).prev().text()})"/>
+    <input value="Yes!" type="button" onclick="sky.g.page(0, '!' + $(this).prev().text())"/>
 @else
     @use(.m_lang)
     <form style="display:none" id="new-page">
@@ -114,9 +124,9 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <th width="1%" style="padding:0"></th>
     <th width="1%" style="padding:0"></th>
     <th width="38%">{{DEFAULT_LG}} (default)</th>
-    <th width="6%" style="text-align:center">ID</th>
+    <th width="{{$obj->all?12:6}}%" style="text-align:center">ID</th>
     <th width="1%" style="padding:0"></th>
-    <th width="38%">{{$obj->lg == DEFAULT_LG ? '' : $obj->lg}}</th>
+    <th width="{{$obj->all?32:38}}%">{{$obj->lg == DEFAULT_LG ? '' : $obj->lg}}</th>
     <th width="15%">KEY</th>
     </tr>
     @loop($e_list)
@@ -131,10 +141,12 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <td{!$row->yell and ' bgcolor="yellow"'!}></td>
         <td{!$row->red and ' bgcolor="red"'!}></td>
         <td><a @href(sky.g.delete({{$row->id}}, {{(int)$row->red}}))><img src="img/a_del.gif"/></a> {{$row->val}}</td>
-        <td style="text-align:right">{{$row->id}} <a @href(sky.g.edit(this, {{$row->id}}))><img src="img/a_upd.gif"/></a></td>
+        <td style="text-align:right{{$row->bgid}}">{{$row->id}}
+            <a @href(sky.g.edit(this, '{{$row->id}}'))><img src="img/a_upd.gif"/></a>
+        </td>
         <td{!$row->pink and ' bgcolor="pink"'!}></td>
         <td>{{$row->val2}}</td>
-        <td><a @href(sky.g.const(this,{{$row->id}}))><img src="img/a_upd.gif"/></a> {{$row->key}}</td>
+        <td><a @href(sky.g.const(this, '{{$row->id}}'))><img src="img/a_upd.gif"/></a> {{$row->key}}</td>
         </tr>
     ~loop
     </table>
@@ -163,7 +175,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <td colspan="7">
 <form id="all-edit">
 @loop($e_list)
-    @if(1==$_)
+    @if(1 == $_)
         <dl><dt><u>const</u>:</dt>
         <dd>
             <input type="hidden" name="const-prev" value="{{$row->const}}"/>
@@ -186,7 +198,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <dl><dt>&nbsp;</dt>
 <dd>
     <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.all(this, {{$id}}, 1)" type="button" value="save"/>
+    <input onclick="sky.g.all(this, '{{$id}}', 1)" type="button" value="save"/>
 </dd>
 </dl>
 </form>
@@ -277,30 +289,22 @@ sky.g.key = function(v) {
 };
 sky.g.parse = function(v) {
     ajax('parse', {}, function(r) {
-        var i, tbl = $('#lang-head').parent();
-
-        for (i in r.tfun) {
-            tbl.find('tr').each(function() {
-                var td = $(this).find('td:eq(2)');
-                if (td && $.trim(td.text()) == i) {
-                    $(this).css('background', '#cfc');
-                    @if($obj->lg == DEFAULT_LG)
-                        $(this).find('td:eq(5)').text(r.tfun[i]);
-                    ~if
-                }
-            });
-        }
-        for (i in r.const) {
-            tbl.find('tr').each(function() {
-                var td = $(this).find('td:eq(6)');
-                if (td && $.trim(td.text()) == i) {
-                    $(this).css('background', '#cfc');
-                    @if($obj->lg == DEFAULT_LG)
-                        $(this).find('td:eq(5)').text(r.const[i]);
-                    ~if
-                }
-            });
-        }
+        var tbl = $('#lang-head').parent();
+        var walk = function(ary, n) {
+            for (var i in ary) {
+                tbl.find('tr').each(function() {
+                    var td = $(this).find('td:eq(' + n + ')');
+                    if (td && $.trim(td.text()) == i) {
+                        $(this).css('background', '#cfc');
+                        @if($obj->lg == DEFAULT_LG)
+                            $(this).find('td:eq(5)').text(ary[i]);
+                        ~if
+                    }
+                });
+            }
+        };
+        walk(r.tfunc, 2);
+        walk(r.const, 6);
     });
 };
 </script>
