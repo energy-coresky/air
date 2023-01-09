@@ -76,6 +76,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.header.list.fix.store.sync -------------------------------------------------------------------------
 #use(.header)
 #use(.menu)
+@inc(.jscss)
 @if(!$obj->error)
     <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
         <div style="width:47%">Goto char:@block(`` as chars)</div>
@@ -119,7 +120,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             <input type="button" onclick="sky.g.page($('#new-page-in'))" value="save"/>
         </dd></dl>
     </form>
-    <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
+    <table width="100%" cellspacing="0" cellpadding="2">
     <tr id="lang-head">
     <th width="1%" style="padding:0"></th>
     <th width="1%" style="padding:0"></th>
@@ -154,8 +155,21 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     Items: {{$e_list->cnt}}
 ~if
 </div>
-@inc(.jscss)
 #.list.fix.store.sync
+
+#.files /////////////////////////////////////////////////////////////////////////
+@inc(.css)
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
+    <div style="width:50%">Select files</div>
+    <div style="text-align:;width:50%">xx
+    </div>
+</div>
+<table width="100%" cellspacing="0" cellpadding="2" style="padding:10px">
+<tr>
+    <th width="5%">##</th><th width="45%">PHP files</th>
+    <th width="5%">##</th><th width="45%">Jet files</th>
+</tr>{!$rows(false)!}</table>
+#.files
 
 #.const /////////////////////////////////////////////////////////////////////////
 <input type="hidden" name="const-prev" value="{{$val}}"/>
@@ -287,28 +301,36 @@ sky.g.chk = 0;
 sky.g.key = function(v) {
     sky.g.chk && $('input.ndef-lg').val(v);
 };
-sky.g.parse = function(v) {
-    ajax('parse', {}, function(r) {
-        var tbl = $('#lang-head').parent();
-        var walk = function(ary, n) {
-            for (var i in ary) {
-                tbl.find('tr').each(function() {
-                    var td = $(this).find('td:eq(' + n + ')');
-                    if (td && $.trim(td.text()) == i) {
-                        $(this).css('background', '#cfc');
-                        @if($obj->lg == DEFAULT_LG)
-                            $(this).find('td:eq(5)').text(ary[i]);
-                        ~if
-                    }
-                });
-            }
-        };
-        walk(r.tfunc, 2);
-        walk(r.const, 6);
-    });
+sky.g.parse = function() {
+    if ({{(int)($obj->lg==DEFAULT_LG)}}) {
+        ajax('parse', {}, function(r) {
+            var tbl = $('#lang-head').parent();
+            var walk = function(ary, n) {
+                for (var i in ary) {
+                    tbl.find('tr').each(function() {
+                        var td = $(this).find('td:eq(' + n + ')');
+                        if (td && $.trim(td.text()) == i) {
+                            $(this).css('background', '#cfc');
+                            @if($obj->lg == DEFAULT_LG)
+                                $(this).find('td:eq(5)').text(ary[i]);
+                            ~if
+                        }
+                    });
+                }
+            };
+            walk(r.tfunc, 2);
+            walk(r.const, 6);
+        });
+    } else {
+        ajax('files', {}, function(r) {
+            $('#v-body').html(r)
+
+        });
+    }
 };
 </script>
-
+@inc(.css)
+#.jscss.css
 <style>
 #lang { margin:10px }
 #lang h1 { color:red }
@@ -319,6 +341,7 @@ sky.g.parse = function(v) {
 #t-i18n a { border-bottom:none;padding:1px 3px }
 .yn-g, .yn-r { font-weight:bold; padding: 0 10px; }
 .yn-g { background:#cfc } .yn-r { background:pink }
+select {font-size:12px;}
 </style>
-#.jscss
+#.css
 
