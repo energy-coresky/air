@@ -86,7 +86,7 @@ a {
     background-color: #eee;
     border-bottom:1px solid #ccc;
 }
-#v-head a, #v-tail a {
+#v-head a, #v-tail a, .a-btn {
     padding:0 10px;
     line-height: 26px;
     display: inline-block;
@@ -130,7 +130,7 @@ a[active], a.active {
     padding-right: 10px !important;
     background-color: #e0e7ff;
 }
-#v-menu a:hover, #v-head a:hover, #v-tail a:hover, #r-menu a:hover {
+#v-menu a:hover, #v-head a:hover, #v-tail a:hover, #r-menu a:hover, a.a-btn:hover {
     background-color: #ddd;
     color: #000 !important;
 }
@@ -227,7 +227,7 @@ td, .bb {
 .bg-wx {
     width: 100%;
     padding-left: 10px;
-    height:41px;
+    height:42px;
     display: inline-flex;
     align-items: center;
 }

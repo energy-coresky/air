@@ -7,6 +7,7 @@ class Language
     public $lg; # selected
     public $sql;
     public $all = false;
+    public $gpd = false;
     public $nsort = 0;
     public $nsync = 0;
     public $pages = ['*' => '* common'];
@@ -17,22 +18,23 @@ class Language
 
     private $t;
 
-    static function translate($ary) {
+    static function translate($ary, $page = false) {
         if (!DEV)
             return;
         $me = new Language; # format: "ID CONST VAL"
         if ($me->error)
             throw new Error("class Language error=$me->error");
         trace($ary, 'Collected new translations');
-        $where = qp('lg=$+ and name=$+', DEFAULT_LG, $me->page = SKY::$reg['lg_page'] ?: '*');
+        $page or $page = SKY::$reg['lg_page'] ?: '*';
+        $where = qp('lg=$+ and name=$+', DEFAULT_LG, $me->page = $page);
         $next_id = 0x7FFF & $me->t->cell($where, 'flag', true);
         $new = array_join($ary, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k);
         });
         // qp('$cc($+, tmemo)', "$new\n") not work !
-        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $me->page));
+        $me->t->update(['$tmemo' => qp(qp('$cc($+, tmemo)'), "$new\n")], qp('name=$+', $page));
         $me->t->update(['.flag' => $next_id | self::NON_SORT]);
-        $me->c_sync(false, false); # without sorting
+        $me->c_sync(false);
     }
 
     static function names() {
@@ -93,7 +95,9 @@ class Language
                 $_POST['page'] = '*';
             } elseif ('+' == $a) { # show all pages
                 $lg = $this->all = DEFAULT_LG;
-            } elseif ($a) {
+            } elseif ('$' == $a) { # get parsed data
+                $lg = $this->gpd = DEFAULT_LG;
+            } else {
                 if ('!' == $a[0]) { # exec SQLs from POST
                     $this->multi_sql(substr($a, 1));
                 } else { # add page
@@ -110,6 +114,26 @@ class Language
             'e_list' => !$lg && $this->make_sql() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
             'lg_names' => Language::names(),
         ];
+    }
+
+    function c_api() {
+        $input = file_get_contents('php://input');
+        $in = (object)unjson($input, true);
+        if ('hallo' == $in->lg) {
+            
+        } elseif (DEFAULT_LG == $in->lg) {
+            list ($page, $id) = explode('.', $in->id);
+            foreach ($in->list as $lg => $translated) {
+                if (DEFAULT_LG == $lg)
+                    continue;
+            }
+        }
+        json([
+            'lg' => DEFAULT_LG,
+            'src' => $src,
+            'list' => $list,
+            'id' => "$page.$id",
+        ]);
     }
 
     private function id($in) {
@@ -187,17 +211,17 @@ class Language
         return $this->c_list($lg);
     }
 
-    function c_sync($lg, $is_sort = true, $page = false) {
+    function c_sync($lg, $page = false) {
         if ($lg) {
             $list = $this->t->all(qp('lg=$+', DEFAULT_LG), 'name, flag');
             foreach ($list as $page => $flag) { # sync all
                 if ($flag & self::NON_SYNC)
-                    $this->c_sync(false, $is_sort, $page);
+                    $this->c_sync(false, $page);
             }
             return true === $lg ? array_keys($list) : $this->c_list($lg);
         }
         $page or $page = $this->page;
-        $dary = $this->load(DEFAULT_LG, $is_sort, true, $page);
+        $dary = $this->load(DEFAULT_LG, false, true, $page);
         $pg = '*' === $page ? '' : "_$page";
         foreach ($this->list as $lg) {
             $out = [];
@@ -222,89 +246,23 @@ class Language
         }
     }
 
-    function &c_files($call) {
-        $files = ['rows' => function ($t, $s = '', $fn = '', &$cnt = null) use (&$files, $call) {
-            if (!$t) {
-                extract($files, EXTR_REFS);
-                $html = function (&$ary, $x) {
-                    $t = str_replace('id', $x, TPL_CHECKBOX);
-                    $s = tag(sprintf($t, $fn = key($ary), '') . " $fn", '', 'label');
-                    $v = array_shift($ary);
-                    if ($v['c'][0])
-                        $s .= sprintf(span_g, ' L_' . $v['c'][0]);
-                    if ($v['f'][0])
-                        $s .= sprintf(span_b, ' t(' . $v['f'][0] . ')');
-                    if ($v['f'][1])
-                        $s .= sprintf(span_r, ' + t(' . $v['f'][1] . ')');
-                    return $v['c'][1] ? $s . sprintf(span_r, ' + L_' . $v['c'][1]) : $s;
-                };
-                for ($i = 1, $s = ''; $app || $jet; $i++) {
-                    $a = $app ? $html($app, 'app') : '';
-                    $j = $jet ? $html($jet, 'jet') : '';
-                    $s .= td([$a ? $i : '', $a, $j ? $i : '', $j]);
-                }
-                return $s;
-            } elseif (!$call) {
-                static $ary = [];
-                if (!$ary) {
-                    $ary['f'] = [];
-                    foreach ($this->c_sync(true, false) as $page) {
-                        $page = '*' === $page ? DEFAULT_LG : DEFAULT_LG . "_$page";
-                        $ary['f'] += Plan::_r("lng/$page.php");
-                    }
-                    $c = get_defined_constants(true)['user'];
-                    $ary['c'] = array_filter($c, function($k) {
-                        return 'L_' === substr($k, 0, 2);
-                    }, ARRAY_FILTER_USE_KEY);
-                }
-                isset($ary[$t]['f' == $t ? $s : "L_$s"]) ? $cnt[$t][0]++ : $cnt[$t][1]++;
-            }
-            return basename($fn);
-        }];
-        $path = Plan::app_obj(['main'])->path;
-        foreach (Rare::walk_dirs($path) as $dir) {
-            if ("$path/lng" == $dir)
-                continue;
-            foreach (Rare::list_path($dir, 'is_file') as $fn) {
-                if ('php' == pathinfo($fn)['extension'] ?? '')
-                    $files['app'][$fn] = ['c' => [0, 0], 'f' => [0, 0]];
-            }
-        }
-        $path = Plan::view_obj(['main'])->path;
-        foreach (Rare::list_path($path, 'is_file') as $fn) {
-            if ('jet' == pathinfo($fn)['extension'] ?? '')
-                $files['jet'][$fn] = ['c' => [0, 0], 'f' => [0, 0]];
-        }
-        $call or $this->c_parse(true, $files);
-        return $files;
-    }
+    function c_parse($get_cache) {
+        if ($get_cache)
+            return json(unserialize(Plan::cache_g('lg_flash')));
 
-    function c_parse($call, &$files = null) {
-        $files or $files =& $this->c_files(true);
-        extract($files, EXTR_REFS);
-        $const = $tfunc = [];
-        foreach ($app as $fn => &$cnt) {
-            $fun = 0;
-            foreach (token_get_all(file_get_contents($fn)) as $v) {
-                list($id, $v) = is_array($v) ? $v : [0, $v];
-                if (T_WHITESPACE == $id)
-                    continue;
-                if (T_STRING == $id) {
-                    $fun = 't' == $v ? 1 : 0;
-                    if (!$fun && preg_match('/^L_([A-Z_\d]+)$/', $v, $m))
-                        $const[$m[1]][] = $rows('c', $m[1], $fn, $cnt);
-                } elseif (1 === $fun && !$id && '(' == $v) {
-                    $fun = 2;
-                } elseif (2 === $fun && T_CONSTANT_ENCAPSED_STRING == $id) {
-                    $fun = $v;
-                } elseif (is_string($fun) && !$id && in_array($v, [',', ')'])) {
-                    $tfunc[$k = eval("return $fun;")][] = $rows('f', $k, $fn, $cnt);
-                    $fun = 0;
-                } else {
-                    $fun = 0;
-                }
-            }
+        $app = $jet = $const = $tfunc = $new = [];
+        $data = [1 => []];
+        foreach ($this->c_sync(true) as $page) {
+            $page = '*' === $page ? DEFAULT_LG : DEFAULT_LG . "_$page";
+            $data[1] += Plan::_r("lng/$page.php");
         }
+        $data[0] = get_defined_constants(true)['user'];
+
+        $put = function ($x, $str, $fn, &$cnt) use (&$data, &$new) {
+            $set = isset($data[$x][$x ? $str : "L_$str"]) or $new[$x][$str] = 0;
+            $set ? $cnt[$x][0]++ : $cnt[$x][1]++;
+            return basename($fn);
+        };
         $php = function ($s) {
             if (!in_array($s[0], ["'", '"']))
                 return $s;
@@ -313,24 +271,87 @@ class Language
                     return eval("return $v[1];");
             }
         };
-        foreach ($jet as $fn => &$cnt) { // 2do: rewrite jet parser
+
+        $path = Plan::app_obj(['main'])->path;
+        foreach (Rare::walk_dirs($path) as $dir) {
+            if ("$path/lng" == $dir)
+                continue;
+            foreach (Rare::list_path($dir, 'is_file') as $fn) {
+                if ('php' != pathinfo($fn)['extension'] ?? '')
+                    continue;
+                $app[$fn] = [[0, 0], [0, $fun = 0]];
+                foreach (token_get_all(file_get_contents($fn)) as $v) {
+                    list($id, $v) = is_array($v) ? $v : [0, $v];
+                    if (T_WHITESPACE == $id)
+                        continue;
+                    if (T_STRING == $id) {
+                        $fun = 't' == $v ? 1 : 0;
+                        if (!$fun && preg_match('/^L_([A-Z_\d]+)$/', $v, $m))
+                            $const[$m[1]][] = $put(0, $m[1], $fn, $app[$fn]);
+                    } elseif (1 === $fun && !$id && '(' == $v) {
+                        $fun = 2;
+                    } elseif (2 === $fun && T_CONSTANT_ENCAPSED_STRING == $id) {
+                        $fun = $v;
+                    } elseif (is_string($fun) && !$id && in_array($v, [',', ')'])) {
+                        $tfunc[$k = eval("return $fun;")][] = $put(1, $k, $fn, $app[$fn]);
+                        $fun = 0;
+                    } else {
+                        $fun = 0;
+                    }
+                }
+            }
+        }
+        $path = Plan::view_obj(['main'])->path;
+        foreach (Rare::list_path($path, 'is_file') as $fn) {
+            if ('jet' != pathinfo($fn)['extension'] ?? '')
+                continue;
+            $jet[$fn] = [[0, 0], [0, 0]]; // 2do: rewrite jet parser
             if (preg_match_all('/L_([A-Z_\d]+)/', $tpl = file_get_contents($fn), $m)) {
                 foreach ($m[1] as $c)
-                    $const[$c][] = $rows('c', $c, $fn, $cnt);
+                    $const[$c][] = $put(0, $c, $fn, $jet[$fn]);
             }
             if (preg_match_all('/@t\(([^\)]+)\)/', $tpl, $m)) {
                 foreach ($m[1] as $c)
-                    $tfunc[$k = $php($c)][] = $rows('f', $k, $fn, $cnt);
+                    $tfunc[$k = $php($c)][] = $put(1, $k, $fn, $jet[$fn]);
             }
         }
-        $call or json([
+        #if ($new[1] ?? false)
+         #   Language::translate($new[1], '*');
+
+        echo Plan::cache_p('lg_flash', serialize([
             'const' => array_map($map = function ($a) {
                 $s = 1 == ($n = count($a)) ? '' : 's';
                 $u = count($a = array_unique($a)) - 1;
                 return "$n use$s in " . ($u < 2 ? implode(' & ', $a) : "$a[0] + $u files");
             }, $const),
             'tfunc' => array_map($map, $tfunc),
-        ]);
+            'files' => view('_lng.files', ['rows' => function () use (&$app, &$jet) {
+                $html = function (&$ary, &$v) {
+                    $s = key($ary);
+                    $v = array_shift($ary);
+                    if ($v[0][1])
+                        $v[0][0] .= sprintf(span_r, ' + ' . $v[0][1]);
+                    if ($v[1][1])
+                        $v[1][0] .= sprintf(span_r, ' + ' . $v[1][1]);
+                    return $s;
+                };
+                for ($i = 1, $s = ''; $app || $jet; $i++, $ac = $jc = [[0, 0], [0, 0]]) {
+                    $a = $app ? $html($app, $ac) : '';
+                    $j = $jet ? $html($jet, $jc) : '';
+                    $s .= td([
+                        [$a ? $i : '', 'align="center"'], $a,
+                        $ac[0][0] ? $ac[0][0] : '', $ac[1][0] ? $ac[1][0] : '',
+                        ['', 'class="td1p"'],
+                        [$j ? $i : '', 'align="center"'], $j,
+                        $jc[0][0] ? $jc[0][0] : '', $jc[1][0] ? $jc[1][0] : '',
+                        ['', 'class="td1p"'],
+                    ]);
+                }
+                return $s;
+            }]),
+            'warning' => ($new[0] ?? false) ? 'L_' . implode(', L_', $new[0]) : '',
+            'message' => 1 ? 'No new strings found' : "Found %d new strings",
+        ]));
     }
 
     private function act($lg, &$id, $mode = 'read', $s = '', $test = false) {
