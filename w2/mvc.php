@@ -237,10 +237,10 @@ trait HOOK
 
     static function getLG_h() {
         global $sky;
-        if (!$sky->lg)
+        if (!$sky->langs)
             return DEFAULT_LG;
         $locale = Locale::acceptFromHttp($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? DEFAULT_LG);
-        $lg = implode('|', $sky->lg);
+        $lg = implode('|', $sky->langs);
         return preg_match("/^($lg)/", strtolower($locale), $match) ? $match[1] : DEFAULT_LG;
     }
 

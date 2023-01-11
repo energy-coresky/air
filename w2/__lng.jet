@@ -29,7 +29,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.array
 
 #.m_lang /////////////////////////////////////////////////////////////////////////
-    @loop($obj->list as $lg)
+    @loop($obj->langs as $lg)
     <a href="{{PATH}}?_lang=list.{{$lg}}"@active($lg==$obj->lg) class="inner-menu"
         style="{!$lg==DEFAULT_LG and 'font-weight:bold;text-decoration:underline'!}">{{$lg}} - {{$lg_names[$lg]}}
     </a>
@@ -49,14 +49,12 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             </select>
         </td></tr>
         @if(!$obj->all)
-        <tr><td>Sorted:</td>{!$e_list->td($obj->nsort)!}<td><a @href(dev('list.{{$obj->lg}}',{sort:1}))>@inc(.rar) sort</a></td></tr>
+        <tr><td>Sorted:</td>{!$e_list->td($obj->nsort)!}<td><a @href(sky.g.bss($(this),1))>@inc(.rar) Sort</a></td></tr>
         ~if
-        <tr><td>Sync7d:</td>{!$e_list->td($obj->nsync)!}<td><a @href(dev('sync.{{$obj->lg}}',{sort:1}))>@inc(.rar) sync</a></td></tr>
+        <tr><td>Sync7d:</td>{!$e_list->td($obj->nsync)!}<td><a @href(sky.g.bss($(this),0))>@inc(.rar) Sync</a></td></tr>
     </table>
     </div>
-    @if(!$obj->all)
-    <a class="inner-menu" onclick="sky.g.all(0, 0)">Add new item</a>
-    ~if
+    @if(!$obj->all)<a class="inner-menu" onclick="sky.g.bulk(0, 0)">Add new item</a>~if
     <a class="inner-menu" onclick="$('#new-page').show()">Add new page</a>
 ~if
 #.menu.header --------
@@ -74,34 +72,42 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.header.list.fix.store.sync -------------------------------------------------------------------------
 #use(.header)
 #use(.menu)
-@inc(.jscss)
+@inc(.css)
 @if(!$obj->error)
     <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
         <div style="width:47%">Goto char:@block(`` as chars)</div>
-        <div style="text-align:right;width:53%">
-            <table id="legend-tbl"><tr>
+        <div style="text-align:left;width:53%" id="legend-tbl">
+            <table><tr>
                 <td>Legend:</td>
                 <td width="7" bgcolor="yellow"></td><td>Key longer then value</td>
                 <td width="7" bgcolor="red"></td><td>Duplicated</td>
                 <td width="7" bgcolor="pink"></td><td>Not translated</td>
             </tr></table>
+            <div style="display:none">
+                <input value="Delete checked" type="button" onclick="sky.g.group('d')"/> &nbsp; &nbsp;
+                <input value="Move checked" type="button" onclick="sky.g.group('m')"/> to ..
+            </div>
         </div>
     </div>
     <div class="bg-x bg-xm" style="">
         <div style="width:30%">
-            <a class="a-btn" href="#">−</a>
-            <a class="a-btn" href="#">±</a>
-            <a class="a-btn" href="#">✱</a>
-            &nbsp; Checked - 0
+            <a class="a-btn" @href(sky.g.chk('-'))>−</a>
+            <a class="a-btn" @href(sky.g.chk('+'))>±</a>
+            <a class="a-btn" @href(sky.g.chk('*'))>✱</a>
+            &nbsp; Checked - <span id="lg-cnt">0</span>
         </div>
         <div style="width:40%">
-            <a class="a-btn" @href(sky.g.page(0, '+')) disabled>@inc(.rar) All sorted</a>
-            &nbsp; <a class="a-btn" @href(sky.g.parse())>F9 - Parse</a>
+            <a class="a-btn" @href(sky.g.page(0, '+'))>@inc(.rar) All sorted</a>
+            &nbsp; <a@active($obj->gpd) class="a-btn" @href(sky.g.parse())>F9 - Parse</a>
         </div>
-        <div style="width:30%">
-            <a class="a-btn" active @href($('#lang').html(sky.g.html[0]))>Strings - {{$e_list->cnt}}</a>
-            &nbsp; <a class="a-btn" @href($('#lang').html(sky.g.html[1])) disabled>Files - 42/27</a>
+        <div style="width:30%" id="lg-tabs">
+            <a class="a-btn" active @href(sky.g.tab(0))>Strings - {{$e_list->cnt}}</a>
+            &nbsp; <a class="a-btn" @href(sky.g.tab(1)) disabled>Files - 0</a>
         </div>
+    </div>
+    <div style="background:pink;padding:10px;display:none">
+        <a @href($(this).parent().hide()) class="fr">@inc(__std.x)</a>
+        Warning: this constant(s) found in code, but don't declared: <span id="lg-warn"></span>
     </div>
 ~if
 <div id="lang">
@@ -109,16 +115,16 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <h1>SkyLang table name not set</h1>
     <a href="_dev?main=0">fix</a>
 @elseif(2 == $obj->error)
-    <h1>Array $sky->lg is not set</h1>
+    <h1>Array $sky->langs is not set</h1>
 @elseif(3 == $obj->error)
-    <h1>DEFAULT_LG is not in array $sky->lg</h1>
+    <h1>DEFAULT_LG is not in array $sky->langs</h1>
 @elseif(4 == $obj->error)
     <h1>The table `{{SKY::$dd->pref . $sky->d_lgt}}` is absent. Create?</h1>
     <pre>@inc(.table)</pre>
     <input value="Yes!" type="button" onclick="sky.g.page(0, '!' + $(this).prev().text())"/>
     <h3>Note: you can define table name in the <u><a href="_dev">Development</a></u> section</h3>
 @elseif(5 == $obj->error)
-    <h1>Languages not match (table and $sky->lg). Fix?</h1>
+    <h1>Languages not match (table and $sky->langs). Fix?</h1>
     <pre>{!$obj->sql!}</pre>
     <input value="Yes!" type="button" onclick="sky.g.page(0, '!' + $(this).prev().text())"/>
 @else
@@ -152,24 +158,25 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             <td colspan="4"></td>
             </tr>
         ~if
-        <tr>
+        <tr class="tr-row">
         <td{!$row->yell and ' bgcolor="yellow"'!}></td>
         <td{!$row->red and ' bgcolor="red"'!}></td>
-        <td><a @href(sky.g.delete({{$row->id}}, {{(int)$row->red}}))><img src="img/a_del.gif"/></a> {{$row->val}}</td>
+        <td><a @href(sky.g.delete({{$row->id}}, {{(int)$row->red}}))><img src="@inc(__std.d2)"/></a> {{$row->val}}</td>
         <td style="text-align:right{{$row->bgid}}">{{$row->id}}
-            <a @href(sky.g.edit(this, '{{$row->id}}'))><img src="img/a_upd.gif"/></a>
+            <a @href(sky.g.edit(this, '{{$row->id}}'))><img src="@inc(__std.e2)"/></a>
         </td>
         <td{!$row->pink and ' bgcolor="pink"'!}></td>
         <td>{{$row->val2}}</td>
-        <td><a @href(sky.g.const(this, '{{$row->id}}'))><img src="img/a_upd.gif"/></a> {{$row->key}}</td>
+        <td><a @href(sky.g.const(this, '{{$row->id}}'))><img src="@inc(__std.e2)"/></a> {{$row->key}}</td>
         </tr>
     ~loop
     </table>
     @use(`{!$e_list->chars()!}` as chars)
     Items: {{$e_list->cnt}}
-    @if($obj->gpd)<script>if (!sky.g.html[0]) sky.g.parse(1)</script>~if
 ~if
 </div>
+@inc(.js)
+@if($obj->gpd)<script>if (!sky.g.html[0]) sky.g.parse(1)</script>~if
 #.list.fix.store.sync
 
 #.files /////////////////////////////////////////////////////////////////////////
@@ -181,23 +188,23 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 </tr>{!$rows()!}</table>
 #.files
 
-#.const /////////////////////////////////////////////////////////////////////////
-<input type="hidden" name="const-prev" value="{{$val}}"/>
-<input id="tr-textarea" value="{{$val}}"/>
-<a @href($(this).prev().val(''))><img src="img/a_del.gif"/></a>
-<input onclick="sky.g.cancel()" type="button" value="cancel"/>
-<input onclick="sky.g.save({{$_POST['id']}}, 1)" type="button" value="OK"/>
-#.const
-
 #.edit /////////////////////////////////////////////////////////////////////////
-<textarea id="tr-textarea" rows="2" cols="40">{{$val}}</textarea><br/>
-<input onclick="sky.g.cancel()" type="button" value="cancel"/>
-<input onclick="sky.g.save({{$_POST['id']}}, 0)" type="button" value="OK"/>
+@if($_POST['m'])
+    <textarea id="tr-textarea" rows="2" cols="40">{{$val}}</textarea><br/>
+    <input onclick="sky.g.cancel()" type="button" value="cancel"/>
+    <input onclick="sky.g.save({{$_POST['id']}}, 0)" type="button" value="OK"/>
+@else~{- constant -}
+    <input type="hidden" name="const-prev" value="{{$val}}"/>
+    <input id="tr-textarea" value="{{$val}}"/>
+    <a @href($(this).prev().val(''))><img src="img/a_del.gif"/></a>
+    <input onclick="sky.g.cancel()" type="button" value="cancel"/>
+    <input onclick="sky.g.save({{$_POST['id']}}, 1)" type="button" value="OK"/>
+~if
 #.edit
 
-#.all /////////////////////////////////////////////////////////////////////////
+#.bulk /////////////////////////////////////////////////////////////////////////
 <td colspan="7">
-<form id="all-edit">
+<form id="bulk-edit">
 @loop($e_list)
     @if(1 == $_)
         <dl><dt><u>const</u>:</dt>
@@ -222,14 +229,14 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <dl><dt>&nbsp;</dt>
 <dd>
     <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.all(this, '{{$id}}', 1)" type="button" value="save"/>
+    <input onclick="sky.g.bulk(this, '{{$id}}', 1)" type="button" value="save"/>
 </dd>
 </dl>
 </form>
 </td>
-#.all
+#.bulk
 
-#.jscss //////////////////////////////////////////////////////////////////////////////
+#.js //////////////////////////////////////////////////////////////////////////////
 <script>
 sky.g.editing = false;
 sky.g.info = 'Please finish current editing before open new one';
@@ -237,12 +244,12 @@ sky.g.delete = function(id, force) {
     if (force || confirm('Are you sure? Delete item?'))
         dev('fix.{{$obj->lg}}', {delete:id});
 };
-sky.g.all = function(el, id, is_save) {
+sky.g.bulk = function(el, id, is_save) {
     if (is_save) {
-        var s = $('#all-edit input[name=const]').val();
+        var s = $('#bulk-edit input[name=const]').val();
         if ('' !== s && !s.match(/^[a-z\d_]+$/i))
             return alert('Use identifiers chars only!');
-        ajax('store.' + id, $('#all-edit').serialize(), function(r) {
+        ajax('store.' + id, $('#bulk-edit').serialize(), function(r) {
             if ('1' == r)
                 return alert('Identifier non unique!');
             $('#v-body').html(r);
@@ -254,7 +261,7 @@ sky.g.all = function(el, id, is_save) {
             el = $('#lang-head').before('<tr></tr>').prev();
         }
         sky.g.editing = [el, el.html()];
-        ajax('all.' + id, {}, function(r) {
+        ajax('bulk.' + id, {}, function(r) {
             el.html(r);
         });
     }
@@ -275,11 +282,11 @@ sky.g.page = function(el, s) {
 sky.g.edit = function(el, id) {
     if (sky.g.editing)
         return alert(sky.g.info);
-    if ({{(int)($obj->lg==DEFAULT_LG)}})
-        return sky.g.all(el, id, 0);
+    if ({{(int)($obj->lg == DEFAULT_LG)}})
+        return sky.g.bulk(el, id, 0);
     el = $(el).parent().next().next();
     sky.g.editing = [el, el.html()];
-    ajax('edit.{{$obj->lg}}', {id:id}, function(r) {
+    ajax('edit.{{$obj->lg}}', {id:id, m:2}, function(r) {
         el.html(r);
     });
 };
@@ -288,7 +295,7 @@ sky.g.const = function(el, id) {
         return alert(sky.g.info);
     el = $(el).parent();
     sky.g.editing = [el, el.html()];
-    ajax('const.{{$obj->lg}}', {id:id}, function(r) {
+    ajax('edit.{{$obj->lg}}', {id:id, m:0}, function(r) {
         el.html(r);
     });
 };
@@ -307,6 +314,12 @@ sky.g.save = function(id, is_const) {
         $('#v-body').html(r);
     });
 };
+sky.g.bss = function(el, is_sort) {
+    if ('NO' == el.parent().prev().text()) {
+        is_sort ? dev('list.{{$obj->lg}}',{sort:1}) : ajax('sync', {});
+        el.parent().prev().text('YES').removeClass('yn-r').addClass('yn-g');
+    }
+};
 sky.g.chk = 0;
 sky.g.key = function(v) {
     sky.g.chk && $('input.ndef-lg').val(v);
@@ -316,36 +329,88 @@ sky.g.parse = function(m) {
     ajax('parse.' + (m || ''), {}, function(r) {
         if (!m)
             return sky.g.page(0, '$');
-        var tbl = $('#lang-head').parent();
-        var walk = function(ary, n) {
+        var tbl = $('#lang-head').parent(), cnt;
+        var walk = function(ary, n, cnt) {
             for (var i in ary) {
-                tbl.find('tr').each(function() {
+                tbl.find('tr.tr-row').each(function() {
                     var td = $(this).find('td:eq(' + n + ')');
-                    if (td && $.trim(td.text()) == i) {
-                        $(this).css('background', '#cfc');
-                        @if($obj->lg == DEFAULT_LG)
-                            $(this).find('td:eq(5)').text(ary[i]);
-                        ~if
-                    }
+                    if (td && $.trim(td.text()) == i)
+                        $(this).find('td:eq(5)').text(ary[i]);
                 });
             }
+            cnt && tbl.find('tr.tr-row').each(function() {
+                var td = $(this).find('td:eq(5)');
+                if (td && !$.trim(td.text()))
+                    cnt++ && $(this).addClass('lg-chk') && td.html('<span style="color:red">0 uses</span>');
+            });
+            return cnt - 1;
         };
         walk(r.tfunc, 2);
-        walk(r.const, 6);
-        sky.g.html[0] = $('#lang').html();
-        $('#lang').html(sky.g.html[1] = r.files);
-        $('#tpl-list').html(r.message);
+        sky.g.cnt(cnt = walk(r.const, 6, 1));
+        sky.g.html = [$('#lang').html(), r.files];
+        sky.g.tab(1, r.fcnt);
+        $('#tpl-list').html('Found ' + r.message + ' new string(s), ' + cnt + " string(s) don't used");
+
         $('#master').html('');
+        if (r.warning)
+            $('#lg-warn').html(r.warning).parent().show();
     });
 };
+sky.g.tab = function(m, fcnt) {
+    $('#lang').html(sky.g.html[m]);
+    sky.g.chk();
+    var el = $('#lg-tabs a:eq(' + m + ')').removeAttr('disabled').attr('active', true);
+    if (fcnt)
+        el.text('Files - ' + fcnt);
+    $('#lg-tabs a:eq(' + (1 - m) + ')').removeAttr('active');
+};
+sky.g.cnt = function(n) {
+    var x = parseInt($('#lg-cnt').html());
+    $('#lg-cnt').html(n);
+    if (x && !n || !x && n)
+        $('#legend-tbl table').toggle().next().toggle();
+};
+sky.g.chk = function(x) {
+    var rows = $('#lang-head').parent().find('tr.tr-row')
+    switch (x) {
+        case '-':
+            rows.removeClass('lg-chk');
+            x = 0;
+            break;
+        case '+':
+            rows.addClass('lg-chk');
+            x = rows.length;
+            break;
+        case '*':
+            rows.toggleClass('lg-chk');
+            x = rows.length - parseInt($('#lg-cnt').html());
+            break;
+        default:
+            return rows.click(function() {
+                sky.g.cnt(parseInt($('#lg-cnt').html()) + ($(this).hasClass('lg-chk') ? -1 : 1));
+                $(this).toggleClass('lg-chk');
+            });
+    }
+    sky.g.cnt(x);
+};
+sky.g.chk();
+
+sky.g.group = function(m, to) {
+    var ary = [], rows = $('#lang-head').parent().find('tr.tr-row');
+    rows.each(function() {
+        if ($(this).hasClass('lg-chk')) {
+            ary.push($.trim($(this).find('td:eq(3)').text()));
+        }
+    });
+    ajax('group.' + m, {row:ary, to:to || ''});
+};
 </script>
-@inc(.css)
-#.jscss.css
+#.js.css
 <style>
 #lang { margin:10px }
 #lang h1 { color:red }
-#legend-tbl {display:inline-table;}
-#legend-tbl td { padding-right:10px; border-bottom:none; }
+#legend-tbl table {display:inline-table;}
+#legend-tbl table td { padding-right:10px; border-bottom:none; }
 #t-i18n { width:100% }
 #t-i18n td { vertical-align:middle; }
 #t-i18n a { border-bottom:none;padding:1px 3px }
@@ -359,10 +424,8 @@ select {font-size:12px;}
     border-bottom:1px solid #4338ca;
 }
 [disabled] {color:#ccc;}
-.td1p {
-    width:1%;
-    background:#ccc
-}
+.td1p { width:1%; background:#ccc}
+.lg-chk { background:#bfdbfe; }
 </style>
 #.css
 

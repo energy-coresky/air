@@ -53,7 +53,35 @@ isset($error) && $error && ($sky->debug || DEV) or $error = isset($list[$no]) ? 
 <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
   <path d="M1.293 1.293a1 1 0 0 1 1.414 0L8 6.586l5.293-5.293a1 1 0 1 1 1.414 1.414L9.414 8l5.293 5.293a1 1 0 0 1-1.414 1.414L8 9.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L6.586 8 1.293 2.707a1 1 0 0 1 0-1.414z"></path>
 </svg>
-#.x
+#.x.e
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="12px" height="12px" viewBox="0 0 12 12" enable-background="new 0 0 12 12" xml:space="preserve">
+<image width="12" height="12" x="0" y="0" href="
+#.e2
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMBAMAAACkW0HUAAAABGdBTUEAALGPC/xhBQAAACBjSFJN
+AAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAD1BMVEWAgIAAAAD4tLD4yAD4
+/Pjta+UlAAAAAXRSTlMAQObYZgAAAAFiS0dEAf8CLd4AAAAHdElNRQfnAQsGJQTG50dnAAAALklE
+QVQI12NgAAJGBjAQEgBzlBRBlDCYx2hsCOYYY3KEwRwRR7AmQUewCYJgDgB3qwMw9N6jzgAAACV0
+RVh0ZGF0ZTpjcmVhdGUAMjAyMy0wMS0xMVQwNjozNzowMiswMDowMIeMorQAAAAldEVYdGRhdGU6
+bW9kaWZ5ADIwMjMtMDEtMTFUMDY6Mzc6MDIrMDA6MDD20RoIAAAAKHRFWHRkYXRlOnRpbWVzdGFt
+cAAyMDIzLTAxLTExVDA2OjM3OjA0KzAwOjAwwhQO7QAAAABJRU5ErkJggg==
+#.e2
+" />
+</svg>
+#.d.e
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="14px" height="14px" viewBox="0 0 14 14" enable-background="new 0 0 14 14" xml:space="preserve">
+<image width="14" height="14" x="0" y="0" href="
+#.d2
+data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAOAgMAAABiJsVCAAAABGdBTUEAALGPC/xhBQAAACBjSFJN
+AAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAADFBMVEXMzMz/MzN7e3sAAAAh
+KB7EAAAAAXRSTlMAQObYZgAAAAFiS0dEAxEMTPIAAAAHdElNRQfnAQsGLhuoG5NZAAAAOklEQVQI
+12NggAABBgYxhhAGBtbGUAYGxtB4oFBoAYg4AOI6AInCAKDsAaASdqBKBhkgxWDAwAzRDQD6FgbJ
+mjLHrAAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMy0wMS0xMVQwNjo0NjoyNyswMDowMFFo9NMAAAAl
+dEVYdGRhdGU6bW9kaWZ5ADIwMjMtMDEtMTFUMDY6NDY6MjcrMDA6MDAgNUxvAAAAKHRFWHRkYXRl
+OnRpbWVzdGFtcAAyMDIzLTAxLTExVDA2OjQ2OjI3KzAwOjAwdyBtsAAAAABJRU5ErkJggg==
+#.d2
+" />
+</svg>
+#.d
 
 ==============================================================================================
 |||||||||||||||||||||||||||||||||||||||||||| GATE ||||||||||||||||||||||||||||||||||||||||||||

@@ -20,7 +20,7 @@ class SKY implements PARADISE
     public $cnt_error = 0;
     public $cli;
     public $gpc = '';
-    public $lg = [];
+    public $langs = [];
     public $shutdown = [];
 
     static $mem = [];
