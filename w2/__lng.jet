@@ -59,17 +59,17 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 ~if
 #.menu.header --------
 <h4>LANGUAGE: {{$obj->lg and strtoupper($lg_names[$obj->lg])}},
-    @if($obj->all)ALL PAGES SORTED@else
-    <form style="display:inline" method="post">PAGE:
+    <form style="display:inline" method="post">
+    @if($obj->all)ALL PAGES SORTED@else PAGE:
     <select name="page" onchange="this.form.submit()">
         @loop($obj->pages as $k => $v)<option value="{{$k}}"@selected($k==$obj->page)>{{$v}}</option>~loop
     </select>
+    ~if
     <input type="hidden" name="a" value=""/>
     @if('*' != $obj->page)<a @href(sky.g.page(0,'-')) style="font-weight:normal">Delete</a>~if
     </form>
-    ~if
 </h4>
-#.header.list.fix.store.sync -------------------------------------------------------------------------
+#.header.list.fix.store.sync.group -------------------------------------------------------------------------
 #use(.header)
 #use(.menu)
 @inc(.css)
@@ -85,19 +85,26 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             </tr></table>
             <div style="display:none">
                 <input value="Delete checked" type="button" onclick="sky.g.group('d')"/> &nbsp; &nbsp;
-                <input value="Move checked" type="button" onclick="sky.g.group('m')"/> to ..
+                @if(count($obj->pages) > 1)
+                <input value="Move checked" type="button" onclick="sky.g.group('m',$(this).next().val())"/> to
+                <select>
+                    @loop($obj->pages as $k => $v)
+                        @continue($k == $obj->page && !$obj->all)<option value="{{$k}}">{{$v}}</option>
+                    ~loop
+                </select>
+                ~if
             </div>
         </div>
     </div>
     <div class="bg-x bg-xm" style="">
         <div style="width:30%">
-            <a class="a-btn" @href(sky.g.chk('-'))>−</a>
-            <a class="a-btn" @href(sky.g.chk('+'))>±</a>
+            <a class="a-btn" @href(sky.g.chk('-'))>-</a>
+            <a class="a-btn" @href(sky.g.chk('+'))>+</a>
             <a class="a-btn" @href(sky.g.chk('*'))>✱</a>
             &nbsp; Checked - <span id="lg-cnt">0</span>
         </div>
         <div style="width:40%">
-            <a class="a-btn" @href(sky.g.page(0, '+'))>@inc(.rar) All sorted</a>
+            <a@active($obj->all)@disabled(false === $obj->all) class="a-btn" @href(sky.g.page(0, '+'))>@inc(.rar) All sorted</a>
             &nbsp; <a@active($obj->gpd) class="a-btn" @href(sky.g.parse())>F9 - Parse</a>
         </div>
         <div style="width:30%" id="lg-tabs">
@@ -177,15 +184,15 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 </div>
 @inc(.js)
 @if($obj->gpd)<script>if (!sky.g.html[0]) sky.g.parse(1)</script>~if
-#.list.fix.store.sync
+#.list.fix.store.sync.group
 
 #.files /////////////////////////////////////////////////////////////////////////
-@inc(.css)
 <table width="100%" cellspacing="0" cellpadding="2" style="padding:0px">
 <tr>
     <th width="5%">##</th><th width="34%">PHP files</th><th width="5%">L_..</th><th width="5%">t(..)</th><th class="td1p"></th>
     <th width="5%">##</th><th width="34%">Jet files</th><th width="5%">L_..</th><th width="5%">t(..)</th><th class="td1p"></th>
-</tr>{!$rows()!}</table>
+</tr>{!$rows()!}
+</table>
 #.files
 
 #.edit /////////////////////////////////////////////////////////////////////////
@@ -328,7 +335,7 @@ sky.g.html = ['', ''];
 sky.g.parse = function(m) {
     ajax('parse.' + (m || ''), {}, function(r) {
         if (!m)
-            return sky.g.page(0, '$');
+            return sky.g.page(0, '{{$obj->all ? '$+' : '$'}}');
         var tbl = $('#lang-head').parent(), cnt;
         var walk = function(ary, n, cnt) {
             for (var i in ary) {
@@ -402,7 +409,7 @@ sky.g.group = function(m, to) {
             ary.push($.trim($(this).find('td:eq(3)').text()));
         }
     });
-    ajax('group.' + m, {row:ary, to:to || ''});
+    dev('group.' + m, {row:ary, to:to || ''});
 };
 </script>
 #.js.css
