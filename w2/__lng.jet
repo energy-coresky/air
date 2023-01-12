@@ -91,7 +91,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
                     @loop($obj->pages as $k => $v)
                         @continue($k == $obj->page && !$obj->all)<option value="{{$k}}">{{$v}}</option>
                     ~loop
-                </select>
+                </select> page
                 ~if
             </div>
         </div>
