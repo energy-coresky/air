@@ -102,10 +102,13 @@ class Language
                 '$' == $a or $this->all = $lg;
             } else {
                 if ('!' == $a[0]) { # exec SQLs from POST
-                    $this->multi_sql(substr($a, 1));
+                    $this->sql = substr($a, 1);
                 } else { # add page
                     $this->make_sql($_POST['page'] = $a);
-                    $this->multi_sql($this->sql);
+                }
+                foreach (explode(';', $this->sql) as $sql) {
+                    if ($sql = trim($sql))
+                        sql($sql);
                 }
                 $this->error = 0;
             }
@@ -145,6 +148,33 @@ class Language
         return $id;
     }
 
+    function c_delete($id) {
+        $id = $this->id($id);
+        foreach ($this->langs as $lg) # delete item
+            $this->act($lg, $id, 'delete');
+        return true;
+    }
+
+    function c_save($id) {
+        $id = $this->id($id);
+        if (!isset($_POST['s'])) {
+            $const = strtoupper($_POST['const']);
+            $new = !$id; # $id passed by reference!
+            foreach ($this->langs as $lg) {
+                 if ($this->act($lg, $id, 'bulk', [$const, escape($_POST[$lg]), $new]))
+                     return true;
+            }
+        } elseif ('~' == $_POST['const-prev']) {
+            $this->act($_POST['lg'], $id, 'text', escape($_POST['s']));
+        } else {
+            foreach ($this->langs as $lg) {
+                if ($this->act($lg, $id, 'const', strtoupper($_POST['s'])))
+                    return true;
+            }
+        }
+        return true;
+    }
+
     function c_edit($lg) {
         $id = $this->id($_POST['id']);
         $m = $_POST['m'] ? 1 : 0;
@@ -167,42 +197,6 @@ class Language
                 ];
             }],
         ];
-    }
-
-    function c_store($id) {
-        $id = $this->id($id);
-        $const = strtoupper($_POST['const']);
-        $new = !$id; # $id passed by reference!
-        foreach ($this->langs as $lg) {
-             if ($this->act($lg, $id, 'bulk', [$const, escape($_POST[$lg]), $new]))
-                 return [];
-        }
-        return $this->c_list(DEFAULT_LG);
-    }
-
-    private function multi_sql($sql) {
-        foreach (explode(';', $sql) as $sql) {
-            if ($sql = trim($sql))
-                sql($sql);
-        }
-    }
-
-    function c_fix($lg) {
-        if (isset($_POST['sql'])) {
-            $this->multi_sql($_POST['sql']);
-        } elseif (isset($_POST['save'])) {
-            if ('~' != $_POST['const-prev']) {
-                foreach ($this->langs as $v) {
-                    if ($this->act($v, $_POST['id'], 'const', strtoupper($_POST['save'])))
-                        return [];
-                }
-            } else {
-                $this->act($lg, $_POST['id'], 'text', escape($_POST['save']));
-            }
-        } else foreach ($this->langs as $v) { # delete item
-            $this->act($v, $_POST['delete'], 'delete');
-        }
-        return $this->c_list($lg);
     }
 
     function c_group($mode) {
@@ -228,8 +222,7 @@ class Language
                     $this->act($lg, $id, 'insert', $set); # $id passed by reference!
             }
         }
-        return $this->c_list('it');
-        echo 1;
+        return true;
     }
 
     private function act($lg, &$id, $mode = 'read', $s = '') {
@@ -264,7 +257,7 @@ class Language
                 if (is_array($s))
                     list($s, $val, $new) = $s;
                 if ($def_lg && '' !== $s && $_POST['const-prev'] != $s) {
-                    foreach ($ary as $v) {//2do: other pages
+                    foreach ($this->load_all() as $v) {
                         if (explode(' ', $v, 2)[0] === $s) {
                             echo 1; # non unique
                             return true;
@@ -462,18 +455,22 @@ class Language
         return $ary;
     }
 
+    private function &load_all() {
+        $all = $this->t->all(qp('lg=$+', DEFAULT_LG), '$cc(name, ".", flag), tmemo');
+        array_walk($all, function (&$v, $k) {
+            list ($k, $flag) = explode('.', $k);
+            $this->nsync |= $flag & self::NON_SYNC;
+            if ('' !== $v)
+                $v = "$k." . str_replace("\n", "\n$k.", trim($v, "\n")) . "\n";
+        });
+        return SKY::ghost('i', trim(implode('', $all), "\n"));
+    }
+
     private function listing($lg) {
         $list = $this->t->all(qp('name<>"*" and lg=$+', DEFAULT_LG), 'name');
         $this->pages += array_combine($list, $list);
         if ($this->all) {
-            $all = $this->t->all(qp('lg=$+', DEFAULT_LG), '$cc(name, ".", flag), tmemo');
-            array_walk($all, function (&$v, $k) {
-                list ($k, $flag) = explode('.', $k);
-                $this->nsync |= $flag & self::NON_SYNC;
-                if ('' !== $v)
-                    $v = "$k." . str_replace("\n", "\n$k.", trim($v, "\n")) . "\n";
-            });
-            $dary = SKY::ghost('i', trim(implode('', $all), "\n"));
+            $dary =& $this->load_all();
             $this->sort($dary);
         } else {
             $dary = $this->load(DEFAULT_LG, isset($_POST['sort']));
@@ -508,7 +505,7 @@ class Language
                     $chars[] = a($nc, "#_$sz");
                 }
                 return [
-                    'red' => $prev === $v, // duplicated
+                    'red' => (int)$prev === $v, // duplicated
                     'val' => $prev = $v,
                     'val2' => $v2 = $ary ? explode(' ', $ary[$id], 2)[1] : '',
                     'pink' => $ary && $v == $v2, // not translated

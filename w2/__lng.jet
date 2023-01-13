@@ -48,10 +48,10 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
                 <option@selected(2 == $sky->d_trans) value="2">api ON</option>
             </select>
         </td></tr>
+        <tr><td>Sync7d:</td>{!$e_list->td($obj->nsync)!}<td><a @href(sky.g.bss($(this),0))>@inc(.rar) Sync</a></td></tr>
         @if(!$obj->all)
         <tr><td>Sorted:</td>{!$e_list->td($obj->nsort)!}<td><a @href(sky.g.bss($(this),1))>@inc(.rar) Sort</a></td></tr>
         ~if
-        <tr><td>Sync7d:</td>{!$e_list->td($obj->nsync)!}<td><a @href(sky.g.bss($(this),0))>@inc(.rar) Sync</a></td></tr>
     </table>
     </div>
     @if(!$obj->all)<a class="inner-menu" onclick="sky.g.bulk(0, 0)">Add new item</a>~if
@@ -60,7 +60,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.menu.header --------
 <h4>LANGUAGE: {{$obj->lg and strtoupper($lg_names[$obj->lg])}},
     <form style="display:inline" method="post">
-    @if($obj->all)ALL PAGES SORTED@else PAGE:
+    @if($obj->all)ALL PAGES SORTED@elseif(false === $obj->all) PAGE: &lt;* COMMON&gt;@elsePAGE:
     <select name="page" onchange="this.form.submit()">
         @loop($obj->pages as $k => $v)<option value="{{$k}}"@selected($k==$obj->page)>{{$v}}</option>~loop
     </select>
@@ -69,7 +69,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     @if('*' != $obj->page)<a @href(sky.g.page(0,'-')) style="font-weight:normal">Delete</a>~if
     </form>
 </h4>
-#.header.list.fix.store.sync.group -------------------------------------------------------------------------
+#.header.list -------------------------------------------------------------------------
 #use(.header)
 #use(.menu)
 @inc(.css)
@@ -120,7 +120,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <div id="lang">
 @if(1 == $obj->error)
     <h1>SkyLang table name not set</h1>
-    <a href="_dev?main=0">fix</a>
+    Set it <a href="_dev?main=0">here</a>
 @elseif(2 == $obj->error)
     <h1>Array $sky->langs is not set</h1>
 @elseif(3 == $obj->error)
@@ -168,7 +168,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <tr class="tr-row">
         <td{!$row->yell and ' bgcolor="yellow"'!}></td>
         <td{!$row->red and ' bgcolor="red"'!}></td>
-        <td><a @href(sky.g.delete({{$row->id}}, {{(int)$row->red}}))><img src="@inc(__std.d2)"/></a> {{$row->val}}</td>
+        <td><a @href(sky.g.delete(this, '{{$row->id}}', {{$row->red}}))><img src="@inc(__std.d2)"/></a> {{$row->val}}</td>
         <td style="text-align:right{{$row->bgid}}">{{$row->id}}
             <a @href(sky.g.edit(this, '{{$row->id}}'))><img src="@inc(__std.e2)"/></a>
         </td>
@@ -184,7 +184,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 </div>
 @inc(.js)
 @if($obj->gpd)<script>if (!sky.g.html[0]) sky.g.parse(1)</script>~if
-#.list.fix.store.sync.group
+#.list
 
 #.files /////////////////////////////////////////////////////////////////////////
 <table width="100%" cellspacing="0" cellpadding="2" style="padding:0px">
@@ -199,13 +199,13 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 @if($_POST['m'])
     <textarea id="tr-textarea" rows="2" cols="40">{{$val}}</textarea><br/>
     <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.save({{$_POST['id']}}, 0)" type="button" value="OK"/>
+    <input onclick="sky.g.save('{{$_POST['id']}}', 0)" type="button" value="OK"/>
 @else~{- constant -}
     <input type="hidden" name="const-prev" value="{{$val}}"/>
     <input id="tr-textarea" value="{{$val}}"/>
     <a @href($(this).prev().val(''))><img src="img/a_del.gif"/></a>
     <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.save({{$_POST['id']}}, 1)" type="button" value="OK"/>
+    <input onclick="sky.g.save('{{$_POST['id']}}', 1)" type="button" value="OK"/>
 ~if
 #.edit
 
@@ -247,19 +247,63 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 <script>
 sky.g.editing = false;
 sky.g.info = 'Please finish current editing before open new one';
-sky.g.delete = function(id, force) {
-    if (force || confirm('Are you sure? Delete item?'))
-        dev('fix.{{$obj->lg}}', {delete:id});
+sky.g.cancel = function() {
+    var el = sky.g.editing[0].html(sky.g.editing[1]);
+    sky.g.editing = false;
+    return el;
+};
+sky.g.yn = function(tr, yn) {
+    var td = $('#t-i18n tr:eq(' + tr + ') td:eq(1)')
+    td.text(yn ? 'YES' : 'NO').removeClass(yn ? 'yn-r' : 'yn-g').addClass(yn ? 'yn-g' : 'yn-r');
+};
+sky.g.delete = function(el, id, force) {
+    if (force || confirm('Are you sure? Delete item?')) {
+        ajax('delete.' + id, {}, function() {
+            $(el).parent().parent().remove()
+            sky.g.yn(1)
+        });
+    }
+};
+sky.g.save = function(id, is_const) {
+    var s = $('#tr-textarea').val();
+    if (is_const && !s.match(/^(|[a-z\d_]+)$/i))
+        return alert('Use identifiers chars only!');
+    var cp = is_const ? $('input[name=const-prev]').val() : '~';
+    ajax('save.' + id, {s:s, lg:'{{$obj->lg}}', 'const-prev':cp}, function(r) {
+        if ('1' == r)
+            return alert('Identifier non unique!');
+        var el = sky.g.cancel();
+        is_const ? el.html(el.html().replace(/ [a-z\d_]*$/i, ' ' + s.toUpperCase())) : el.text(s);
+        sky.g.yn(1)
+    });
+};
+sky.g.edit = function(el, id) {
+    if (sky.g.editing)
+        return alert(sky.g.info);
+    if ({{(int)($obj->lg == DEFAULT_LG)}})
+        return sky.g.bulk(el, id, 0);
+    el = $(el).parent().next().next();
+    sky.g.editing = [el, el.html()];
+    ajax('edit.{{$obj->lg}}', {id:id, m:1}, el);
+};
+sky.g.const = function(el, id) {
+    if (sky.g.editing)
+        return alert(sky.g.info);
+    el = $(el).parent();
+    sky.g.editing = [el, el.html()];
+    ajax('edit.{{$obj->lg}}', {id:id, m:0}, el);
 };
 sky.g.bulk = function(el, id, is_save) {
     if (is_save) {
         var s = $('#bulk-edit input[name=const]').val();
         if ('' !== s && !s.match(/^[a-z\d_]+$/i))
             return alert('Use identifiers chars only!');
-        ajax('store.' + id, $('#bulk-edit').serialize(), function(r) {
+        ajax('save.' + id, $('#bulk-edit').serialize(), function(r) {
             if ('1' == r)
                 return alert('Identifier non unique!');
-            $('#v-body').html(r);
+            ;
+            var el = sky.g.cancel();
+            sky.g.yn(1)
         });
     } else {
         if (el) {
@@ -268,9 +312,7 @@ sky.g.bulk = function(el, id, is_save) {
             el = $('#lang-head').before('<tr></tr>').prev();
         }
         sky.g.editing = [el, el.html()];
-        ajax('bulk.' + id, {}, function(r) {
-            el.html(r);
-        });
+        ajax('bulk.' + id, {}, el);
     }
 };
 sky.g.page = function(el, s) {
@@ -286,45 +328,10 @@ sky.g.page = function(el, s) {
     form.find('input[name=a]').val(s);
     form.submit();
 };
-sky.g.edit = function(el, id) {
-    if (sky.g.editing)
-        return alert(sky.g.info);
-    if ({{(int)($obj->lg == DEFAULT_LG)}})
-        return sky.g.bulk(el, id, 0);
-    el = $(el).parent().next().next();
-    sky.g.editing = [el, el.html()];
-    ajax('edit.{{$obj->lg}}', {id:id, m:2}, function(r) {
-        el.html(r);
-    });
-};
-sky.g.const = function(el, id) {
-    if (sky.g.editing)
-        return alert(sky.g.info);
-    el = $(el).parent();
-    sky.g.editing = [el, el.html()];
-    ajax('edit.{{$obj->lg}}', {id:id, m:0}, function(r) {
-        el.html(r);
-    });
-};
-sky.g.cancel = function() {
-    sky.g.editing[0].html(sky.g.editing[1]);
-    sky.g.editing = false;
-};
-sky.g.save = function(id, is_const) {
-    var s = $('#tr-textarea').val();
-    if (is_const && !s.match(/^[a-z\d_]+$/i))
-        return alert('Use identifiers chars only!');
-    var cp = is_const ? $('input[name=const-prev]').val() : '~';
-    ajax('fix.{{$obj->lg}}', {save:s, id:id, 'const-prev':cp}, function(r) {
-        if ('1' == r)
-            return alert('Identifier non unique!');
-        $('#v-body').html(r);
-    });
-};
 sky.g.bss = function(el, is_sort) {
     if ('NO' == el.parent().prev().text()) {
         is_sort ? dev('list.{{$obj->lg}}',{sort:1}) : ajax('sync', {});
-        el.parent().prev().text('YES').removeClass('yn-r').addClass('yn-g');
+        sky.g.yn(is_sort ? 2 : 1, 1)
     }
 };
 sky.g.chk = 0;
@@ -405,11 +412,23 @@ sky.g.chk();
 sky.g.group = function(m, to) {
     var ary = [], rows = $('#lang-head').parent().find('tr.tr-row');
     rows.each(function() {
-        if ($(this).hasClass('lg-chk')) {
+        if ($(this).hasClass('lg-chk'))
             ary.push($.trim($(this).find('td:eq(3)').text()));
-        }
     });
-    dev('group.' + m, {row:ary, to:to || ''});
+    ajax('group.' + m, {row:ary, to:to || ''}, function() {
+        rows.each(function() {
+            var id = $.trim($(this).find('td:eq(3)').text());
+            if (!ary.includes(id))
+                return;
+            $(this).remove();
+            sky.g.cnt(0);
+            sky.g.yn(1);
+            if ('m' == m && {{(int)($obj->all)}}) {
+                
+            }
+        });
+        
+    });
 };
 </script>
 #.js.css
