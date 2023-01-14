@@ -169,12 +169,14 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <tr class="tr-row">
         <td{!$row->yell and ' bgcolor="yellow"'!}></td>
         <td{!$row->red and ' bgcolor="red"'!}></td>
-        <td><a @href(sky.g.delete(this, '{{$row->id}}', {{$row->red}}))><img src="@inc(__std.d2)"/></a> {{$row->val}}</td>
+        <td>
+            <a @href(sky.g.delete(this, '{{$row->id}}', {{$row->red}}))><img src="@inc(__std.d2)"/></a> {{$row->val}}
+        </td>
         <td style="text-align:right{{$row->bgid}}">{{$row->id}}
             <a @href(sky.g.edit(this, '{{$row->id}}', 1))><img src="@inc(__std.e2)"/></a>
         </td>
         <td{!$row->pink and ' bgcolor="pink"'!}></td>
-        <td>{{$row->val2}}</td>
+        <td onclick="sky.g.click($(this).parent())">{{$row->val2}}</td>
         <td><a @href(sky.g.edit(this, '{{$row->id}}', 0))><img src="@inc(__std.e2)"/></a> {{$row->key}}</td>
         </tr>
     ~loop
@@ -205,7 +207,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 @else~{- constant -}
     <input type="hidden" name="const-prev" value="{{$val}}"/>
     <input id="tr-textarea" value="{{$val}}"/>
-    <a @href($(this).prev().val(''))><img src="img/a_del.gif"/></a>
+    <a @href($(this).prev().val(''))><img src="@inc(__std.d2)"/></a>
     <input onclick="sky.g.cancel()" type="button" value="cancel"/>
     <input onclick="sky.g.save('{{$_POST['id']}}', 1)" type="button" value="OK"/>
 ~if
@@ -220,7 +222,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <dd>
             <input type="hidden" name="const-prev" value="{{$row->const}}"/>
             <input size="30" name="const" value="{{$row->const}}"/>
-            <a @href($(this).prev().val(''))><img src="img/a_del.gif"/></a>
+            <a @href($(this).prev().val(''))><img src="@inc(__std.d2)"/></a>
         </dd>
         </dl>
     ~if
@@ -330,7 +332,7 @@ sky.g.bss = function(el, is_sort) {
         sky.g.yn(is_sort ? 2 : 1, 1)
     }
 };
-sky.g.html = ['', ''];
+sky.g.html = ['', '', 0];
 sky.g.parse = function(m) {
     ajax('parse.' + (m || ''), {}, function(r) {
         if (!m)
@@ -353,7 +355,7 @@ sky.g.parse = function(m) {
         };
         walk(r.tfunc, 2);
         sky.g.cnt(cnt = walk(r.const, 6, 1));
-        sky.g.html = [$('#lang').html(), r.files];
+        sky.g.html[1] = r.files;
         sky.g.tab(1, r.fcnt);
         $('#tpl-list').html('Found ' + r.message + ' new string(s), ' + cnt + " string(s) don't used");
 
@@ -363,8 +365,12 @@ sky.g.parse = function(m) {
     });
 };
 sky.g.tab = function(m, fcnt) {
+    if (!sky.g.html[m])
+        return;
+    m ? $('.bg-xm div:eq(0) a').attr('disabled', 1) : $('.bg-xm div:eq(0) a').removeAttr('disabled');
+    if (sky.g.html[2] = m)
+        sky.g.html[0] = $('#lang').html()
     $('#lang').html(sky.g.html[m]);
-    sky.g.chk();
     var el = $('#lg-tabs a:eq(' + m + ')').removeAttr('disabled').attr('active', true);
     if (fcnt)
         el.text('Files - ' + fcnt);
@@ -376,32 +382,29 @@ sky.g.cnt = function(n) {
     if (x && !n || !x && n)
         $('#legend-tbl table').toggle().next().toggle();
 };
+sky.g.click = function(tr) {
+    tr.toggleClass('lg-chk');
+    sky.g.cnt(parseInt($('#lg-cnt').html()) + (tr.hasClass('lg-chk') ? 1 : -1));
+};
 sky.g.chk = function(x) {
+    if (sky.g.html[2])
+        return;
     var rows = $('#lang-head').parent().find('tr.tr-row')
     switch (x) {
         case '-':
             rows.removeClass('lg-chk');
-            x = 0;
-            break;
+            return sky.g.cnt(0);
         case '+':
             rows.addClass('lg-chk');
-            x = rows.length;
-            break;
+            return sky.g.cnt(rows.length);
         case '*':
             rows.toggleClass('lg-chk');
-            x = rows.length - parseInt($('#lg-cnt').html());
-            break;
-        default:
-            return rows.click(function() {
-                sky.g.cnt(parseInt($('#lg-cnt').html()) + ($(this).hasClass('lg-chk') ? -1 : 1));
-                $(this).toggleClass('lg-chk');
-            });
+            return sky.g.cnt(rows.length - parseInt($('#lg-cnt').html()));
     }
-    sky.g.cnt(x);
 };
-sky.g.chk();
-
 sky.g.group = function(m, to) {
+    if (sky.g.html[2])
+        sky.g.tab(0)
     var ary = [], rows = $('#lang-head').parent().find('tr.tr-row');
     var fun = function(x) {
         rows.each(function() {

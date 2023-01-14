@@ -2,6 +2,8 @@
 
 class Language
 {
+    const version = '0.99';
+
     public $langs;
     public $error;
     public $lg; # selected
@@ -491,15 +493,9 @@ class Language
             },
             'row_c' => function() use (&$dary, &$ary, &$chars, $only) {
                 static $char = '', $prev = '', $pp = '', $color = false;
+
                 if (false === ($v = current($dary)))
                     return false;
-               /* if ($only) {
-                    $v = $dary[$id = $only];
-                    $dary = [];
-                    $char = '%';
-                } else {
-                    $id = key($dary);
-                } */
                 $id = key($dary);
                 next($dary);
                 if ($only && ($char = '%') && !in_array($id, $only))
