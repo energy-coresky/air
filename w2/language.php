@@ -155,8 +155,10 @@ class Language
         return true;
     }
 
-    function c_save($id) {
-        $id = $this->id($id);
+    function c_save($in) {
+        $lng = substr($in, 0, 2);
+        $id = $this->id($in = substr($in, 2));
+        $this->all = strpos($in, '.');
         if (!isset($_POST['s'])) {
             $const = strtoupper($_POST['const']);
             $new = !$id; # $id passed by reference!
@@ -165,14 +167,14 @@ class Language
                      return true;
             }
         } elseif ('~' == $_POST['const-prev']) {
-            $this->act($_POST['lg'], $id, 'text', escape($_POST['s']));
+            $this->act($lng, $id, 'text', escape($_POST['s']));
         } else {
             foreach ($this->langs as $lg) {
                 if ($this->act($lg, $id, 'const', strtoupper($_POST['s'])))
                     return true;
             }
         }
-        return true;
+        return ['e_list' => $this->listing($lng, [$in])];
     }
 
     function c_edit($lg) {
@@ -204,6 +206,7 @@ class Language
             throw new Error('SkyLang error');
         if (strpos($_POST['row'][0], '.')) {
             $pg = [];
+            $this->all = true;
             array_walk($_POST['row'], function ($id) use (&$pg) {
                 list ($page, $id) = explode('.', $id, 2);
                 $pg[$page][] = $id;
@@ -211,18 +214,21 @@ class Language
         } else {
             $pg[$this->page] = $_POST['row'];
         }
-        $ary = [];
+        $ary = $moved = [];
         foreach ($pg as $page => $list) {
             $this->page = $page;
             foreach ($this->langs as $lg)
                 $ary[$lg] = $this->act($lg, $list, 'delete');
             if ('m' == $mode) { # move
                 $this->page = $to;
-                foreach ($ary as $lg => $set)
+                foreach ($ary as $lg => $set) {
                     $this->act($lg, $id, 'insert', $set); # $id passed by reference!
+                    if ($this->all && $lg == DEFAULT_LG)
+                        for ($i = 0, $c = count($set); $i < $c; $moved[] = "$to." . ($id + $i++));
+                }
             }
         }
-        return true;
+        return $moved ? ['e_list' => $this->listing(DEFAULT_LG, $moved)] : true;
     }
 
     private function act($lg, &$id, $mode = 'read', $s = '') {
@@ -466,7 +472,7 @@ class Language
         return SKY::ghost('i', trim(implode('', $all), "\n"));
     }
 
-    private function listing($lg) {
+    private function listing($lg, $only = []) {
         $list = $this->t->all(qp('name<>"*" and lg=$+', DEFAULT_LG), 'name');
         $this->pages += array_combine($list, $list);
         if ($this->all) {
@@ -483,17 +489,26 @@ class Language
             'chars' => function() use (&$chars) {
                 return ' ' . implode(' ', $chars);
             },
-            'row_c' => function() use (&$dary, &$ary, &$chars) {
+            'row_c' => function() use (&$dary, &$ary, &$chars, $only) {
                 static $char = '', $prev = '', $pp = '', $color = false;
                 if (false === ($v = current($dary)))
                     return false;
+               /* if ($only) {
+                    $v = $dary[$id = $only];
+                    $dary = [];
+                    $char = '%';
+                } else {
+                    $id = key($dary);
+                } */
                 $id = key($dary);
+                next($dary);
+                if ($only && ($char = '%') && !in_array($id, $only))
+                    return true;
+                list ($key, $v) = explode(' ', $v, 2);
                 if ($this->all && !in_array($page = explode('.', $id, 2)[0], [$pp, '*'])) {
                     $pp = $page;
                     $color = 'cfc' == $color ? 'e0e7ff' : 'cfc';
                 }
-                list ($k, $v) = explode(' ', $v, 2);
-                next($dary);
                 $nc = '%';
                 if ('%' != $char) {
                     $ord = ord($c0 = mb_strtoupper(mb_substr($v, 0, 1)));
@@ -509,8 +524,8 @@ class Language
                     'val' => $prev = $v,
                     'val2' => $v2 = $ary ? explode(' ', $ary[$id], 2)[1] : '',
                     'pink' => $ary && $v == $v2, // not translated
-                    'yell' => strlen($v) < strlen($k),
-                    'key' => $k,
+                    'yell' => strlen($v) < strlen($key),
+                    'key' => $key,
                     'bgid' => $color && '*' != $page ? ";background:#$color" : '',
                     'id' => $id,
                     'chr' => $char != $nc ? [$char = $nc, $sz] : false,

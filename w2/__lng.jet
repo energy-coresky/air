@@ -84,9 +84,9 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
                 <td width="7" bgcolor="pink"></td><td>Not translated</td>
             </tr></table>
             <div style="display:none">
-                <input value="Delete checked" type="button" onclick="sky.g.group('d')"/> &nbsp; &nbsp;
+                <input value="Delete checked" type="button" onclick="sky.g.group('d', '')"/> &nbsp; &nbsp;
                 @if(count($obj->pages) > 1)
-                <input value="Move checked" type="button" onclick="sky.g.group('m',$(this).next().val())"/> to
+                <input value="Move checked" type="button" onclick="sky.g.group('m', $(this).next().val())"/> to
                 <select>
                     @loop($obj->pages as $k => $v)
                         @continue($k == $obj->page && !$obj->all)<option value="{{$k}}">{{$v}}</option>
@@ -157,6 +157,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <th width="{{$obj->all?32:38}}%">{{$obj->lg == DEFAULT_LG ? '' : $obj->lg}}</th>
     <th width="15%">KEY</th>
     </tr>
+#.save.group
     @loop($e_list)
         @if($row->chr)
             <tr>
@@ -170,13 +171,14 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <td{!$row->red and ' bgcolor="red"'!}></td>
         <td><a @href(sky.g.delete(this, '{{$row->id}}', {{$row->red}}))><img src="@inc(__std.d2)"/></a> {{$row->val}}</td>
         <td style="text-align:right{{$row->bgid}}">{{$row->id}}
-            <a @href(sky.g.edit(this, '{{$row->id}}'))><img src="@inc(__std.e2)"/></a>
+            <a @href(sky.g.edit(this, '{{$row->id}}', 1))><img src="@inc(__std.e2)"/></a>
         </td>
         <td{!$row->pink and ' bgcolor="pink"'!}></td>
         <td>{{$row->val2}}</td>
-        <td><a @href(sky.g.const(this, '{{$row->id}}'))><img src="@inc(__std.e2)"/></a> {{$row->key}}</td>
+        <td><a @href(sky.g.edit(this, '{{$row->id}}', 0))><img src="@inc(__std.e2)"/></a> {{$row->key}}</td>
         </tr>
     ~loop
+#.save.group
     </table>
     @use(`{!$e_list->chars()!}` as chars)
     Items: {{$e_list->cnt}}
@@ -211,7 +213,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 
 #.bulk /////////////////////////////////////////////////////////////////////////
 <td colspan="7">
-<form id="bulk-edit">
+<form id="bulk-edit"><script>sky.g.inputs = {{(int)!$id}}</script>
 @loop($e_list)
     @if(1 == $_)
         <dl><dt><u>const</u>:</dt>
@@ -226,8 +228,8 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <dd>
         <input size="60" name="{{$row->lg}}" value="{{$row->val}}"
         @if($row->lg==DEFAULT_LG)
-            onkeyup="sky.g.key(this.value)"/>
-            <label><input type="checkbox" onclick="sky.g.chk = this.checked"/> sync input</label>
+            onkeyup="sky.g.inputs && $('input.ndef-lg').val(this.value)"/>
+            <label><input type="checkbox" onclick="sky.g.inputs = this.checked"@checked(!$id)/> sync input</label>
         @else class="ndef-lg"/>
         ~if
     </dd>
@@ -246,7 +248,6 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.js //////////////////////////////////////////////////////////////////////////////
 <script>
 sky.g.editing = false;
-sky.g.info = 'Please finish current editing before open new one';
 sky.g.cancel = function() {
     var el = sky.g.editing[0].html(sky.g.editing[1]);
     sky.g.editing = false;
@@ -259,7 +260,7 @@ sky.g.yn = function(tr, yn) {
 sky.g.delete = function(el, id, force) {
     if (force || confirm('Are you sure? Delete item?')) {
         ajax('delete.' + id, {}, function() {
-            $(el).parent().parent().remove()
+            $(el).parents('tr').remove()
             sky.g.yn(1)
         });
     }
@@ -269,43 +270,38 @@ sky.g.save = function(id, is_const) {
     if (is_const && !s.match(/^(|[a-z\d_]+)$/i))
         return alert('Use identifiers chars only!');
     var cp = is_const ? $('input[name=const-prev]').val() : '~';
-    ajax('save.' + id, {s:s, lg:'{{$obj->lg}}', 'const-prev':cp}, function(r) {
+    ajax('save.{{$obj->lg}}' + id, {s:s, 'const-prev':cp}, function(r) {
         if ('1' == r)
             return alert('Identifier non unique!');
         var el = sky.g.cancel();
-        is_const ? el.html(el.html().replace(/ [a-z\d_]*$/i, ' ' + s.toUpperCase())) : el.text(s);
+        el.parents('tr').replaceWith(r)
         sky.g.yn(1)
     });
 };
-sky.g.edit = function(el, id) {
+sky.g.edit = function(el, id, m) {
     if (sky.g.editing)
-        return alert(sky.g.info);
-    if ({{(int)($obj->lg == DEFAULT_LG)}})
+        sky.g.cancel();
+    if (m && {{(int)($obj->lg == DEFAULT_LG)}})
         return sky.g.bulk(el, id, 0);
-    el = $(el).parent().next().next();
+    el = m ? $(el).parent().next().next() : $(el).parent();
     sky.g.editing = [el, el.html()];
-    ajax('edit.{{$obj->lg}}', {id:id, m:1}, el);
-};
-sky.g.const = function(el, id) {
-    if (sky.g.editing)
-        return alert(sky.g.info);
-    el = $(el).parent();
-    sky.g.editing = [el, el.html()];
-    ajax('edit.{{$obj->lg}}', {id:id, m:0}, el);
+    ajax('edit.{{$obj->lg}}', {id:id, m:m}, el);
 };
 sky.g.bulk = function(el, id, is_save) {
     if (is_save) {
         var s = $('#bulk-edit input[name=const]').val();
         if ('' !== s && !s.match(/^[a-z\d_]+$/i))
             return alert('Use identifiers chars only!');
-        ajax('save.' + id, $('#bulk-edit').serialize(), function(r) {
+        ajax('save.{{$obj->lg}}' + id, $('#bulk-edit').serialize(), function(r) {
             if ('1' == r)
                 return alert('Identifier non unique!');
-            ;
             var el = sky.g.cancel();
+            '0' == id ? $('#lang-head').after(r) : el.replaceWith(r);
             sky.g.yn(1)
         });
     } else {
+        if (sky.g.editing)
+            sky.g.cancel();
         if (el) {
             el = $(el).parents('tr');
         } else {
@@ -333,10 +329,6 @@ sky.g.bss = function(el, is_sort) {
         is_sort ? dev('list.{{$obj->lg}}',{sort:1}) : ajax('sync', {});
         sky.g.yn(is_sort ? 2 : 1, 1)
     }
-};
-sky.g.chk = 0;
-sky.g.key = function(v) {
-    sky.g.chk && $('input.ndef-lg').val(v);
 };
 sky.g.html = ['', ''];
 sky.g.parse = function(m) {
@@ -411,23 +403,17 @@ sky.g.chk();
 
 sky.g.group = function(m, to) {
     var ary = [], rows = $('#lang-head').parent().find('tr.tr-row');
-    rows.each(function() {
-        if ($(this).hasClass('lg-chk'))
-            ary.push($.trim($(this).find('td:eq(3)').text()));
-    });
-    ajax('group.' + m, {row:ary, to:to || ''}, function() {
+    var fun = function(x) {
         rows.each(function() {
-            var id = $.trim($(this).find('td:eq(3)').text());
-            if (!ary.includes(id))
-                return;
-            $(this).remove();
-            sky.g.cnt(0);
-            sky.g.yn(1);
-            if ('m' == m && {{(int)($obj->all)}}) {
-                
-            }
+            if ($(this).hasClass('lg-chk'))
+                x ? $(this).remove() : ary.push($.trim($(this).find('td:eq(3)').text()));
         });
-        
+    }
+    fun();
+    ajax('group.' + m, {row:ary, to:to}, function(r) {
+        fun(true), sky.g.cnt(0), sky.g.yn(1);
+        if (r)
+            $('#lang-head').after(r);
     });
 };
 </script>
