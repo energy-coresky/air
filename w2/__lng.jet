@@ -29,11 +29,11 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.array
 
 #.m_lang /////////////////////////////////////////////////////////////////////////
-    @loop($obj->langs as $lg)
-    <a href="{{PATH}}?_lang=list.{{$lg}}"@active($lg==$obj->lg) class="inner-menu"
-        style="{!$lg==DEFAULT_LG and 'font-weight:bold;text-decoration:underline'!}">{{$lg}} - {{$lg_names[$lg]}}
-    </a>
-    ~loop
+@loop($obj->langs as $lg)
+<a href="{{PATH}}?_lang=list.{{$lg}}"@active($lg==$obj->lg) class="inner-menu"
+    style="{!$lg==DEFAULT_LG and 'font-weight:bold;text-decoration:underline'!}">{{$lg}} - {{$lg_names[$lg]}}
+</a>
+~loop
 #.m_lang.rar --------
 <span style="font-family:Verdana;">►</span>
 #.menu.rar --------
@@ -54,7 +54,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         ~if
     </table>
     </div>
-    @if(!$obj->all)<a class="inner-menu" onclick="sky.g.bulk(0, 0)">Add new item</a>~if
+    <a class="inner-menu" onclick="sky.g.bulk(0, 0)">Add new item</a>
     <a class="inner-menu" onclick="$('#new-page').show()">Add new page</a>
 ~if
 #.menu.header --------
@@ -66,7 +66,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     </select>
     ~if
     <input type="hidden" name="a" value=""/>
-    @if('*' != $obj->page)<a @href(sky.g.page(0,'-')) style="font-weight:normal">Delete</a>~if
+    @if('*' != $obj->page)<a @href(sky.g.page('-')) style="font-weight:normal">Delete</a>~if
     </form>
 </h4>
 #.header.list -------------------------------------------------------------------------
@@ -106,7 +106,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             </a>
         </div>
         <div style="width:40%">
-            <a@active($obj->all)@disabled(false === $obj->all) class="a-btn" @href(sky.g.page(0, '+'))>@inc(.rar) All sorted</a>
+            <a@active($obj->all)@disabled(false === $obj->all) class="a-btn" @href(sky.g.page('+'))>@inc(.rar) All sorted</a>
             &nbsp; <a@active($obj->gpd) class="a-btn" @href(sky.g.parse())>F9 - Parse</a>
         </div>
         <div style="width:30%" id="lg-tabs">
@@ -130,12 +130,12 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 @elseif(4 == $obj->error)
     <h1>The table `{{SKY::$dd->pref . $sky->d_lgt}}` is absent. Create?</h1>
     <pre>@inc(.table)</pre>
-    <input value="Yes!" type="button" onclick="sky.g.page(0, '!' + $(this).prev().text())"/>
+    <input value="Yes!" type="button" onclick="sky.g.page('!' + $(this).prev().text())"/>
     <h3>Note: you can define table name in the <u><a href="_dev">Development</a></u> section</h3>
 @elseif(5 == $obj->error)
     <h1>Languages not match (table and $sky->langs). Fix?</h1>
     <pre>{!$obj->sql!}</pre>
-    <input value="Yes!" type="button" onclick="sky.g.page(0, '!' + $(this).prev().text())"/>
+    <input value="Yes!" type="button" onclick="sky.g.page('!' + $(this).prev().text())"/>
 @else
     @use(.m_lang)
     <form style="display:none" id="new-page">
@@ -146,7 +146,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         </dl><dl><dt>&nbsp;</dt>
         <dd>
             <input onclick="$('#new-page').hide()" type="button" value="cancel"/>
-            <input type="button" onclick="sky.g.page($('#new-page-in'))" value="save"/>
+            <input type="button" onclick="sky.g.page($('#new-page-in').val(), 1)" value="save"/>
         </dd></dl>
     </form>
     <table width="100%" cellspacing="0" cellpadding="2">
@@ -317,16 +317,14 @@ sky.g.bulk = function(el, id, is_save) {
         ajax('bulk.' + id, {}, el);
     }
 };
-sky.g.page = function(el, s) {
-    var form = $('#top-head form:eq(0)');
-    if (!el) {
-        if ('-' == s && !confirm('Are you sure? Delete `{{$obj->page}}` page?'))
-            return;
-    } else {
-        s = el.val();
-        if (!s.match(/^[a-z\d_]+$/))
-            return alert('Use identifiers chars only!');
-    }
+sky.g.page = function(s, is_page) {
+    if (is_page && !s.match(/^[a-z\d_]+$/))
+        return alert('Use identifiers chars only!');
+    if (is_page && ['{{implode("','", $obj->pages)}}'].includes(s))
+        return alert('Page `' + s + '` already exist!');
+    if ('-' == s && !confirm('Are you sure? Delete `{{$obj->page}}` page?'))
+        return;
+    let form = $('#top-head form:eq(0)');
     form.find('input[name=a]').val(s);
     form.submit();
 };
@@ -340,7 +338,7 @@ sky.g.html = ['', '', 0];
 sky.g.parse = function(m) {
     ajax('parse.' + (m || ''), {}, function(r) {
         if (!m)
-            return sky.g.page(0, '{{$obj->all ? '$+' : '$'}}');
+            return sky.g.page('{{$obj->all ? '$+' : '$'}}');
         var tbl = $('#lang-head').parent(), cnt;
         var walk = function(ary, n, cnt) {
             for (var i in ary) {
