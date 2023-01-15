@@ -110,9 +110,8 @@ class DEV
 
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
     static function post_data($me) {
-        global $sky;
          isset($_POST['args']) && $me->argc($_POST['args']);//////////
-        $sky->n_sg_prod = isset($_POST['production']);
+        SKY::d('sg_prod', (int)isset($_POST['production']));
         $addr = $pfs = [];
         $to =& $addr;
         if (isset($_POST['key'])) {
@@ -175,10 +174,9 @@ class DEV
     }
 
     static function cshow() {
-        global $sky;
-        Gate::$cshow = $sky->n_sg_cshow;
+        Gate::$cshow = SKY::d('sg_cshow');
         if (isset($_POST['s']))
-            Gate::$cshow = $sky->n_sg_cshow = (int)('true' == $_POST['s']);
+            SKY::d('sg_cshow', Gate::$cshow = $_POST['s']);
         return Gate::$cshow;
     }
 
@@ -197,7 +195,6 @@ class DEV
         $edit = $has_func && $is_edit;
         $return = [
             'row_c' => function($row = false) use (&$src, $ary, $me, $class, $edit) {
-                global $sky;
                 if ($row && $row->__i && !next($src) || !$src)
                     return false;
                 $name = key($src);
@@ -221,7 +218,7 @@ class DEV
                     'c1' => DEV::view_c1($flag, $edit, $meth, $is_j),
                     'c2' => DEV::view_c23($flag, $edit, $addr, 1),
                     'c3' => DEV::view_c23($flag, $edit, $pfs, 0),
-                    'prod' => $sky->n_sg_prod ? ' checked' : '',
+                    'prod' => SKY::d('sg_prod') ? ' checked' : '',
                 ];
             },
         ];

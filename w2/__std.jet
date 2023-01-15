@@ -113,22 +113,21 @@ $(function() {
     </a>
 ~loop
 #.m_gate.header ------------------------------------------------------------------------------
-<h4><span style="color:#4338ca">CONTROLLER</span>:<b>
+<h4><span style="color:#4338ca">CONTROLLER</span>:
 @if($list[$y_1])
     <span style="color:#000">{{strtoupper($h1)}}.PHP</span>
 @else
     <span style="color:red">{{strtoupper($h1)}}.PHP</span> (not exists)
-    <a @href(ajax('{{$y_1}}',{},'v-body','_delete'))>delete</a>
+    <a style="font-weight:normal" @href(ajax('{{$y_1}}',{},'v-body','_delete'))>Delete</a>
 ~if
-</b></h4>
+<a class="@active($cshow)" style="font-weight:normal"
+    @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
+</h4>
 #.header.gate.delete ------------------------------------------------------------------------------
 #use(.header)
 @use(.m_gate)
 <div id="gate">
 @if($y_1)
-    <label class="fr">
-        Show code <input type="checkbox"{{$cshow}} onchange="dev('{!$y_1!}',{s:this.checked})"/>
-    </label><br><br>
     <div style="display:none" id="c23-tpl">@view(c23_edit)</div>
     @loop($e_func)
     <fieldset>

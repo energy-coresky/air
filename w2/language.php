@@ -127,7 +127,7 @@ class Language
     function c_api() {
         $input = file_get_contents('php://input');
         $in = (object)unjson($input, true);
-        if ('hallo' == $in->lg) {
+        if ('hallo' == $in->tell) {
             
         } elseif (DEFAULT_LG == $in->lg) {
             list ($page, $id) = explode('.', $in->id);
@@ -137,8 +137,8 @@ class Language
             }
         }
         json([
-            'lg' => DEFAULT_LG,
-            'src' => $src,
+            'tell' => $tell,
+            'langs' => $this->langs,
             'list' => $list,
             'id' => "$page.$id",
         ]);

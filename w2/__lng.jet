@@ -101,7 +101,9 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             <a class="a-btn" @href(sky.g.chk('-'))>-</a>
             <a class="a-btn" @href(sky.g.chk('+'))>+</a>
             <a class="a-btn" @href(sky.g.chk('*'))>✱</a>
-            &nbsp; Checked - <span id="lg-cnt">0</span>
+            <a class="a-btn" @href($(this).toggleClass('active'); sky.g.cfl=!sky.g.cfl)>Checked
+                - <span id="lg-cnt">0</span>
+            </a>
         </div>
         <div style="width:40%">
             <a@active($obj->all)@disabled(false === $obj->all) class="a-btn" @href(sky.g.page(0, '+'))>@inc(.rar) All sorted</a>
@@ -166,7 +168,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             <td colspan="4"></td>
             </tr>
         ~if
-        <tr class="tr-row">
+        <tr class="tr-row" onclick="sky.g.click($(this))">
         <td{!$row->yell and ' bgcolor="yellow"'!}></td>
         <td{!$row->red and ' bgcolor="red"'!}></td>
         <td>
@@ -176,7 +178,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
             <a @href(sky.g.edit(this, '{{$row->id}}', 1))><img src="@inc(__std.e2)"/></a>
         </td>
         <td{!$row->pink and ' bgcolor="pink"'!}></td>
-        <td onclick="sky.g.click($(this).parent())">{{$row->val2}}</td>
+        <td>{{$row->val2}}</td>
         <td><a @href(sky.g.edit(this, '{{$row->id}}', 0))><img src="@inc(__std.e2)"/></a> {{$row->key}}</td>
         </tr>
     ~loop
@@ -202,14 +204,14 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 #.edit /////////////////////////////////////////////////////////////////////////
 @if($_POST['m'])
     <textarea id="tr-textarea" rows="2" cols="40">{{$val}}</textarea><br/>
-    <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.save('{{$_POST['id']}}', 0)" type="button" value="OK"/>
+    <input onclick="sky.g.cancel()" type="button" value="Esc - Cancel"/>
+    <input onclick="sky.g.save('{{$_POST['id']}}', 0)" type="button" value="F2 - Save" class="f2"/>
 @else~{- constant -}
     <input type="hidden" name="const-prev" value="{{$val}}"/>
     <input id="tr-textarea" value="{{$val}}"/>
     <a @href($(this).prev().val(''))><img src="@inc(__std.d2)"/></a>
-    <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.save('{{$_POST['id']}}', 1)" type="button" value="OK"/>
+    <input onclick="sky.g.cancel()" type="button" value="Cancel"/>
+    <input onclick="sky.g.save('{{$_POST['id']}}', 1)" type="button" value="F2 - Save" class="f2"/>
 ~if
 #.edit
 
@@ -239,8 +241,8 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 ~loop
 <dl><dt>&nbsp;</dt>
 <dd>
-    <input onclick="sky.g.cancel()" type="button" value="cancel"/>
-    <input onclick="sky.g.bulk(this, '{{$id}}', 1)" type="button" value="save"/>
+    <input onclick="sky.g.cancel()" type="button" value="Esc - Cancel"/>
+    <input onclick="sky.g.bulk(this, '{{$id}}', 1)" type="button" value="F2 - Save" class="f2"/>
 </dd>
 </dl>
 </form>
@@ -260,7 +262,7 @@ sky.g.yn = function(tr, yn) {
     td.text(yn ? 'YES' : 'NO').removeClass(yn ? 'yn-r' : 'yn-g').addClass(yn ? 'yn-g' : 'yn-r');
 };
 sky.g.delete = function(el, id, force) {
-    if (force || confirm('Are you sure? Delete item?')) {
+    if (!sky.g.cfl && (force || confirm('Are you sure? Delete item?'))) {
         ajax('delete.' + id, {}, function() {
             $(el).parents('tr').remove()
             sky.g.yn(1)
@@ -281,6 +283,8 @@ sky.g.save = function(id, is_const) {
     });
 };
 sky.g.edit = function(el, id, m) {
+    if (sky.g.cfl)
+        return;
     if (sky.g.editing)
         sky.g.cancel();
     if (m && {{(int)($obj->lg == DEFAULT_LG)}})
@@ -383,11 +387,14 @@ sky.g.cnt = function(n) {
         $('#legend-tbl table').toggle().next().toggle();
 };
 sky.g.click = function(tr) {
+    if (!sky.g.cfl)
+        return;
     tr.toggleClass('lg-chk');
     sky.g.cnt(parseInt($('#lg-cnt').html()) + (tr.hasClass('lg-chk') ? 1 : -1));
 };
+sky.g.cfl = false;
 sky.g.chk = function(x) {
-    if (sky.g.html[2])
+    if (sky.g.html[2] || !sky.g.cfl)
         return;
     var rows = $('#lang-head').parent().find('tr.tr-row')
     switch (x) {
@@ -419,6 +426,20 @@ sky.g.group = function(m, to) {
             $('#lang-head').after(r);
     });
 };
+$(function() {
+    var prev = sky.key[27];
+    sky.key[27] = function() { // Escape
+        if (sky.g.editing)
+            return sky.g.cancel();
+        prev();
+    };
+    sky.key[120] = function() { // F9
+        sky.g.parse();
+    };
+    sky.key[113] = function() { // F2
+        $('.f2:first').click();
+    };
+});
 </script>
 #.js.css
 <style>
