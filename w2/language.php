@@ -19,6 +19,7 @@ class Language
     const NON_SYNC = 0x10000; # bit no 17
 
     private $t;
+    private $flag = 0;
 
     static function translate($ary, $page = false) {
         if (!DEV)
@@ -134,22 +135,26 @@ class Language
                 $tell = 'bye';
             } else {
                 array_shift($langs);
-                $api = (object)unserialize(SKY::d('lg_api') ?: serialize(['i' => "$langs[0].*.0"]));
-                list ($_lg, $_page, $_id) = explode('.', $api->i);
-                if ('translate' == $in->tell) {
-                    if ($in->i != $api->i)
-                        throw new Error('Lang API');////////
+                $api = unserialize(SKY::d('lg_api') ?: serialize(['i' => "$langs[0].*.0"]));
+                list ($_lg, $_page, $_id) = explode('.', $api['i']);
+                if ($ok = 'translate' == $in->tell) {
+                    if ($in->i != $api['i'])
+                        throw new Error('Lang API');
                     $ary =& $this->act($_lg, $_page, 'list');
                     foreach ($in->list as $id => $s)
                         $ary[$id] = explode(' ', $ary[$id], 2)[0] . " $s";
                     $this->t->update(['tmemo' => SKY::sql('i')]);
                 }
-                $pages = $this->t->all(qp('lg=$+ order by id', DEFAULT_LG), 'name');////////
+                $pages = $this->t->all(qp('lg=$+ order by id', DEFAULT_LG), 'name');
                 foreach ($pages as $page) {
                     foreach ($langs as $lg) {
                         if (!$_lg || $lg == $_lg && $page == $_page) {
-                            $dary or $dary =& $this->act(DEFAULT_LG, $page, 'list');
+                            if (!$_lg)
+                                $_id = $api["$lg.$page"] ?? 0;
                             $ary or $ary =& $this->act($lg, $page, 'list');
+                            $dary or $dary =& $this->act(DEFAULT_LG, $page, 'list');
+                            if ($ok && $_lg) # save in $dary
+                                $this->t->update(['.flag' => $this->flag | self::NON_SYNC]);
                             ksort($ary, SORT_NUMERIC);
                             foreach ($ary as $id => $cs) {
                                 if ($id > $_id && $cs == $dary[$id]) {
@@ -158,8 +163,9 @@ class Language
                                         break;
                                 }
                             }
+                            $api["$lg.$page"] = $id;
                             if ($list) {
-                                $api->i = "$lg.$page.$id";
+                                $api['i'] = "$lg.$page.$id";
                                 break 2;
                             } else {
                                 $ary = $_lg = [];
@@ -168,14 +174,16 @@ class Language
                     }
                     $dary = [];
                 }
-                SKY::d('lg_api', serialize((array)$api));
+                if (!$list)
+                    $api['i'] = "$langs[0].*." . ($api["$langs[0].*"] ?? 0);
+                SKY::d('lg_api', serialize($api));
             }
         }
         json([
             'tell' => $tell ?? 'translate',
             'langs' => $this->langs,
             'list' => $list,
-            'i' => $list ? $api->i : 0,
+            'i' => $list ? $api['i'] : 0,
         ]);
     }
 
@@ -277,17 +285,17 @@ class Language
             case 'list':
                 if (!$def_lg)
                     return $ary;
-                $this->nsort = self::NON_SORT & ($flag = $row['flag']);
-                $this->nsync = self::NON_SYNC & $flag;
+                $this->nsort = self::NON_SORT & ($this->flag = $row['flag']);
+                $this->nsync = self::NON_SYNC & $this->flag;
                 if ($s) # is_sync
-                    $flag &= ~self::NON_SYNC;
+                    $this->flag &= ~self::NON_SYNC;
                 if ($is_sort && $this->nsort) {
-                    $flag &= ~self::NON_SORT;
+                    $this->flag &= ~self::NON_SORT;
                     $this->sort($ary);
                     $out = ['tmemo' => SKY::sql('i')];
                 }
-                if ($flag != $row['flag'])
-                    $this->t->update(['flag' => $flag] + $out);
+                if ($this->flag != $row['flag'])
+                    $this->t->update(['flag' => $this->flag] + $out);
                 return $ary;
             case 'read':
                 $ary = explode(' ', $ary[$id], 2);
