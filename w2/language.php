@@ -2,7 +2,7 @@
 
 class Language
 {
-    const version = '0.99';
+    const version = '1.0';
 
     public $langs;
     public $error;
@@ -126,10 +126,10 @@ class Language
 
     function c_api() {
         $dary = $ary = $list = [];
+        $in = (object)unjson(file_get_contents('php://input'), true);
         if (2 != SKY::d('trans')) {
             $tell = 'idle';
         } else {
-            $in = (object)unjson(file_get_contents('php://input'), true);
             $langs = '?' == $in->langs ? $this->langs : array_intersect($this->langs, $in->langs);
             if (count($langs) < 2 || DEFAULT_LG != $langs[0]) {
                 $tell = 'bye';
@@ -184,6 +184,7 @@ class Language
             'langs' => $this->langs,
             'list' => $list,
             'i' => $list ? $api['i'] : 0,
+            'max' => $in->max,
         ]);
     }
 
