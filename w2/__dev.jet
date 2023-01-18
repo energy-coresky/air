@@ -160,12 +160,15 @@ $(function() {
 
 #.view //////////////////////////////////////////////////////////////////////////////
 #use(.menu)
-#use(`{{count($list_views)}}` as views)
+#use(`{{$time}}` as time)
 #use(`{!$top!}` as top_tpl)
 #use(`{!$header!}` as header)
 @if($php){!$php!}@else
     {!$layout!}{!$body!}
 ~if
+<script>
+$(function() { sky.d.cnts('{{implode("','", $bottom)}}') });
+</script>
 #.view.menu ------------------------------------------------------------------------------
     <br><div class="other-task">Views</div>
     @loop($list_views as $v)
@@ -185,17 +188,19 @@ $(function() {
 #.layout //////////////////////////////////////////////////////////////////////////////
 @if($y_ware_dir)@use(`Ware` as bottom)~if
 <!doctype html><html>
-<head>@head<script>sky.a._0 = sky.a.div = '{{$sky->_0}}'; sky.a._1 = '{{$sky->_1}}'; sky.a.uri = '{{URI}}'</script>
+<head>@head<script>
+    sky.a._0 = sky.a.div = '{{$sky->_0}}'; sky.a._1 = '{{$sky->_1}}'; sky.a.uri = '{{URI}}'; sky.d.dev = {{(int)$sky->d_dev}}
+</script>
 </head>
 <body>
 <div id="main">
 <div id="v-head">
-    <div style="width:126px"><a href="{{PATH}}{{$sky->d_last_page ?: '_dev'}}">
+    <div style="width:126px"><a href="{{PATH . ($sky->d_last_page ?: '_dev')}}">
         ▼ {{'ware'==@(explode('?', $sky->d_last_page))[1] ? 'Wares' : 'Tasks'}}</a><a
         @href(history.back())><span style="font-family:Verdana;">&#9668;</span> Back</a>
     </div>
     <div style="width:144px">
-    @loop($_ < 4)<a href="_x{{$_}}"@active("_x$_" == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
+    @loop($_ < 4)<a @href(sky.d.trace({{"$_,'$y_page'"}},this))@active($_ == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
     </div>
     <div id="top-head" style="width:calc(100% - 380px)">@block(`` as header)</div>
     <div style="text-align:right; width:110px"><a @href(sky.d.close_box())>Esc - Close @inc(__std.x)</a></div>
@@ -229,28 +234,34 @@ $(function() {
 <div id="v-body">
     <div style="display:table-cell; width:inherit;" id="dev-{{$y_page}}">@inc(*)</div>
     <div id="trace-h" style="display:none">{!$err_ajax ?? ''!}</div>
+    @if('trace' != $y_page)<div style="display:none" id="dev-trace"></div>~if
 </div>
 
 <div id="v-tail">
     <span style="width:40%" id="master">@block(`{{$y_ware_dir}}` as top_tpl)</span>
     <div style="width:35%" id="tpl-list">
         @block(bottom)
+#.bottom --------
         <form method="post" style="display:inline-block"><input type="hidden" name="t0">
-        <a @href(sky.d.view({{preg_match("/^_x(\d)$/",URI,$m)?$m[1]:0}}))@active('_dev?view=' == substr(URI, 0, 10))>
-            ▲ Views (<span>@block(`?` as views)</span>)
+        <a @href(sky.d.view())@active('_dev?view=' == substr(URI, 0, 10))>
+            ▲ Views (<span>?</span>)
         </a>&nbsp; &nbsp;
         <a href="#">
-            ▲ SQLs (?)
+            ▲ SQLs (<span>?</span>)
         </a>&nbsp; &nbsp;
-        <a href="#">▲ Classes (?)</a>
+        <a href="#">▲ Classes (<span>?</span>)</a>
         </form>
+#.bottom --------
         ~block
     </div>
-    <div style="text-align:right; width:25%"><b>{{SKY::version()['app'][3]}}</b></div>
+    <div style="width:25%">
+        <span>@block(`` as time)</span>
+        <span style="float:right;font-weight:bold">{{SKY::version()['app'][3]}}</span>
+    </div>
+    <div id="tpl-list-copy" style="display:none">@inc(.bottom)</div>
 </div>
-#if('_trace'!=:0)
-    <style>#v-menu { width: 170px; } #v-body { width: calc(100vw - 170px); }</style>
-#end
 </div>
 @tail</body></html>
 #.layout
+
+

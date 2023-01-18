@@ -14,6 +14,7 @@ class Language
     public $nsync = 0;
     public $pages = ['*' => '* common'];
     public $page = '*';
+    public $api;
 
     const NON_SORT = 0x8000; # bit no 16
     const NON_SYNC = 0x10000; # bit no 17
@@ -59,6 +60,7 @@ class Language
         } else {
             $this->langs = array_diff($this->langs, [DEFAULT_LG]);
             $this->langs = array_merge([DEFAULT_LG], $this->langs); # default is first
+            $this->api = unserialize(SKY::d('lg_api') ?: serialize(['i' => "{$this->langs[1]}.*.0"]));
         }
         $this->t = MVC::$cc->{"t_$sky->d_lgt"};
         $this->page = $sky->d_lng_page ?: '*';
@@ -135,7 +137,7 @@ class Language
                 $tell = 'bye';
             } else {
                 array_shift($langs);
-                $api = unserialize(SKY::d('lg_api') ?: serialize(['i' => "$langs[0].*.0"]));
+                $api = unserialize(SKY::d('lg_api') ?: serialize(['i' => "{$langs[0]}.*.0"]));
                 list ($_lg, $_page, $_id) = explode('.', $api['i']);
                 if ($ok = 'translate' == $in->tell) {
                     if ($in->i != $api['i'])
@@ -179,7 +181,7 @@ class Language
                 SKY::d('lg_api', serialize($api));
             }
         }
-        json([
+        return json([
             'tell' => $tell ?? 'translate',
             'langs' => $this->langs,
             'list' => $list,
@@ -416,7 +418,7 @@ class Language
             if ("$path/lng" == $dir)
                 continue;
             foreach (Rare::list_path($dir, 'is_file') as $fn) {
-                if ('php' != pathinfo($fn)['extension'] ?? '')
+                if ('php' != (pathinfo($fn)['extension'] ?? ''))
                     continue;
                 $app[$fn] = [[0, 0], [0, $fun = 0]];
                 foreach (token_get_all(file_get_contents($fn)) as $v) {
@@ -442,7 +444,7 @@ class Language
         }
         $path = Plan::view_obj(['main'])->path;
         foreach (Rare::list_path($path, 'is_file') as $fn) {
-            if ('jet' != pathinfo($fn)['extension'] ?? '')
+            if ('jet' != (pathinfo($fn)['extension'] ?? ''))
                 continue;
             $jet[$fn] = [[0, 0], [0, 0]]; // 2do: rewrite jet parser ?
             if (preg_match_all('/L_([A-Z_\d]+)/', $tpl = file_get_contents($fn), $m)) {

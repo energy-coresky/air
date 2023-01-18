@@ -15,7 +15,7 @@ class standard_c extends Controller
             $this->_y = ['page' => substr($action, 2)];
             MVC::$layout = '__dev.layout';
         }
-        if (in_array($action, ['a_trace', 'j_file', 'j_init']))
+        if (in_array($action, ['a_trace', 'j_trace', 'j_file', 'j_init']))
             return $user = new USER;
         if (!DEV) {
             $this->_y = MVC::$layout = '';
@@ -40,7 +40,7 @@ class standard_c extends Controller
             $sky->k_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
             defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             return $this->_y + [
-                'tx' => '_trace' == $sky->_0 ? URI : '_x0',
+                'tx' => '_trace' == $sky->_0 ? $sky->_1 : 0,
                 'ware_dir' => '',
                 'tasks' => [
                     '_dev?main=0' => 'Main',
@@ -70,12 +70,17 @@ class standard_c extends Controller
         ];
     }
 
-    function a_trace($id) {
+    function a_trace() {
+        return $this->j_trace();
+    }
+
+    function j_trace() {
+        if (!$id = array_search($this->_1, [2 => 0, 1 => 1, 15 => 2, 16 => 3]))
+            return 404;
         global $sky, $user;
         if (!$user->root && !DEBUG)
             return 404;
         $sky->debug = 0;
-        $this->_y = ['page' => 2 == $id ? 'trace-t' : 'trace-x'];
         if (2 != $id)
             $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
         echo $body ?? 'err';
@@ -189,7 +194,7 @@ class standard_c extends Controller
         if ('c_' == $this->_c && 'c' == $x)
             $this->_c = DEV::atime(); # open last access time controller
         return (!$this->_4 ? [] : [
-            'y_tx' => '_x1',
+            'y_tx' => 1,
             'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
         ]) + [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',

@@ -62,17 +62,16 @@ class Root
             'dev' => ['Set debug=0 for DEV-tools', 'chk'],
             'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
             'sql' => ['Show SQLs in the tracing', 'chk'],
-            'const' => ['Show user-defined global CONSTANTs in the tracing,' . $br, 'chk'],
+            'const' => ['Show user-defined global CONSTANTs in the tracing', 'chk'],// . $br
             'class' => ['Show CLASSEs', 'chk'],
             'cron'  => ['Run cron when click on DEV instance', 'chk'],
        //     ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
-            Form::X([], '<hr>'),
-            ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
-            'static' => ['', '', 'size="50"'],
             'lgt' => ['SkyLang table name', '', 'size="25"'],
             'manual' => ['PHP manual language', 'select', $phpman],
             'se' => ['Search engine tpl', '', 'size="50"'],
-            //'se4so' => ['SE for stackoveflow site', '', 'size="50"'],
+            Form::X([], '<hr>'),
+            ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
+            'static' => ['', '', 'size="50"'],
             ['Save', 'submit'],
         ];
         if (isset($_POST['app'])) {
@@ -95,7 +94,21 @@ class Root
             return call_user_func(['Root', '_' . $funs[$n]], $id);
         }
         $cr = [7 => 10, 2, 11, 4];
-        echo '<pre>' . sqlf('+select tmemo from $_memory where id=%d', $cr[$n]) . '</pre>';
+        echo Display::log(sqlf('+select tmemo from $_memory where id=%d', $cr[$n]));
+    }
+
+    static function get_classes($ext = [], $t = -2) {
+        $ext or $ext = get_loaded_extensions();
+        $all = get_declared_classes();
+        $ary = [];
+        $types = array_filter($ext, function ($v) use (&$ary, $t) {
+            if (!$cls = (new ReflectionExtension($v))->getClassNames())
+                return false;
+            $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
+            return true;
+        });
+        $types = [-1 => 'all', -2 => 'user'] + $types;
+        return [$types, -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]]))];
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -186,18 +199,9 @@ class Root
                 break;
 
             case 'Classes':
-                $t = isset($_GET['t']) ? intval($_GET['t']) : -2;
-                $all = get_declared_classes();
-                $ary = [];
-                $types = array_filter($ext, function ($v) use (&$ary, $t) {
-                    if (!$cls = (new ReflectionExtension($v))->getClassNames())
-                        return false;
-                    $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
-                    return true;
-                });
-                $types = [-1 => 'all', -2 => 'user'] + $types;
-                $echo(-2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]])));
-                $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $types)) . $priv;
+                $ary = Root::get_classes($ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
+                $echo($ary[1]);
+                $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $ary[0])) . $priv;
                 break;
 
             case 'Other':

@@ -59,7 +59,12 @@ class DEV
         global $sky;
         $style = 'style="width:100%; display:table; background-color:#fff; color:#000"';
         $avar = [1 => 'from Globals', 'from Jet Templates'];
-        $out = '';
+        $classes = Root::get_classes()[1];
+        sort($classes);
+        $dev_data = [
+            'classes' => $classes,
+        ];
+        $out = tag(json_encode($dev_data), 'class="dev-data" style="display:none"');
 
         if ($sky->d_sql)
             $out .= tag('<h2>SQL queries:</h2>' . Debug::table(DEV::$sqls), $style);
@@ -334,6 +339,15 @@ class DEV
             array_shift($m);
             $list[] = $m;
         }
+        $list_sqls = preg_match("/([\.\d]+ sec), SQL queries: (\d+)/s", $trace, $m) ? $m[2] : '?';
+        $time = $m ? $m[1] : '??';
+        $list_classes = '?';
+        if (preg_match('~<div class="dev-data" [^>]+>(.*?)</div>~s', $trace, $m)) {
+            $list_classes = json_decode(trim($m[1]), true);
+            
+            $list_classes = is_array($list_classes) ? count($list_classes['classes']) : '??';
+        }
+
         $menu = ['Source templates', 'Parsed template', 'Master action'];
 
         $layout = '>Layout not used</div>';
@@ -365,7 +379,7 @@ class DEV
                 if ($lay) {
                     $sl = '"';
                     $lay = explode('.', $lay);
-                    $fn = '_' == $lay[0][0] ? "_$lay[0].jet" : "y_$lay[0].jet";
+                    $fn = '_' == $lay[0][0] ? "$lay[0].jet" : "y_$lay[0].jet";
                     $lay = $fn . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
                     $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_('g', [$ware, $fn]), $marker) . '<br>';
                     if ('' === $bod) {
@@ -385,8 +399,12 @@ class DEV
         return [
             'list_views' => $list,
             'list_menu' => $menu,
+            //'list_sqls' => $list_sqls,
+            //'list_classes' => $list_classes,
+            'bottom' => [count($list), $list_sqls, $list_classes],
+            'time' => $time,
             'nv' => $nv,
-            'y_tx' => "_x$x",
+            'y_tx' => $x,
             'top' => $top,
             'header' => ('main' == $ware ? '' : '<span style="font-size:14px"><b>' . strtoupper($ware) . ":</b></span> ") . $header,
             // for src tpl
@@ -584,7 +602,9 @@ class DEV
             return;
         list ($char, $id) = explode('.', $_POST['cid']);
         $sky->memory($id, $char);
-        call_user_func("SKY::$char", $_POST['v'], null);
+        //call_user_func_array("SKY::$char", [$_POST['v'], null]);
+        trace("SKY:: $char $_POST[v], null");
+        SKY::$char($_POST['v'], null);
     }
 
     function j_pp() {

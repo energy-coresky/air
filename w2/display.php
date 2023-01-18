@@ -147,6 +147,14 @@ class Display
         }
     }
 
+    static function log($html) { # 2do
+        if ($p = strrpos($html, '<a'))
+            $html = substr($html, 0, $p);
+        if ($p = strrpos($html, '<span'))
+            $html = substr($html, 0, $p);
+        return '<pre>' . $html. '</pre>';
+    }
+
     static function var($v, $html = true) { # tune var_export
         $var = @var_export($v, true);
         if ($len = strlen($var) > 50)

@@ -13,9 +13,9 @@ var sky = {
     err_show: function(r) {
         if (r) {
             $('#trace-x').html(r.catch_error);
-            'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func, 0) : dev('_x1');
+            'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func, 0) : dev('_trace/1');
         } else if (sky.err_t) {
-            dev('_x0');
+            dev('_trace/0');
         }
     },
     d: {}, // dev utilities
@@ -216,10 +216,9 @@ var sky = {
     },
     box_html: '',
     trace: function(c) {
-        if (1) {
-            dev('_x' + c);
-            return;
-        }
+        dev('_trace/' + c);
+        return;
+
         if (c) $.post(sky.home + '_x' + c, function(r) {
             box('<ul style="position:fixed" id="x-cell">'
                 + '<li><a href="javascript:;" onclick="sky.trace(1)" class="' + (1 == c ? 'active' : '') + '">X<sup>0</sup></a></li>'

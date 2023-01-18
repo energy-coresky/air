@@ -207,8 +207,8 @@ class SKY implements PARADISE
             $x[3] = $k + $x[3];         # a - conf for root-admin section
             return $x[0] |= 1;          # n - cron conf
         }                               # u - user
-        if (!isset($args[1]))           # i,j,k - used in Language class
-            return $x[3][$k] ?? '';        # d - development conf
+        if (1 == count($args))          # i,j - used in Language class
+            return $x[3][$k] ?? '';     # d - development conf
         $v = $args[1];
         if (is_null($k)) {
             if ($exists)

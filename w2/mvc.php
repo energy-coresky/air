@@ -261,6 +261,7 @@ class MVC extends MVC_BASE
     public $ob;
     public $is_sub;
     public $return;
+    public $hnd;
 
     static $vars;
     static $_y = []; # layout vars
@@ -526,10 +527,6 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $param = [];
         $me->return = 1 == $sky->ajax;
         if ('_' == $sky->_0[0]) {
-            if ($id = array_search(URI, [2 => '_x0', 1 => '_x1', 15 => '_x2', 16 => '_x3'])) {
-                $param = [$id];
-                $sky->surl[0] = '_trace';
-            }
             $class = 'standard_c';
             $action = ($me->return ? 'j' : 'a') . $sky->_0;
             MVC::$tpl = '_std';

@@ -70,20 +70,20 @@ class HEAVEN extends SKY
         $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
         if (!preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname))
             exit('sname');
-        $this->extra = EXTRA;
+/*        $this->extra = EXTRA;
         if ($fh = $this->extra_file($this->sname)) {
             for(; ob_get_level(); ob_end_clean());
             fpassthru($fh);
             fclose($fh);
             exit;
-        }
+        }*/
         define('PROTO', @$_SERVER['HTTPS'] ? 'https' : 'http');
         define('DOMAIN', $this->sname[3]);
 
         parent::load(); # database connection start from here
 
         $this->ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) ? 2 : 0;
-        //2do: fetch
+        # use fetch with a_.. actions
         $this->is_front = true;
         $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
         $this->orientation = 0;
@@ -128,8 +128,8 @@ class HEAVEN extends SKY
         SKY::$vars = [
             'k_list' => 'list' == $this->_1 || in_array($this->page_p, [$this->_1, $this->_2, $this->_3]),
         ];
-        if (1 == $this->extra)
-            is_file($fn = 'var/extra.txt') && in_array($this->fn_extra, array_map('trim', file($fn))) or $this->extra = 2;
+//        if (1 == $this->extra)
+            //is_file($fn = 'var/extra.txt') && in_array($this->fn_extra, array_map('trim', file($fn))) or $this->extra = 2;
     }
 
     function qs($url) {
@@ -458,8 +458,7 @@ function json($in, $return = false, $off_layout = true) {
     if ($off_layout)
         MVC::$layout = '';
     header('Content-Type: application/json; charset=' . ENC);
-    //defined('JSON_PARTIAL_OUTPUT_ON_ERROR') or define('JSON_PARTIAL_OUTPUT_ON_ERROR', 0); # SKY work from PHP 5.4 this const from PHP 5.5
-    $out = json_encode($in, $return ? JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR : 0);
+    $out = json_encode($in, $return ? JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR : 0); # second const from PHP 5.5
     false === $out ? trace('json error: ' . json_last_error(), true, 1) : trace($in, 'json()', 1);
     return $return ? $out : print($out);
 }

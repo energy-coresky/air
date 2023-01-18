@@ -42,16 +42,17 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     <div class="other-info">
     <table cellspacing="0" cellpadding="0" id="t-i18n">
         <tr><td>Mode:</td><td colspan="2">
-            <select onchange="ajax('mode.' + $(this).val())">
+            <select onchange="if(2==$(this).val()) $('#t-i18n tr:last').show(); ajax('mode.' + $(this).val())">
                 <option@selected(0 == $sky->d_trans) value="0">manual edit</option>
                 <option@selected(1 == $sky->d_trans) value="1">auto-detect</option>
-                <option@selected(2 == $sky->d_trans) value="2">api ON</option>
+                <option@selected(2 == $sky->d_trans) value="2">API ON</option>
             </select>
         </td></tr>
         <tr><td>Sync7d:</td>{!$e_list->td($obj->nsync)!}<td><a @href(sky.g.bss($(this),0))>@inc(.rar) Sync</a></td></tr>
         @if(!$obj->all)
         <tr><td>Sorted:</td>{!$e_list->td($obj->nsort)!}<td><a @href(sky.g.bss($(this),1))>@inc(.rar) Sort</a></td></tr>
         ~if
+        <tr style="display:@none(2!=SKY::d('trans'))"><td>API i7n:</td><td colspan="2"><b>{{$obj->api['i']}}</b></td></tr>
     </table>
     </div>
     <a class="inner-menu" onclick="sky.g.bulk(0, 0)">Add new item</a>
