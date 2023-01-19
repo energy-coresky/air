@@ -41,7 +41,7 @@ class Language
     }
 
     static function names() {
-        return unserialize(trim(view('_lng.array', [])));
+        return unserialize(view('_lng.array', []));
     }
 
     function __construct() {

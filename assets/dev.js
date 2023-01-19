@@ -88,9 +88,7 @@ sky.d.init = function(str) {
     if ('_trace/1' == sky.a.uri)
         $('#dev-trace').prepend(sky.d.parent_x);
     if ('' != $('#master').html() && !str)
-        return;// alert(11);
-    if ('_trace' != sky.a._0 && '' === $('#trace-h').html())
-        $('#trace-h').html(sky.d.trace_t);
+        return;
 
     if (!str)
         str = $('#trace').html();
@@ -113,9 +111,7 @@ sky.d.init = function(str) {
         $('#tpl-list').next().find('span:eq(0)').html(m[1]);
     }
 
-    a = $('#dev-trace div.dev-data:eq(0)');
-    if (!a[0])
-        a = $('div.dev-data:eq(0)');
+    a = $('#trace div.dev-data:eq(0)');
     if (a[0]) {
         eval('var data = ' + $.trim(a.html()) + ';')
         str = '';

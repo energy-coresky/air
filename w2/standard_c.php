@@ -194,7 +194,7 @@ class standard_c extends Controller
         if ('c_' == $this->_c && 'c' == $x)
             $this->_c = DEV::atime(); # open last access time controller
         return (!$this->_4 ? [] : [
-            'y_tx' => 1,
+            'y_tx' => $this->d_dev ? 1 : 2, # sample: ?_gate=company&func=j_edit&ajax
             'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
         ]) + [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',

@@ -14,21 +14,25 @@ class Display
         $in = $fn;
         $lnum = $inm = '';
         $ary = [""];
-        $list = [];
+        $yellow = $blue = [];
 
         foreach (explode("\n", unl($in)) as $i => $line) {
             $lnum .= str_pad(1 + $i, 3, 0, STR_PAD_LEFT) . "<br>";
             $cnt = count($ary) - 1;
             if (preg_match("/^#\.([\.\w]+)(.*)$/", $line, $m)) {
                 $line = $s('#.', '#090') . $s($m[1], 'red') . $s($m[2], '#b45309');
-                $ary[] = ['<div class="code" style="background:#e7ebf2;">' . "$line</div>"];
+                $line = '<div class="code" style="background:#e7ebf2;">' . "$line</div>";
+                $ary[] = [$line, explode('.', $m[1])];
                 $ary[] = "";
                 if (in_array($marker, explode('.', $m[1])))
                     $inm = !$inm;
                 if ($inm)
-                    $list[] = 2 + $cnt;
+                    $yellow[] = 2 + $cnt;
             } else {
                 $ary[$cnt] .= "$line\n";
+                
+                if ($inm && preg_match("/(#use|@use|@inc|@block)\(\.([a-z\d_]+)/", $line, $m))
+                    $blue[] = $m[2];
             }
         }
         $fu = function ($v) use ($s) {
@@ -47,23 +51,30 @@ class Display
             }
             return $out . html($v);
         };
+        $mname = [];
         foreach ($ary as $i => &$v) {
+            $pp = ['if', 'elseif', 'else', 'end', 'use'];
             if (is_array($v)) {
+                $new = array_diff($v[1], $mname);
+                $mname = array_merge(array_diff($mname, $v[1]), $new);
                 $v = $v[0];
             } else {
                 $out = '';
                 while (preg_match('/^(.*?)(~|@|#)([a-z]+)(.*)$/s', $v, $m)) {
                     $out .= $fu($m[1]);
                     $v = substr($m[4], strlen($br = Rare::bracket($m[4])));
-                    $out .= $s($m[2] . $m[3], '#' == $m[2] ? '#090' : '#00f');
+                    $out .= $s($m[2] . $m[3], '#' == $m[2] ? (in_array($m[3], $pp) ? '#090' : '') : '#00f');
                     if ($br && '`' != $br[1] && in_array($m[3], ['inc', 'use', 'block']))
                         $out .= $s($br, 'red');
                     elseif ($br)
                         $out .= $s($br, '#00b;font-weight:bold');
                 }
                 $v = $out . $fu($v);
-                if (in_array($i, $list) || '' === $marker)
+                if (in_array($i, $yellow) || '' === $marker) {
                     $v = '<div class="code" style="background:#ffd;">' . "$v</div>";
+                } elseif (array_intersect($mname, $blue)) {
+                    $v = '<div class="code" style="background:#eff;">' . "$v</div>";//e0e7ff
+                }
             }
         }
         $out = implode("", $ary);

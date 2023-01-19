@@ -233,8 +233,7 @@ $(function() { sky.d.cnts('{{implode("','", $bottom)}}') });
 
 <div id="v-body">
     <div style="display:table-cell; width:inherit;" id="dev-{{$y_page}}">@inc(*)</div>
-    <div id="trace-h" style="display:none">{!$err_ajax ?? ''!}</div>
-    @if('trace' != $y_page)<div style="display:none" id="dev-trace"></div>~if
+    @if('trace' != $y_page)<div style="display:none" id="dev-trace">{!$err_ajax ?? ''!}</div>~if
 </div>
 
 <div id="v-tail">
@@ -263,5 +262,4 @@ $(function() { sky.d.cnts('{{implode("','", $bottom)}}') });
 </div>
 @tail</body></html>
 #.layout
-
 

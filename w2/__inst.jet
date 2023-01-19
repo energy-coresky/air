@@ -101,7 +101,7 @@ Current table's prefix: <input value="{{SQL::$dd->pref}}" name="pref" size="5">
 </fieldset>
 <p>
 PHP version &gt;= <input name="vphp" value="{{$row->vphp or PHP_VERSION}}" size="5">
-&nbsp; &nbsp; <label><input type="checkbox" name="and"{{$and ? ' checked' : ''}}> and</label>
+&nbsp; &nbsp; <label><input type="checkbox" name="and"@checked($and)> and</label>
 &nbsp; &nbsp; PHP &lt;= <input name="vphp2" value="{{$row->vphp2 or '7.1'}}" size="5">
 &nbsp; &nbsp; MySQL version &gt;= <input name="vmysql" value="{{$row->vmysql or $mysql}}" size="5">
 <p>Description:<br><textarea name="desc" rows="5" style="width:75%">{{$row->desc or ''}}</textarea>

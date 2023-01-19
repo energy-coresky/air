@@ -214,7 +214,7 @@ $(function() {
         <input name="vname[]" size="6" placeholder="val name" value="{{$vname}}"/>
         <input name="val[]" size="15" placeholder="val" value="{{$val}}"/>
         <label>
-            ns<input type="checkbox" onclick="$(this).next().val(this.checked?1:0)"{!$chk and ' checked'!}/>
+            ns<input type="checkbox" onclick="$(this).next().val(this.checked?1:0)"@checked($chk)/>
             <input type="hidden" name="chk[]" value="{{$chk}}"/>
         </label>
     </div>
