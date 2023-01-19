@@ -34,7 +34,9 @@ var sky = {
                 sky.a.err_tmp = tmp;
             sky.a.err = func ? func : sky.a.err_tmp;
             return tmp;
-        }
+        },
+        start: false,
+        finish: false
     },
     g: { // sky gate & language extensions
         box: function(ctrl, func, layout) {
@@ -273,8 +275,7 @@ function ajax(j_, postfields, func, c_) {
         c_ = sky.a._0 = sky.a.div = j_[0];
         j_ = sky.a._1 = 1 == j_.length ? '' : j_[1];
     }
-    j_ = 'number' == typeof j_ ? 'ajax' + (j_ ? j_ : '') : j_;
-    var mem_x, ctrl0 = c_ || sky.a.div, ctrl1 = c_ || sky.a._0;
+    var mem_x, to, ctrl0 = c_ || sky.a.div, ctrl1 = c_ || sky.a._0;
     if (sky.a.x_el) {
         mem_x = sky.a.x_el.html();
         sky.a.x_el.html(sky.a.x_html);
@@ -282,6 +283,8 @@ function ajax(j_, postfields, func, c_) {
     $.ajaxSetup({
         headers: {'X-Orientation': sky.orientation()}
     });
+    if (sky.a.start)
+        to = sky.a.start(ctrl1, '' + j_);
     sky.post(sky.home + '?AJAX=' + ctrl0 + '&' + ctrl1 + '=' + j_, postfields || '', function(r) {
         var error_func = sky.a.error(); // get the current and restore default error handler
         func = func || sky.a.body;
@@ -294,6 +297,8 @@ function ajax(j_, postfields, func, c_) {
         }
         if (sky.a.x_el)
             sky.a.x_el.html(mem_x);
+        if (sky.a.finish)
+            sky.a.finish(to);
         if ('undefined' !== typeof r.catch_error) {
             if ('undefined' !== typeof r.ky) {
 //                location.href = sky.home + (12 == r.ky ? '' : '_exception');
@@ -323,23 +328,6 @@ function ajax(j_, postfields, func, c_) {
     $.ajaxSetup({
         headers: {'X-Csrf-Token': sky.scrf}
     });
-    /* $.fn.serializeFiles = function() {
-        var obj = $(this);
-        sky.post_files = true;
-        var formData = new FormData();
-        $.each($(obj).find("input[type='file']"), function(i, tag) {
-            $.each($(tag)[0].files, function(i, file) {
-                formData.append(tag.name, file);
-            });
-        });
-    
-        var params = $(obj).serializeArray();
-        $.each(params, function (i, val) {
-            formData.append(val.name, val.value);
-        });
-        return formData;
-    };
-    */
 })(jQuery);
 
 $(function() {

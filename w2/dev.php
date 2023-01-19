@@ -320,7 +320,7 @@ class DEV
         $cr = [1 => 1, 2 => 15, 3 => 16];
         if ($_POST)
             Plan::mem_p('dev_trace.txt', $_POST['t0']);
-        $trace = $x
+        $trace = $trc = $x
             ? sqlf('+select tmemo from $_memory where id=%d', $cr[$x])
             : Plan::mem_g('dev_trace.txt');
         preg_match("/^WARE: (\w+)/m", $trace, $m);
@@ -399,6 +399,7 @@ class DEV
         return [
             'list_views' => $list,
             'list_menu' => $menu,
+            'err_ajax' => tag($trc, 'id="trace"', 'pre'),
             //'list_sqls' => $list_sqls,
             //'list_classes' => $list_classes,
             'bottom' => [count($list), $list_sqls, $list_classes],

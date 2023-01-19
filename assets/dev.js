@@ -1,5 +1,29 @@
 
-sky.d.top = function(tr) {
+sky.a.start = function(ctrl, act) {
+    if ('_trace' == ctrl)
+        return 0;
+    let a = $('#v-head div:eq(1) a:eq(1)'), i = 0;
+    return setInterval(function() {
+        ++i % 2 ? a.attr('active', 1) : a.removeAttr('active');
+    }, 50);
+};
+
+sky.a.finish = function(to) {
+    if (!to)
+        return;
+    clearInterval(to);
+    $('#v-head div:eq(1) a').removeAttr('active');
+    $('#v-head div:eq(1) a:eq(' + (sky.d.dev ? 0 : 1) + ')').attr('active', 1);
+    if (sky.d.dev)
+        return;
+    ajax(1, {}, function(r) {
+        sky.d.trace_x = 1;
+            if (!$('#dev-trace')[0])
+        $('#v-body').append('<div id="dev-trace" style="display:none"></div>');
+
+        $('#dev-trace').html(r);
+        sky.d.init(r, 2);
+    }, '_trace');
 };
 
 sky.d.close_box = function() {
@@ -62,11 +86,11 @@ sky.d.trace = function(x, page, el) {
     if (sky.d.trace_x = x) {
         ajax('' + x, {}, function(r) {
             $('#dev-trace').html(r).css({display:'table-cell'});
-            sky.d.init(r)
+            sky.d.init(r, 1)
         }, '_trace')
     } else {
         $('#dev-trace').html(sky.d.trace_t).css({display:'table-cell'});
-        sky.d.init(sky.d.trace_t)
+        sky.d.init(sky.d.trace_t, 1)
     }
 };
 
@@ -75,7 +99,7 @@ sky.d.trace_t = '';
 sky.d.parent_t = window.parent.document.getElementById('trace-t').innerHTML;
 sky.d.parent_x = window.parent.document.getElementById('trace-x').innerHTML;
 
-sky.d.init = function(str) {
+sky.d.init = function(str, from) {
     var self_t = $('#trace-t').html(), m, top = '', black = {backgroundColor:'#000', color:'#0f0'};
 
     if ('_trace' == sky.a._0)
@@ -83,16 +107,14 @@ sky.d.init = function(str) {
     $('#dev-trace').css(sky.d.trace_x ? black : {backgroundColor:'#005', color:'#7ff'});
     if ('view' != sky.a._1)
         sky.d.trace_t = sky.d.dev || !self_t ? sky.d.parent_t : self_t;
-    if ('_trace/0' == sky.a.uri)
-        $('#dev-trace').html(sky.d.trace_t);
-    if ('_trace/1' == sky.a.uri)
+    if ('_trace/1' == sky.a.uri) {
         $('#dev-trace').prepend(sky.d.parent_x);
-    if ('' != $('#master').html() && !str)
-        return;
+    } else if ('_trace/0' == sky.a.uri || !str && sky.d.dev) {
+        $('#dev-trace').html(sky.d.trace_t);
+    }
 
     if (!str)
         str = $('#trace').html();
-
     if (-1 != str.indexOf('<div class="error">'))
         $('#v-body h1').each(function () {
             $(this).css({color:'red', backgroundColor:'pink'});
@@ -104,7 +126,7 @@ sky.d.init = function(str) {
         if ('TOP' == m[1])
             top = 'Top-view: <b>' + m[2] + '</b> &nbsp; Template: <b>' + a[a.length - 1].tpl + '</b>';
     }
-    $('#master').html(top)
+    
     var c1 = a.length, c2 = '?', c3 = '?';
     if (m = str.match(/([\.\d]+ sec), SQL queries: (\d+)/s)) {
         c2 = m[2];
@@ -118,18 +140,17 @@ sky.d.init = function(str) {
         var i = 0;
         Object.keys(data.classes).forEach(function (key) {
             i++;
-            str += i + '. '+data.classes[key] + " ";
+            str += i + '. ' + data.classes[key] + " ";
         });
         c3 = i;
     }
-    $('#tpl-list').html($('#tpl-list-copy').html());
-    sky.d.cnts(c1, c2, c3)
-};
-
-sky.d.cnts = function(c1, c2, c3) {
-    $('#tpl-list span:eq(0)').html(c1);
-    $('#tpl-list span:eq(1)').html(c2);
-    $('#tpl-list span:eq(2)').html(c3);
+    if (1 == from || '' !== $('#master').html()) {
+        $('#tpl-list').html($('#tpl-list-copy').html());
+        $('#tpl-list span:eq(0)').html(c1);
+        $('#tpl-list span:eq(1)').html(c2);
+        $('#tpl-list span:eq(2)').html(c3);
+        $('#master').html(top)
+    }
 };
 
 sky.d.view = function() {
@@ -161,13 +182,6 @@ sky.d.reflect = function(el, type) {
 };
 
 $(function() {
-    /*$('#v-menu a').each(function () {
-        $(this).click(function () {
-            $('#v-menu a').each(function () {
-            });
-        });
-    });*/
-
     sky.d.show_menu('_trace' != sky.a._0);
     sky.d.init();
 
@@ -177,5 +191,3 @@ $(function() {
 
     $('#drop-var').after('<input type="button" value="Yes" onclick="sky.d.drop()" />');
 });
-
-

@@ -35,7 +35,7 @@ class standard_c extends Controller
         global $sky;
 
         if ($this->_y) {
-            if (1 == $sky->method && '_trace' != $sky->_0)
+            if (1 == $sky->method && '_trace' != $sky->_0 && 'view' != $sky->_1)
                 $sky->d_last_page = URI;
             $sky->k_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
             defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);

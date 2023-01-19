@@ -82,7 +82,7 @@ class Display
             $out = "\n" . $out;
         if ($no_lines)
             return '<pre style="margin:0;background:#ffd">' . $out . '</pre>';
-        $table = self::lay_l . $lnum . self::lay_m . '<pre style="margin:0">' . $out . '</pre>' . self::lay_r;
+        $table = self::lay_l . $lnum . self::lay_m . '<pre style="margin:0;width:100%">' . $out . '</pre>' . self::lay_r;
         return '<div class="php">' . $table . '</div>';
     }
 

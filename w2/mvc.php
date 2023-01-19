@@ -42,8 +42,8 @@ abstract class MVC_BASE
 
     function __set($name, $value) {
         global $sky;
-    //    if (DEV && $sky->in_tpl && !$sky->in_row_c)
-      //      throw new Error("Cannot set \$sky->$name property from the templates");
+        if (DEV && $sky->in_tpl && !$sky->in_row_c)
+            throw new Error("Cannot set \$sky->$name property from the templates");
         $sky->$name = $value;
     }
 }

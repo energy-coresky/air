@@ -161,14 +161,11 @@ $(function() {
 #.view //////////////////////////////////////////////////////////////////////////////
 #use(.menu)
 #use(`{{$time}}` as time)
-#use(`{!$top!}` as top_tpl)
+#use(`{!$top!}` as master)
 #use(`{!$header!}` as header)
 @if($php){!$php!}@else
     {!$layout!}{!$body!}
 ~if
-<script>
-$(function() { sky.d.cnts('{{implode("','", $bottom)}}') });
-</script>
 #.view.menu ------------------------------------------------------------------------------
     <br><div class="other-task">Views</div>
     @loop($list_views as $v)
@@ -237,7 +234,7 @@ $(function() { sky.d.cnts('{{implode("','", $bottom)}}') });
 </div>
 
 <div id="v-tail">
-    <span style="width:40%" id="master">@block(`{{$y_ware_dir}}` as top_tpl)</span>
+    <span style="width:40%" id="master">?@block(`{{$y_ware_dir}}` as master)</span>
     <div style="width:35%" id="tpl-list">
         @block(bottom)
 #.bottom --------
