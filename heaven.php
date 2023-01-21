@@ -271,7 +271,8 @@ class HEAVEN extends SKY
         if ($this->debug) {
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
-            $tracing = 'PATH: ' . PATH . html("\nURI: " . URI . "\n\$sky->lref: $this->lref") . "\n\$sky->ajax: $this->ajax";
+            $uri = $this->methods[$this->method] . ' ' . URI;
+            $tracing = 'PATH: ' . PATH . html("\nURI: $uri\n\$sky->lref: $this->lref") . "\n\$sky->ajax: $this->ajax";
             $tracing .= "\n\$sky->k_type: $this->k_type\nSURL: " . html("$this->surl_orig -> " . implode('/', $this->surl));
             $this->tracing = $tracing . "\n\n" . $this->tracing;
             if ($this->fn_extra)
@@ -283,8 +284,6 @@ class HEAVEN extends SKY
             }
         }
         $plus = parent::tracing($plus, $trace_x);
-        if (DEV && !$trace_x)
-            $plus .= $this->dev->trace();
         return preg_replace('/^(' . preg_quote(DIR, '/') . '.*)$/m', '<span>$1</span>', $plus);
     }
 
@@ -459,7 +458,10 @@ function json($in, $return = false, $off_layout = true) {
         MVC::$layout = '';
     header('Content-Type: application/json; charset=' . ENC);
     $out = json_encode($in, $return ? JSON_PRETTY_PRINT | JSON_PARTIAL_OUTPUT_ON_ERROR : 0); # second const from PHP 5.5
-    false === $out ? trace('json error: ' . json_last_error(), true, 1) : trace($in, 'json()', 1);
+    if ($err = json_last_error())
+        trace('json error: ' . $err, true, 1);
+    if (DEV && !$return)
+        DEV::ed_var(['$$' => $in], MVC::instance(-1)->no);
     return $return ? $out : print($out);
 }
 

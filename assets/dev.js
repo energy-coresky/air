@@ -30,6 +30,56 @@ sky.d.close_box = function() {
     $(window.parent.document.getElementById('box')).find('.esc a:first').click();
 };
 
+sky.d.draw = {
+    v: function(data, str) {
+        str = '';
+        var j, vars, blks = {}, blkc = {};
+        for (var view of data.views) {
+            vars = 'BLK' == view.type ? blks[view.no][blkc[view.no]++] : data.vars[view.no];
+            var c = 'BLK' == view.type ? '.' + blkc[view.no] : '';
+            str += '<span style="color:#f77">#' + (1 + parseInt(view.no)) + c + ' ' + view.type + '</span> ' + view.hnd + '<br>';
+            str += 'TEMPLATE ' + view.tpl + '<br>';
+            j = 0;
+            if (!vars) {
+                str += '<span style="color:red">empty-response</span>';
+            } else Object.keys(vars).forEach(function (name) {
+                if ('' === name) { // BLKs vars
+                    blks[view.no] = vars[name];
+                    blkc[view.no] = 0;
+                } else {
+                    let s = ++j + '. <b>$' + name + '</b>';
+                    if ('$' == name.charAt(0))
+                        s = '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
+                    str += s +'&nbsp;=&nbsp;' + vars[name] + '<br>';
+                }
+            });
+            str += '<hr>';
+        }
+        return str;
+    },
+    s: function(data, str) {
+        var m, i = 0, s = '';
+        for (; m = str.match(/>\nSQL: (.+?)\n\n<(.*)/sm); str = m[2]) {
+            s += '<span style="color:#f77">#' + ++i + '</span> ' + m[1] + '<br><br>';
+        }
+        return s ? s : '?';
+    },//#f77 #93c #0a0 #b88
+    c: function(data, str) {
+        str = '';
+        const base = [
+            'Bolt', 'Controller', 'DEV', 'Debug', 'dc_file', 'Func', 'Gape', 'HEAVEN', 'MVC', 'MVC_BASE',
+            'Model_m', 'Model_q', 'Model_t', 'Plan', 'SKY', 'SQL', 'Stop', 'USER', 'common_c', 'eVar'
+        ];
+        for (var i in data.classes) {
+            let s = data.classes[i], inc = base.includes(s);
+            str += (1 + parseInt(i)) + '.&nbsp;' + (inc ? s : `<span style="color:#93c">${s}</span>`) + '<br>';
+        }
+        //Object.keys(data.classes).forEach(function (key) {
+        //});
+        return str;
+    }
+};
+
 sky.d.drop_cache = function(r, el) {
     var s = $(el).html(), ok = 'OK' == r;
     $(el).html(ok ? 'Dropped OK' : r).css({background: ok ? '#dfd' : '#fdd'});
@@ -115,42 +165,56 @@ sky.d.init = function(str, from) {
 
     if (!str)
         str = $('#trace').html();
+    var trc = str;
     if (-1 != str.indexOf('<div class="error">'))
         $('#v-body h1').each(function () {
             $(this).css({color:'red', backgroundColor:'pink'});
         });
     sky.set_file_clk('#v-body');
 
-    for (var a = []; m = str.match(/(TOP|SUB|BLK)\-VIEW: (\S+) (\S+)(.*)/s); str = m[4]) {
-        a.push({type:m[1], hnd:m[2], tpl:'^' == m[3] ? 'no-tpl' : m[3]});
+    for (var a = []; m = str.match(/(TOP|SUB|BLK)\-VIEW: (\d+) (\S+) (\S+)(.*)/s); str = m[5]) {
+        a.push({type:m[1], no:m[2], hnd:m[3], tpl:'^' == m[4] ? ('BLK' == m[1] ? 'injected-to-parent' : 'not-used') : m[4]});
         if ('TOP' == m[1])
-            top = 'Top-view: <b>' + m[2] + '</b> &nbsp; Template: <b>' + a[a.length - 1].tpl + '</b>';
+            top = 'Top-view: <b>' + m[3] + '</b> &nbsp; Template: <b>' + a[a.length - 1].tpl + '</b>';
     }
-    
-    var c1 = a.length, c2 = '?', c3 = '?';
+
+    var csql = '?';
     if (m = str.match(/([\.\d]+ sec), SQL queries: (\d+)/s)) {
-        c2 = m[2];
+        csql = m[2];
         $('#tpl-list').next().find('span:eq(0)').html(m[1]);
     }
 
-    a = $('#trace div.dev-data:eq(0)');
-    if (a[0]) {
-        eval('var data = ' + $.trim(a.html()) + ';')
-        str = '';
-        var i = 0;
-        Object.keys(data.classes).forEach(function (key) {
-            i++;
-            str += i + '. ' + data.classes[key] + " ";
-        });
-        c3 = i;
-    }
     if (1 == from || '' !== $('#master').html()) {
-        $('#tpl-list').html($('#tpl-list-copy').html());
-        $('#tpl-list span:eq(0)').html(c1);
-        $('#tpl-list span:eq(1)').html(c2);
-        $('#tpl-list span:eq(2)').html(c3);
+        var data = JSON.parse($.trim($('#trace div.dev-data:eq(0)').text()));
+        //eval('var data = ' + $.trim($('#trace div.dev-data:eq(0)').html()) + ';');
+        data.views = a;
+        $('#tpl-list').html($('#tpl-list-copy').html()).find('a')
+            .mouseenter(function() {
+                if (sky.d.to)
+                    clearTimeout(sky.d.to);
+                sky.d.to = 0;
+                var n = $(this).attr('n'), poh = sky.d.draw[n](data, trc)
+                $('div#popup-in').html(poh).parent().show().css({left:$(this).offset().left});
+            }).mouseleave(sky.d.mouseleave);
+            $('div#popup').mouseenter(function() {
+                if (sky.d.to)
+                    clearTimeout(sky.d.to);
+                sky.d.to = 0;
+            }).mouseleave(sky.d.mouseleave);
+        $('#tpl-list span:eq(0)').html(a.length);
+        $('#tpl-list span:eq(1)').html(csql);
+        $('#tpl-list span:eq(2)').html(data.classes.length);
         $('#master').html(top)
     }
+};
+
+sky.d.to = 0;
+sky.d.mouseleave = function() {
+    if (sky.d.to)
+        clearTimeout(sky.d.to);
+    sky.d.to = setTimeout(function() {
+        $('div#popup').hide();
+    }, 300);
 };
 
 sky.d.view = function() {
@@ -181,13 +245,13 @@ sky.d.reflect = function(el, type) {
     });
 };
 
+sky.key[27] = function() { // Escape
+    sky.d.close_box();
+};
+
 $(function() {
+    $('body').prepend('<div id="popup" style="display:none"><div id="popup-in"></div></div>');
     sky.d.show_menu('_trace' != sky.a._0);
     sky.d.init();
-
-    sky.key[27] = function() { // Escape
-        sky.d.close_box();
-    };
-
     $('#drop-var').after('<input type="button" value="Yes" onclick="sky.d.drop()" />');
 });

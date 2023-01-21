@@ -11,7 +11,7 @@ class DEV
 {
     static $static = false;
     static $sqls = [['##', 'Time', 'Query']];
-    static $vars = [['##', 'Name', 'Value']];
+    static $vars = [];//['##', 'Name', 'Value']];
 
     static function init() {
         if (DEV && !CLI && SKY::$dd) {
@@ -59,35 +59,58 @@ class DEV
         global $sky;
         $style = 'style="width:100%; display:table; background-color:#fff; color:#000"';
         $avar = [1 => 'from Globals', 'from Jet Templates'];
+
         $classes = Root::get_classes()[1];
         sort($classes);
+        ksort(DEV::$vars);
         $dev_data = [
             'classes' => $classes,
+            'vars' => DEV::$vars,
         ];
-        $out = tag(json_encode($dev_data), 'class="dev-data" style="display:none"');
+        //$out = tag(html(str_replace('\\"', '\\\\"', json_encode($dev_data))),
+        $out = tag(html(json_encode($dev_data)),
+            'class="dev-data" style="display:none"');//, JSON_HEX_QUOT
 
-        if ($sky->d_sql)
-            $out .= tag('<h2>SQL queries:</h2>' . Debug::table(DEV::$sqls), $style);
-        if ($i = $sky->d_var)
-            $out .= tag("<h2>Variables $avar[$i]:</h2>" . Debug::table(DEV::$vars), $style);
+        #if ($sky->d_sql)
+         #   $out .= tag('<h2>SQL queries:</h2>' . Debug::table(DEV::$sqls), $style);
+        #if ($i = $sky->d_var)
+         #   $out .= tag("<h2>Variables $avar[$i]:</h2>" . Debug::table(DEV::$vars), $style);
         return $out;
     }
-    
-    static function ed_var($in) {
-        $i = 1;
-        DEV::$vars[] = [['<hr>', 'colspan="3"']];
+
+    static function ed_var($in, $no, $is_blk = false) {
+        //$i = 1;
+        //DEV::$vars[] = [['<hr>', 'colspan="3"']];
+        $ary = [];
+        isset(DEV::$vars[$no]) or DEV::$vars[$no] = [];
+        $p =& DEV::$vars[$no];
         foreach ($in as $k => $v) {
+            if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
+                continue;
+            if ('$' == $k && isset($p['$$']))
+                return;
             $is_obj = is_object($v);
             $is_arr = is_array($v);
             is_string($v) or is_int($v) or $v = @var_export($v, true);
+            strlen($v) <= 500 or $v = strcut($v);// . sprintf(span_r, ' cutted...');
             $v = html($v);
-            strlen($v) <= 500 or $v = substr($v, 0, 500) . sprintf(span_r, ' cutted...');
             if ($is_obj || $is_arr) {
-                $v = tag($is_obj ? 'Object' : 'Array', '', 'b') . ' '
-                    . a('>>>', 'javascript:;', 'onclick="sky.toggle(this)" style="font-family:monospace" title="expand / collapse"')
-                    . tag($v, 'style="display:none"');
+                $v = $is_obj ? 'Object' : 'Array';
+                //tag($is_obj ? 'Object' : 'Array', '', 'b') . ' '
+                  //  . a('>>>', 'javascript:;', 'onclick="sky.toggle(this)" style="font-family:monospace" title="expand / collapse"')
+                    //. tag($v, 'style="display:none"');
             }
-            DEV::$vars[] = [$i++, "\$$k", $v];
+            $ary[$k] = $v;
+        }
+//      if ('' !== $in['sky']->ob)
+  //      $ary['$'] = strcut($in['sky']->ob);
+        ksort($ary);
+        
+        if ($is_blk) {
+            isset($p['']) or $p += ['' => []];
+            $p[''][] = $ary;
+        } else {
+            $p += $ary;
         }
     }
 
@@ -325,13 +348,11 @@ class DEV
             : Plan::mem_g('dev_trace.txt');
         preg_match("/^WARE: (\w+)/m", $trace, $m);
         $ware = $m[1] ?? 'main';
-        $top = $header = '';
+        $header = '';
         $nv = $_GET['nv'] ?? 0;
         for ($list = [], $i = 0; preg_match("/(TOP|SUB|BLK)\-VIEW: (\S+) (\S+)(.*)/s", $trace, $m); $i++) {
             $m[1] = ucfirst(strtolower($m[1]));
             $title = "$m[1]-view:&nbsp;<b>$m[2]</b> &nbsp; Template: <b>" . ('^' == $m[3] ? 'no-tpl' : $m[3]) . "</b>";
-            if ('Top' == $m[1])
-                $top = $title;
             if ($nv == $i)
                 $header = $title;
             $trace = $m[4];
@@ -339,15 +360,6 @@ class DEV
             array_shift($m);
             $list[] = $m;
         }
-        $list_sqls = preg_match("/([\.\d]+ sec), SQL queries: (\d+)/s", $trace, $m) ? $m[2] : '?';
-        $time = $m ? $m[1] : '??';
-        $list_classes = '?';
-        if (preg_match('~<div class="dev-data" [^>]+>(.*?)</div>~s', $trace, $m)) {
-            $list_classes = json_decode(trim($m[1]), true);
-            
-            $list_classes = is_array($list_classes) ? count($list_classes['classes']) : '??';
-        }
-
         $menu = ['Source templates', 'Parsed template', 'Master action'];
 
         $layout = '>Layout not used</div>';
@@ -400,13 +412,8 @@ class DEV
             'list_views' => $list,
             'list_menu' => $menu,
             'err_ajax' => tag($trc, 'id="trace"', 'pre'),
-            //'list_sqls' => $list_sqls,
-            //'list_classes' => $list_classes,
-            'bottom' => [count($list), $list_sqls, $list_classes],
-            'time' => $time,
             'nv' => $nv,
             'y_tx' => $x,
-            'top' => $top,
             'header' => ('main' == $ware ? '' : '<span style="font-size:14px"><b>' . strtoupper($ware) . ":</b></span> ") . $header,
             // for src tpl
             'layout' => '<div class="other-task" style="position:sticky; top:0px' . $sl . $layout,

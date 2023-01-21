@@ -45,6 +45,13 @@ class Debug
             "\n\$_COOKIE: " . html(var_export($_COOKIE, true)) . "\n";
     }
 
+    static function closure($fun) {
+        $fun = new ReflectionFunction($fun);
+        $file = file($fun->getFileName());
+        $line = trim($file[$fun->getStartLine()]);
+        return 'Plan::' == substr($line, 0, 6) ? $line : 'Extended Closure';
+    }
+
     static function error_name($no) {
         $list = [
             E_ERROR => 'Fatal error',

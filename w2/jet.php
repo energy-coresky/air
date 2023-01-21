@@ -104,7 +104,7 @@ class Jet
         if ($tail)
             $out .= ' ?>';
         if (DEV && !$layout)
-            $out .= '<?php if (2 == $sky->d_var): DEV::ed_var(get_defined_vars()); endif ?>';
+            $out .= '<?php DEV::ed_var(get_defined_vars(), $sky->no) ?>';
         if (DEV)
             $out .= "<?php MVC::in_tpl() ?>";
         if ($return) {
@@ -148,15 +148,16 @@ class Jet
             if ($closure)
                 $s .= '$_b = (array)';
             $s .= "MVC::handle('$pf[0]_$name', \$_vars)";
-            if (DEV)
-                $s .= "; trace(MVC::\$ctrl . '::$pf[0]_$name() ^', 'BLK-VIEW')";
             if ($closure)
                 $s .= '; MVC::vars($_a, $_b); extract($_a, EXTR_REFS)';
+            if (DEV && $closure)
+                $s .= "; trace(\$sky->no . ' ' . MVC::\$ctrl . '::$pf[0]_$name() ^', 'BLK-VIEW')";
             if (DEV)
                 $s .= '; MVC::in_tpl()';
             if (!$closure)
                 return ["<?php $s ?>", $jet->parsed];
-            return ["<?php call_user_func(function() use(&\$_vars) { $s ?>", $jet->parsed, '<?php }) ?>'];
+            $vars = DEV ? 'DEV::ed_var(get_defined_vars(), $sky->no, true); ' : '';
+            return ["<?php call_user_func(function() use(&\$_vars,\$sky) { $s ?>", $jet->parsed, "<?php $vars}) ?>"];
 
         } elseif ($pf) { # asterisk
             if (in_array($pf[0], $this->occupied))
@@ -356,7 +357,7 @@ class Jet
             case 'head':
                 return "<?php MVC::head($arg) ?>";
             case 'tail':
-                $ed_var = DEV ? ' if (2 == $sky->d_var): DEV::ed_var(get_defined_vars()); endif;' : '';
+                $ed_var = DEV ? ' DEV::ed_var(get_defined_vars(), $sky->no);' : '';
                 return "<?php$ed_var MVC::tail($arg) ?>";
             case 'continue':
                 return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>';

@@ -223,15 +223,15 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     @if(1 == $_)
         <dl><dt><u>const</u>:</dt>
         <dd>
-            <input type="hidden" name="const-prev" value="{{$row->const}}"/>
-            <input size="30" name="const" value="{{$row->const}}"/>
+            <input type="hidden" name="const-prev" value="{{$row->val[0]}}"/>
+            <input size="30" name="const" value="{{$row->val[0]}}"/>
             <a @href($(this).prev().val(''))><img src="@inc(__std.d2)"/></a>
         </dd>
         </dl>
     ~if
     <dl><dt>@if($row->lg==DEFAULT_LG)default language - ~if{{$row->lg}}:</dt>
     <dd>
-        <input size="60" name="{{$row->lg}}" value="{{$row->val}}"
+        <input size="60" name="{{$row->lg}}" value="{{escape($row->val[1], true)}}"
         @if($row->lg==DEFAULT_LG)
             onkeyup="sky.g.inputs && $('input.ndef-lg').val(this.value)"/>
             <label><input type="checkbox" onclick="sky.g.inputs = this.checked"@checked(!$id)/> sync input</label>
@@ -428,6 +428,7 @@ sky.g.group = function(m, to) {
 $(function() {
     var prev = sky.key[27];
     sky.key[27] = function() { // Escape
+     alert(prev)
         if (sky.g.editing)
             return sky.g.cancel();
         prev();

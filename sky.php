@@ -226,7 +226,7 @@ class SKY implements PARADISE
     static function &ghost($char, $original, $tpl = '', $flag = 0) {
         SKY::$mem[$char] = [$flag, $flag & 4 ? null : $original, $tpl, []];
         if ($tpl)
-            trace(is_array($tpl) ? end($tpl) : $tpl, 'GHOST', 1);
+            trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Debug::closure($tpl) : $tpl), 'GHOST', 1);
         if ($original) foreach (explode("\n", unl($original)) as $v) {
             list($k, $v) = explode(' ', $v, 2);
             SKY::$mem[$char][3][$k] = escape($v, true);
@@ -281,11 +281,11 @@ class SKY implements PARADISE
     function tracing($plus = '', $trace_x = false) {
         $plus .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
         $plus .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
+        if (DEV)
+            $plus .= DEV::trace();
         if ($trace_x && SKY::$dd) {
-            if (DEV) {
-                $plus .= DEV::trace();
+            if (DEV)
                 SKY::$dd->_xtrace();
-            }
             SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $plus);
         }
         return $plus;
@@ -607,7 +607,7 @@ function unl($str) {
     return str_replace(["\r\n", "\r"], "\n", $str);
 }
 
-function strcut($str, $n = 300) {
+function strcut($str, $n = 100) { #300
     $text = mb_substr($str, 0, $n);
     return mb_strlen($str) > $n
         ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', 0) - mb_strlen($text)), '.,?!') . '&nbsp;...'

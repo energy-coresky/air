@@ -42,7 +42,7 @@ pre, fieldset {
     width: 95%;
     margin-bottom:10px;
 }
-pre, .code {
+pre, .code, div#popup-in {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     /* font-size: 12px; */
 }
@@ -319,5 +319,22 @@ td, .bb {
     margin-right:10px;
     font-size:18px;
 }
+
+div#popup {
+    position: fixed;
+    left: 170px;
+    bottom: 27px;
+    max-width: 35%;
+    max-height: 75%;
+    z-index: 890;
+    overflow: auto;
+    background-color:#fff;
+    border:1px solid #ccc;
+}
+div#popup div#popup-in {
+    margin: 10px;
+    font-size:12px;
+}
+
 
 

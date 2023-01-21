@@ -2,7 +2,6 @@
 var sky = {
     version: 0.722,
     id: 0,
-    mode: '', // visual or debug
     tz: null,
     home: '/',
     scrf: '',
@@ -18,7 +17,6 @@ var sky = {
             dev('_trace/0');
         }
     },
-    d: {}, // dev utilities
     a: { // ajax
         body: null,
         div: 'main',
@@ -38,7 +36,8 @@ var sky = {
         start: false,
         finish: false
     },
-    g: { // sky gate & language extensions
+    d: {}, // dev utilities
+    g: { // sky gate & dev utilities
         box: function(ctrl, func, layout) {
             if (layout) {
                 $('#trace-x').html('<h1>' + $('#trace-t h1:eq(0)').html() + '</h1>');
@@ -51,15 +50,8 @@ var sky = {
             //$('#err-top div:eq(0)').html()
         }
     },
-    key: {27: this.false},
     orientation: function() {
         return 'undefined' === typeof window.orientation ? 0 : (window.orientation == 90 || window.orientation == -90 ? 2 : 1);
-    },
-    false: function() {
-        return false;
-    },
-    true: function() {
-        return true;
     },
     toggle: function(el) {
         $(el).html('&gt;&gt;&gt;' == $(el).html() ? '<<<' : '>>>').next().slideToggle();
@@ -122,7 +114,7 @@ var sky = {
             return false;
         },
         slide: function(el, id) {
-            '0' == $(el).val() ? $(id).slideUp(150, sky.resize): $(id).slideDown(150, sky.resize);
+            '0' == $(el).val() ? $(id).slideUp(150): $(id).slideDown(150);
         },
         plus: function(cls, h) {
             var name, el = $('#' + cls).before($('.' + cls + ':eq(0)')[0].outerHTML).prev();
@@ -134,20 +126,6 @@ var sky = {
         del: function(el) {
             $(el).parent().remove();
         }
-    },
-    head: function() {
-        $('html').animate({scrollTop:0});
-    },
-    tail: function() {
-        $('html').animate({scrollTop:$('main').height()});
-    },
-    resize: function() {
-        var wh = $(window).height(), ww = $(window).width(), t;
-        $('#box').css({width:ww, height:wh}).children().css({
-            left: (ww - $('#box-in').width()) / 2,
-            top: t = (wh - $('#box-in').height()) / 2
-        });
-        $('#box div:first').css('top', t - 18);
     },
     load: function() {
         // process elm-hide
@@ -167,6 +145,13 @@ var sky = {
             }
         });
     },
+    key: {},//{27: this.false},
+    false: function() {
+        return false;
+    },
+    true: function() {
+        return true;
+    },
     _k27: this.false,
     hide: function() {
         sky.key[27] = sky._k27;//sky.false;
@@ -182,21 +167,14 @@ var sky = {
         sky.key[27] = sky.hide;
         $('#box').click(sky.true).prepend('<div class="esc"><a href="javascript:;" onclick="sky.hide()" class="red-link fr">Esc - Close [X]</a></div>');
         $('#box .esc').css('width', $('#box-in').width() - 20);
-        sky.resize();
     },
-    bg: '#ded url(img/bg.png)',
-    background_obj: false,
-    bgs: function(el) {
-        if (!el) el = $('#box-in');
-        sky.background_obj = {el:el, css:el.css('background')};
-        el.css('background', 'url(' + sky.home + 'img/ajax2.gif)');
+    head: function() {
+        $('html').animate({scrollTop:0});
     },
-    bgh: function(bg) {
-        if (sky.background_obj) {
-            sky.background_obj.el.css('background', bg ? bg : sky.background_obj.css);
-            sky.background_obj = false;
-        }
+    tail: function() {
+        $('html').animate({scrollTop:$('main').height()});
     },
+    box_html: '',
     set_file_clk: function(id) {
         $(id + ' pre span, ' + id + ' td span').each(function() {
             $(this).click(function() {
@@ -216,23 +194,9 @@ var sky = {
         });
         sky.key[27] = sky.hide;
     },
-    box_html: '',
     trace: function(c) {
         dev('_trace/' + c);
         return;
-
-        if (c) $.post(sky.home + '_x' + c, function(r) {
-            box('<ul style="position:fixed" id="x-cell">'
-                + '<li><a href="javascript:;" onclick="sky.trace(1)" class="' + (1 == c ? 'active' : '') + '">X<sup>0</sup></a></li>'
-                + '<li><a href="javascript:;" onclick="sky.trace(2)" class="' + (2 == c ? 'active' : '') + '">X<sup>-1</sup></a></li>'
-                + '<li><a href="javascript:;" onclick="sky.trace(3)" class="' + (3 == c ? 'active' : '') + '">X<sup>-2</sup></a></li>'
-                + '</ul><pre>' + r + '</pre>', 'x');
-            //sky.set_file_clk('#box-in');
-        }); else {
-            var r = $('#trace').html();
-            box('<pre>' + r + '</pre>', 't');
-            //sky.set_file_clk('#box-in');
-        }
     }
 }
 
@@ -258,7 +222,6 @@ function box(html, c) {
     if (null !== html)
         box.children('#box-in').css(css).html(html).click(sky.true);
     sky.show();
-    sky.resize();
     //if ('e' == c)
       //  sky.set_file_clk('#box-in');
     if (el && ('t' == c || 'x' == c))
@@ -331,8 +294,7 @@ function ajax(j_, postfields, func, c_) {
 })(jQuery);
 
 $(function() {
-    var html = '<div id="box" style="display:none"><div id="box-in"></div></div>'
-        + '<div style="opacity:0;position:absolute;left:0;top:0;z-index:-1000"><img src="' + sky.home + 'img/ajax2.gif" /></div>';
+    var html = '<div id="box" style="display:none"><div id="box-in"></div></div>';
     // set box
     $('body').prepend(html).keydown(function(e) {
         if ('function' == typeof sky.key[e.keyCode]) try {
@@ -348,9 +310,6 @@ $(function() {
             sky.g.show();
     }
   sky.err_show(); // _x0 + sky gate
-
-    sky.resize();
-    $(window).resize(sky.resize);
 
     var scr = '';
     if ('' === sky.tz) {

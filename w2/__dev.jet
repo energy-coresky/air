@@ -160,8 +160,6 @@ $(function() {
 
 #.view //////////////////////////////////////////////////////////////////////////////
 #use(.menu)
-#use(`{{$time}}` as time)
-#use(`{!$top!}` as master)
 #use(`{!$header!}` as header)
 @if($php){!$php!}@else
     {!$layout!}{!$body!}
@@ -239,19 +237,19 @@ $(function() {
         @block(bottom)
 #.bottom --------
         <form method="post" style="display:inline-block"><input type="hidden" name="t0">
-        <a @href(sky.d.view())@active('_dev?view=' == substr(URI, 0, 10))>
+        <a n="v" @href(sky.d.view())@active('_dev?view=' == substr(URI, 0, 10))>
             ▲ Views (<span>?</span>)
         </a>&nbsp; &nbsp;
-        <a href="#">
+        <a n="s" href="#">
             ▲ SQLs (<span>?</span>)
         </a>&nbsp; &nbsp;
-        <a href="#">▲ Classes (<span>?</span>)</a>
+        <a n="c" href="#">▲ Classes (<span>?</span>)</a>
         </form>
 #.bottom --------
         ~block
     </div>
     <div style="width:25%">
-        <span>@block(`` as time)</span>
+        <span></span>
         <span style="float:right;font-weight:bold">{{SKY::version()['app'][3]}}</span>
     </div>
     <div id="tpl-list-copy" style="display:none">@inc(.bottom)</div>

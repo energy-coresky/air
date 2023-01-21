@@ -84,16 +84,21 @@ a.red-link:hover {
 }
 div#box {
     position: fixed;
-    z-index: 1000;
-    left: 0; top: 0;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 888;
     background-color: rgba(0,0,0, 0.5);
 }
 div#box div#box-in {
     position: fixed;
-    background-color: rgba(255,255,255, 1);
-    overflow: hidden;
+    left: 50px;
+    top: 50px;
     width: calc(100vw - 100px);
     height: calc(100vh - 100px);
+    background-color: rgba(255,255,255, 1);
+    overflow: hidden;
 }
 #box-in pre span:hover, #box-in td span:hover, #err-top pre span:hover {
     color: red;

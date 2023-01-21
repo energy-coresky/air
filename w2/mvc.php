@@ -1,6 +1,6 @@
 <?php
 
-function view($_in, $return = false, &$_vars = null) {
+function view($_in, $_return = false, &$_vars = null) {
     if (!$_in) {
         return require Plan::$parsed_fn;
     } elseif ($_in instanceof MVC) {
@@ -9,17 +9,20 @@ function view($_in, $return = false, &$_vars = null) {
     } else {
         list($_in, $layout) = is_array($_in) ? $_in : [$_in, ''];
         $no_handle = false;
-        if (!is_bool($return)) {
-            $no_handle = is_array($_vars = $return);
-            $return = true;
+        if (!is_bool($_return)) {
+            $no_handle = is_array($_vars = $_return);
+            $_return = true;
         }
         $mvc = MVC::sub($_in, $_vars, $no_handle);
-        $mvc->return = $return;
+        $mvc->return = $_return;
     }
-    if ('' !== $mvc->ob)
+    if ('' !== $mvc->ob) {
         $mvc->body = '';
+        if (DEV && !$layout)
+            DEV::ed_var(['$' => $mvc->ob], $mvc->no);
+    }
 
-    trace("$mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
+    trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
     if ($layout || $mvc->body)
         $mvc->ob = view(false, 0, MVC::jet($mvc, $layout));
     return MVC::tail($mvc, $layout);
@@ -262,6 +265,7 @@ class MVC extends MVC_BASE
     public $is_sub;
     public $return;
     public $hnd;
+    public $no;
 
     static $vars;
     static $_y = []; # layout vars
@@ -272,6 +276,8 @@ class MVC extends MVC_BASE
     static $tpl = 'default';
 
     function __construct($is_sub = false) {
+        static $no = 0;
+        $this->no = $no++;
         MVC::$stack[] = $this;
         $this->is_sub = $is_sub;
     }
@@ -286,7 +292,7 @@ class MVC extends MVC_BASE
 
     static function instance($level = 0) {
         MVC::$stack or new MVC;
-        return MVC::$stack[$level];
+        return MVC::$stack[$level < 0 ? count(MVC::$stack) + $level : $level];
     }
 
     static function fn_parsed($layout, $body) {
@@ -433,7 +439,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     }
 
     static function handle($method, &$param = null) {
-        if (MVC::$ctrl = method_exists(MVC::$mc, $method) ? substr(get_class(MVC::$mc), 0, -7) : false)
+        if (MVC::$ctrl = method_exists(MVC::$mc, $method) ? get_class(MVC::$mc) : false)
             return MVC::$mc->$method($param);
         if (MVC::$ctrl = method_exists(MVC::$cc, $method) ? 'common_c' : false)
             return MVC::$cc->$method($param);
@@ -453,7 +459,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $me->body = "$tpl." . substr($action, 2);
                 $me->set($no_handle ? $param : MVC::handle($action, $param));
-                $me->hnd = $no_handle ? "no-handle" : MVC::$ctrl . "::$action()";
+                $me->hnd = $no_handle ? 'no-handle' : ('_cached' == substr(MVC::$ctrl, -7) ? substr(MVC::$ctrl, 0, -7) : MVC::$ctrl) . "::$action()";
             }
         } elseif ($action instanceof Closure) {
             $me->set($action($param));
@@ -544,7 +550,6 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $me->hnd = "$class::$action()";
         MVC::$mc = $gape ? new $cached : new $class;
         MVC::$cc = new common_c;
-        SKY::$vars['k_class'] = $class;
         $me->set(MVC::$mc->head_y($action), true);
         if ($gape) {
             $param = (array)call_user_func([$gape, $action], $sky, $user);

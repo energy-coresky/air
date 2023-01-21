@@ -207,14 +207,9 @@ class Language
         return [
             'id' => $in,
             'e_list' => ['row_c' => function() use ($id) {
-                if (false === ($lg = current($this->langs)))
-                    return false;
-                list ($const, $val) = $id ? $this->act($lg, $id) : ['', ''];
-                next($this->langs);
-                return [
-                    'lg' => $lg,
-                    'const' => $const,
-                    'val' => escape($val, true),
+                return !$this->langs ? false : [
+                    'lg' => $lg = array_shift($this->langs),
+                    'val' => $id ? $this->act($lg, $id) : ['', ''],
                 ];
             }],
         ];
@@ -284,6 +279,7 @@ class Language
         $row = $this->t->one(qp('lg=$+ and name=$+', $lg, 'list' == $mode ? $id : $this->page));
         $ary =& SKY::ghost('i', trim($row['tmemo'], "\n"), false, 1);
         $out = [];
+        static $sync = false;
         switch ($mode) {
             case 'list':
                 if (!$def_lg)
@@ -292,6 +288,8 @@ class Language
                 $this->nsync = self::NON_SYNC & $this->flag;
                 if ($s) # is_sync
                     $this->flag &= ~self::NON_SYNC;
+                if ($sync)
+                    $this->flag |= self::NON_SYNC;
                 if ($is_sort && $this->nsort) {
                     $this->flag &= ~self::NON_SORT;
                     $this->sort($ary);
@@ -305,6 +303,7 @@ class Language
                 return $ary;
             case 'text':
                 $ary[$id] = explode(' ', $ary[$id], 2)[0] . " $s";
+                $sync = true;
                 break;
             case 'delete':
                 is_array($id) or $id = [$id];
@@ -534,8 +533,8 @@ class Language
             'chars' => function() use (&$chars) {
                 return ' ' . implode(' ', $chars);
             },
-            'row_c' => function() use (&$dary, &$ary, &$chars, $only) {
-                static $char = '', $prev = '', $pp = '', $color = false;
+            'row_c' => function($row) use (&$dary, &$ary, &$chars, $only) {
+                static $char = '', $pp = '', $color = false;
 
                 if (false === ($v = current($dary)))
                     return false;
@@ -559,8 +558,8 @@ class Language
                     $chars[] = a($nc, "#_$sz");
                 }
                 return [
-                    'red' => (int)$prev === $v, // duplicated
-                    'val' => $prev = $v,
+                    'red' => (int)(($row->val ?? '') === $v), // duplicated
+                    'val' => $v,
                     'val2' => $v2 = $ary ? explode(' ', $ary[$id], 2)[1] : '',
                     'pink' => $ary && $v == $v2, // not translated
                     'yell' => strlen($v) < strlen($key),
