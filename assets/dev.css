@@ -323,13 +323,14 @@ td, .bb {
 div#popup {
     position: fixed;
     left: 170px;
-    bottom: 27px;
+    bottom: 26px;
     max-width: 35%;
     max-height: 75%;
     z-index: 890;
     overflow: auto;
-    background-color:#fff;
+    background-color:#eee;/* e0e7ff #ffd;*/
     border:1px solid #ccc;
+    box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
 }
 div#popup div#popup-in {
     margin: 10px;

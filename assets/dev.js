@@ -47,10 +47,21 @@ sky.d.draw = {
                     blks[view.no] = vars[name];
                     blkc[view.no] = 0;
                 } else {
-                    let s = ++j + '. <b>$' + name + '</b>';
+                    let s = ++j + '. <b>$' + name + '</b>', v = vars[name];
                     if ('$' == name.charAt(0))
                         s = '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
-                    str += s +'&nbsp;=&nbsp;' + vars[name] + '<br>';
+                    if ('number' == typeof v) {
+                        v = '<span style="color:red">' + v + '</span>';
+                    } else if (null === v || 'boolean' == typeof v) {
+                        v = '<span style="color:#93c">' + v + '</span>';
+                    } else if ('<' == v.charAt(0)) {
+                        var cls = v.match(/<o>([\(\)\w]+)/i);
+                        !cls || (cls = '(object)' == cls[1] ? 'stdClass' : cls[1]);
+                        v = '<span style="color:#b88">' + ('o' == v.charAt(1) ? 'Object ' + cls : 'Array') + '</span>'
+                            + ' <a href="javascript:;" onclick="sky.toggle(this)">&gt;&gt;&gt;</a>'
+                            + v.replace('<'+v.charAt(1)+'>', '<pre style="display:none">').replace('</'+v.charAt(1)+'>', '</pre>');
+                    }
+                    str += s +'&nbsp;=&nbsp;' + v + '<br>';
                 }
             });
             str += '<hr>';

@@ -79,33 +79,29 @@ class DEV
     }
 
     static function ed_var($in, $no, $is_blk = false) {
-        //$i = 1;
-        //DEV::$vars[] = [['<hr>', 'colspan="3"']];
         $ary = [];
         isset(DEV::$vars[$no]) or DEV::$vars[$no] = [];
         $p =& DEV::$vars[$no];
+        $types = ['unknown type', 'NULL', 'boolean', 'integer', 'double', 5 => 'resource', 'string', 'array', 'object'];
+        $cut = function ($v, $n) {
+            return mb_strlen($v) > $n ? html(mb_substr($v, 0, $n)) . sprintf(span_g, '&nbsp;cutted...') : html($v);
+        };
         foreach ($in as $k => $v) {
             if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
                 continue;
             if ('$' == $k && isset($p['$$']))
                 return;
-            $is_obj = is_object($v);
-            $is_arr = is_array($v);
-            is_string($v) or is_int($v) or $v = @var_export($v, true);
-            strlen($v) <= 500 or $v = strcut($v);// . sprintf(span_r, ' cutted...');
-            $v = html($v);
-            if ($is_obj || $is_arr) {
-                $v = $is_obj ? 'Object' : 'Array';
-                //tag($is_obj ? 'Object' : 'Array', '', 'b') . ' '
+            $t = array_search(gettype($v), $types);
+            if ($t > 5) {
+                6 == $t or $v = @var_export($v, true);
+                $v = $cut($v, 6 == $t ? 100 : 200);
+                6 == $t or $v = tag($v, '', 7 == $t ? 'r' : 'o');
                   //  . a('>>>', 'javascript:;', 'onclick="sky.toggle(this)" style="font-family:monospace" title="expand / collapse"')
                     //. tag($v, 'style="display:none"');
             }
-            $ary[$k] = $v;
+            $ary[$k] = $v;//.'<a href="#" style="color:red"> &gt;&gt;&gt;</a>';
         }
-//      if ('' !== $in['sky']->ob)
-  //      $ary['$'] = strcut($in['sky']->ob);
         ksort($ary);
-        
         if ($is_blk) {
             isset($p['']) or $p += ['' => []];
             $p[''][] = $ary;
