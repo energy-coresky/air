@@ -346,15 +346,15 @@ class DEV
         $ware = $m[1] ?? 'main';
         $header = '';
         $nv = $_GET['nv'] ?? 0;
-        for ($list = [], $i = 0; preg_match("/(TOP|SUB|BLK)\-VIEW: (\S+) (\S+)(.*)/s", $trace, $m); $i++) {
+        for ($list = [], $i = 0; preg_match("/(TOP|SUB|BLK)\-VIEW: (\d+) (\S+) (\S+)(.*)/s", $trace, $m); $i++) {
             $m[1] = ucfirst(strtolower($m[1]));
-            $title = "$m[1]-view:&nbsp;<b>$m[2]</b> &nbsp; Template: <b>" . ('^' == $m[3] ? 'no-tpl' : $m[3]) . "</b>";
+            $title = "$m[1]-view:&nbsp;<b>$m[3]</b> &nbsp; Template: <b>" . ('^' == $m[4] ? 'no-tpl' : $m[4]) . "</b>";
             if ($nv == $i)
                 $header = $title;
-            $trace = $m[4];
+            $trace = $m[5];
             array_pop($m);
             array_shift($m);
-            $list[] = $m;
+            $list[] = $m + [7 => 'no-handle' == $m[2]];
         }
         $menu = ['Source templates', 'Parsed template', 'Master action'];
 
@@ -363,14 +363,14 @@ class DEV
         $sl = $sb = ';background:#eee"';
         $php = '';
         if (2 == $sky->_6) {
-            $ctrl = explode('::', $list[$nv][1]);
+            $ctrl = explode('::', $list[$nv][2]);
             $fn = ($w2 = 'standard_c' == $ctrl[0]) ? "w2/standard_c.php" : "mvc/$ctrl[0].php";
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
             $we = 'mvc/common_c.php' != $fn ? $ware : 'main';
             $php .= Display::php_method(Plan::_g([$we, $fn], $w2), substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
-            $tpl = $list[$nv][2];
+            $tpl = $list[$nv][3];
             list ($lay, $bod) = explode('^', $tpl);
             $fn = MVC::fn_parsed($lay, "_$bod");
             $php = '<div class="other-task" style="position:sticky; top:0px">Parsed: ';
@@ -381,7 +381,7 @@ class DEV
             }
             
         } elseif ($list) {
-            $tpl = $list[$nv][2];
+            $tpl = $list[$nv][3];
             if ('^' != $tpl) {
                 list ($lay, $bod) = explode('^', $tpl);
                 if ($lay) {

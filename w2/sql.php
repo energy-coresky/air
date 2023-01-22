@@ -163,15 +163,13 @@ final class SQL
             $sky->was_error |= SKY::ERR_DETECT;
         if ($sky->debug || $no && $sky->s_prod_error) {
             $this->mode++; # add 1 depth
-            $ts = microtime(true) - $ts;
+            $ts = !DEV || ($ts = microtime(true) - $ts) < 0.1 ? '' : sprintf("%01.3f sec ", $ts);
             SQL::$query_num++;
             if ($is_error = (bool)$no)
                 $sky->error_title = 'SQL Error';
             $depth = SQL::NO_TRACE & $this->mode ? (int)$is_error : 1 + $this->mode & 7;
             if ($depth)
-                trace(($is_error ? "ERROR in {$this->_dd->name} - $no: " . $this->_dd->error() . "\n" : '') . "SQL: $char$qstr", $is_error, $depth);
-            if (DEV && $sky->d_sql)
-                DEV::ed_sql($qstr, $ts, $depth, $no);
+                trace(($is_error ? "ERROR in {$this->_dd->name} - $no: " . $this->_dd->error() . "\n" : '') . "SQL: $ts$char$qstr", $is_error, $depth);
         }
 
         if ($no)

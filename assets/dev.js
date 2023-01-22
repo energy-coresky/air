@@ -31,6 +31,7 @@ sky.d.close_box = function() {
 };
 
 sky.d.draw = {
+    x: '',
     v: function(data, str) {
         str = '';
         var j, vars, blks = {}, blkc = {};
@@ -69,12 +70,14 @@ sky.d.draw = {
         return str;
     },
     s: function(data, str) {
-        var m, i = 0, s = '';
+        var m, n, i = 0, s = '';
         for (; m = str.match(/>\nSQL: (.+?)\n\n<(.*)/sm); str = m[2]) {
+            m[1] = m[1].replace(/(select|update|insert|join|from|where|group|order)/gi, '<span style="color:#93c">$1</span>');
+            m[1] = m[1].replace(/^([\d\.]+ sec)/m, '<span style="color:red;border-bottom:1px solid blue">$1</span>');
             s += '<span style="color:#f77">#' + ++i + '</span> ' + m[1] + '<br><br>';
         }
         return s ? s : '?';
-    },//#f77 #93c #0a0 #b88
+    },
     c: function(data, str) {
         str = '';
         const base = [
@@ -85,11 +88,32 @@ sky.d.draw = {
             let s = data.classes[i], inc = base.includes(s);
             str += (1 + parseInt(i)) + '.&nbsp;' + (inc ? s : `<span style="color:#93c">${s}</span>`) + '<br>';
         }
-        //Object.keys(data.classes).forEach(function (key) {
-        //});
         return str;
-    }
+    },
+    b: function() {
+        $('div#popup-in b').css({cursor: 'default'})
+            .mouseenter(function() {
+                var v = $(this).html();
+                if (v == sky.d.v)
+                    return;
+                if (sky.d.v)
+                    $('div#popup-in b').css({background:''});
+                sky.d.v = v;
+                $(this).css({background:'#bfdbfe'});
+            }).click(function() {
+                var found = 0;
+                $('div.code span').each(function() {
+                    $(this).css({background:'', color:''});
+                    if ($(this).text().includes(sky.d.v)) {
+                        found || this.scrollIntoView({block:'center',behavior:'smooth'});
+                        found = 1;
+                        $(this).css({background:'blue', color:'#fff'});
+                    }
+                });
+            });
+    }//#f77 #93c #0a0 #b88
 };
+sky.d.v = '';
 
 sky.d.drop_cache = function(r, el) {
     var s = $(el).html(), ok = 'OK' == r;
@@ -197,19 +221,24 @@ sky.d.init = function(str, from) {
 
     if (1 == from || '' !== $('#master').html()) {
         var data = JSON.parse($.trim($('#trace div.dev-data:eq(0)').text()));
-        //eval('var data = ' + $.trim($('#trace div.dev-data:eq(0)').html()) + ';');
         data.views = a;
         $('#tpl-list').html($('#tpl-list-copy').html()).find('a')
             .mouseenter(function() {
-                if (sky.d.to)
-                    clearTimeout(sky.d.to);
+                sky.d.to && clearTimeout(sky.d.to);
                 sky.d.to = 0;
-                var n = $(this).attr('n'), poh = sky.d.draw[n](data, trc)
-                $('div#popup-in').html(poh).parent().show().css({left:$(this).offset().left});
+                $('div#popup').show().css({left:$(this).offset().left});
+                var n = $(this).attr('n');
+                var i = 's' == n ? 1 : ('c' == n ? 2 : 0);
+                $('#tpl-list a').css({background:'', color:''});
+                $('#tpl-list a:eq(' + i + ')').css({background:'#ddd', color:'#000'});
+                if (n != sky.d.draw.x) {
+                    sky.d.draw.x = n;
+                    $('div#popup-in').html(sky.d.draw[n](data, trc));
+                    'v' == n && sky.d.draw.b();
+                }
             }).mouseleave(sky.d.mouseleave);
             $('div#popup').mouseenter(function() {
-                if (sky.d.to)
-                    clearTimeout(sky.d.to);
+                sky.d.to && clearTimeout(sky.d.to);
                 sky.d.to = 0;
             }).mouseleave(sky.d.mouseleave);
         $('#tpl-list span:eq(0)').html(a.length);
@@ -225,6 +254,7 @@ sky.d.mouseleave = function() {
         clearTimeout(sky.d.to);
     sky.d.to = setTimeout(function() {
         $('div#popup').hide();
+        $('#tpl-list a').css({background:'', color:''});
     }, 300);
 };
 

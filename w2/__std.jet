@@ -99,18 +99,7 @@ $(function() {
 </script>
 #.lock
 
-#.qq
-        @if($nv == $_)
-        @loop($list_menu as $k => $v)
-            <a href="_dev?view={{$sky->_2}}&nv={{$_}}&act={{$k}}"
-                class="inner-menu"@active($k == ($sky->_6 ?: 0))>{!$v!}
-            </a>
-        ~loop
-        ~if
-    <br><div class="other-task">Variables</div>
-#.qq //////////////////////////////////////////////////////////////////////////////
-
-#.m_gate <fieldset id="contr">
+#.m_gate //////////////////////////////////////////////////////////////////////////////
 @loop($list as $one => $ex)
     <a href="{{PATH}}?_gate={!$one!}" class="inner-menu" style="background:{! $ex?(1==$ex?'':'#cfc'):'#fcc' !}"@active($one==$y_1)>
         {!'*' == $one ? 'default_c' : "c_$one"!}.php @if(!in_array($ex,['0','1']))({{$ex}})~if
