@@ -42,9 +42,7 @@ class Plan
             require 'vendor/autoload.php';
             if (2 != count($ary = spl_autoload_functions()))
                 throw new Error('Vendor autoload');
-            $vendor = $ary[0];
-            'Plan' !== $vendor[0] or $vendor = $ary[1];
-            spl_autoload_unregister($vendor);
+            spl_autoload_unregister($vendor = 'Plan' === $ary[0][0] ? $ary[1] : $ary[0]);
         }
     }
 
