@@ -7,6 +7,7 @@ class Jet
     private $parsed = [];
     private $files = [];
     private $loop = [];
+    private $tailed = false;
 
     private static $custom = [];
     private static $verb;
@@ -95,7 +96,7 @@ class Jet
         Jet::$top .= "extract(\$_vars, EXTR_REFS) ?>";
         if (DEV) {
             Jet::$top .= "<?php\ntrace('TPL: $list'); MVC::in_tpl(true);";
-            Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || 1 == $sky->ajax && !$sky->is_sub))';
+            Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || HEAVEN::J_ACT == $sky->fly && !$sky->is_sub))';
             Jet::$top .= "\nthrow new Error('Return status do not match for file: ' . __FILE__) ?>";
         }
         array_walk_recursive($this->parsed, function ($str, $id) use (&$out) {
@@ -103,7 +104,7 @@ class Jet
         });
         if ($tail)
             $out .= ' ?>';
-        if (DEV && !$layout)
+        if (DEV && !$this->tailed)
             $out .= '<?php DEV::ed_var(get_defined_vars(), $sky->no) ?>';
         if (DEV)
             $out .= "<?php MVC::in_tpl() ?>";
@@ -349,7 +350,7 @@ class Jet
             case 'dump':
                 return "<?php echo '<pre>' . html(print_r($arg, true)) . '</pre>' ?>";
             case 'mime':
-                return $q('MVC::doctype(%s)', $arg);
+                return $q('MVC::mime(%s)', $arg);
             case 'href':
                 return 'href="javascript:;" onclick="' . $this->echos($arg) . '"';
             case 'csrf':
@@ -357,8 +358,9 @@ class Jet
             case 'head':
                 return "<?php MVC::head($arg) ?>";
             case 'tail':
-                $ed_var = DEV ? ' DEV::ed_var(get_defined_vars(), $sky->no);' : '';
-                return "<?php$ed_var MVC::tail($arg) ?>";
+                $vars = DEV ? ' DEV::ed_var(get_defined_vars(), $sky->no);' : '';
+                $this->tailed = true;
+                return "<?php$vars MVC::tail($arg) ?>";
             case 'continue':
                 return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>';
             case 'break':

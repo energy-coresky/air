@@ -354,11 +354,11 @@ class Rare
             if ($ary)
                 SKY::u(null, $ary);
             SKY::v(null, ['uid' => $sky->is_front ? 0 : $user->id]);
-        } elseif (!$sky->ajax) {
+        } elseif (!$sky->fly) {
             throw new Exception('logout when auth=0');
         }
         $to = $sky->is_front ? $sky->lref : $user->u_uri_front;
-        if ($sky->ajax)
+        if ($sky->fly)
             return !$to ? LINK : $to;
         jump([$to, '']);
     }

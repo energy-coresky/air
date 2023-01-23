@@ -23,7 +23,7 @@ $list = [ # production errors
 ];
 $p_prev = $ru ? 'вернуться на предыдущую страницу' : 'return to previouse page';
 $p_main = $ru ? 'открыть главную' : 'open main page';
-isset($error) && $error && ($sky->debug || DEV) or $error = isset($list[$no]) ? $list[$no] : $list[500];
+isset($error) && $error && (SKY::$debug || DEV) or $error = isset($list[$no]) ? $list[$no] : $list[500];
 ~php
 #if(Plan::view_t('error.jet'))@inc(error.exception)#else
 <!doctype html><html>

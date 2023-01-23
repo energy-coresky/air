@@ -34,6 +34,20 @@ class Plan
         return $prev;
     }
 
+    static function vendor($class = false) {
+        static $vendor = false;
+        if ($class && $vendor) {
+            call_user_func($vendor, $class);
+        } elseif (!$class && !$vendor) {
+            require 'vendor/autoload.php';
+            if (2 != count($ary = spl_autoload_functions()))
+                throw new Error('Vendor autoload');
+            $vendor = $ary[0];
+            'Plan' !== $vendor[0] or $vendor = $ary[1];
+            spl_autoload_unregister($vendor);
+        }
+    }
+
     static function main() {
         Plan::$ctrl += Gate::controllers();
         SKY::$plans['main'] += ['ctrl' => Plan::$ctrl];
@@ -107,7 +121,10 @@ class Plan
             case 'rr': # gate
                 $recompile = $arg[1];
                 return require $obj->path . '/' . $a0;
-            case 'ra': # autoloader
+            case 'autoload':
+                trace("autoload($a0)");
+                if (strpos($a0, '\\'))
+                    return Plan::vendor($a0);
                 $low = strtolower($a0);
                 $cfg =& SKY::$plans['main']['class'];
                 if (in_array(substr($a0, 0, 2), ['m_', 'q_', 't_'])) {
@@ -120,7 +137,7 @@ class Plan
                     return Plan::_r([$cfg[$a0], "w3/$low.php"]);
                 }
                 $fn = DIR_S . '/w2/' . $low . '.php';
-                return is_file($fn) ? require $fn : Plan::_r("w3/$low.php");
+                return is_file($fn) ? require $fn : Plan::_rq("w3/$low.php") || Plan::vendor($a0);
             case 'da':
             case 'dq':
             case 'd':

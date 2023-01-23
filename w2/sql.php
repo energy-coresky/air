@@ -161,7 +161,7 @@ final class SQL
         $ts = microtime(true);
         if ($no = SQL::$last_error = $this->_dd->query($qstr, $this->stmt))
             $sky->was_error |= SKY::ERR_DETECT;
-        if ($sky->debug || $no && $sky->s_prod_error) {
+        if (SKY::$debug || $no && $sky->s_prod_error) {
             $this->mode++; # add 1 depth
             $ts = !DEV || ($ts = microtime(true) - $ts) < 0.1 ? '' : sprintf("%01.3f sec ", $ts);
             SQL::$query_num++;
@@ -285,14 +285,14 @@ final class SQL
             case '$.': # numbers
                 if (is_num($val))
                     return $val;
-                $sky->debug ? ($this->parse_error = "$param not numeric") : die;
+                SKY::$debug ? ($this->parse_error = "$param not numeric") : die;
             break;
             case '$+': # string (scalar)
                 if (null === $val)
                     return $val = 'NULL';
                 if (is_scalar($val))
                     return $val = is_num($val) ? $val : $this->_dd->escape($val);
-                $sky->debug ? ($this->parse_error = "$param not a scalar") : die;
+                SKY::$debug ? ($this->parse_error = "$param not a scalar") : die;
             break;
             case '$`': # column of a table, free to use
                 if (is_string($val))
@@ -312,7 +312,7 @@ final class SQL
             case '$@':
                 if (is_array($val) && is_num(key($val)))
                     return $val = $this->array_join(array_values($val));
-                $sky->debug ? ($this->parse_error = "$param not array or key0 not numeric") : die;
+                SKY::$debug ? ($this->parse_error = "$param not array or key0 not numeric") : die;
             break;
             case '!!': # scalar or array, dangerous, NOT escaped! use it as least as can
                 if (is_scalar($val))

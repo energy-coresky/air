@@ -176,15 +176,15 @@ class Controller extends MVC_BASE
 
     function __call($name, $args) {
         global $sky;
-        if ($sky->debug) {
+        if (SKY::$debug) {
             switch ($class = get_class($this)) {
                 case __CLASS__:
                 case 'default_c':
                     if (DEV && Plan::_t([Plan::$gate, "mvc/c_$sky->_0.php"])) {
                         Plan::cache_d(['main', 'sky_plan.php']);
-                        $sky->ajax or jump(URI);
+                        $sky->fly or jump(URI);
                     }
-                    $x = 1 == $sky->ajax ? 'j' : 'a';
+                    $x = HEAVEN::J_ACT == $sky->fly ? 'j' : 'a';
                     $msg = preg_match("/^\w+$/", $sky->_0)
                         ? "Controller `c_$sky->_0.php` or method `default_c::{$x}_$sky->_0()` not exist"
                         : "Method `default_c::default_$x()` not exist";
@@ -194,7 +194,7 @@ class Controller extends MVC_BASE
                     trace("Method `{$class}::$name()` not exist", (bool)DEV);
             }
         }
-        return 404; # 1 == $sky->ajax also works via sky.error() and CONTR::error_y()
+        return 404; # 1 == $sky->fly also works via sky.error() and CONTR::error_y()
     }
 }
 
@@ -222,7 +222,7 @@ trait HOOK
     static function head_h() {
         global $sky, $user;
         $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
-        return "sky.is_debug=" . (int)$sky->debug . "; sky.tz=$tz;";// var addr='".LINK."';";
+        return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";// var addr='".LINK."';";
     }
 
     //add named limits and permission to sky-gate!!!!!!
@@ -421,17 +421,17 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         if ($mvc) {
             if ($mvc->is_sub)
                 return $mvc->return ? $mvc->ob : print($mvc->ob);
-            if ($sky->ajax || !$layout)
-                $sky->tail_x('', $mvc->ob); # tail_x ended with "throw new Stop"
+            if ($sky->fly || !$layout)
+                $sky->tail_x('', $mvc->ob); # tail_x ended with "exit"
             return $mvc->ob;
         }
-        $sky->ajax or $sky->tail();
+        $sky->fly or $sky->tail();
     }
 
-    static function doctype($mime) {
+    static function mime($mime) {
         global $sky;
         header("Content-Type: $mime;");
-        $sky->ajax = 3;
+        $sky->fly = HEAVEN::U_ACT;
     }
 
     static function body($body) {
@@ -488,7 +488,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             $sky->error_no = $in;
             if ($sky->s_error_404)// || $user->jump_alt)
                 throw new Stop($in); # terminate quick
-            $sky->ajax or http_response_code($in);
+            $sky->fly or http_response_code($in);
             $this->body = '_std.404';
         }
     }
@@ -531,7 +531,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $me = new MVC;
         ob_start();
         $param = [];
-        $me->return = 1 == $sky->ajax;
+        $me->return = HEAVEN::J_ACT == $sky->fly;
         if ('_' == $sky->_0[0]) {
             $class = 'standard_c';
             $action = ($me->return ? 'j' : 'a') . $sky->_0;

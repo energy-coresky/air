@@ -3,9 +3,13 @@
 //////////////////////////////////////////////////////////////////////////
 class HEAVEN extends SKY
 {
+    const J_ACT = 1;
+    const U_ACT = 2;
+
     public $jump = false;
+    //public $requests = [''];
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
-    public $method = false;
+    public $method;
     public $re;
     public $sname = [];
     public $fn_extra = '';
@@ -15,7 +19,7 @@ class HEAVEN extends SKY
     public $has_public = true; # web-site or CRM
     public $page_p = 'p';
     public $show_pdaxt = false;
-    public $ajax = 0;
+    public $fly = 0;
     public $surl_orig = '';
     public $surl = [];
 
@@ -82,7 +86,7 @@ class HEAVEN extends SKY
 
         parent::load(); # database connection start from here
 
-        $this->ajax = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) ? 2 : 0;
+        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::U_ACT : 0;
         # use fetch with a_.. actions
         $this->is_front = true;
         $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
@@ -107,8 +111,8 @@ class HEAVEN extends SKY
             if (1 == $cnt_s && '' === $this->surl[0]) {
                 $this->surl = [];
                 $cnt_s = 0;
-                if ($this->ajax && 'AJAX' == key($_GET)) {
-                    $this->ajax = 1; # j_ template
+                if ($this->fly && 'AJAX' == key($_GET)) {
+                    $this->fly = HEAVEN::J_ACT;
                     if ('adm' == $_GET['AJAX'])
                         $this->surl = ['adm'];
                     array_shift($_GET);
@@ -117,10 +121,10 @@ class HEAVEN extends SKY
             common_c::rewrite_h($cnt_s, $this->surl);
         }
 
-        if ($this->debug)
+        if (SKY::$debug)
             $this->gpc = Debug::gpc();
 
-        //if (12 == $this->error_no && !$this->ajax && '' !== URI) // 2do:check for api calls
+        //if (12 == $this->error_no && !$this->fly && '' !== URI) // 2do:check for api calls
         //    jump();
         //if ($this->error_no && '_exception' != URI)
         //    throw new Exception(11);
@@ -148,7 +152,7 @@ class HEAVEN extends SKY
             trace($this->except ? $this->except['title'] : 'Unexpected Exit', true, 3);
         $this->ghost or $this->tail_ghost();
         for ($i = 0; ob_get_level(); $i++, $stdout .= ob_get_clean()); # grab if this is unexpected break
-        if ($flag = !headers_sent() && 1 === $this->ajax) { # CSN-AJAX template only
+        if ($flag = !headers_sent() && HEAVEN::J_ACT == $this->fly) {
             http_response_code(200);
             $etc = is_array($this->ca_path) ? $this->ca_path : [];
             if ($this->except && 11 == $this->except['code'])
@@ -156,13 +160,13 @@ class HEAVEN extends SKY
             if (!$etc && $this->error_no > 100) {
                 $etc = ['err_no' => $this->error_no, 'soft' => (int)('' === $plus)];
                 if ($plus) {
-                    $tracing = $this->debug ? $this->errors . $this->tracing($plus, true) : '';
+                    $tracing = SKY::$debug ? $this->errors . $this->tracing($plus, true) : '';
                     $this->errors = view('_std.404', ['tracing' => $tracing]);
                 } else {
                     $this->errors = $stdout;
                 }
             }
-            $flag = $etc || $this->debug && $this->errors;
+            $flag = $etc || SKY::$debug && $this->errors;
         }
         if (DEV)
             $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
@@ -175,20 +179,20 @@ class HEAVEN extends SKY
             $out or $out = json_encode(['catch_error' => '<h1>See X-tracing</h1>']);/////////////////////////
             $stdout = $out;
         }
-        if ($this->debug && !isset($tracing)) {
+        if (SKY::$debug && !isset($tracing)) {
             trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars:');
             $this->tracing($plus, true); # write X-tracing
         }
         echo $stdout; # send to browser
         $this->tailed = true;
-        exit;//throw new Stop;
+        exit;
     }
 
     function tail() {
         $trace_single = $this->s_trace_single;
         $this->ghost or $this->tail_ghost();///////2do:  show an errors for FILE REQUESTS!
 
-        if ($this->debug) { # render tracing in the layout
+        if (SKY::$debug) { # render tracing in the layout
             trace(array_keys(SKY::$mem), 'KEYS of: SKY::$mem');
             if (SKY::ERR_SHOW == $this->was_error && !headers_sent())
                 http_response_code(503); # Service Unavailable
@@ -221,7 +225,7 @@ class HEAVEN extends SKY
         if (!$hs && $this->jump)
             exit;
         MVC::instance();
-        if ($this->ajax)
+        if ($this->fly)
             $this->tail_x($plus); # exit here
 
         $no = $ky = $this->error_no;
@@ -252,7 +256,7 @@ class HEAVEN extends SKY
             http_response_code($no > 99 ? $no : 404);
         }
         for ($stdout = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
-        if ($this->debug) {
+        if (SKY::$debug) {
             $tracing .= $h1 . $this->errors . tag($this->tracing($plus, true), 'id="trace"', 'pre');
             $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
         }
@@ -268,16 +272,16 @@ class HEAVEN extends SKY
     }
 
     function tracing($plus = '', $trace_x = false) {
-        if ($this->debug) {
+        if (SKY::$debug) {
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
             $uri = $this->methods[$this->method] . ' ' . URI;
-            $tracing = 'PATH: ' . PATH . html("\nURI: $uri\n\$sky->lref: $this->lref") . "\n\$sky->ajax: $this->ajax";
+            $tracing = 'PATH: ' . PATH . html("\nURI: $uri\n\$sky->lref: $this->lref") . "\n\$sky->fly: $this->fly";
             $tracing .= "\n\$sky->k_type: $this->k_type\nSURL: " . html("$this->surl_orig -> " . implode('/', $this->surl));
             $this->tracing = $tracing . "\n\n" . $this->tracing;
             if ($this->fn_extra)
                 $this->tracing = "EXTRA: $this->fn_extra\n$this->tracing";
-            if ($this->debug > 1) {
+            if (SKY::$debug > 1) {
                 flush();
                 $plus .= 'Request headers:'  . html(substr(print_r(getallheaders(), true), 7, -2));
                 $plus .= 'Response headers:' . html(substr(print_r(apache_response_headers(), true), 7, -2));
@@ -318,10 +322,10 @@ class HEAVEN extends SKY
     function tail_ghost($alt = false) {
         global $user;
 
-        if ($alt && isset($user) && $user->jump_alt && !headers_sent() && !$this->ajax)
+        if ($alt && isset($user) && $user->jump_alt && !headers_sent() && !$this->fly)
             jump($this->alt_jump = true, 302, false); # no exit, alt jump (special case)
         parent::tail_ghost();
-        if ($this->jump && $this->debug) {
+        if ($this->jump && SKY::$debug) {
             #$plus = $this->tracing("JUMP[$user->jump_n]: $this->jump\n\n", !$user->jump_n);
             #if ($user->jump_n)
             #    sqlf('update $_memory set tmemo=' . SKY::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");

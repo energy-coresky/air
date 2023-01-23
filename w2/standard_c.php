@@ -22,7 +22,7 @@ class standard_c extends Controller
             return 404;
         }
         if ($sky->d_dev) {
-            $sky->debug = 0;
+            SKY::$debug = 0;
             $sky->s_prod_error = 1;
         }
         $v = explode('.', $this->_1, 2);
@@ -80,7 +80,7 @@ class standard_c extends Controller
         global $sky, $user;
         if (!$user->root && !DEBUG)
             return 404;
-        $sky->debug = 0;
+        SKY::$debug = 0;
         if (2 != $id)
             $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
         echo $body ?? 'err';
@@ -90,7 +90,7 @@ class standard_c extends Controller
         global $sky, $user;
         if (!$user->root && !DEV)
             return 404;
-        $sky->debug = 0;
+        SKY::$debug = 0;
         list($file, $line) = explode('^', $_POST['name']);
         $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
         echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
@@ -184,8 +184,7 @@ class standard_c extends Controller
     }
 
     function a_svg() {
-        header("Content-Type: image/svg+xml;");
-        $this->ajax = 3;
+        MVC::mime('image/svg+xml');
         echo new SVG(substr($this->_c, 2), $this->_a);
         throw new Stop;
     }

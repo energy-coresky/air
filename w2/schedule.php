@@ -29,9 +29,9 @@ class Schedule
                 $this->arg = (int)$argv[1];
         } elseif ('cli' != PHP_SAPI) { # you can use: * * * * * curl http://addr/cron.php
             $this->amp = '@';
-            $this->single_thread = $sky->cli = true;
+            $this->single_thread = SKY::$cli = true;
         }
-        $sky->debug = $debug_level;
+        SKY::$debug = $debug_level;
         $sky->shutdown[] = $this;
         if (!$this->arg && !$this->amp)
             echo "Multy-threads: " . ($this->single_thread ? "No\n" : "Yes\n");

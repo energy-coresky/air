@@ -106,7 +106,7 @@ class Admin
         trace(self::$adm);
         $uri = '' === $sky->_0 ? self::$adm['first_page'] : URI;
         
-        if (1 == $sky->ajax) {
+        if (HEAVEN::J_ACT == $sky->fly) {
             $pos = array_search($sky->_0, $me->files);
             
         } else foreach ($me->uris as $p => $u) {
@@ -124,7 +124,7 @@ class Admin
             $me->_file = $file;
         }
         
-        if (!$me->_file && $sky->ajax)
+        if (!$me->_file && $sky->fly)
             throw new Error('admin ajax, no file: ' . $file);
         $me->_title = $me->_file ? $me->names[$pos] : 'File not found';
         return $me;

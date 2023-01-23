@@ -18,7 +18,6 @@ class SKY implements PARADISE
     public $was_error = 0;
     public $was_warning = 0;
     public $cnt_error = 0;
-    public $cli;
     public $gpc = '';
     public $langs = [];
     public $shutdown = [];
@@ -29,33 +28,28 @@ class SKY implements PARADISE
     static $databases;
     static $dd = null;
     static $plans = [];
+    static $cli;
+    static $debug;
 
     protected $ghost = false;
     protected $except = false;
 
     function __construct() {
-        require DIR_S . '/w2/plan.php';
         ob_get_level() && ob_end_clean();
-        $this->debug = DEBUG;
+        SKY::$debug = DEBUG;
+        SKY::$cli = CLI;
         $this->constants();
-        $this->cli = CLI;
         date_default_timezone_set(PHP_TZ);
         mb_internal_encoding(ENC);
         define('NOW', date(DATE_DT));
         srand((double) microtime() * 1e6);
-
-        spl_autoload_register(function ($name) {
-            trace("autoload($name)");
-            if (strpos($name, '\\')) # `vendor` folder autoloader
-                return;
-            Plan::_ra($name);
-            return true;
-        }, true, true);
+        require DIR_S . '/w2/plan.php';
+        spl_autoload_register('Plan::_autoload', true, true);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
             $this->error_last = $no;
             $this->was_error |= SKY::ERR_DETECT;
-            if (error_reporting() & $no && ($this->debug || !SKY::$dd || $this->s_prod_error)) {
+            if (error_reporting() & $no && (SKY::$debug || !SKY::$dd || $this->s_prod_error)) {
                 $this->error_title = 'PHP ' . ($err = Debug::error_name($no));
                 trace("$err: $message", true, $line, $file, $context);
             }
@@ -82,11 +76,6 @@ class SKY implements PARADISE
         register_shutdown_function([$this, 'shutdown']);
     }
 
-    function init_h($vendor = false) {
-        if ($vendor)
-            require 'vendor/autoload.php';
-    }
-
     function shutdown() {
         chdir(DIR); # restore dir!
         Plan::$ware = 'main';
@@ -102,14 +91,14 @@ class SKY implements PARADISE
         }
 
         if (SKY::$dd) {
-            $this->ghost or $this->tail_ghost(!$this->cli && !$this->tailed);
+            $this->ghost or $this->tail_ghost(!SKY::$cli && !$this->tailed);
             if ($this->error_prod) # write error log
                 sqlf('update $_memory set dt=' . SKY::$dd->f_dt()
                 . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
         }
         if (!$this->tailed) { # if script exit in advance (with exit() or throw new Error())
-            $plus = $this->debug ? "x autotrace\n\n" : '';
-            $this->cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
+            $plus = SKY::$debug ? "x autotrace\n\n" : '';
+            SKY::$cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
             $this->tailed = true;
         }
         SQL::close();
@@ -131,8 +120,8 @@ class SKY implements PARADISE
             DEV::init();
 
         $this->memory(3, 's');
-        $this->debug |= (int)$this->s_trace_single;
-        if ($this->s_prod_error || $this->debug)
+        SKY::$debug |= (int)$this->s_trace_single;
+        if ($this->s_prod_error || SKY::$debug)
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
         if (Plan::$put_cache)
@@ -160,8 +149,8 @@ class SKY implements PARADISE
 
     function tail_ghost($alt = false) {
         $this->ghost = true; // version contr c_name statp visit online_ts
-        if ($this->lock_table)
-            sql('unlock tables');
+        #if ($this->lock_table)
+         #   sql('unlock tables');
         if ($this->s_trace_single)
             $this->s_trace_single = 0; # single click done
         foreach (SKY::$mem as $char => &$v)
@@ -295,7 +284,7 @@ class SKY implements PARADISE
         $error = '';
  #       if ('utf8' != mysqli_character_set_name($this->conn))
   #          $error = '<h1>wrong database character set</h1>'; # cannot use trace() to SQL insert..
-     #   if ($class_debug && $this->debug)
+     #   if ($class_debug && SKY::$debug)
       #      Debug::check_other($error);
         return $error;
     }
@@ -488,7 +477,6 @@ class eVar implements Iterator
 function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
     global $sky;
 
-    //if (!isset($sky))        return;
     if (true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;
         if (null === SKY::$dd)
@@ -498,7 +486,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
             throw new Error("500 Internal SKY error");
         }
     }
-    if ($sky->debug || $sky->s_prod_error && true === $is_error) {
+    if (SKY::$debug || $sky->s_prod_error && true === $is_error) {
         is_string($var) or $var = var_export($var, true);
         $is_warning = 'WARNING' === $is_error;
         if (is_string($is_error)) {
@@ -519,31 +507,31 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
         $error = "$fln\n" . html($var);
         if ($is_error) {
             $sky->was_error |= SKY::ERR_SHOW;
-            if ($sky->cli)
+            if (SKY::$cli)
                 echo "\n$file^$line\n$var\n\n";
             if ($sky->s_prod_error) { # collect error log
-                $type = $sky->cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
+                $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
                 $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
-                if (!$sky->cli)
+                if (!SKY::$cli)
                     $sky->error_prod .= ' uri: ' . html(URI);
                 $sky->error_prod .= "\n$error\n\n";
             }
         }
-        if (!$sky->debug)
+        if (!SKY::$debug)
             return; # else collect tracing
         if ($is_error) {
             $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>";
             ob_start();
             debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
             $backtrace = html(ob_get_clean());
-            if ($sky->is_front || $sky->ajax) {
+            if ($sky->is_front || $sky->fly) {
                 $sky->error_title or $sky->error_title = 'User Error';
                 $sky->errors .= "<h1>$sky->error_title</h1><pre>$error\n\n$backtrace</pre>";
                 $sky->error_title = '';
                 $str = Debug::context($context, $has_depth ? $depth : 2) and $sky->errors .= "<pre>$str</pre>";
             } else {
                 $sky->tracing .= "BACKTRACE:\n$backtrace";
-                if (!$sky->cli && !$sky->s_trace_single)
+                if (!SKY::$cli && !$sky->s_trace_single)
                     printf(span_r, "<br /><b>SKY:</b> " . html($var) . " at <b>$file</b> on line <b>$line</b>");
             }
             $sky->tracing .= "\n";

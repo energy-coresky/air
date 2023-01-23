@@ -100,7 +100,7 @@ class USER
                 if (1 == $this->pid) {
                     $this->root = 1;
                     if ($sky->s_trace_root && 2 == $this->auth)
-                        $sky->debug = $this->root = 2;
+                        SKY::$debug = $this->root = 2;
                 }
             } else {
                 $this->row['pid'] = $this->row['auth'] = 0;
@@ -116,7 +116,7 @@ class USER
             if ($sky->eref) {
                 $ary['ref'] = $sky->eref;
             }
-            if ($sky->ajax) {
+            if ($sky->fly) {
                 if (($_ & self::NO_JS) && $this->clk_total > 1 && $sky->s_j_manda)
                     $this->js_unlock = true;
                 $_ &= ~self::NO_JS;
