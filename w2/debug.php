@@ -45,6 +45,19 @@ class Debug
             "\n\$_COOKIE: " . html(var_export($_COOKIE, true)) . "\n";
     }
 
+    static function get_classes($all, $ext = [], $t = -2) {
+        $ext or $ext = get_loaded_extensions();
+        $ary = [];
+        $types = array_filter($ext, function ($v) use (&$ary, $t) {
+            if (!$cls = (new ReflectionExtension($v))->getClassNames())
+                return false;
+            $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
+            return true;
+        });
+        $types = [-1 => 'all', -2 => 'user'] + $types;
+        return [$types, -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]]))];
+    }
+
     static function closure($fun) {
         $fun = new ReflectionFunction($fun);
         $file = file($fun->getFileName());

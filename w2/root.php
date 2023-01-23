@@ -45,8 +45,6 @@ class Root
             ['Core', 'ni', SKY::CORE],
             ['Save', 'submit'],
         ];
-
-        $br = '<br>' . str_repeat(' &nbsp;', 7) .'other CONSTANTS see in the ' . a('Admin section', 'adm?main=0&id=4');
         $phpman = [
             'en' => 'English',
             'pt_BR' => 'Brazilian Portuguese',
@@ -60,12 +58,7 @@ class Root
         ];
         $form2 = [
             'dev' => ['Set debug=0 for DEV-tools', 'chk'],
-            'var' => ['Show Vars in the tracing', 'radio', ['none', 'from Globals', 'from Templates']],
-            'sql' => ['Show SQLs in the tracing', 'chk'],
-            'const' => ['Show user-defined global CONSTANTs in the tracing', 'chk'],// . $br
-            'class' => ['Show CLASSEs', 'chk'],
             'cron'  => ['Run cron when click on DEV instance', 'chk'],
-       //     ['', [['See also ' . a('Admin\'s configuration', 'adm?main=2') . ' settings', 'li']]],
             'lgt' => ['SkyLang table name', '', 'size="25"'],
             'manual' => ['PHP manual language', 'select', $phpman],
             'se' => ['Search engine tpl', '', 'size="50"'],
@@ -95,20 +88,6 @@ class Root
         }
         $cr = [7 => 10, 2, 11, 4];
         echo Display::log(sqlf('+select tmemo from $_memory where id=%d', $cr[$n]));
-    }
-
-    static function get_classes($ext = [], $t = -2) {
-        $ext or $ext = get_loaded_extensions();
-        $all = get_declared_classes();
-        $ary = [];
-        $types = array_filter($ext, function ($v) use (&$ary, $t) {
-            if (!$cls = (new ReflectionExtension($v))->getClassNames())
-                return false;
-            $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
-            return true;
-        });
-        $types = [-1 => 'all', -2 => 'user'] + $types;
-        return [$types, -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]]))];
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -199,7 +178,7 @@ class Root
                 break;
 
             case 'Classes':
-                $ary = Root::get_classes($ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
+                $ary = Debug::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
                 $echo($ary[1]);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $ary[0])) . $priv;
                 break;

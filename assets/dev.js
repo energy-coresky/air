@@ -72,9 +72,10 @@ sky.d.draw = {
     s: function(data, str) {
         var m, n, i = 0, s = '';
         for (; m = str.match(/>\nSQL: (.+?)\n\n<(.*)/sm); str = m[2]) {
+            //s && (s += '<br>');
             m[1] = m[1].replace(/(select|update|insert|join|from|where|group|order)/gi, '<span style="color:#93c">$1</span>');
             m[1] = m[1].replace(/^([\d\.]+ sec)/m, '<span style="color:red;border-bottom:1px solid blue">$1</span>');
-            s += '<span style="color:#f77">#' + ++i + '</span> ' + m[1] + '<br><br>';
+            s += '<span style="color:#f77">#' + ++i + '</span> ' + m[1] + '<hr>';
         }
         return s ? s : '?';
     },
@@ -82,13 +83,16 @@ sky.d.draw = {
         str = '';
         const base = [
             'Bolt', 'Controller', 'DEV', 'Debug', 'dc_file', 'Func', 'Gape', 'HEAVEN', 'MVC', 'MVC_BASE',
-            'Model_m', 'Model_q', 'Model_t', 'Plan', 'SKY', 'SQL', 'Stop', 'USER', 'common_c', 'eVar'
+            'Model_m', 'Model_q', 'Model_t', 'Plan', 'SKY', 'SQL', 'Stop', 'USER', 'common_c', 'eVar',
+            'PARADISE', 'Cache_driver', 'Database_driver', 'QUERY_BUILDER', 'SQL_COMMON', 'HOOK'
         ];
         for (var i in data.classes) {
-            let s = data.classes[i], inc = base.includes(s);
-            str += (1 + parseInt(i)) + '.&nbsp;' + (inc ? s : `<span style="color:#93c">${s}</span>`) + '<br>';
+            let s = data.classes[i], inc = base.includes(s), n;
+            if (data.cnt.includes(n = parseInt(i)))
+                str += '<hr>';
+            str += (1 + n) + '.&nbsp;' + (inc ? s : `<span style="color:#93c">${s}</span>`) + '<br>';
         }
-        return str;
+        return str + '<hr>';
     },
     b: function() {
         $('div#popup-in b').css({cursor: 'default'})
@@ -226,9 +230,8 @@ sky.d.init = function(str, from) {
             .mouseenter(function() {
                 sky.d.to && clearTimeout(sky.d.to);
                 sky.d.to = 0;
-                $('div#popup').show().css({left:$(this).offset().left});
-                var n = $(this).attr('n');
-                var i = 's' == n ? 1 : ('c' == n ? 2 : 0);
+                var n = $(this).attr('n'), i = 's' == n ? 1 : ('c' == n ? 2 : 0);
+                $('div#popup').show().css({left:$(this).offset().left, maxWidth: i ? '35%' : '50%'});
                 $('#tpl-list a').css({background:'', color:''});
                 $('#tpl-list a:eq(' + i + ')').css({background:'#ddd', color:'#000'});
                 if (n != sky.d.draw.x) {
@@ -243,7 +246,7 @@ sky.d.init = function(str, from) {
             }).mouseleave(sky.d.mouseleave);
         $('#tpl-list span:eq(0)').html(a.length);
         $('#tpl-list span:eq(1)').html(csql);
-        $('#tpl-list span:eq(2)').html(data.classes.length);
+        $('#tpl-list span:eq(2)').html(data.cnt[0]);
         $('#master').html(top)
     }
 };

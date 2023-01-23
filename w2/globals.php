@@ -321,6 +321,10 @@ class Globals
         ];
     }
 
+    function c_code() {
+        return [];
+    }
+
     function c_form() {
         return ['ident' => $_POST['ident']];
     }

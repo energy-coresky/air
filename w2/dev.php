@@ -9,9 +9,26 @@ function e() {
 
 class DEV
 {
+    const repository = 'https://coresky.net/api';
     static $static = false;
-    static $sqls = [['##', 'Time', 'Query']];
-    static $vars = [];//['##', 'Name', 'Value']];
+    static $vars = [];
+
+    static function auto($v, $more = '') {
+        return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn " . var_export($v, true) . ";\n";
+    }
+
+    static function trace() {
+        ksort(DEV::$vars);
+        $dev_data = [
+            'cnt' => [
+                $c = count($a1 = Debug::get_classes(get_declared_classes())[1]),
+                $c + count($a2 = Debug::get_classes(get_declared_interfaces())[1]),
+             ],
+            'classes' => array_merge($a1, $a2, get_declared_traits()),
+            'vars' => DEV::$vars,
+        ];
+        return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
+    }
 
     static function init() {
         if (DEV && !CLI && SKY::$dd) {
@@ -55,29 +72,6 @@ class DEV
         }
     }
 
-    static function trace() {
-        global $sky;
-        $style = 'style="width:100%; display:table; background-color:#fff; color:#000"';
-        $avar = [1 => 'from Globals', 'from Jet Templates'];
-
-        $classes = Root::get_classes()[1];
-        sort($classes);
-        ksort(DEV::$vars);
-        $dev_data = [
-            'classes' => $classes,
-            'vars' => DEV::$vars,
-        ];
-        //$out = tag(html(str_replace('\\"', '\\\\"', json_encode($dev_data))),
-        $out = tag(html(json_encode($dev_data)),
-            'class="dev-data" style="display:none"');//, JSON_HEX_QUOT
-
-        #if ($sky->d_sql)
-         #   $out .= tag('<h2>SQL queries:</h2>' . Debug::table(DEV::$sqls), $style);
-        #if ($i = $sky->d_var)
-         #   $out .= tag("<h2>Variables $avar[$i]:</h2>" . Debug::table(DEV::$vars), $style);
-        return $out;
-    }
-
     static function ed_var($in, $no, $is_blk = false) {
         $ary = [];
         isset(DEV::$vars[$no]) or DEV::$vars[$no] = [];
@@ -96,10 +90,8 @@ class DEV
                 6 == $t or $v = @var_export($v, true);
                 $v = $cut($v, 6 == $t ? 100 : 200);
                 6 == $t or $v = tag($v, '', 7 == $t ? 'r' : 'o');
-                  //  . a('>>>', 'javascript:;', 'onclick="sky.toggle(this)" style="font-family:monospace" title="expand / collapse"')
-                    //. tag($v, 'style="display:none"');
             }
-            $ary[$k] = $v;//.'<a href="#" style="color:red"> &gt;&gt;&gt;</a>';
+            $ary[$k] = $v;
         }
         ksort($ary);
         if ($is_blk) {
@@ -108,28 +100,6 @@ class DEV
         } else {
             $p += $ary;
         }
-    }
-
-    static function ed_sql($sql, $ts, $depth, $err) {
-        static $i = 1;
-        $j = 0;
-        list ($file, $line) = array_values(debug_backtrace()[$depth]);
-        $bg = 'background:' . ($err ? '#f77' : '#7f7;');
-        $table = tag(html($sql), "style=\"font:normal 120% monospace;$bg\"", 'span');
-
-        if (!in_array(strtolower(substr($sql, 0, 6)), ['delete', 'update', 'replac', 'insert'])) {
-            SQL::$dd->query("explain extended $sql", $q);
-            if (false !== $q) {
-                $table .= "\n<u><i>EXPLAIN EXTENDED ..</i></u>";
-                while ($row = SQL::$dd->one($q, 'A')) {
-                    $j++ or $table .= th(array_keys($row), 'cellspacing="0" cellpadding="3"');
-                    $table .= td(array_values($row));
-                }
-                $table .= '</table>';
-                //SQL::$dd->free($q);
-            }
-        }
-        DEV::$sqls[] = [$i++, sprintf('%01.3f sec', $ts), "$file:$line:\n$table"];
     }
 
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
@@ -177,14 +147,10 @@ class DEV
         return $c;
     }
 
-    static function auto($v, $more = '') {
-        return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn " . var_export($v, true) . ";\n";
-    }
-
     static function save($class, $func = false, $ary = false) {
         $cfg =& SKY::$plans['main']['ctrl'];
         if ('main' != ($cfg[substr($class, 2)] ?? 'main'))
-            Gate::$ware = $cfg[substr($class, 2)];
+            Plan::$gate = $cfg[substr($class, 2)];
         $sky_gate = Gate::load_array();
         if (!$func) { # delete controller
             unset($sky_gate[$class]);
@@ -194,7 +160,7 @@ class DEV
             $sky_gate[$class][$func] = true === $ary ? DEV::post_data(Gate::instance()) : $ary;
         }
         Plan::gate_dq($class . '.php'); # clear cache
-        Plan::_p([Gate::$ware, 'gate.php'], DEV::auto($sky_gate));
+        Plan::_p([Plan::$gate, 'gate.php'], DEV::auto($sky_gate));
     }
 
     static function cshow() {
@@ -206,10 +172,10 @@ class DEV
 
     static function gate($class, $func = null, $is_edit = true) {
         $cfg =& SKY::$plans['main']['ctrl'];
-        Gate::$ware = $cfg[substr($class, 2)] ?? 'main';
+        Plan::$gate = $cfg[substr($class, 2)] ?? 'main';
         $ary = Gate::load_array($class);
         $me = Gate::instance();
-        $src = Plan::_t([Gate::$ware, $fn = "mvc/$class.php"]) ? $me->parse($fn) : [];
+        $src = Plan::_t([Plan::$gate, $fn = "mvc/$class.php"]) ? $me->parse($fn) : [];
         if ($diff = array_diff_key($ary, $src))
             $src = $diff + $src;
         if ($has_func = is_string($func)) {
@@ -531,8 +497,6 @@ class DEV
             ],
         ];
     }
-
-    const repository = 'https://coresky.net/api';
 
     function j_download() {
         $name = strtolower($_POST['n']);

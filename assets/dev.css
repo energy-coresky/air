@@ -36,6 +36,7 @@ fieldset {
 }
 hr {
     border-style:solid;
+    border-top: 1px solid #ccc;
     border-bottom:0;
 }
 pre, fieldset {
@@ -211,7 +212,7 @@ th {
 }
 td, .bb {
     vertical-align:top;
-    border-bottom: 1px solid #a0a0a0;
+    border-bottom: 1px solid #ccc;
 }
 #gate td {
     border: 0;

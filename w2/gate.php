@@ -25,12 +25,12 @@ class Gate
     }
 
     static function load_array($class = false) {
-        $sky_gate = (array)Plan::_rq([Gate::$ware, 'gate.php']);
+        $sky_gate = (array)Plan::_rq([Plan::$gate, 'gate.php']);
         return $class ? ($sky_gate[$class] ?? []) : $sky_gate;
     }
 
     static function controllers($in = false) {
-        $glob = Plan::_b([Gate::$ware, 'mvc/c_*.php']);
+        $glob = Plan::_b([Plan::$gate, 'mvc/c_*.php']);
         if ($fn = Plan::_t('mvc/default_c.php'))
             array_unshift($glob, $fn);
         $list = $deleted = [];
@@ -74,7 +74,7 @@ class Gate
     }
 
     function parse($src_fn, $dst_class = false) {
-        Plan::_r([Gate::$ware, $src_fn]);
+        Plan::_r([Plan::$gate, $src_fn]);
         $reflect = new ReflectionClass(basename($src_fn, '.php'));
         $methods = array_filter(
             $reflect->getMethods(ReflectionMethod::IS_PUBLIC),
@@ -104,7 +104,7 @@ class Gate
             $gape .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
         }
 
-        $content = Plan::_g([Gate::$ware, $src_fn]);
+        $content = Plan::_g([Plan::$gate, $src_fn]);
         if (!preg_match("/^<\?(php)?(.*?)class $dst_class extends(.+)$/s", $content, $match))
             throw new Error("File `$src_fn` must start from &lt;?");
         return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_cached extends" . $match[3];

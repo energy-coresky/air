@@ -151,7 +151,7 @@ class Jet
             if ($closure)
                 $s .= '; MVC::vars($_a, $_b); extract($_a, EXTR_REFS)';
             if (DEV && $closure)
-                $s .= "; trace(\$sky->no . ' ' . MVC::\$ctrl . '::$pf[0]_$name() ^', 'BLK-VIEW')";
+                $s .= "; trace(\$sky->no . ' ' . ('_cached' == substr(MVC::\$ctrl, -7) ? substr(MVC::\$ctrl, 0, -7) : MVC::\$ctrl) . '::$pf[0]_$name() ^', 'BLK-VIEW')";
             if (DEV)
                 $s .= '; MVC::in_tpl()';
             if (!$closure)

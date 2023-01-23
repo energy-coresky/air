@@ -10,10 +10,16 @@
 </div>
 #.form
 
+#.code
+#use(.m_glob)
+2do: find places for functions usage and more..
+#.code
+
 #.m_glob ==========================================================================================================
 <a class="inner-menu" href="_glob?report"@active($sky->_1 == 'report')>Show Report</a>
 <a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Select Dirs</a>
 <a class="inner-menu" @href(sky.g.save())>Save Report</a>
+<a class="inner-menu" href="_glob?code"@active($sky->_1 == 'code')>Code Analysis</a>
 #.m_glob.dirs.skip ----------------------------------------------------------------------------------------------------------
 #use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
 @use(.m_glob)

@@ -13,6 +13,7 @@ class Plan
     static $wares = ['main'];
     static $ware = 'main';
     static $view = 'main';
+    static $gate = 'main';
     static $apps = [];
     static $ctrl = [];
     static $parsed_fn;
