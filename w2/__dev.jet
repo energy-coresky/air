@@ -223,7 +223,7 @@ $(function() {
 
 <div id="v-body">
     <div style="display:table-cell; width:inherit;" id="dev-{{$y_page}}">@inc(*)</div>
-    @if('trace' != $y_page)<div style="display:none" id="dev-trace">{!$err_ajax ?? ''!}</div>~if
+    @if('trace' != $y_page)<div style="display:none" id="dev-trace">{!$err_ajax ?? ''!}</div>@else@use(.header)~if
 </div>
 
 <div id="v-tail">
@@ -251,5 +251,12 @@ $(function() {
 </div>
 </div>
 @tail</body></html>
-#.layout
+#.layout.header --------
+<div class="fl"><span style="color:red">SEE ALSO</span>
+<a href="{{PATH}}_dev?main=10">@inc(__lng.rar) LOG ERROR</a>
+<a href="{{PATH}}_gate">@inc(__lng.rar) SKYGATE</a>
+<a href="{{PATH}}_glob?report">@inc(__lng.rar) GLOBALS REPORT</a>
+</div>
+#.header
+
 
