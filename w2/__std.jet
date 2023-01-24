@@ -12,6 +12,19 @@
 ~if
 #.404
 
+#.err_u //////////////////////////////////////////////////////////////////////////////
+<!doctype html><html>
+<head>@head</head>
+<body style="background:url({!PATH!}img/cloud.jpg);background-size:cover;margin:0 10px;">
+    <h1>FLY-U error at {{date(DATE_DT, $ts)}}</h1>
+    <div id="trace-t"></div>
+    <div id="trace-x"></div>
+    <a href="{!LINK!}">Goto app Main page</a>
+    <script>$(function() { sky.trace(2) })</script>
+</body>@tail
+</html>
+#.err_u
+
 #.exception //////////////////////////////////////////////////////////////////////////////
 @php # this template for Exceptions and die() functions
 $ru = DEFAULT_LG && defined('LG') && 'ru' == LG;
@@ -27,7 +40,7 @@ isset($error) && $error && (SKY::$debug || DEV) or $error = isset($list[$no]) ? 
 ~php
 #if(Plan::view_t('error.jet'))@inc(error.exception)#else
 <!doctype html><html>
-<head>@head()</head>
+<head>@head</head>
 <body style="background:url({!PATH!}img/cloud.jpg);background-size:cover;margin:0 10px;@if(!$tracing)text-align:center;~if">
 #.ex_inner
 <style>.error {background-color:red !important;color:#fff !important}</style>

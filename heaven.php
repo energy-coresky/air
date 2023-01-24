@@ -322,6 +322,8 @@ class HEAVEN extends SKY
     function tail_ghost($alt = false) {
         global $user;
 
+        if (DEV && HEAVEN::U_ACT == $this->fly && $this->errors)
+            SKY::d('err_u_act', time()); # popup error for file downloads on next click
         if ($alt && isset($user) && $user->jump_alt && !headers_sent() && !$this->fly)
             jump($this->alt_jump = true, 302, false); # no exit, alt jump (special case)
         parent::tail_ghost();

@@ -70,6 +70,15 @@ class standard_c extends Controller
         ];
     }
 
+    function a_err_u() {
+        global $sky;
+        MVC::$layout = $this->_y = '';
+        SKY::$debug = 0;
+        $sky->k_static = [[], [], []];
+        define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
+        return ['ts' => $this->_2];
+    }
+
     function a_trace() {
         return $this->j_trace();
     }

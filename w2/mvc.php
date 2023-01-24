@@ -323,6 +323,10 @@ class MVC extends MVC_BASE
             $name = $mvc;
             $vars['sky'] = $sky;
         } else {
+            if (DEV && ($ts = SKY::d('err_u_act')) && !$sky->error_no && $layout && !$sky->fly) {
+                SKY::d('err_u_act', null); # erase flash var
+                jump("_err_u?t=$ts");
+            }
             $name = "_$mvc->body";
             $mvc->is_sub or MVC::vars($vars, MVC::$_y, 'y_');
             MVC::vars($vars, $mvc->_v);
