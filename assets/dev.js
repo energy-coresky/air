@@ -26,8 +26,10 @@ sky.a.finish = function(to) {
     }, '_trace');
 };
 
-sky.d.close_box = function() {
+sky.d.close_box = function(url) {
     $(window.parent.document.getElementById('box')).find('.esc a:first').click();
+    if (url)
+        window.parent.location.href = url;
 };
 
 sky.d.draw = {

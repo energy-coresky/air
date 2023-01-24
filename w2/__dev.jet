@@ -189,7 +189,7 @@ $(function() {
 <body>
 <div id="main">
 <div id="v-head">
-    <div style="width:126px"><a href="{{PATH . ($sky->d_last_page ?: '_dev')}}">
+    <div style="width:126px"><a href="{{PATH . ($sky->d_last_page ?: '_dev')}}"@active('_trace'!=$sky->_0)>
         ▼ {{'ware'==@(explode('?', $sky->d_last_page))[1] ? 'Wares' : 'Tasks'}}</a><a
         @href(history.back())><span style="font-family:Verdana;">&#9668;</span> Back</a>
     </div>
@@ -252,10 +252,10 @@ $(function() {
 </div>
 @tail</body></html>
 #.layout.header --------
-<div class="fl"><span style="color:red">SEE ALSO</span>
-<a href="{{PATH}}_dev?main=10">@inc(__lng.rar) LOG ERROR</a>
-<a href="{{PATH}}_gate">@inc(__lng.rar) SKYGATE</a>
-<a href="{{PATH}}_glob?report">@inc(__lng.rar) GLOBALS REPORT</a>
+<div class="fl"><span style="color:red;margin:0 10px;">See also</span>
+<a href="{{PATH}}_dev?main=10">@inc(__lng.rar) Log Error</a>
+<a href="{{PATH}}_gate">@inc(__lng.rar) SkyGate</a>
+<a href="{{PATH}}_glob?report">@inc(__lng.rar) Globals Report</a>
 </div>
 #.header
 

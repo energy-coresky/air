@@ -92,6 +92,8 @@ final class SQL
             if (!$dd->conn)
                 return false;
             SQL::$connections[$name] = $dd;
+            if (!$main)
+                trace("name=$name, driver=$dd->name", 'DATABASE');
 
             unset($cfg['dsn']);
             common_c::dd_h($name, $dd);

@@ -276,7 +276,7 @@ class HEAVEN extends SKY
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
             $uri = $this->methods[$this->method] . ' ' . URI;
-            $tracing = 'PATH: ' . PATH . html("\nURI: $uri\n\$sky->lref: $this->lref") . "\n\$sky->fly: $this->fly";
+            $tracing = 'PATH: ' . PATH . html("\nADDR: $uri\n\$sky->lref: $this->lref") . "\n\$sky->fly: $this->fly";
             $tracing .= "\n\$sky->k_type: $this->k_type\nSURL: " . html("$this->surl_orig -> " . implode('/', $this->surl));
             $this->tracing = $tracing . "\n\n" . $this->tracing;
             if ($this->fn_extra)
