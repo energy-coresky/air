@@ -72,9 +72,9 @@ class Language
 
     function c_list($lg) {
         if ($a = $_POST['a'] ?? false) {
+            $_POST['page'] = '*';
             if ('-' == $a) { # drop page
                 $this->t->delete(qp('"*"<>name and name=$+', $this->page));
-                $_POST['page'] = '*';
             } elseif ('+' == $a) { # show all pages
                 $lg = $this->all = DEFAULT_LG;
             } elseif ('$' == $a || '$+' == $a) { # get parsed data
