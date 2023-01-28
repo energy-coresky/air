@@ -18,8 +18,8 @@ class Admin
     function __get($name) {
         global $sky;
         if ($name && '_' == $name[1]) switch($name[0]) {
-            case 'a': return SKY::$mem['a'][3][substr($name, 2)];
-            case 's': return SKY::$mem['s'][3][substr($name, 2)];
+            case 'a':
+            case 's': return $sky->$name;
             case 't': SQL::onduty(substr($name, 2));
             case 'm': return MVC::instance()->$name;
         }
@@ -84,7 +84,7 @@ class Admin
 
         list(, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=8');
         SKY::ghost('a', $tmemo, 'update $_memory set dt=now(), tmemo=%s where id=8');
-        $menu = SKY::$mem['a'][3]['menu'] or Root::admin($sky);
+        $menu = SKY::a('menu') or Root::admin($sky);
         self::$menu = unserialize($menu);
         self::$adm = [
             'files' => explode("\t", self::$menu[-2]),
@@ -98,7 +98,7 @@ class Admin
         $sky->show_pdaxt = true;
 
         self::$adm['first_page'] = 'adm?' . self::$adm['uris'][current(self::$adm['cr'])];
-        $sky->is_front = $sky->extra = false;
+        $sky->is_front = false;
         if (2 != $user->auth)
             return true;
 
@@ -164,7 +164,7 @@ class Admin
     }
 
     static function drop_all_cache() { // 2do Plans!
-        $dirs = ['var/cache', 'var/gate', 'var/jet', 'var/extra'];
+        $dirs = ['var/cache', 'var/gate', 'var/jet'];//, 'var/extra'
         $result = 1;
         foreach ($dirs as $dir) {
             foreach (glob("$dir/*.php") as $fn)

@@ -258,8 +258,8 @@ class Root
             } else {
                 $ary = $_POST + $ary;
                 if ('s' == $char) {
-                    $chk = ['trace_single', 'trace_cli', 'prod_error', 'trace_root', 'error_403', 'error_404', 'quiet_eerr', 'crash_log', 'dev_cron', 'jet_prod'];
-                    foreach ($chk as $v) $ary[$v] = (int)isset($_POST[$v]);
+                    $chk = ['trace_cli', 'prod_error', 'trace_root', 'error_403', 'error_404', 'quiet_eerr', 'crash_log', 'dev_cron', 'jet_prod'];
+                    foreach ($chk as $v) $ary[$v] = (int)isset($_POST[$v]); //2do: use "chk" type
                 }
                 ksort($ary);
                 SKY::$char($ary);
@@ -305,7 +305,6 @@ class Root
             '<fieldset><legend>Primary settings</legend>',
                 ['', [['<b><u>Production</u></b>', 'li']]],
                 'trace_root'    => ['Debug mode on production for `root` profile', 'checkbox'],
-                'trace_single'  => ['Single-click tracing on production to `X-tracing`', 'checkbox'],
                 ['', [['<b><u>Production & DEV</u></b>', 'li']]],
                 'trace_cli'     => ['Use X-tracing for CLI', 'checkbox'],
                 'error_404'     => ['Use `Stop` on "return 404"', 'checkbox'],
@@ -313,25 +312,19 @@ class Root
                 'error_403'     => ['Use 403 code for `die`', 'checkbox'],
                 'prod_error'    => ['Use Log ERROR', 'checkbox'],
                 'crash_log'     => ['Use Log CRASH', 'checkbox'],
-       #         ['', [['<br>See also ' . a('DEV instance', '_dev') . ' settings', 'li']]],
             '</fieldset>',
             '<fieldset><legend>Visitor\'s & users settings</legend>',
-                'c_manda'   => ['Hide all content if no cookies', 'radio', ['No', 'Yes']],
-                'j_manda'   => ['Hide all content if no javascripts', 'radio', ['No', 'Yes']],
                 'c_name'    => ['Cookie name', '', '', 'sky'],
-                'c_upd'     => ['Cookie updates, minutes', '', '', 60],
-                'visit'     => ['One visit break after, off minutes', '', '', 5],
+                'c_upd'     => ['Cookie updates, minutes', 'number', '', 60],
+                'visit'     => ['One visit break after, off minutes', 'number', '', 5],
                 'reg_req'   => ['Users required for registrations', 'radio', ['Both', 'Login', 'E-mail']],
             '</fieldset>',
             '<fieldset><legend>Cache & Jet settings</legend>',
                 'cache_act' => ['Hard cache', 'radio', ['Off', 'On']],
-                'cache_sec' => ['Default TTL, seconds', '', '', 300],
+                'cache_sec' => ['Default TTL, seconds', 'number', '', 300],
                 'red_label' => ['Red label', 'radio', ['Off', 'On'], 1],
-                ['', [['<b><u>The Jet compiller</u></b>', 'li']]],
                 'jet_cact' => ['Jet cache', 'radio', ['Off', 'On'], 1],
-         #       'jet_swap' => ['Swap @inc & @require commands', 'checkbox'],
           #      'jet_prod' => ['Recompile Jet-files on production when edit tpls', 'checkbox'],
-        #       'jet_0php' => ['Allow native PHP', 'checkbox'],
         #       'jet_1php' => ['Allow @php Jet command', 'checkbox'],
             '</fieldset>',
         ];
@@ -344,26 +337,28 @@ class Root
         $menu = ['Hard cache', 'Jet cache', 'Gate cache', 'Extra cache', 'Static cache'];
         '_dev' == $sky->_0 or $menu += [5 => 'Drop ALL cache'];
         switch ($i) {
-            case 3:
-                $extra = tag(is_file($fn = 'var/extra.txt') ? html(file_get_contents($fn)) : '', 'rows="20" cols="70" name="extra"', 'textarea');
-                $extra .= '<br>TTL: <input name="ttl" value="' . $sky->s_extra_ttl . '"/>';
-                $extra .= ' <input type="submit" value="save"/>' . hidden();
-                echo tag('EXTRA=' . EXTRA . ', extra.txt:<br><form method="post">' . "$extra</form>", 'class="fl"');
             case 0:
             case 1:
             case 2:
+            case 3:
                 $ary = ['var/cache', 'var/jet', 'var/gate', 'var/extra'];
+                if (isset($_POST['extra'])) {
+                    $html = file_get_contents($url = $_POST['extra']);
+                    $url = SNAME . urlencode($u = substr($url, strlen(LINK)));
+                    is_dir('var/extra') or mkdir('var/extra');
+                    'main/error' == $u
+                        ? Plan::mem_p(['main', 'error.html'], $html)
+                        : file_put_contents("var/extra/$url.html", $html);
+                    jump(URI);
+                } elseif ($_POST) {
+                    foreach ($_POST['id'] as $file)
+                        unlink($file);
+                    jump(URI);
+                }
                 if (is_dir($path = $ary[(int)$i])) {
-                    if (isset($_POST['extra'])) {
-                        file_put_contents('var/extra.txt', $_POST['extra']);
-                        $sky->s_extra_ttl = (int)$_POST['ttl'];
-                        jump(URI);
-                    } elseif ($_POST) {
-                        foreach ($_POST['id'] as $file)
-                            unlink($file);
-                        jump(URI);
-                    }
                     $files = array_flip(glob("$path/*"));
+                    if (3 == $i && Plan::mem_t('error.html'))
+                        $files += [Plan::mem_obj(['main'])->path . '/error.html' => 1];
                     foreach ($files as $k => $v) {
                         $s = stat($k);
                         $files[$k] = tag(sprintf(TPL_CHECKBOX . ' ', $k, '') . date(DATE_DT, $s['mtime']), '', 'label');
@@ -379,6 +374,8 @@ class Root
                 } else {
                     echo '<h1>Cache dir is absent</h1>';
                 }
+                if (3 == $i)
+                    echo view('_std.save_cache', []);
             break;
             case 4:
                 if ($_POST) {

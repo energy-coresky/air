@@ -199,7 +199,7 @@ class Globals
         $dirs = Rare::walk_dirs('.');
         if (DIR_M != DIR_S)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
-        SKY::s('gr_start', 0);
+        SKY::d('gr_start', 0);
         return [
             'dirs' => $dirs,
             'continue' => function ($dir) {
@@ -229,7 +229,7 @@ class Globals
     }
 
     function c_report() {
-        SKY::s('gr_start', 1);
+        SKY::d('gr_start', 1);
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $functions = get_defined_functions();
         $this->functions = array_change_key_case(array_flip($functions['internal']));

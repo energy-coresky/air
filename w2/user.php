@@ -3,19 +3,12 @@
 /*
  * $user->id $user->vid $user->pid $user->gid $user->auth
  */
- 
+
 //////////////////////////////////////////////////////////////////////////
 class USER
 {
-    public $row = [];
-    public $root = 0;
-    public $jump_n = 0;
-    public $jump_alt = [];
-    public $jump_path = [];
-
-    protected $pretty;
     const BANNED = 1;
-    #const NOT_TESTED = 2; IP_CHANGED = 2;
+    #const IP_CHANGED = 2;
     const NO_ANY_C = 4;
     const NO_PRETTY = 8;
     const UA_CHANGED = 16;
@@ -24,9 +17,14 @@ class USER
     const IS_BOT = 128;
     const NOT_TAILED = 1048576;
 
+    public $row = [];
+    public $root = 0;
+
+    protected $pretty;
+
     function __get($name) {
         if ('_' == $name[1] && in_array($char = $name[0], ['v', 'u']))
-            return (string)@SKY::$mem[$char][3][substr($name, 2)];
+            return SKY::$char(substr($name, 2));
         return array_key_exists($name, $this->row) ? $this->row[$name] : '';
     }
 
@@ -47,11 +45,10 @@ class USER
     function __construct() {
         global $sky;
 
-        $ua = preg_replace("|[\r\n\t]+|", ' ', @$_SERVER['HTTP_USER_AGENT']);
+        $ua = preg_replace("|[\r\n\t]+|", ' ', $_SERVER['HTTP_USER_AGENT'] ?? '');
         define('IS_BOT', (int)!preg_match("#firefox/|msie \d|opera/|safari/|chrome/#i", $ua));
-        $ip = @$_SERVER['REMOTE_ADDR'];
-        $hash = md5($ip . $ua . @$_SERVER['HTTP_X_FORWARDED_FOR']);
-        $this->pretty = preg_match("/^\w{23}$/", $cookie = (string) @$_COOKIE["$sky->s_c_name"]);
+        $hash = md5($sky->ip . $ua . ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
+        $this->pretty = preg_match("/^\w{23}$/", $cookie = (string)($_COOKIE[$sky->s_c_name] ?? ''));
         $dd = SKY::$dd;
         $now = $dd->f_dt();
 
@@ -66,12 +63,6 @@ class USER
                 AND $this->row = $row + $this->row;
 
             $_ = $this->flags & ~self::NOT_TAILED; # reset flag "not tailed" each click
-            //if (self::BANNED & $_) {
-            if (0 && self::BANNED & $_) {
-                if (!$this->banend)
-                    throw new Stop('403 You are banned'); # hard ban by visitor row
-                $_ &= ~self::BANNED;
-            }
             $_COOKIE ? ($_ &= ~self::NO_ANY_C) : ($_ |= self::NO_ANY_C);
             $this->row['v'] = SKY::ghost('v', $this->row['vmemo'], ['vmemo' => "update \$_visitors set @@ where id=$this->vid"]);
 
@@ -81,11 +72,8 @@ class USER
                 '!clk_visit' => $this->visit ? 1 : 'clk_visit+1',
                 'uri' => URI,
             ];
-            if ($_POST || $this->banend) {
-                if ($this->flood && $this->clk_flood > 28) # set hard ban when > 29 flood clicks
-                    $_ &= self::BANNED;                    ///////////////////////////////////////////////////////////
+            if ($_POST || $this->banend)
                 $ary['!clk_flood'] = $this->flood ? 'clk_flood+1' : 0;
-            }
             if ($this->pretty = $this->pretty && $this->sky === $cookie) {
                 null === $this->hash or $ary['hash'] = 'null';
                 $_ &= ~self::NO_PRETTY & ~self::NO_C;
@@ -110,15 +98,13 @@ class USER
                 '!cnt_visit' => 'cnt_visit+1',
                 'sky' => $this->cookize(),
             ];
-            if ($ip != $this->ip) {
-                $ary['ip'] = $this->ip = $ip;
+            if ($sky->ip != $this->ip) {
+                $ary['ip'] = $this->ip = $sky->ip;
             }
             if ($sky->eref) {
                 $ary['ref'] = $sky->eref;
             }
-            if ($sky->fly) {
-                if (($_ & self::NO_JS) && $this->clk_total > 1 && $sky->s_j_manda)
-                    $this->js_unlock = true;
+            if (HEAVEN::J_ACT == $sky->fly) {
                 $_ &= ~self::NO_JS;
             } elseif (1 == $this->clk_total) { # second click
                 $_ |= self::NO_JS;
@@ -128,13 +114,6 @@ class USER
                 $_ |= self::UA_CHANGED | (IS_BOT ? self::IS_BOT : 0);
             }
 
-            if ($this->v_jump_alt) {
-                $this->jump_alt = unserialize($this->v_jump_alt);
-                $this->jump_n = 1 + array_shift($this->jump_alt);
-                $this->jump_path = array_shift($this->jump_alt);
-                $this->v_jump_alt = null;
-            }
-
             SKY::v(null, $ary + ['flags' => $_]);
 
             $this->row['u'] = $this->id ? SKY::ghost('u', $this->row['umemo'], ['umemo' => "update \$_users set @@ where id=$this->id"]) : [];
@@ -142,20 +121,13 @@ class USER
             if (2 == $this->auth && $sky->is_front && Admin::section($sky->lref))
                 $this->u_uri_admin = $sky->lref;
 
-            $_c = ($_ & self::NO_ANY_C) && $sky->s_c_manda;
-            $_j = ($_ & self::NO_JS)    && $sky->s_j_manda;
-    //        if ($_c || $_j)
-      //          $sky->error_no = "1$sky->s_c_manda$sky->s_j_manda" . (int)$_c . (int)$_j;
-            if ($_j)
-                $this->v_tz = ''; # for exit from js lock
-
         } else {
             if (INPUT_POST == $sky->method)
                 $sky->error_no = 12;
             $ary = [
                 'sky'   => $this->cookize(),
                 'hash'  => $hash,
-                'ip'    => $ip,
+                'ip'    => $sky->ip,
                 'ref'   => $sky->eref,
                 'uri'   => URI,
                 'flags' => (IS_BOT ? self::IS_BOT : 0) | ($_COOKIE ? 0 : self::NO_ANY_C) | ($this->pretty ? 0 : self::NO_PRETTY),
@@ -183,6 +155,13 @@ class USER
 
         if (DEBUG > 2)
             trace($this->row, '$user->row');
+    }
+
+    function flag($flag = 0, $val = null, $char = 'v') {
+        $storage =& SKY::$mem[$char][2]['flags'];
+        if ($val == null)
+            return $flag ? $storage & $flag : $storage;
+        SKY::$char(null, ['flags' => $val ? $flag | $storage : ~$flag & $storage]);
     }
 
     function cookize($cookie = false) {
@@ -222,7 +201,7 @@ class USER
         unset($_POST['_csrf']);
         if ($csrf !== $this->v_csrf)
             throw new Exception('CSRF protection');
-    //      if ($sky->origin && $sky->origin != $link)          throw new Exception('Origin not allowed');
+
         trace('CSRF is OK');
     }
 }

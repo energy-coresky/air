@@ -87,8 +87,8 @@ class dd_mysqli implements Database_driver
         global $sky;
         if (!$sql instanceof SQL) {
             is_string($sql) or $sql = '>>' . gettype($sql) . '<<';
-            $sky->error_title = 'Multi SQL Error';
-            trace("Not instance of SQL\nSQL-multi: $sql", true, SQL::NO_TRACE & $sql->mode ? 1 : 1 + $sql->mode & 7);
+            $ary = ['Multi SQL Error', "Not instance of SQL\nSQL-multi: $sql"];
+            trace($ary, true, SQL::NO_TRACE & $sql->mode ? 1 : 1 + $sql->mode & 7);
             return;
         }
     

@@ -16,13 +16,10 @@ sky.a.finish = function(to) {
     $('#v-head div:eq(1) a:eq(' + (sky.d.dev ? 0 : 1) + ')').attr('active', 1);
     if (sky.d.dev)
         return;
-    ajax(1, {}, function(r) {
+    ajax(1, function(r) {
         sky.d.trace_x = 1;
-            if (!$('#dev-trace')[0])
-        $('#v-body').append('<div id="dev-trace" style="display:none"></div>');
-
         $('#dev-trace').html(r);
-        sky.d.init(r, 2);
+        sky.d.init(2);
     }, '_trace');
 };
 
@@ -46,6 +43,7 @@ sky.d.draw = {
             if (!vars) {
                 str += '<span style="color:red">empty-response</span>';
             } else Object.keys(vars).forEach(function (name) {
+            //} else for (let [name, _var] of vars) { vars is not iterable
                 if ('' === name) { // BLKs vars
                     blks[view.no] = vars[name];
                     blkc[view.no] = 0;
@@ -177,37 +175,41 @@ sky.d.trace = function(x, page, el) {
     if (sky.d.trace_x = x) {
         ajax('' + x, {}, function(r) {
             $('#dev-trace').html(r).css({display:'table-cell'});
-            sky.d.init(r, 1)
+            sky.d.init(1)
         }, '_trace')
     } else {
         $('#dev-trace').html(sky.d.trace_t).css({display:'table-cell'});
-        sky.d.init(sky.d.trace_t, 1)
+        sky.d.init(1)
     }
 };
 
 sky.d.trace_x = 0;
 sky.d.trace_t = '';
 sky.d.parent_t = window.parent.document.getElementById('trace-t').innerHTML;
-sky.d.parent_x = window.parent.document.getElementById('trace-x').innerHTML;
 
-sky.d.init = function(str, from) {
-    var self_t = $('#trace-t').html(), m, top = '', black = {backgroundColor:'#000', color:'#0f0'};
+sky.d.init = function(from) {
+    var self_t = $('#trace-t').html(), m, top = '', black = {backgroundColor:'#000', color:'#0f0'},
+        is_trace = '_trace' == sky.a._0;
 
-    if ('_trace' == sky.a._0)
+    if (is_trace)
         sky.d.trace_x = parseInt(sky.a._1)
+
     $('#dev-trace').css(sky.d.trace_x ? black : {backgroundColor:'#005', color:'#7ff'});
+
     if ('view' != sky.a._1)
         sky.d.trace_t = sky.d.dev || !self_t ? sky.d.parent_t : self_t;
-    if ('_trace/1' == sky.a.uri) {
-        $('#dev-trace').prepend(sky.d.parent_x);
-    } else if ('_trace/0' == sky.a.uri || !str && sky.d.dev) {
-        $('#dev-trace').html(sky.d.trace_t);
-    }
 
-    if (!str)
-        str = $('#trace').html();
-    var trc = str;
-    if (-1 != str.indexOf('<div class="error">'))
+    if (!from && (!is_trace || '_trace/0' == sky.a.uri))
+        $('#dev-trace').html(sky.d.dev || is_trace ? sky.d.parent_t : self_t);
+
+    var str = $('#dev-trace').html();
+
+    var trc = str, data = JSON.parse($.trim($('#dev-trace div.dev-data:eq(0)').text()));
+    for (let i in data.errors) if ('0' != i) {
+        let err = data.errors[i];
+        $('#dev-trace').prepend(`<h1>${err[0]}</h1><pre>${err[1]}</pre>`);
+    }
+    if (data.errors[0])
         $('#v-body h1').each(function () {
             $(this).css({color:'red', backgroundColor:'pink'});
         });
@@ -226,7 +228,6 @@ sky.d.init = function(str, from) {
     }
 
     if (1 == from || '' !== $('#master').html()) {
-        var data = JSON.parse($.trim($('#trace div.dev-data:eq(0)').text()));
         data.views = a;
         $('#tpl-list').html($('#tpl-list-copy').html()).find('a')
             .mouseenter(function() {

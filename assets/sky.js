@@ -11,7 +11,7 @@ var sky = {
     err_t: 0,
     err_show: function(r) {
         if (r) {
-            $('#trace-x').html(r.catch_error);
+            $('#trace-x').html(r.catch_error);  //////delete
             'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func, 0) : dev('_trace/1');
         } else if (sky.err_t) {
             dev('_trace/0');
@@ -40,14 +40,13 @@ var sky = {
     g: { // sky gate & dev utilities
         box: function(ctrl, func, layout) {
             if (layout) {
-                $('#trace-x').html('<h1>' + $('#trace-t h1:eq(0)').html() + '</h1>');
+                $('#trace-x').html('<h1>' + $('#trace-t h1:eq(0)').html() + '</h1>');  //////delete
                 sky.err_t = 0;
             } else {
                 func += '&ajax';
             }
             var fn = !ctrl ? '' : ("default_c" == ctrl ? "*" : ctrl.substr(2));
             dev('?_gate=' + fn + '&func=' + func);
-            //$('#err-top div:eq(0)').html()
         }
     },
     orientation: function() {
@@ -251,13 +250,6 @@ function ajax(j_, postfields, func, c_) {
     sky.post(sky.home + '?AJAX=' + ctrl0 + '&' + ctrl1 + '=' + j_, postfields || '', function(r) {
         var error_func = sky.a.error(); // get the current and restore default error handler
         func = func || sky.a.body;
-        var x_trace = function () {
-            try {
-                $('#trace-x').html('');
-                window.parent.document.getElementById('trace-x').innerHTML = '';
-                //'_' != ctrl1.charAt(0);
-            } catch (e) {};
-        }
         if (sky.a.x_el)
             sky.a.x_el.html(mem_x);
         if (sky.a.finish)
@@ -271,10 +263,10 @@ function ajax(j_, postfields, func, c_) {
                 sky.err_show(r);
             }
         } else switch (typeof func) {
-            case 'function': x_trace(); return func(r);
-            case 'string':   x_trace(); return $('#' + func).html(r);
-            case 'object':   x_trace(); return func ? func.html(r) : null; // null is object
-            default:         x_trace(); return r ? sky.err(r) : null;
+            case 'function': return func(r);
+            case 'string':   return $('#' + func).html(r);
+            case 'object':   return func ? func.html(r) : null; // null is object
+            default:         return r ? sky.err(r) : null;
         }
     });
 }

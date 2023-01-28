@@ -19,13 +19,17 @@ function view($_in, $_return = false, &$_vars = null) {
     if ('' !== $mvc->ob) {
         $mvc->body = '';
         if (DEV && !$layout)
-            DEV::ed_var(['$' => $mvc->ob], $mvc->no);
+            DEV::vars(['$' => $mvc->ob], $mvc->no);
     }
-
     trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
+
+    global $sky;
     if ($layout || $mvc->body)
         $mvc->ob = view(false, 0, MVC::jet($mvc, $layout));
-    return MVC::tail($mvc, $layout);
+    if ($mvc->is_sub)
+        return $mvc->return ? $mvc->ob : null;
+    if ($sky->fly || !$layout)
+        $sky->tail_x('', $mvc->ob); # tail_x ended with "exit"
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -323,8 +327,8 @@ class MVC extends MVC_BASE
             $name = $mvc;
             $vars['sky'] = $sky;
         } else {
-            if (DEV && ($ts = SKY::d('err_u_act')) && !$sky->error_no && $layout && !$sky->fly) {
-                SKY::d('err_u_act', null); # erase flash var
+            if (DEV && ($ts = SKY::d('err_z_act')) && !$sky->error_no && $layout && !$sky->fly) {
+                SKY::d('err_z_act', null); # erase flash var
                 jump("_err_u?t=$ts");
             }
             $name = "_$mvc->body";
@@ -420,22 +424,15 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         echo $plus . '<link href="' . PATH . 'favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
     }
 
-    static function tail($mvc = false, $layout = false) {
+    static function tail() {
         global $sky;
-        if ($mvc) {
-            if ($mvc->is_sub)
-                return $mvc->return ? $mvc->ob : print($mvc->ob);
-            if ($sky->fly || !$layout)
-                $sky->tail_x('', $mvc->ob); # tail_x ended with "exit"
-            return $mvc->ob;
-        }
-        $sky->fly or $sky->tail();
+        $sky->tail_t();
     }
 
     static function mime($mime) {
         global $sky;
         header("Content-Type: $mime;");
-        $sky->fly = HEAVEN::U_ACT;
+        $sky->fly = HEAVEN::Z_ACT;
     }
 
     static function body($body) {
@@ -447,7 +444,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             return MVC::$mc->$method($param);
         if (MVC::$ctrl = method_exists(MVC::$cc, $method) ? 'common_c' : false)
             return MVC::$cc->$method($param);
-        MVC::$ctrl = 'not-found';
+        MVC::$ctrl = 'not-found';///???
     }
 
     static function sub(&$action, $param = null, $no_handle = false) {
@@ -490,7 +487,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             !$in or $this->body = '';
         } elseif (is_int($in)) { # soft error
             $sky->error_no = $in;
-            if ($sky->s_error_404)// || $user->jump_alt)
+            if ($sky->s_error_404)
                 throw new Stop($in); # terminate quick
             $sky->fly or http_response_code($in);
             $this->body = '_std.404';
@@ -571,12 +568,8 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             $me->set(MVC::$mc->error_y($action));
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);
         $me->ob = ob_get_clean();
-        $me->ob = view($me, $extra = 1 == $sky->extra); # visualize
+        $me->ob = view($me); # visualize
         if (!$sky->tailed)
             throw new Error('MVC::tail() must used in the layout');
-        if ($extra) { # save extra cache
-  #          file_put_contents("var/extra/$sky->fn_extra", ($sky->s_extra_ttl ? time() + $sky->s_extra_ttl : 0) . "\n<!-- E -->$me->ob");
-   #         echo $me->ob;
-        }
     }
 }

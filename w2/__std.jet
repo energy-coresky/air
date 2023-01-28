@@ -66,6 +66,14 @@ isset($error) && $error && (SKY::$debug || DEV) or $error = isset($list[$no]) ? 
 #end
 #.exception
 
+#.save_cache
+<p class="clear"><br><br><h1>EXTRA = {{EXTRA}}</h1>
+<form method="post" style="display:inline-block">
+Save HTML from URL: <input size="50" name="extra" /> <input type="submit" value="Save"/>
+</form>
+<p>Note: use `/main/error` link (c_main::a_error) for static exception error page
+#.save_cache
+
 #.x
 <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
   <path d="M1.293 1.293a1 1 0 0 1 1.414 0L8 6.586l5.293-5.293a1 1 0 1 1 1.414 1.414L9.414 8l5.293 5.293a1 1 0 0 1-1.414 1.414L8 9.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L6.586 8 1.293 2.707a1 1 0 0 1 0-1.414z"></path>

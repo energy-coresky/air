@@ -167,11 +167,13 @@ final class SQL
             $this->mode++; # add 1 depth
             $ts = !DEV || ($ts = microtime(true) - $ts) < 0.1 ? '' : sprintf("%01.3f sec ", $ts);
             SQL::$query_num++;
-            if ($is_error = (bool)$no)
-                $sky->error_title = 'SQL Error';
-            $depth = SQL::NO_TRACE & $this->mode ? (int)$is_error : 1 + $this->mode & 7;
-            if ($depth)
-                trace(($is_error ? "ERROR in {$this->_dd->name} - $no: " . $this->_dd->error() . "\n" : '') . "SQL: $ts$char$qstr", $is_error, $depth);
+            $is_error = (bool)$no;
+            if ($depth = SQL::NO_TRACE & $this->mode ? (int)$is_error : 1 + $this->mode & 7) {
+                $msg = "SQL: $ts$char$qstr";
+                if ($is_error)
+                    $msg = ['SQL Error', "ERROR in {$this->_dd->name} - $no: " . $this->_dd->error() . "\n$msg"];
+                trace($msg, $is_error, $depth);
+            }
         }
 
         if ($no)
@@ -206,13 +208,16 @@ final class SQL
     }
 
     private function parseF() {
-        if (SQL::NO_PARSE & $this->mode)
-            return $this->exec();
+        if ((SQL::NO_PARSE & $this->mode) && !$this->in)
+            return;
 
         if (false !== strpos($this->qstr, '$'))
             $this->qstr = $this->replace_nop(false, $this->qstr);
 
-        if ($this->in) $this->qstr = vsprintf($this->qstr, array_map(function ($val) {
+        if (!$this->in)
+            return;
+
+        $this->qstr = vsprintf($this->qstr, array_map(function ($val) {
             $this->i++;
             return is_array($val)
                 ? $this->array_join($val)
@@ -242,9 +247,8 @@ final class SQL
             count($this->in) == $this->i or $this->parse_error = 'Placeholder\'s count don\'t match parameters count';
     
         if ($this->parse_error) {
-            global $sky;
-            $sky->error_title = 'SQL parse Error';
-            trace("$this->parse_error\nSQL-x: $this->qstr", true, $this->depth + ($this->mode & 7));
+            $ary = ['SQL parse Error', "$this->parse_error\nSQL-x: $this->qstr"];
+            trace($ary, true, $this->depth + ($this->mode & 7));
         }
         return $this->qstr;
     }

@@ -47,7 +47,7 @@ class standard_c extends Controller
                     '_gate' => 'Open SkyGate',
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Compile Project',
-                    '_glob?' . ($sky->s_gr_start ? 'report' : 'dirs') => 'Globals Report',
+                    '_glob?' . ($sky->d_gr_start ? 'report' : 'dirs') => 'Globals Report',
                     '_vend?list' => 'Browse All Vendors',
                 ],
                 'wares' => $this->dev->wares_menu(),
@@ -91,7 +91,7 @@ class standard_c extends Controller
             return 404;
         SKY::$debug = 0;
         if (2 != $id)
-            $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'id="trace"', 'pre');
+            $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'class="trace"', 'pre');
         echo $body ?? 'err';
     }
 
@@ -149,8 +149,8 @@ class standard_c extends Controller
             $user->v_scr = $m ? $m[0] : '768x1024';
             if ($mobi = $user->v_mobi === '' && ($m && $m[1] < 1000 || $sky->orientation))
                 $user->v_mobi = $user->v_mobd = $m[1] < 700 ? 1 : 2;
-            if ($user->js_unlock || $mobi)
-                echo 'main';
+  //          if ($user->js_unlock || $mobi)  2do: check
+   //             echo 'main';
         }
         return true;
     }

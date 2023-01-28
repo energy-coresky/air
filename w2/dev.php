@@ -3,8 +3,7 @@
 function e() {
     global $sky;
     $sky->error_no = 1;
-    $sky->error_title = 'Gate error - <span class="gate-err"></span>';
-    trace('Gate error', true, 1);
+    trace(['Gate error - <span class="gate-err"></span>', 'Gate error'], true, 1);
 }
 
 class DEV
@@ -23,9 +22,10 @@ class DEV
             'cnt' => [
                 $c = count($a1 = Debug::get_classes(get_declared_classes())[1]),
                 $c + count($a2 = Debug::get_classes(get_declared_interfaces())[1]),
-             ],
+            ],
             'classes' => array_merge($a1, $a2, get_declared_traits()),
             'vars' => DEV::$vars,
+            'errors' => SKY::$errors,
         ];
         return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
     }
@@ -72,7 +72,7 @@ class DEV
         }
     }
 
-    static function ed_var($in, $no, $is_blk = false) {
+    static function vars($in, $no, $is_blk = false) {
         $ary = [];
         isset(DEV::$vars[$no]) or DEV::$vars[$no] = [];
         $p =& DEV::$vars[$no];

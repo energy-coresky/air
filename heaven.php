@@ -4,18 +4,15 @@
 class HEAVEN extends SKY
 {
     const J_ACT = 1;
-    const U_ACT = 2;
+    const Z_ACT = 2;
 
-    public $jump = false;
-    //public $requests = [''];
+    public $jump = false; # INPUT_POST=0 INPUT_GET=1
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
     public $method;
     public $re;
     public $sname = [];
-    public $fn_extra = '';
     public $profiles = ['Anonymous', 'Root'];
     public $admins = 1; # root only has admin access or list pids in array
-    public $lg = false; # no languages initialy
     public $has_public = true; # web-site or CRM
     public $page_p = 'p';
     public $show_pdaxt = false;
@@ -41,52 +38,39 @@ class HEAVEN extends SKY
     }
 
     function __construct() {
-        parent::__construct();
-
-        header('Content-Type: text/html; charset=' . ENC);
+        $this->ip = $_SERVER['REMOTE_ADDR'] ?? '';
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
-        if (false === $this->method)
-            throw new Error('Unknown request method');
-
+        false !== $this->method or exit('request method');
         define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
         define('SNAME', $_SERVER['SERVER_NAME']);
         define('PORT', 80 == $_SERVER['SERVER_PORT'] ? '' : ':' . $_SERVER['SERVER_PORT']);
-    }
 
-    private function extra_file($sname) {
-        if (!EXTRA || 1 != $this->method) # GET only
-            return $this->extra = 0;
-        $this->fn_extra = "$sname[1]$sname[2]$sname[3]" . str_replace('/', '.', PATH . URI) . '.php';
+        header('Content-Type: text/html; charset=UTF-8');
 
-        if (is_file($fn = "var/extra/$this->fn_extra") && ($fh = @fopen($fn, 'r'))) {
-            $ts = fgets($fh);
-            if ("0\n" === $ts || START_TS < (int)$ts) # check TTL
-                return $fh;
-            fclose($fh);
-            @unlink($fn);
-            $this->extra = 1; # set adjust mode
+        if (EXTRA && INPUT_GET == $this->method) {
+            $fn = "var/extra/" . SNAME . urlencode(URI) . '.html';
+            if (is_file($fn) && ($fh = @fopen($fn, 'r'))) {
+                for(; ob_get_level(); ob_end_clean());
+                fpassthru($fh);
+                fclose($fh);
+                exit;
+            }
         }
-        return false;
+
+        parent::__construct();
     }
 
     function load() {
         $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
-        if (!preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname))
-            exit('sname');
-/*        $this->extra = EXTRA;
-        if ($fh = $this->extra_file($this->sname)) {
-            for(; ob_get_level(); ob_end_clean());
-            fpassthru($fh);
-            fclose($fh);
-            exit;
-        }*/
+        preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname) or exit('sname');
+
         define('PROTO', @$_SERVER['HTTPS'] ? 'https' : 'http');
         define('DOMAIN', $this->sname[3]);
 
         parent::load(); # database connection start from here
 
-        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::U_ACT : 0;
+        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_ACT : 0;
         # use fetch with a_.. actions
         $this->is_front = true;
         $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
@@ -111,7 +95,7 @@ class HEAVEN extends SKY
             if (1 == $cnt_s && '' === $this->surl[0]) {
                 $this->surl = [];
                 $cnt_s = 0;
-                if ($this->fly && 'AJAX' == key($_GET)) {
+                if ($this->fly && 'AJAX' == key($_GET)) {// && INPUT_POST == $this->method
                     $this->fly = HEAVEN::J_ACT;
                     if ('adm' == $_GET['AJAX'])
                         $this->surl = ['adm'];
@@ -124,109 +108,78 @@ class HEAVEN extends SKY
         if (SKY::$debug)
             $this->gpc = Debug::gpc();
 
-        //if (12 == $this->error_no && !$this->fly && '' !== URI) // 2do:check for api calls
-        //    jump();
-        //if ($this->error_no && '_exception' != URI)
-        //    throw new Exception(11);
-
-        SKY::$vars = [
-            'k_list' => 'list' == $this->_1 || in_array($this->page_p, [$this->_1, $this->_2, $this->_3]),
+        SKY::$vars = [// move to Admin class
+            //'k_list' => 'list' == $this->_1 || in_array($this->page_p, [$this->_1, $this->_2, $this->_3]),
         ];
-//        if (1 == $this->extra)
-            //is_file($fn = 'var/extra.txt') && in_array($this->fn_extra, array_map('trim', file($fn))) or $this->extra = 2;
     }
 
     function qs($url) {
         return preg_match("$this->re(.*)$~", $url, $m) ? $m[3] : false;
     }
 
-    function flag($flag = 0, $val = null, $char = 'v') {
-        $storage =& SKY::$mem[$char][2]['flags'];
-        if ($val == null)
-            return $flag ? $storage & $flag : $storage;
-        SKY::$char(null, ['flags' => $val ? $flag | $storage : ~$flag & $storage]);
-    }
-
-    function tail_x($plus = '', $stdout = '') {
-        if ($plus) # if not tailed correctly
-            trace($this->except ? $this->except['title'] : 'Unexpected Exit', true, 3);
+    function tail_t() {
+        # let ghost's SQLs will in the tracing
         $this->ghost or $this->tail_ghost();
-        for ($i = 0; ob_get_level(); $i++, $stdout .= ob_get_clean()); # grab if this is unexpected break
-        if ($flag = !headers_sent() && HEAVEN::J_ACT == $this->fly) {
-            http_response_code(200);
-            $etc = is_array($this->ca_path) ? $this->ca_path : [];
-            if ($this->except && 11 == $this->except['code'])
-                $etc = ['ky' => $this->error_no];
-            if (!$etc && $this->error_no > 100) {
-                $etc = ['err_no' => $this->error_no, 'soft' => (int)('' === $plus)];
-                if ($plus) {
-                    $tracing = SKY::$debug ? $this->errors . $this->tracing($plus, true) : '';
-                    $this->errors = view('_std.404', ['tracing' => $tracing]);
-                } else {
-                    $this->errors = $stdout;
-                }
-            }
-            $flag = $etc || SKY::$debug && $this->errors;
-        }
-        if (DEV)
-            $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
-        if ($flag) {
-            if (!$etc) {
-                $plus or $this->errors .= $this->check_other();
-                $this->errors .= "<h1>Stdout, depth=$i</h1><pre>" . html(mb_substr($stdout, 0, 100)) . '</pre>';
-            }
-            $out = json(['catch_error' => $this->errors] + $etc, true);
-            $out or $out = json_encode(['catch_error' => '<h1>See X-tracing</h1>']);/////////////////////////
-            $stdout = $out;
-        }
-        if (SKY::$debug && !isset($tracing)) {
-            trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars:');
-            $this->tracing($plus, true); # write X-tracing
-        }
-        echo $stdout; # send to browser
-        $this->tailed = true;
-        exit;
-    }
-
-    function tail() {
-        $trace_single = $this->s_trace_single;
-        $this->ghost or $this->tail_ghost();///////2do:  show an errors for FILE REQUESTS!
 
         if (SKY::$debug) { # render tracing in the layout
             trace(array_keys(SKY::$mem), 'KEYS of: SKY::$mem');
             if (SKY::ERR_SHOW == $this->was_error && !headers_sent())
                 http_response_code(503); # Service Unavailable
-            if ($trace_single) {
-                $this->tracing('', true); # write X-tracing
-            } else {
-                $out = '<h1>Tracing</h1>' . tag($this->tracing(), 'id="trace"', 'pre');
-                $out_x = tag('', 'id="trace-x" style="display:none"');
-                if ($this->errors) {
-                    $out = $this->check_other() . $this->errors . $out;
-                    echo tag($out, 'id="trace-t" style="display:none"') . $out_x . js("sky.err_t=1");
-                } else {
-                    global $user;
-                    if (!$this->is_front && (DEV || 1 == $user->pid)) {
-                        echo a('see tracing', ['sky.trace()']) . ' + ' . a('X', ['sky.trace(1)']);
-                    }
-                    echo $this->was_error == SKY::ERR_SHOW
-                        ? $this->check_other() . $out . js("$('div.error')[0].scrollIntoView();")
-                        : tag($out, 'id="trace-t" style="display:none"') . $out_x;
-                }
-            }
+            echo tag('<h1>Tracing</h1>'.tag($this->tracing(), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"')
+                . tag('', 'id="trace-x" style="display:none"');
+            if (SKY::$errors[0])
+                echo js("sky.err_t=1");
         }
         $this->tailed = true;
     }
 
-    protected function tail_force($plus) {
-        global $user;
+    function tail_x($plus = '', $stdout = '') {
+        if ($plus && !$this->except) # if not tailed correctly
+            trace(['Unexpected Exit', 'Unexpected Exit'], true, 3);
 
-        $hs = headers_sent();
-        if (!$hs && $this->jump)
-            exit;
-        MVC::instance();
+        # let ghost's SQLs will in the tracing
+        $this->ghost or $this->tail_ghost();
+        # grab OB if unexpected break done
+        for ($depth = 0; ob_get_level(); $depth++, $stdout .= ob_get_clean());
+
+        if (!headers_sent() && HEAVEN::J_ACT == $this->fly) {
+            http_response_code(200);
+            $eary = $this->ca_path ?: [];
+            if ($this->except && 11 == $this->except['code'])
+                $eary = ['ky' => $this->error_no];
+            if (!$eary && $this->error_no > 100) {
+                $eary = ['err_no' => $this->error_no, 'soft' => (int)('' === $plus)];
+                if ($plus) {
+                    $tracing = SKY::$debug ? $this->tracing($plus, true) : '';
+                    $msg = view('_std.404', ['tracing' => $tracing]);
+                } else {
+                    $msg = $stdout;
+                }
+            }
+            if ($eary || SKY::$debug && SKY::$errors[0]) {
+                if (!$eary) {
+                    $msg = $plus ? '' : $this->check_other();
+                    $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 100)) . '</pre>';
+                }
+                $out = json(['catch_error' => $msg ?? 'err'] + $eary, true);
+                $stdout = $out ?: json_encode(['catch_error' => '<h1>See X-tracing</h1>']);
+            }
+        }
+        if (DEV)
+            $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
+        if (SKY::$debug && !isset($tracing)) {
+            trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars:');
+            $this->tracing($plus, true); # write X-tracing
+        }
+        echo $stdout; # send to browser
+
+        $this->tailed = true;
+        exit;
+    }
+
+    protected function tail_force($plus) {
         if ($this->fly)
-            $this->tail_x($plus); # exit here
+            $this->tail_x($plus); # ended with exit
 
         $no = $ky = $this->error_no;
         if ($this->except) {
@@ -243,21 +196,24 @@ class HEAVEN extends SKY
         }
         $this->k_refresh = false;
         $tracing = '';
-        if ($hs) {
+        for ($stdout = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
+        if ($hs = headers_sent()) {
             $tracing = '--></script></style>';
             if (DEV) {
                 $tracing .= tag('Headers sent', '', 'h1');
             } else {
-        //      $tracing .= js('document.location.href="' . ($user->jump_alt ? LINK : '_exception') . '"');
                 $tracing .= js('document.location.href="' . PATH . "_exception?$no\"");
                 $this->k_refresh = '0!' . PATH . "_exception?$no";
             }
         } elseif ($no) {
             http_response_code($no > 99 ? $no : 404);
         }
-        for ($stdout = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
+
+        if (!$hs and $html = Plan::mem_gq('error.html'))
+            return print $html;
+
         if (SKY::$debug) {
-            $tracing .= $h1 . $this->errors . tag($this->tracing($plus, true), 'id="trace"', 'pre');
+            $tracing .= $h1 . /* SKY::$errors . */ tag($this->tracing($plus, true), 'id="trace"', 'pre');
             $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
         }
 
@@ -271,96 +227,65 @@ class HEAVEN extends SKY
         view(false, Plan::$parsed_fn, $vars);
     }
 
+    function tail_ghost() {
+        if (DEV && HEAVEN::Z_ACT == $this->fly && SKY::$errors[0])
+            SKY::d('err_z_act', time()); # popup error for file downloads on next click
+        parent::tail_ghost();
+        if ($this->jump && SKY::$debug)
+            $this->tracing("JUMP: $this->jump\n\n", true);
+    }
+
     function tracing($plus = '', $trace_x = false) {
         if (SKY::$debug) {
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
+
             $uri = $this->methods[$this->method] . ' ' . URI;
             $tracing = 'PATH: ' . PATH . html("\nADDR: $uri\n\$sky->lref: $this->lref") . "\n\$sky->fly: $this->fly";
             $tracing .= "\n\$sky->k_type: $this->k_type\nSURL: " . html("$this->surl_orig -> " . implode('/', $this->surl));
             $this->tracing = $tracing . "\n\n" . $this->tracing;
-            if ($this->fn_extra)
-                $this->tracing = "EXTRA: $this->fn_extra\n$this->tracing";
+
             if (SKY::$debug > 1) {
                 flush();
                 $plus .= 'Request headers:'  . html(substr(print_r(getallheaders(), true), 7, -2));
                 $plus .= 'Response headers:' . html(substr(print_r(apache_response_headers(), true), 7, -2));
             }
         }
-        $plus = parent::tracing($plus, $trace_x);
-        return preg_replace('/^(' . preg_quote(DIR, '/') . '.*)$/m', '<span>$1</span>', $plus);
+        return parent::tracing($plus, $trace_x);
     }
 
     function shutdown() {
-        chdir(DIR); # restore dir!
+        chdir(DIR);
         Plan::$ware = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
         if (!$this->tailed) { # possible result of `die` function
             global $user;
-            if (isset($user)) {
-                $this->flag(USER::NOT_TAILED, 1);
-                if (!$this->except || 'Exception' == $this->except['name']) { # DAH result
-                    SKY::v(null, ['!clk_flood' => 'clk_flood+9']);
-                    if ($user->clk_flood > 19 && !DEV)
-                        $this->flag(USER::BANNED, 1); # hard ban
-                }
-            }
+
+            if (isset($user))
+                $user->flag(USER::NOT_TAILED, 1);
+
             $crash = $this->except ? $this->except['crash'] : !$this->s_quiet_eerr;
-            if ($crash && $this->s_crash_log) {
-                $str = NOW . ' ';
-                if (isset($user))
-                    $str .= a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) . ' ';
-                if (INPUT_POST == $this->method)
-                    $str .= 'POST ';
-                if ($dd)
-                    sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', $str . html(URI) . "\n");
+            if ($dd && $crash && $this->s_crash_log) {
+                $str = NOW . " $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . ($this->except ? $this->except['title'] : 'die'). ', ';
+                $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
+                sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
             }
         }
         parent::shutdown();
-    }
-
-    function tail_ghost($alt = false) {
-        global $user;
-
-        if (DEV && HEAVEN::U_ACT == $this->fly && $this->errors)
-            SKY::d('err_u_act', time()); # popup error for file downloads on next click
-        if ($alt && isset($user) && $user->jump_alt && !headers_sent() && !$this->fly)
-            jump($this->alt_jump = true, 302, false); # no exit, alt jump (special case)
-        parent::tail_ghost();
-        if ($this->jump && SKY::$debug) {
-            #$plus = $this->tracing("JUMP[$user->jump_n]: $this->jump\n\n", !$user->jump_n);
-            #if ($user->jump_n)
-            #    sqlf('update $_memory set tmemo=' . SKY::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");
-            $plus = $this->tracing("JUMP[]: $this->jump\n\n", true);
-  #          if (1)
-          #      sqlf('update $_memory set tmemo=' . SKY::$dd->f_cc('tmemo', '%s') . ' where id=1', "\n----\n$plus");
-        }
     }
 }
 
 
 function jump($uri = '', $code = 302, $exit = true) {
-    global $sky, $user;
+    global $sky;
 
-    if ($ut = isset($user))
-        $sky->alt_jump ? ($uri = $user->jump_alt) : ($user->jump_path[] = '. ' . LINK . URI);
-    $alt = [];
-    if (is_array($uri)) # jump to the next link if an error 404 or exception
-        $uri = ($alt = $uri) ? array_shift($alt) : '';
-    $sky->is_front or '' === $uri or '?' != $uri[0] or $uri = "adm$uri";
-    $sky->jump = preg_match("@^https?://@i", $uri) ? $uri : LINK . $uri;
-    if ($ut) {
-        $user->jump_path[] = "! $sky->jump";
-        if ($user->jump_n > 7) {
-            $user->jump_alt = []; # no more jumps
-            if ($exit && !$sky->alt_jump)
-                throw new Error('22 Too much jumps');
-            trace("Too much jumps:\n" . implode("\n", $user->jump_path), true);
-            return;
-        }
-        array_unshift($alt, $user->jump_n, $user->jump_path);
-        $user->v_jump_alt = serialize($alt);
+    if (strpos($uri, '://')) {
+        $sky->jump = $uri;
+    } else {
+        $sky->is_front or '' === $uri or '?' != $uri[0] or $uri = "adm$uri";
+        $sky->jump = LINK . $uri;
     }
+
     header("Location: $sky->jump", true, $code);
     $sky->tailed = true;
     if ($exit)
@@ -467,7 +392,7 @@ function json($in, $return = false, $off_layout = true) {
     if ($err = json_last_error())
         trace('json error: ' . $err, true, 1);
     if (DEV && !$return)
-        DEV::ed_var(['$$' => $in], MVC::instance(-1)->no);
+        DEV::vars(['$$' => $in], MVC::instance(-1)->no);
     return $return ? $out : print($out);
 }
 

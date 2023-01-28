@@ -179,9 +179,9 @@ a[active].inner-menu:hover {
     width: 100%;
     margin-bottom:0;
 }
-pre#trace {
-    background-color: transparent;
-    color: currentColor;
+pre.trace {
+    background-color: transparent !important;
+    color: currentColor !important;
 }
 #dev-trace h1 {
     margin: 0;

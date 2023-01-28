@@ -7,17 +7,16 @@ interface PARADISE
 //////////////////////////////////////////////////////////////////////////
 class SKY implements PARADISE
 {
+    const CORE = '0.211 2022-12-30T19:48:13+02:00 energy';
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
 
     public $tracing = '';
     public $error_prod = '';
-    public $errors = '';
     public $error_no = 0;
     public $error_last = 0;
     public $was_error = 0;
     public $was_warning = 0;
-    public $cnt_error = 0;
     public $gpc = '';
     public $langs = [];
     public $shutdown = [];
@@ -30,15 +29,16 @@ class SKY implements PARADISE
     static $plans = [];
     static $cli;
     static $debug;
+    static $errors = [0]; # cnt_error
 
     protected $ghost = false;
     protected $except = false;
 
     function __construct() {
         ob_get_level() && ob_end_clean();
+        $this->constants();
         SKY::$debug = DEBUG;
         SKY::$cli = CLI;
-        $this->constants();
         date_default_timezone_set(PHP_TZ);
         mb_internal_encoding(ENC);
         define('NOW', date(DATE_DT));
@@ -50,8 +50,8 @@ class SKY implements PARADISE
             $this->error_last = $no;
             $this->was_error |= SKY::ERR_DETECT;
             if (error_reporting() & $no && (SKY::$debug || !SKY::$dd || $this->s_prod_error)) {
-                $this->error_title = 'PHP ' . ($err = Debug::error_name($no));
-                trace("$err: $message", true, $line, $file, $context);
+                $error = Debug::error_name($no);
+                trace(["PHP $error", "$error: $message"], true, $line, $file, $context);
             }
             return true;
         });
@@ -63,45 +63,14 @@ class SKY implements PARADISE
                 'crash' => $crash = 'Stop' != $name && ('Exception' != $name || !SKY::$dd || !$this->s_quiet_eerr),
                 'code' => $m ? $m[1] : 0,
                 'mess' => $m ? $m[2] : $mess,
-                'title' => $this->error_title = "Exception $name($mess)",
+                'title' => $title = "Thrown $name($mess)",
             ];
             if ('Stop' == $name && !$mess)
                 $this->tailed = true;
-            global $user;
-            $etc = $m && 22 == $m[1] ? isset($user) && implode("\n", $user->jump_path) : $e->getTraceAsString();//////////
-            trace("$this->error_title\n$etc", $crash, $e->getLine(), $e->getFile());
-            $this->error_title = "Exception $name($mess)";
+            trace($crash ? [$title, $title] : $title, $crash, $e->getLine(), $e->getFile(), $e->getTraceAsString());
         });
 
         register_shutdown_function([$this, 'shutdown']);
-    }
-
-    function shutdown() {
-        chdir(DIR); # restore dir!
-        Plan::$ware = 'main';
-        SQL::$dd = SKY::$dd; # set main database driver if loaded
-        foreach ($this->shutdown as $object)
-            call_user_func([$object, 'shutdown']);
-
-        $e = error_get_last();
-        if ($e && $e['type'] != $this->error_last) {
-            $err = Debug::error_name($e['type']);
-            trace("$err: $e[message]", true, $e['line'], $e['file']);
-            $this->error_title = "PHP $err";
-        }
-
-        if (SKY::$dd) {
-            $this->ghost or $this->tail_ghost(!SKY::$cli && !$this->tailed);
-            if ($this->error_prod) # write error log
-                sqlf('update $_memory set dt=' . SKY::$dd->f_dt()
-                . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
-        }
-        if (!$this->tailed) { # if script exit in advance (with exit() or throw new Error())
-            $plus = SKY::$debug ? "x autotrace\n\n" : '';
-            SKY::$cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
-            $this->tailed = true;
-        }
-        SQL::close();
     }
 
     function load() {
@@ -120,7 +89,6 @@ class SKY implements PARADISE
             DEV::init();
 
         $this->memory(3, 's');
-        SKY::$debug |= (int)$this->s_trace_single;
         if ($this->s_prod_error || SKY::$debug)
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
@@ -137,24 +105,13 @@ class SKY implements PARADISE
             $dd or $dd = $this->load();
             if (!$dd)
                 return '';
-            SKY::$reg["ghost_$char"] = $dd;
             
             list($dt, $imemo, $tmemo) = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
-            SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id);
+            SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id, 0, $dd);
             if (9 == $id && defined('WWW') && 'n' == $char)
                 Schedule::setWWW($this->n_www);
         }
         return SKY::$mem[$char][3];
-    }
-
-    function tail_ghost($alt = false) {
-        $this->ghost = true; // version contr c_name statp visit online_ts
-        #if ($this->lock_table)
-         #   sql('unlock tables');
-        if ($this->s_trace_single)
-            $this->s_trace_single = 0; # single click done
-        foreach (SKY::$mem as $char => &$v)
-            $v[0] && $v[2] && SKY::sql($char, false);
     }
 
     function __get($name) {
@@ -190,7 +147,7 @@ class SKY implements PARADISE
         $exists = isset(SKY::$mem[$char]);
         if (!$args)
             return $exists;
-        $exists or SKY::$mem[$char] = [0, null, $args[1] ?? '', []];
+        $exists or SKY::$mem[$char] = [0, null, $args[1] ?? '', [], SKY::$dd];
         $x =& SKY::$mem[$char];
         if (is_array($k = $args[0])) {  # s - system conf
             $x[3] = $k + $x[3];         # a - conf for root-admin section
@@ -212,11 +169,11 @@ class SKY implements PARADISE
         return $x[0] |= 1;
     }
 
-    static function &ghost($char, $original, $tpl = '', $flag = 0) {
-        SKY::$mem[$char] = [$flag, $flag & 4 ? null : $original, $tpl, []];
-        if ($tpl)
+    static function &ghost($char, $packed, $tpl = '', $flag = 0, $dd = null) {
+        SKY::$mem[$char] = [$flag, $flag & 4 ? null : $packed, $tpl, [], $dd ?? SKY::$dd];
+        if (SKY::$debug && $tpl)
             trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Debug::closure($tpl) : $tpl), 'GHOST', 1);
-        if ($original) foreach (explode("\n", unl($original)) as $v) {
+        if ($packed) foreach (explode("\n", unl($packed)) as $v) {
             list($k, $v) = explode(' ', $v, 2);
             SKY::$mem[$char][3][$k] = escape($v, true);
         }
@@ -246,47 +203,15 @@ class SKY implements PARADISE
             } else {
                 unset($x[2][$key]);
             }
-            $new = $query && $x[2] ? qp($query, $x[2]) : false;
+            $new = $query && $x[2] ? $x[4]->qp($query, $x[2]) : false;
         }
         $flags = 0; # reset flags
         if ($return)
             return $new;
-        $dd = array_key_exists($name = "ghost_$char", SKY::$reg) ? SKY::$reg[$name] : SKY::$dd;
         if ($f2)
-            return $new && $dd->sql($new);
+            return $new && $x[4]->sql($new);
         if ($f1)
-            $dd->sqlf($x[2], $new);
-    }
-
-    static function date($in = 0, $hm = true) {
-        global $sky;
-        if (!$in)
-            return '';
-        if (is_string($in))
-            $in = strtotime($in);
-        return date($sky->s_date_format ? $sky->s_date_format : 'd.m.Y' . ($hm ? ' H:i' : ''), $in); # :s
-    }
-
-    function tracing($plus = '', $trace_x = false) {
-        $plus .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
-        $plus .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
-        if (DEV)
-            $plus .= DEV::trace();
-        if ($trace_x && SKY::$dd) {
-            if (DEV)
-                SKY::$dd->_xtrace();
-            SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $plus);
-        }
-        return $plus;
-    }
-
-    function check_other($class_debug = true) {
-        $error = '';
- #       if ('utf8' != mysqli_character_set_name($this->conn))
-  #          $error = '<h1>wrong database character set</h1>'; # cannot use trace() to SQL insert..
-     #   if ($class_debug && SKY::$debug)
-      #      Debug::check_other($error);
-        return $error;
+            $x[4]->sqlf($x[2], $new);
     }
 
     static function lang($lg, $page = false) {
@@ -298,7 +223,45 @@ class SKY implements PARADISE
             SKY::$reg['trans_coll'] = [];
     }
 
+    static function date($in, $hm = true) {
+        if (!$in)
+            return '';
+        if (is_string($in))
+            $in = strtotime($in);
+        return date(SKY::s('date_format') ?: 'd.m.Y' . ($hm ? ' H:i' : ''), $in);
+    }
+
+    function log($mode, $data) {
+        if (!in_array(SKY::s('test_mode'), [$mode, 'all']))
+            return;
+        $new = date(DATE_DT) . " $mode $data\n";
+        SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', $new);
+    }
+
+    static function version() : array {
+        global $sky;
+        $core = explode(' ', SKY::CORE);    # timestamp, CS-ver, APP-ver, APP-name
+        $app = explode(' ', $sky->s_version) + [time(), $core[0], '0.0001', 'APP'];
+        $len = strlen(substr($app[2], 1 + strpos($app[2], '.')));
+        $app[3] = ($len < 3 ? '' : ($len < 4 ? 'βῆτα.' : 'ἄλφα.')) . "$app[2].$app[3].SKY.";
+        return [
+            'core' => $core,
+            'app' => $app,
+        ];
+    }
+
+    function check_other($class_debug = true) {
+        $error = '';
+ #       if ('utf8' != mysqli_character_set_name($this->conn))
+  #          $error = '<h1>wrong database character set</h1>'; # cannot use trace() to SQL insert..
+     #   if ($class_debug && SKY::$debug)
+      #      Debug::check_other($error);
+        return $error;
+    }
+
     function constants() {
+        define('ENC', 'UTF-8');
+        define('CLI', 'cli' == PHP_SAPI);
         define('zebra', 'return @$i++ % 2 ? \'bgcolor="#eee"\' : "";');
         define('DATE_DT', 'Y-m-d H:i:s');
         define('I_YEAR', 365 * 24 * 3600);
@@ -315,24 +278,49 @@ class SKY implements PARADISE
         define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
-    const CORE = '0.211 2022-12-30T19:48:13+02:00 energy';
-
-    static function version() : array {
-        global $sky;
-        $core = explode(' ', SKY::CORE);    # timestamp, CS-ver, APP-ver, APP-name
-        $app = explode(' ', $sky->s_version) + [time(), $core[0], '0.0001', 'APP'];
-        $len = strlen(substr($app[2], 1 + strpos($app[2], '.')));
-        $app[3] = ($len < 3 ? '' : ($len < 4 ? 'βῆτα.' : 'ἄλφα.')) . "$app[2].$app[3].SKY.";
-        return [
-            'core' => $core,
-            'app' => $app,
-        ];
+    function tail_ghost() {
+        $this->ghost = true;
+        foreach (SKY::$mem as $char => &$v)
+            $v[0] && $v[2] && SKY::sql($char, false);
     }
 
-    function log($mode, $data) {
-        if (!in_array($this->s_test_mode, [$mode, 'all']))
-            return;
-        SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', date(DATE_DT) . " $mode $data\n");
+    function tracing($plus = '', $trace_x = false) {
+        $plus .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
+        $plus .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
+        if (DEV)
+            $plus .= DEV::trace(); // move to HEAVEN::tracing(..) ?
+        if ($trace_x && SKY::$dd) {
+            if (DEV)
+                SKY::$dd->_xtrace();
+            SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $plus);
+        }
+        return $plus;
+    }
+
+    function shutdown() {
+        chdir(DIR);
+        Plan::$ware = 'main';
+        $dd = SQL::$dd = SKY::$dd; # set main database driver if loaded
+        foreach ($this->shutdown as $object)
+            call_user_func([$object, 'shutdown']);
+
+        $e = error_get_last();
+        if ($e && $e['type'] != $this->error_last) {
+            $error = Debug::error_name($e['type']);
+            trace(["PHP $error", "$error: $e[message]"], true, $e['line'], $e['file']);
+        }
+        # run tail_ghost() if !$this->tailed
+        $this->ghost or $this->tail_ghost();
+
+        if ($dd && $this->error_prod) # write error log
+            sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
+
+        if (!$this->tailed) { # if script exit in advance (with exit() or throw new Error())
+            $plus = SKY::$debug ? "x autotrace\n\n" : '';
+            SKY::$cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
+            $this->tailed = true;
+        }
+        SQL::close();
     }
 }
 
@@ -477,16 +465,19 @@ class eVar implements Iterator
 function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
     global $sky;
 
-    if (true === $is_error) {
+    if ($err = true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;
         if (null === SKY::$dd)
             $sky->load();
-        if (++$sky->cnt_error > 99) {
+        if (SKY::$errors[0]++ > 99) {
             $sky->tracing("Error 500", true);
             throw new Error("500 Internal SKY error");
         }
     }
-    if (SKY::$debug || $sky->s_prod_error && true === $is_error) {
+    if (SKY::$debug || $sky->s_prod_error && $err) {
+        if ($err && is_array($var)) {
+            list ($title, $var) = $var;
+        }
         is_string($var) or $var = var_export($var, true);
         $is_warning = 'WARNING' === $is_error;
         if (is_string($is_error)) {
@@ -504,8 +495,8 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
             }
         }
         isset($fln) or $fln = "<span>$file^$line</span>";
-        $error = "$fln\n" . html($var);
-        if ($is_error) {
+        $mgs = "$fln\n" . html($var);
+        if ($err) {
             $sky->was_error |= SKY::ERR_SHOW;
             if (SKY::$cli)
                 echo "\n$file^$line\n$var\n\n";
@@ -514,32 +505,29 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
                 $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
                 if (!SKY::$cli)
                     $sky->error_prod .= ' uri: ' . html(URI);
-                $sky->error_prod .= "\n$error\n\n";
+                $sky->error_prod .= "\n$mgs\n\n";
             }
         }
         if (!SKY::$debug)
             return; # else collect tracing
-        if ($is_error) {
-            $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>";
-            ob_start();
-            debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-            $backtrace = html(ob_get_clean());
-            if ($sky->is_front || $sky->fly) {
-                $sky->error_title or $sky->error_title = 'User Error';
-                $sky->errors .= "<h1>$sky->error_title</h1><pre>$error\n\n$backtrace</pre>";
-                $sky->error_title = '';
-                $str = Debug::context($context, $has_depth ? $depth : 2) and $sky->errors .= "<pre>$str</pre>";
+        if ($err) {
+            $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>\n";
+            if (!DEV)
+                return;
+            if (is_string($context)) {
+                $backtrace = html($context);
+                $context = null;
             } else {
-                $sky->tracing .= "BACKTRACE:\n$backtrace";
-                if (!SKY::$cli && !$sky->s_trace_single)
-                    printf(span_r, "<br /><b>SKY:</b> " . html($var) . " at <b>$file</b> on line <b>$line</b>");
+                ob_start();
+                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+                $backtrace = html(ob_get_clean());
             }
-            $sky->tracing .= "\n";
+            Debug::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context, $has_depth ? $depth : 2);
         } elseif ($is_warning) {
             $sky->was_warning = 1;
             $sky->tracing .= "$fln\n" . '<div class="warning">' . html($var) . "</div>\n";
         } else {
-            $sky->tracing .= "$error\n\n";
+            $sky->tracing .= "$mgs\n\n";
         }
     }
 }
@@ -554,21 +542,17 @@ function qp(...$in) { # Query Part, Query Parse
     return new SQL($in, 'parseT');
 }
 
-function table(...$in) {
+function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL injection!
+    $sql = new SQL($in, 'parseF');
+    return $sql->exec();
+}
+
+/* function table(...$in) {
     $sql = new SQL($in, 'init_qb');
    $sql->table($sql->qstr);
    $sql->qstr = '';
     return $sql;
-}
-
-function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL injection!
-    //$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);//new Exception();  |DEBUG_BACKTRACE_PROVIDE_OBJECT
-    //$trace = $e->getTrace();
-    //trace($trace[1]);
-
-    $sql = new SQL($in, 'parseF');
-    return $sql->exec();
-}
+}*/
 
 function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
     $str = htmlspecialchars($str, $mode, ENC);

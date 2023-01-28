@@ -82,14 +82,17 @@ class Debug
         return $list[$no] ?? "ErrorNo_$no";
     }
 
-    static function context($ary = -1, $depth = 1) {
+    static function epush($title, $err, $ary, $depth) {
+        $i = !isset(SKY::$errors[1]) ? 1 : 2;
+        SKY::$errors[$i] = [$title, $err . Debug::context($ary, $depth)];
+    }
+
+    static function context($ary, $depth) {
         if (-1 === $ary)
             return function_exists('get_context') ? get_context(1 + $depth) : '';
         if (is_null($ary))
             return ''; # else array
-        if (function_exists('filter_context'))
-            return filter_context($ary);
-        $out = ''; # $ary as reference!
+        $out = $ary ? "\n" : ''; # $ary as reference!
         foreach ($ary as $k => $v) {
             if (is_scalar($v) && 's_' != substr($k, 0, 2))
                 $out .= "\$$k = " . html(var_export($v, 1)) . ";\n";
