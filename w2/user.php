@@ -104,7 +104,7 @@ class USER
             if ($sky->eref) {
                 $ary['ref'] = $sky->eref;
             }
-            if (HEAVEN::J_ACT == $sky->fly) {
+            if (HEAVEN::J_FLY == $sky->fly) {
                 $_ &= ~self::NO_JS;
             } elseif (1 == $this->clk_total) { # second click
                 $_ |= self::NO_JS;

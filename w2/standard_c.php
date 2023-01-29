@@ -70,15 +70,6 @@ class standard_c extends Controller
         ];
     }
 
-    function a_err_u() {
-        global $sky;
-        MVC::$layout = $this->_y = '';
-        SKY::$debug = 0;
-        $sky->k_static = [[], [], []];
-        define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
-        return ['ts' => $this->_2];
-    }
-
     function a_trace() {
         return $this->j_trace();
     }
@@ -201,17 +192,18 @@ class standard_c extends Controller
     function j_gate($x = 'j') {
         if ('c_' == $this->_c && 'c' == $x)
             $this->_c = DEV::atime(); # open last access time controller
-        return (!$this->_4 ? [] : [
+        $ary = !$this->_4 ? [] : [
             'y_tx' => $this->d_dev ? 1 : 2, # sample: ?_gate=company&func=j_edit&ajax
-            'err_ajax' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
-        ]) + [
+            'trace_x' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
+        ];
+        return [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
             'h1' => $this->_c,
             'list' => Gate::controllers(true) + DEV::ctrl(),
             'cshow' => DEV::cshow() ? ' checked' : '',
             'e_func' => $this->_c ? DEV::gate($this->_c) : false,
             'func' => $this->_3 ?? '',
-        ];
+        ] + $ary;
     }
 
     function j_delete() {

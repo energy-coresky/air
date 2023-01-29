@@ -257,10 +257,6 @@ class Root
                 file_put_contents($fn, $_POST['etc_file']);
             } else {
                 $ary = $_POST + $ary;
-                if ('s' == $char) {
-                    $chk = ['trace_cli', 'prod_error', 'trace_root', 'error_403', 'error_404', 'quiet_eerr', 'crash_log', 'dev_cron', 'jet_prod'];
-                    foreach ($chk as $v) $ary[$v] = (int)isset($_POST[$v]); //2do: use "chk" type
-                }
                 ksort($ary);
                 SKY::$char($ary);
             }
@@ -304,28 +300,32 @@ class Root
         return [
             '<fieldset><legend>Primary settings</legend>',
                 ['', [['<b><u>Production</u></b>', 'li']]],
-                'trace_root'    => ['Debug mode on production for `root` profile', 'checkbox'],
+                'trace_root'    => ['Debug mode on production for `root` profile', 'chk'],
                 ['', [['<b><u>Production & DEV</u></b>', 'li']]],
-                'trace_cli'     => ['Use X-tracing for CLI', 'checkbox'],
-                'error_404'     => ['Use `Stop` on "return 404"', 'checkbox'],
-                'quiet_eerr'    => ['No `Exception` in Log CRASH', 'checkbox'],
-                'error_403'     => ['Use 403 code for `die`', 'checkbox'],
-                'prod_error'    => ['Use Log ERROR', 'checkbox'],
-                'crash_log'     => ['Use Log CRASH', 'checkbox'],
+                'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
+                'error_404'     => ['Use `Stop` on "return 404"', 'chk'],
+                'error_403'     => ['Use 403 code for `die`', 'chk'],
+                'quiet_eerr'    => ['No `Exception` in Log CRASH', 'chk'],
+                ['Log ERROR', [
+                    'prod_error'    => ['', 'radio', ['Off', 'On']],
+                    'crash_log'     => ['Log CRASH', 'radio', ['Off', 'On']],
+                ]],
             '</fieldset>',
             '<fieldset><legend>Visitor\'s & users settings</legend>',
-                'c_name'    => ['Cookie name', '', '', 'sky'],
-                'c_upd'     => ['Cookie updates, minutes', 'number', '', 60],
+                ['Cookie name', [
+                    'c_name'    => ['', '', '', 'sky'],
+                    'c_upd'     => ['Cookie updates, minutes', 'number', 'style="width:100px"', 60],
+                ]],
                 'visit'     => ['One visit break after, off minutes', 'number', '', 5],
                 'reg_req'   => ['Users required for registrations', 'radio', ['Both', 'Login', 'E-mail']],
             '</fieldset>',
             '<fieldset><legend>Cache & Jet settings</legend>',
-                'cache_act' => ['Hard cache', 'radio', ['Off', 'On']],
-                'cache_sec' => ['Default TTL, seconds', 'number', '', 300],
+                ['Hard cache', [
+                    'cache_act' => ['', 'radio', ['Off', 'On']],
+                    'cache_sec' => ['Default TTL, seconds', 'number', 'style="width:100px"', 300],
+                ]],
                 'red_label' => ['Red label', 'radio', ['Off', 'On'], 1],
                 'jet_cact' => ['Jet cache', 'radio', ['Off', 'On'], 1],
-          #      'jet_prod' => ['Recompile Jet-files on production when edit tpls', 'checkbox'],
-        #       'jet_1php' => ['Allow @php Jet command', 'checkbox'],
             '</fieldset>',
         ];
     }

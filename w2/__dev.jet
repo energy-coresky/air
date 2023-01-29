@@ -223,7 +223,7 @@ $(function() {
 
 <div id="v-body">
     <div style="display:table-cell; width:inherit;" id="dev-{{$y_page}}">@inc(*)</div>
-    @if('trace' != $y_page)<div style="display:none" id="dev-trace">{!$err_ajax ?? ''!}</div>@else@use(.header)~if
+    @if('trace' != $y_page)<div style="display:none" id="dev-trace">{!$trace_x ?? ''!}</div>@else@use(.header)~if
 </div>
 
 <div id="v-tail">

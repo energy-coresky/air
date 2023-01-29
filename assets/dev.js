@@ -17,7 +17,7 @@ sky.a.finish = function(to) {
     if (sky.d.dev)
         return;
     ajax(1, function(r) {
-        sky.d.trace_x = 1;
+        sky.d.x = 1;
         $('#dev-trace').html(r);
         sky.d.init(2);
     }, '_trace');
@@ -172,7 +172,7 @@ sky.d.trace = function(x, page, el) {
     $('#v-head div:eq(1) a').removeAttr('active');
     $(el).attr('active', 1);
     sky.d.trace_t = sky.d.dev ? sky.d.parent_t : $('#trace-t').html();
-    if (sky.d.trace_x = x) {
+    if (sky.d.x = x) {
         ajax('' + x, {}, function(r) {
             $('#dev-trace').html(r).css({display:'table-cell'});
             sky.d.init(1)
@@ -183,18 +183,18 @@ sky.d.trace = function(x, page, el) {
     }
 };
 
-sky.d.trace_x = 0;
+sky.d.x = 0;
 sky.d.trace_t = '';
 sky.d.parent_t = window.parent.document.getElementById('trace-t').innerHTML;
 
 sky.d.init = function(from) {
-    var self_t = $('#trace-t').html(), m, top = '', black = {backgroundColor:'#000', color:'#0f0'},
-        is_trace = '_trace' == sky.a._0;
+    var self_t = $('#trace-t').html(), m, top = '',
+        black = {backgroundColor:'#000', color:'#0f0'}, is_trace = '_trace' == sky.a._0;
 
     if (is_trace)
-        sky.d.trace_x = parseInt(sky.a._1)
+        sky.d.x = parseInt(sky.a._1)
 
-    $('#dev-trace').css(sky.d.trace_x ? black : {backgroundColor:'#005', color:'#7ff'});
+    $('#dev-trace').css(sky.d.x ? black : {backgroundColor:'#005', color:'#7ff'});
 
     if ('view' != sky.a._1)
         sky.d.trace_t = sky.d.dev || !self_t ? sky.d.parent_t : self_t;
@@ -213,6 +213,12 @@ sky.d.init = function(from) {
         $('#v-body h1').each(function () {
             $(this).css({color:'red', backgroundColor:'pink'});
         });
+    var wpx = window.parent.document.getElementById('trace-x');
+    if (from && !sky.d.dev)
+        $(wpx).html('');
+    if ($(wpx).html() && sky.d.x == parseInt($(wpx).attr('x')))
+        $('#dev-trace').prepend($(wpx).html());
+
     sky.set_file_clk('#v-body');
 
     for (var a = []; m = str.match(/(TOP|SUB|BLK)\-VIEW: (\d+) (\S+) (\S+)(.*)/s); str = m[5]) {
@@ -268,7 +274,7 @@ sky.d.view = function() {
     if (!sky.d.trace_t)
         return;
     $('#v-tail input').val(sky.d.trace_t);
-    $('#v-tail form').attr('action', sky.home + '_dev?view=' + sky.d.trace_x).submit();
+    $('#v-tail form').attr('action', sky.home + '_dev?view=' + sky.d.x).submit();
 };
 
 sky.d.drop = function() {

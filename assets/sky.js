@@ -9,12 +9,28 @@ var sky = {
         alert(s);
     },
     err_t: 0,
-    err_show: function(r) {
-        if (r) {
-            $('#trace-x').html(r.catch_error);  //////delete
-            'undefined' !== typeof r.ctrl ? sky.g.box(r.ctrl, r.func, 0) : dev('_trace/1');
-        } else if (sky.err_t) {
-            dev('_trace/0');
+    err_core: function(r) {
+        if (r) { // from ajax
+            $('#trace-x').html(r.catch_error).attr('x', r.err_no);
+            if (1 == r.err_no && r.ctrl) {
+                sky.g.box(r.ctrl, r.func, 0)
+            } else {
+                dev('_trace/' + r.err_no);
+            }
+        } else if (sky.err_t) { // from layout
+            dev('_trace/' + $('#trace-x').attr('x'));
+        }
+    },
+    g: { // sky gate & dev utilities
+        box: function(ctrl, func, layout) {
+            
+            if (layout) {
+                sky.err_t = 0;
+            } else {
+                func += '&ajax';
+            }
+            var fn = !ctrl ? '' : ("default_c" == ctrl ? "*" : ctrl.substr(2));
+            dev('?_gate=' + fn + '&func=' + func);
         }
     },
     a: { // ajax
@@ -37,18 +53,6 @@ var sky = {
         finish: false
     },
     d: {}, // dev utilities
-    g: { // sky gate & dev utilities
-        box: function(ctrl, func, layout) {
-            if (layout) {
-                $('#trace-x').html('<h1>' + $('#trace-t h1:eq(0)').html() + '</h1>');  //////delete
-                sky.err_t = 0;
-            } else {
-                func += '&ajax';
-            }
-            var fn = !ctrl ? '' : ("default_c" == ctrl ? "*" : ctrl.substr(2));
-            dev('?_gate=' + fn + '&func=' + func);
-        }
-    },
     orientation: function() {
         return 'undefined' === typeof window.orientation ? 0 : (window.orientation == 90 || window.orientation == -90 ? 2 : 1);
     },
@@ -255,12 +259,10 @@ function ajax(j_, postfields, func, c_) {
         if (sky.a.finish)
             sky.a.finish(to);
         if ('undefined' !== typeof r.catch_error) {
-            if ('undefined' !== typeof r.ky) {
-//                location.href = sky.home + (12 == r.ky ? '' : '_exception');
-            } else if ('undefined' !== typeof r.err_no) {
+            if (r.err_no > 100) {
                 return error_func ? error_func(r) : sky.err('Error ' + r.err_no + ' (error handler not set)');
             } else {
-                sky.err_show(r);
+                sky.err_core(r);
             }
         } else switch (typeof func) {
             case 'function': return func(r);
@@ -294,14 +296,7 @@ $(function() {
         } catch(e) {}
     });
 
-
-    if ($('#trace-t')[0] && 0) {///////////////////////////////////////////////
-        $('#err-top').show().html($('#trace-t').html());
-        $('#trace-t').remove();
-        if ('function' == typeof sky.g.show)
-            sky.g.show();
-    }
-  sky.err_show(); // _x0 + sky gate
+    sky.err_core();
 
     var scr = '';
     if ('' === sky.tz) {
@@ -314,8 +309,5 @@ $(function() {
                 location.href = sky.home;
         }, '_init');
     }
-
-    //sky.set_file_clk('#err-top');
     sky.load();
 });
-

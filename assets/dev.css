@@ -337,6 +337,14 @@ div#popup div#popup-in {
     margin: 10px;
     font-size:12px;
 }
-
-
+.z-err, .g-err {
+    background: #be185d !important;
+    color:#fff !important;
+    border-bottom: 3px solid #fff;
+}
+.g-err {
+    margin-top:0;
+    line-height: 41px;
+    padding-left: 10px;
+}
 

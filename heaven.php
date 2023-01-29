@@ -3,8 +3,8 @@
 //////////////////////////////////////////////////////////////////////////
 class HEAVEN extends SKY
 {
-    const J_ACT = 1;
-    const Z_ACT = 2;
+    const J_FLY = 1;
+    const Z_FLY = 2;
 
     public $jump = false; # INPUT_POST=0 INPUT_GET=1
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
@@ -70,7 +70,7 @@ class HEAVEN extends SKY
 
         parent::load(); # database connection start from here
 
-        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_ACT : 0;
+        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
         # use fetch with a_.. actions
         $this->is_front = true;
         $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
@@ -96,7 +96,7 @@ class HEAVEN extends SKY
                 $this->surl = [];
                 $cnt_s = 0;
                 if ($this->fly && 'AJAX' == key($_GET)) {// && INPUT_POST == $this->method
-                    $this->fly = HEAVEN::J_ACT;
+                    $this->fly = HEAVEN::J_FLY;
                     if ('adm' == $_GET['AJAX'])
                         $this->surl = ['adm'];
                     array_shift($_GET);
@@ -107,14 +107,14 @@ class HEAVEN extends SKY
 
         if (SKY::$debug)
             $this->gpc = Debug::gpc();
-
-        SKY::$vars = [// move to Admin class
-            //'k_list' => 'list' == $this->_1 || in_array($this->page_p, [$this->_1, $this->_2, $this->_3]),
-        ];
     }
 
-    function qs($url) {
-        return preg_match("$this->re(.*)$~", $url, $m) ? $m[3] : false;
+    private function err_z() {
+        if (!DEV)
+            return '';
+        if ($time = Plan::cache_gq($p = ['main', 'dev_z_err']))
+            Plan::cache_dq($p); # erase flash file
+        return $time ? tag("Z-error at $time", 'class="z-err"', 'h1') : '';
     }
 
     function tail_t() {
@@ -123,12 +123,14 @@ class HEAVEN extends SKY
 
         if (SKY::$debug) { # render tracing in the layout
             trace(array_keys(SKY::$mem), 'KEYS of: SKY::$mem');
-            if (SKY::ERR_SHOW == $this->was_error && !headers_sent())
-                http_response_code(503); # Service Unavailable
-            echo tag('<h1>Tracing</h1>'.tag($this->tracing(), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"')
-                . tag('', 'id="trace-x" style="display:none"');
-            if (SKY::$errors[0])
-                echo js("sky.err_t=1");
+
+           #if (SKY::ERR_SHOW == $this->was_error && !headers_sent())
+           #    http_response_code(503); # Service Unavailable
+
+            echo tag('<h1>Tracing</h1>' . tag($this->tracing(), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"')
+                . tag($err_z = $this->err_z(), 'id="trace-x" x="' . ($err_z ? 1 : 0) . '" style="display:none"');
+            if (SKY::$errors[0] || $err_z)
+                echo js('sky.err_t = 1');
         }
         $this->tailed = true;
     }
@@ -142,11 +144,14 @@ class HEAVEN extends SKY
         # grab OB if unexpected break done
         for ($depth = 0; ob_get_level(); $depth++, $stdout .= ob_get_clean());
 
-        if (!headers_sent() && HEAVEN::J_ACT == $this->fly) {
+        if (headers_sent())
+            $this->fly = HEAVEN::Z_FLY;
+
+        if (HEAVEN::J_FLY == $this->fly) {
             http_response_code(200);
             $eary = $this->ca_path ?: [];
-            if ($this->except && 11 == $this->except['code'])
-                $eary = ['ky' => $this->error_no];
+            if ($msg = $this->err_z())
+                $eary = ['err_no' => 2];
             if (!$eary && $this->error_no > 100) {
                 $eary = ['err_no' => $this->error_no, 'soft' => (int)('' === $plus)];
                 if ($plus) {
@@ -161,12 +166,12 @@ class HEAVEN extends SKY
                     $msg = $plus ? '' : $this->check_other();
                     $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 100)) . '</pre>';
                 }
-                $out = json(['catch_error' => $msg ?? 'err'] + $eary, true);
+                $out = json(['catch_error' => $msg] + $eary + ['err_no' => 1], true);
                 $stdout = $out ?: json_encode(['catch_error' => '<h1>See X-tracing</h1>']);
             }
         }
-        if (DEV)
-            $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
+#        if (DEV)
+ #           $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
         if (SKY::$debug && !isset($tracing)) {
             trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars:');
             $this->tracing($plus, true); # write X-tracing
@@ -227,14 +232,6 @@ class HEAVEN extends SKY
         view(false, Plan::$parsed_fn, $vars);
     }
 
-    function tail_ghost() {
-        if (DEV && HEAVEN::Z_ACT == $this->fly && SKY::$errors[0])
-            SKY::d('err_z_act', time()); # popup error for file downloads on next click
-        parent::tail_ghost();
-        if ($this->jump && SKY::$debug)
-            $this->tracing("JUMP: $this->jump\n\n", true);
-    }
-
     function tracing($plus = '', $trace_x = false) {
         if (SKY::$debug) {
             if ($this->trans_coll)
@@ -254,13 +251,16 @@ class HEAVEN extends SKY
         return parent::tracing($plus, $trace_x);
     }
 
-    function shutdown() {
+    function shutdown($plus = false, $z_fly = false) {
         chdir(DIR);
         Plan::$ware = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
+
+        if (SKY::$debug && $this->jump)
+            $plus = "JUMP: $this->jump\n";
+
         if (!$this->tailed) { # possible result of `die` function
             global $user;
-
             if (isset($user))
                 $user->flag(USER::NOT_TAILED, 1);
 
@@ -270,8 +270,11 @@ class HEAVEN extends SKY
                 $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
                 sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
             }
+
+            if (headers_sent() && $this->fly)
+                $this->fly = HEAVEN::Z_FLY;
         }
-        parent::shutdown();
+        parent::shutdown($plus, DEV && HEAVEN::Z_FLY == $this->fly);
     }
 }
 
@@ -279,6 +282,9 @@ class HEAVEN extends SKY
 function jump($uri = '', $code = 302, $exit = true) {
     global $sky;
 
+    if ($sky->fly)
+        throw new Error('Jump when $sky->fly');
+    $sky->fly = HEAVEN::Z_FLY;
     if (strpos($uri, '://')) {
         $sky->jump = $uri;
     } else {

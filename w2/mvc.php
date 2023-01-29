@@ -36,14 +36,16 @@ function view($_in, $_return = false, &$_vars = null) {
 abstract class MVC_BASE
 {
     function __get($name) {
-        global $sky;
+        static $instances = [];
         if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
-            isset(SKY::$reg[$name]) && is_a(SKY::$reg[$name], $name) or SKY::$reg[$name] = new $name;
+            $obj = isset($instances[$name]) ? $instances[$name] : ($instances[$name] = new $name);
             if ('m' != $name[0]) {
-                SKY::$reg[$name]->dd->onduty(SKY::$reg[$name]->table);
-                SQL::$dd = SKY::$reg[$name]->dd;
+                SQL::$dd = $obj->dd;
+                SQL::$dd->onduty($obj->table);
             }
+            return $obj;
         }
+        global $sky;
         return $sky->$name;
     }
 
@@ -188,7 +190,7 @@ class Controller extends MVC_BASE
                         Plan::cache_d(['main', 'sky_plan.php']);
                         $sky->fly or jump(URI);
                     }
-                    $x = HEAVEN::J_ACT == $sky->fly ? 'j' : 'a';
+                    $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
                     $msg = preg_match("/^\w+$/", $sky->_0)
                         ? "Controller `c_$sky->_0.php` or method `default_c::{$x}_$sky->_0()` not exist"
                         : "Method `default_c::default_$x()` not exist";
@@ -327,10 +329,6 @@ class MVC extends MVC_BASE
             $name = $mvc;
             $vars['sky'] = $sky;
         } else {
-            if (DEV && ($ts = SKY::d('err_z_act')) && !$sky->error_no && $layout && !$sky->fly) {
-                SKY::d('err_z_act', null); # erase flash var
-                jump("_err_u?t=$ts");
-            }
             $name = "_$mvc->body";
             $mvc->is_sub or MVC::vars($vars, MVC::$_y, 'y_');
             MVC::vars($vars, $mvc->_v);
@@ -432,7 +430,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     static function mime($mime) {
         global $sky;
         header("Content-Type: $mime;");
-        $sky->fly = HEAVEN::Z_ACT;
+        $sky->fly = HEAVEN::Z_FLY;
     }
 
     static function body($body) {
@@ -532,7 +530,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $me = new MVC;
         ob_start();
         $param = [];
-        $me->return = HEAVEN::J_ACT == $sky->fly;
+        $me->return = HEAVEN::J_FLY == $sky->fly;
         if ('_' == $sky->_0[0]) {
             $class = 'standard_c';
             $action = ($me->return ? 'j' : 'a') . $sky->_0;

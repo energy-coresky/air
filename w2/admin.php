@@ -102,11 +102,13 @@ class Admin
         if (2 != $user->auth)
             return true;
 
+        $sky->k_list = 'list' == $sky->_1 || in_array($sky->page_p, [$sky->_1, $sky->_2, $sky->_3]);
+
         $me = new Admin;
         trace(self::$adm);
         $uri = '' === $sky->_0 ? self::$adm['first_page'] : URI;
         
-        if (HEAVEN::J_ACT == $sky->fly) {
+        if (HEAVEN::J_FLY == $sky->fly) {
             $pos = array_search($sky->_0, $me->files);
             
         } else foreach ($me->uris as $p => $u) {

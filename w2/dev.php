@@ -3,7 +3,7 @@
 function e() {
     global $sky;
     $sky->error_no = 1;
-    trace(['Gate error - <span class="gate-err"></span>', 'Gate error'], true, 1);
+    trace(['Gate error in "' . MVC::instance()->hnd . '"', 'Gate error'], true, 1);
 }
 
 class DEV
@@ -373,7 +373,7 @@ class DEV
         return [
             'list_views' => $list,
             'list_menu' => $menu,
-            'err_ajax' => tag($trc, 'id="trace"', 'pre'),
+            'trace_x' => tag($trc, 'class="trace"', 'pre'),
             'nv' => $nv,
             'y_tx' => $x,
             'header' => ('main' == $ware ? '' : '<span style="font-size:14px"><b>' . strtoupper($ware) . ":</b></span> ") . $header,

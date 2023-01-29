@@ -118,8 +118,9 @@ class SKY implements PARADISE
         $pre = substr($name, 0, 2);
         if ('k_' == $pre) {
             return array_key_exists($name, SKY::$vars) ? SKY::$vars[$name] : '';
-        } elseif (2 == strlen($pre) && '_' == $pre[1] && isset(SKY::$mem[$char = $pre[0]])) {
+        } elseif (2 == strlen($pre) && '_' == $pre[1]) {
             $name = substr($name, 2);
+            $char = $pre[0];
             return array_key_exists($name, SKY::$mem[$char][3]) ? SKY::$mem[$char][3][$name] : '';
         }
         return array_key_exists($name, SKY::$reg) ? SKY::$reg[$name] : '';
@@ -129,8 +130,8 @@ class SKY implements PARADISE
         $pre = substr($name, 0, 2);
         if ('k_' == $pre) {
             SKY::$vars[$name] = $value;
-        } elseif (2 == strlen($pre) && '_' == $pre[1] && isset(SKY::$mem[$char = $pre[0]])) {
-            SKY::$mem[$char][0] = 1; # sqlf only, flag cannot be =2
+        } elseif (2 == strlen($pre) && '_' == $pre[1]) {
+            SKY::$mem[$char = $pre[0]][0] |= 1; # set flag
             SKY::$mem[$char][3][substr($name, 2)] = $value;
         } else {
             SKY::$reg[$name] = $value;
@@ -183,35 +184,33 @@ class SKY implements PARADISE
     static function sql($char, $return = true) {
         $x =& SKY::$mem[$char];
         if ('s' == $char && !$x[1]) # protect if SQL select failed
-            return false;
-        $flags =& $x[0];
-        if ($f1 = $flags & 1) {
+            return;
+        $flag = $x[0];
+        $x[0] = 0; # reset flags
+        if ($f1 = $flag & 1) { # sky-memory
             $new = array_join($x[3], function($k, $v) {
                 return $k . ' ' . escape($v);
             });
             $new === $x[1] ? ($f1 = 0) : ($x[1] = $new);
             if ($x[2] instanceof Closure)
-                return $f1 ? $x[2]($new) : false;
+                return $f1 ? $x[2]($new) : null;
         }
-        if ($f2 = is_array($x[2])) {
-            if (!$f2 = $flags & 2 | $f1)
-                return $flags = 0;
-            $query = end($x[2]);
-            $key = key($x[2]);
-            if ($f1) {
-                $x[2][$key] = $new;
-            } else {
-                unset($x[2][$key]);
+        if (is_array($x[2])) { # type 2
+            if ($flag & 2 | $f1) {
+                $query = end($x[2]);
+                $key = key($x[2]);
+                if ($f1) {
+                    $x[2][$key] = $new;
+                } else {
+                    unset($x[2][$key]);
+                }
+                if ($query && $x[2])
+                    return $return ? $x[4]->qp($query, $x[2]) : $x[4]->sql($query, $x[2]);
+                return $x[2];
             }
-            $new = $query && $x[2] ? $x[4]->qp($query, $x[2]) : false;
+        } elseif ($f1) {
+            return $return ? $new : $x[4]->sqlf($x[2], $new);
         }
-        $flags = 0; # reset flags
-        if ($return)
-            return $new;
-        if ($f2)
-            return $new && $x[4]->sql($new);
-        if ($f1)
-            $x[4]->sqlf($x[2], $new);
     }
 
     static function lang($lg, $page = false) {
@@ -297,7 +296,7 @@ class SKY implements PARADISE
         return $plus;
     }
 
-    function shutdown() {
+    function shutdown($plus = false, $z_fly = false) {
         chdir(DIR);
         Plan::$ware = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if loaded
@@ -312,6 +311,9 @@ class SKY implements PARADISE
         # run tail_ghost() if !$this->tailed
         $this->ghost or $this->tail_ghost();
 
+        if ($z_fly && SKY::$errors[0])
+            Plan::cache_p('dev_z_err', NOW); # popup error for file downloads on next click
+
         if ($dd && $this->error_prod) # write error log
             sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
 
@@ -319,6 +321,8 @@ class SKY implements PARADISE
             $plus = SKY::$debug ? "x autotrace\n\n" : '';
             SKY::$cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
             $this->tailed = true;
+        } elseif ($plus) {
+            $this->tracing($plus, true); # for jumps
         }
         SQL::close();
     }
