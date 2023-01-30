@@ -301,6 +301,16 @@ class MVC extends MVC_BASE
         return MVC::$stack[$level < 0 ? count(MVC::$stack) + $level : $level];
     }
 
+    static function mime($mime) {
+        global $sky;
+        header("Content-Type: $mime;");
+        $sky->fly = HEAVEN::Z_FLY;
+    }
+
+    static function body($body) {
+        end(MVC::$stack)->body = $body;
+    }
+
     static function fn_parsed($layout, $body) {
         global $sky;
         return Plan::$view . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
@@ -425,16 +435,6 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     static function tail() {
         global $sky;
         $sky->tail_t();
-    }
-
-    static function mime($mime) {
-        global $sky;
-        header("Content-Type: $mime;");
-        $sky->fly = HEAVEN::Z_FLY;
-    }
-
-    static function body($body) {
-        end(MVC::$stack)->body = $body;
     }
 
     static function handle($method, &$param = null) {

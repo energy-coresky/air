@@ -1,6 +1,6 @@
 #.jet core template
 
-#.404 this template for 404 (or others) error inside app layout
+#.404._404 this template for 404 (or others) error inside app layout
 @php isset($tracing) or $tracing = ''; ~php
 @if('standard_c' == get_class(MVC::$mc))
 #.basic404
@@ -10,7 +10,7 @@
 @else
 #if(Plan::view_t('error.jet'))@inc(error.404)#else@inc(.basic404)#end
 ~if
-#.404
+#.404._404
 
 #.exception //////////////////////////////////////////////////////////////////////////////
 @php # this template for Exceptions and die() functions

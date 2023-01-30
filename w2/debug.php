@@ -65,7 +65,27 @@ class Debug
         return 'Plan::' == substr($line, 0, 6) ? $line : 'Extended Closure';
     }
 
-    static function error_name($no) {
+    static function z_err($was_error = null) {
+        if (!DEV)
+            return '';
+        $msg = Plan::cache_gq($err = ['main', 'dev_z_err']);
+        if (null === $was_error) {
+            $msg && Plan::cache_dq($err); # erase flash file
+            return $msg;
+        }
+        if ($msg) {
+            SKY::$debug = false; # skip tracing to show first error
+        } elseif ($was_error) {
+            $msg = tag("Z-error at " . NOW, 'class="z-err"', 'h1');
+            $ary = SKY::$errors;
+            array_shift($ary);
+         #   foreach ($ary as $one)
+            #    $msg .= "<h1>$one[0]</h1><pre>$one[1]</pre>";
+            Plan::cache_p($err, $msg);
+        }
+    }
+
+    static function error_name($no, $amp = '') {
         $list = [
             E_ERROR => 'Fatal error',
             E_WARNING => 'Warning',
@@ -79,12 +99,19 @@ class Debug
             E_RECOVERABLE_ERROR => 'Recoverable error',
             E_DEPRECATED => 'Deprecated',
         ];
-        return $list[$no] ?? "ErrorNo_$no";
+        $name = $list[$no] ?? "ErrorNo_$no";
+        return $name . $amp;
+    }
+
+    // 2do: fix for php 8 https://www.php.net/manual/en/language.operators.errorcontrol.php
+    static function show_suppressed() {
+        return SKY::d('err') ? '@' : '';
     }
 
     static function epush($title, $err, $ary, $depth) {
         $i = !isset(SKY::$errors[1]) ? 1 : 2;
-        SKY::$errors[$i] = [$title, $err . Debug::context($ary, $depth)];
+        $n = SKY::$errors[0];
+        SKY::$errors[$i] = ["#$n $title", $err . Debug::context($ary, $depth)];
     }
 
     static function context($ary, $depth) {

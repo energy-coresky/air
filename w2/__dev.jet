@@ -257,6 +257,12 @@ $(function() {
 <a href="{{PATH}}_gate">@inc(__lng.rar) SkyGate</a>
 <a href="{{PATH}}_glob?report">@inc(__lng.rar) Globals Report</a>
 </div>
+@if($sky->d_dev)
+    <div style="display:inline-block;line-height:27px !important;background:#cfc; padding:0 10px">{{SKY::version()['app'][3]}}</div>
+@else
+    <div style="display:inline-block;line-height:27px !important;background:#ccf; padding:0 10px">TOOLS.DEV.SKY</div>
+~if
+<a href="{{PATH}}_dev?main=0" style="font-family:Verdana;color:{{SKY::d('err')?'red':'#1b1'}}">&#9668;</a>
 #.header
 
 

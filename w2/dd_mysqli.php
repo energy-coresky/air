@@ -93,7 +93,7 @@ class dd_mysqli implements Database_driver
         }
     
         $sql_string = (string)$sql;
-        if ($sql->error || $sky->begin_transaction && $sky->was_error)
+        if ($sql->error || $sky->begin_transaction && ($sky->was_error & SKY::ERR_DETECT))
             return;
         mysqli_multi_query($this->conn, $sql_string);
         $no = 0;
@@ -119,7 +119,7 @@ class dd_mysqli implements Database_driver
     static function begin($lock_table = false) {
         global $sky;
 
-        if ($sky->was_error || $sky->begin_transaction)
+        if ($sky->was_error & SKY::ERR_DETECT || $sky->begin_transaction)
             return false;
         trace('transaction started', false, 1);
         if (!SKY::$debug && !$sky->s_prod_error)
@@ -139,7 +139,7 @@ class dd_mysqli implements Database_driver
             $sky->s_prod_error = $sky->begin_debug = false;
         if (!$sky->begin_transaction)
             return;
-        ($ok = !$sky->was_error && mysqli_commit($this->conn)) ? mysqli_autocommit($this->conn, true) : mysqli_rollback($this->conn);
+        ($ok = !($sky->was_error & SKY::ERR_DETECT) && mysqli_commit($this->conn)) ? mysqli_autocommit($this->conn, true) : mysqli_rollback($this->conn);
         if ($sky->lock_table)
             $this->sql('unlock tables');
         trace('transaction finished', false, 1);

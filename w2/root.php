@@ -58,6 +58,7 @@ class Root
         ];
         $form2 = [
             'dev' => ['Set debug=0 for DEV-tools', 'chk'],
+            'err' => ['Show suppressed PHP errors', 'chk'],
             'cron'  => ['Run cron when click on DEV instance', 'chk'],
             'lgt' => ['SkyLang table name', '', 'size="25"'],
             'manual' => ['PHP manual language', 'select', $phpman],

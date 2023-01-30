@@ -111,10 +111,10 @@ class standard_c extends Controller
         }
         if (is_file($fn)) {
             switch ($ext) {
-                case 'txt': header('Content-Type: text/plain; charset=' . ENC); break;
-                case 'css': header('Content-Type: text/css'); break;
-                case 'xml': header('Content-Type: application/xml'); break;
-                case 'js': header('Content-Type: application/javascript'); break;
+                case 'txt': MVC::mime('text/plain; charset=' . ENC); break;
+                case 'css': MVC::mime('text/css'); break;
+                case 'xml': MVC::mime('application/xml'); break;
+                case 'js': MVC::mime('application/javascript'); break;
             }
             MVC::last_modified(filemtime($fn), false, function() use ($sky) {
                 $sky->log('etc', "304 $sky->_1");

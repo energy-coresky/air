@@ -7,9 +7,9 @@ interface PARADISE
 //////////////////////////////////////////////////////////////////////////
 class SKY implements PARADISE
 {
-    const CORE = '0.211 2022-12-30T19:48:13+02:00 energy';
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
+    const ERR_SUPPRESSED = 4;
 
     public $tracing = '';
     public $error_prod = '';
@@ -34,6 +34,8 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = false;
 
+    const CORE = '0.211 2022-12-30T19:48:13+02:00 energy';
+
     function __construct() {
         ob_get_level() && ob_end_clean();
         $this->constants();
@@ -47,10 +49,20 @@ class SKY implements PARADISE
         spl_autoload_register('Plan::_autoload', true, true);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
-            $this->error_last = $no;
-            $this->was_error |= SKY::ERR_DETECT;
-            if (error_reporting() & $no && (SKY::$debug || !SKY::$dd || $this->s_prod_error)) {
-                $error = Debug::error_name($no);
+            $amp = '';
+            if ($detect = error_reporting() & $no) {
+                $this->error_last = $no;
+                $this->was_error |= SKY::ERR_DETECT;
+            } elseif (DEV) {
+                static $show;
+                if (null === $show)
+                    $show = Debug::show_suppressed();
+                if ($detect = $amp = $show)
+                    $this->error_last = $no;
+                $this->was_error |= SKY::ERR_SUPPRESSED | ($show ? SKY::ERR_DETECT : 0);
+            }
+            if ($detect && (SKY::$debug || !SKY::$dd || $this->s_prod_error)) {
+                $error = Debug::error_name($no, $amp);
                 trace(["PHP $error", "$error: $message"], true, $line, $file, $context);
             }
             return true;
@@ -296,33 +308,31 @@ class SKY implements PARADISE
         return $plus;
     }
 
-    function shutdown($plus = false, $z_fly = false) {
+    function shutdown($web = false) {
         chdir(DIR);
         Plan::$ware = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if loaded
+
         foreach ($this->shutdown as $object)
             call_user_func([$object, 'shutdown']);
 
+        $this->ghost or $this->tail_ghost(); # run tail_ghost() if !$this->tailed
+
         $e = error_get_last();
+        $msg = 'die';
         if ($e && $e['type'] != $this->error_last) {
             $error = Debug::error_name($e['type']);
-            trace(["PHP $error", "$error: $e[message]"], true, $e['line'], $e['file']);
+            trace(["PHP $error", $msg = "$error: $e[message]"], true, $e['line'], $e['file']);
         }
-        # run tail_ghost() if !$this->tailed
-        $this->ghost or $this->tail_ghost();
-
-        if ($z_fly && SKY::$errors[0])
-            Plan::cache_p('dev_z_err', NOW); # popup error for file downloads on next click
 
         if ($dd && $this->error_prod) # write error log
             sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
 
-        if (!$this->tailed) { # if script exit in advance (with exit() or throw new Error())
-            $plus = SKY::$debug ? "x autotrace\n\n" : '';
-            SKY::$cli ? ($this->was_error || $this->trace_cli) && $this->tracing($plus, true) : $this->tail_force($plus);
-            $this->tailed = true;
-        } elseif ($plus) {
-            $this->tracing($plus, true); # for jumps
+        if ($web) {
+            $web($msg);
+        } elseif ($this->was_error & SKY::ERR_DETECT || $this->trace_cli) {
+            $class = $this->shutdown ? get_class($this->shutdown[0]) : 'Console';
+            $this->tracing("$class\n", true);
         }
         SQL::close();
     }
@@ -463,76 +473,6 @@ class eVar implements Iterator
         } while (true === $x);
         if (!$this->dd)
             $this->row = $x ? (object)$x : false;
-    }
-}
-
-function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
-    global $sky;
-
-    if ($err = true === $is_error) {
-        $sky->was_error |= SKY::ERR_DETECT;
-        if (null === SKY::$dd)
-            $sky->load();
-        if (SKY::$errors[0]++ > 99) {
-            $sky->tracing("Error 500", true);
-            throw new Error("500 Internal SKY error");
-        }
-    }
-    if (SKY::$debug || $sky->s_prod_error && $err) {
-        if ($err && is_array($var)) {
-            list ($title, $var) = $var;
-        }
-        is_string($var) or $var = var_export($var, true);
-        $is_warning = 'WARNING' === $is_error;
-        if (is_string($is_error)) {
-            $var = "$is_error: $var";
-            $is_error = false;
-        }
-        if ($has_depth = !$file) {
-            $depth = 1 + $line;
-            $db = debug_backtrace();
-            list ($file, $line) = array_values($db[$line]);
-            if (is_array($line)) { # file-line don't supported
-                list ($file, $line) = array_values($db[$depth - 2]);
-                $depth--;
-                $fln = sprintf(span_r, "<span>$file^$line</span>");
-            }
-        }
-        isset($fln) or $fln = "<span>$file^$line</span>";
-        $mgs = "$fln\n" . html($var);
-        if ($err) {
-            $sky->was_error |= SKY::ERR_SHOW;
-            if (SKY::$cli)
-                echo "\n$file^$line\n$var\n\n";
-            if ($sky->s_prod_error) { # collect error log
-                $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
-                $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
-                if (!SKY::$cli)
-                    $sky->error_prod .= ' uri: ' . html(URI);
-                $sky->error_prod .= "\n$mgs\n\n";
-            }
-        }
-        if (!SKY::$debug)
-            return; # else collect tracing
-        if ($err) {
-            $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>\n";
-            if (!DEV)
-                return;
-            if (is_string($context)) {
-                $backtrace = html($context);
-                $context = null;
-            } else {
-                ob_start();
-                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
-                $backtrace = html(ob_get_clean());
-            }
-            Debug::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context, $has_depth ? $depth : 2);
-        } elseif ($is_warning) {
-            $sky->was_warning = 1;
-            $sky->tracing .= "$fln\n" . '<div class="warning">' . html($var) . "</div>\n";
-        } else {
-            $sky->tracing .= "$mgs\n\n";
-        }
     }
 }
 

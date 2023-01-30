@@ -209,15 +209,15 @@ sky.d.init = function(from) {
         let err = data.errors[i];
         $('#dev-trace').prepend(`<h1>${err[0]}</h1><pre>${err[1]}</pre>`);
     }
-    if (data.errors[0])
-        $('#v-body h1').each(function () {
-            $(this).css({color:'red', backgroundColor:'pink'});
-        });
     var wpx = window.parent.document.getElementById('trace-x');
     if (from && !sky.d.dev)
         $(wpx).html('');
     if ($(wpx).html() && sky.d.x == parseInt($(wpx).attr('x')))
         $('#dev-trace').prepend($(wpx).html());
+    if (data.errors[0])
+        $('#v-body h1').each(function () {
+            $(this).css({color:'red', backgroundColor:'pink'});
+        });
 
     sky.set_file_clk('#v-body');
 

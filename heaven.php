@@ -65,7 +65,7 @@ class HEAVEN extends SKY
         $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
         preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname) or exit('sname');
 
-        define('PROTO', @$_SERVER['HTTPS'] ? 'https' : 'http');
+        define('PROTO', isset($_SERVER['HTTPS']) ? 'https' : 'http');
         define('DOMAIN', $this->sname[3]);
 
         parent::load(); # database connection start from here
@@ -109,27 +109,14 @@ class HEAVEN extends SKY
             $this->gpc = Debug::gpc();
     }
 
-    private function err_z() {
-        if (!DEV)
-            return '';
-        if ($time = Plan::cache_gq($p = ['main', 'dev_z_err']))
-            Plan::cache_dq($p); # erase flash file
-        return $time ? tag("Z-error at $time", 'class="z-err"', 'h1') : '';
-    }
-
     function tail_t() {
         # let ghost's SQLs will in the tracing
         $this->ghost or $this->tail_ghost();
 
         if (SKY::$debug) { # render tracing in the layout
-            trace(array_keys(SKY::$mem), 'KEYS of: SKY::$mem');
-
-           #if (SKY::ERR_SHOW == $this->was_error && !headers_sent())
-           #    http_response_code(503); # Service Unavailable
-
-            echo tag('<h1>Tracing</h1>' . tag($this->tracing(), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"')
-                . tag($err_z = $this->err_z(), 'id="trace-x" x="' . ($err_z ? 1 : 0) . '" style="display:none"');
-            if (SKY::$errors[0] || $err_z)
+            echo tag('<h1>Tracing</h1>' . tag($this->tracing(), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"');
+            echo tag($z_err = Debug::z_err(), 'id="trace-x" x="' . ($z_err ? 1 : 0) . '" style="display:none"');
+            if (DEV && (SKY::$errors[0] || $z_err))
                 echo js('sky.err_t = 1');
         }
         $this->tailed = true;
@@ -150,13 +137,13 @@ class HEAVEN extends SKY
         if (HEAVEN::J_FLY == $this->fly) {
             http_response_code(200);
             $eary = $this->ca_path ?: [];
-            if ($msg = $this->err_z())
+            if (DEV && ($msg = Debug::z_err()))
                 $eary = ['err_no' => 2];
             if (!$eary && $this->error_no > 100) {
                 $eary = ['err_no' => $this->error_no, 'soft' => (int)('' === $plus)];
                 if ($plus) {
                     $tracing = SKY::$debug ? $this->tracing($plus, true) : '';
-                    $msg = view('_std.404', ['tracing' => $tracing]);
+                    $msg = view('_std._404', ['tracing' => $tracing]);
                 } else {
                     $msg = $stdout;
                 }
@@ -164,9 +151,9 @@ class HEAVEN extends SKY
             if ($eary || SKY::$debug && SKY::$errors[0]) {
                 if (!$eary) {
                     $msg = $plus ? '' : $this->check_other();
-                    $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 100)) . '</pre>';
+                    $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 500)) . '</pre>';
                 }
-                $out = json(['catch_error' => $msg] + $eary + ['err_no' => 1], true);
+                $out = json(['catch_error' => $msg ?? ''] + $eary + ['err_no' => 1], true);
                 $stdout = $out ?: json_encode(['catch_error' => '<h1>See X-tracing</h1>']);
             }
         }
@@ -181,6 +168,9 @@ class HEAVEN extends SKY
         $this->tailed = true;
         exit;
     }
+
+            #if (SKY::ERR_SHOW == $this->was_error && !headers_sent())
+            #    http_response_code(503); # Service Unavailable
 
     protected function tail_force($plus) {
         if ($this->fly)
@@ -234,6 +224,7 @@ class HEAVEN extends SKY
 
     function tracing($plus = '', $trace_x = false) {
         if (SKY::$debug) {
+            trace(implode(', ', array_keys(SKY::$mem)), 'CHARS of Ghost');
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
 
@@ -251,22 +242,56 @@ class HEAVEN extends SKY
         return parent::tracing($plus, $trace_x);
     }
 
-    function shutdown($plus = false, $z_fly = false) {
+    function shutdown($web = false) {
+        parent::shutdown(function ($msg) {
+            if (DEV && HEAVEN::Z_FLY == $this->fly)
+                Debug::z_err($this->was_error & SKY::ERR_DETECT);
+            if (!$this->tailed) {
+                global $user;
+                if (isset($user))
+                    $user->flag(USER::NOT_TAILED, 1);
+
+                $crash = $this->except ? $this->except['crash'] : !$this->s_quiet_eerr;
+                if (($dd = SKY::$dd) && $crash && $this->s_crash_log) {
+                    $str = NOW . " $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . ($this->except ? $this->except['title'] : $msg). ', ';
+                    $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
+                    sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
+                }
+                if (headers_sent() && $this->fly)
+                    $this->fly = HEAVEN::Z_FLY;
+
+                $this->tail_force("Not tailed\n");
+
+            } elseif (SKY::$debug) {
+                if ($this->jump) {
+                    $this->tracing("JUMP: $this->jump\n", true);
+                } elseif ($this->except && 'Stop' == $this->except['name']) {
+                    $this->tracing("Thrown Stop:\n", true);
+                }
+            }
+        });
+    }
+
+    function _shutdown($plus = false, $z_fly = false) {
         chdir(DIR);
         Plan::$ware = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
 
         if (SKY::$debug && $this->jump)
             $plus = "JUMP: $this->jump\n";
+        if (SKY::$debug && $this->except && 'Stop' == $this->except['name'])
+            $plus = "Thrown Stop:\n";
 
-        if (!$this->tailed) { # possible result of `die` function
+        $err = $this->error_last();
+
+        if (!$this->tailed) {
             global $user;
             if (isset($user))
                 $user->flag(USER::NOT_TAILED, 1);
 
             $crash = $this->except ? $this->except['crash'] : !$this->s_quiet_eerr;
             if ($dd && $crash && $this->s_crash_log) {
-                $str = NOW . " $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . ($this->except ? $this->except['title'] : 'die'). ', ';
+                $str = NOW . " $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . ($this->except ? $this->except['title'] : $err). ', ';
                 $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
                 sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
             }
@@ -296,6 +321,76 @@ function jump($uri = '', $code = 302, $exit = true) {
     $sky->tailed = true;
     if ($exit)
         exit;
+}
+
+function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
+    global $sky;
+
+    if ($err = true === $is_error) {
+        $sky->was_error |= SKY::ERR_DETECT;
+        if (null === SKY::$dd)
+            $sky->load();
+        if (SKY::$errors[0]++ > 99) {
+            $sky->tracing("Error 500", true);
+            throw new Error("500 Internal SKY error");
+        }
+    }
+    if (SKY::$debug || $sky->s_prod_error && $err) {
+        if ($err && is_array($var)) {
+            list ($title, $var) = $var;
+        }
+        is_string($var) or $var = var_export($var, true);
+        $is_warning = 'WARNING' === $is_error;
+        if (is_string($is_error)) {
+            $var = "$is_error: $var";
+            $is_error = false;
+        }
+        if ($has_depth = !$file) {
+            $depth = 1 + $line;
+            $db = debug_backtrace();
+            list ($file, $line) = array_values($db[$line]);
+            if (is_array($line)) { # file-line don't supported
+                list ($file, $line) = array_values($db[$depth - 2]);
+                $depth--;
+                $fln = sprintf(span_r, "<span>$file^$line</span>");
+            }
+        }
+        isset($fln) or $fln = "<span>$file^$line</span>";
+        $mgs = "$fln\n" . html($var);
+        if ($err) {
+            $sky->was_error |= SKY::ERR_SHOW;
+            if (SKY::$cli)
+                echo "\n$file^$line\n$var\n\n";
+            if ($sky->s_prod_error) { # collect error log
+                $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
+                $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
+                if (!SKY::$cli)
+                    $sky->error_prod .= ' uri: ' . html(URI);
+                $sky->error_prod .= "\n$mgs\n\n";
+            }
+        }
+        if (!SKY::$debug)
+            return; # else collect tracing
+        if ($err) {
+            $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>\n";
+            if (!DEV)
+                return;
+            if (is_string($context)) {
+                $backtrace = html($context);
+                $context = null;
+            } else {
+                ob_start();
+                debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+                $backtrace = html(ob_get_clean());
+            }
+            Debug::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context, $has_depth ? $depth : 2);
+        } elseif ($is_warning) {
+            $sky->was_warning = 1;
+            $sky->tracing .= "$fln\n" . '<div class="warning">' . html($var) . "</div>\n";
+        } else {
+            $sky->tracing .= "$mgs\n\n";
+        }
+    }
 }
 
 function pagination($ipp, $cnt = null, $ipl = 5, $current = null, $throw = true) {
