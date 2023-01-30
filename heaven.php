@@ -271,36 +271,6 @@ class HEAVEN extends SKY
             }
         });
     }
-
-    function _shutdown($plus = false, $z_fly = false) {
-        chdir(DIR);
-        Plan::$ware = 'main';
-        $dd = SQL::$dd = SKY::$dd; # set main database driver if SKY loaded
-
-        if (SKY::$debug && $this->jump)
-            $plus = "JUMP: $this->jump\n";
-        if (SKY::$debug && $this->except && 'Stop' == $this->except['name'])
-            $plus = "Thrown Stop:\n";
-
-        $err = $this->error_last();
-
-        if (!$this->tailed) {
-            global $user;
-            if (isset($user))
-                $user->flag(USER::NOT_TAILED, 1);
-
-            $crash = $this->except ? $this->except['crash'] : !$this->s_quiet_eerr;
-            if ($dd && $crash && $this->s_crash_log) {
-                $str = NOW . " $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . ($this->except ? $this->except['title'] : $err). ', ';
-                $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
-                sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
-            }
-
-            if (headers_sent() && $this->fly)
-                $this->fly = HEAVEN::Z_FLY;
-        }
-        parent::shutdown($plus, DEV && HEAVEN::Z_FLY == $this->fly);
-    }
 }
 
 
