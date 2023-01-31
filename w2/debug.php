@@ -85,7 +85,7 @@ class Debug
         }
     }
 
-    static function error_name($no, $amp = '') {
+    static function error_name($no) {
         $list = [
             E_ERROR => 'Fatal error',
             E_WARNING => 'Warning',
@@ -99,13 +99,12 @@ class Debug
             E_RECOVERABLE_ERROR => 'Recoverable error',
             E_DEPRECATED => 'Deprecated',
         ];
-        $name = $list[$no] ?? "ErrorNo_$no";
-        return $name . $amp;
+        return $list[$no] ?? "ErrorNo_$no";
     }
 
     // 2do: fix for php 8 https://www.php.net/manual/en/language.operators.errorcontrol.php
     static function show_suppressed() {
-        return SKY::d('err') ? '@' : '';
+        //return 
     }
 
     static function epush($title, $err, $ary, $depth) {

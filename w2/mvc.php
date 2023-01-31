@@ -29,7 +29,7 @@ function view($_in, $_return = false, &$_vars = null) {
     if ($mvc->is_sub)
         return $mvc->return ? $mvc->ob : null;
     if ($sky->fly || !$layout)
-        $sky->tail_x('', $mvc->ob); # tail_x ended with "exit"
+        $sky->tail_x(0, $mvc->ob); # tail_x ended with "exit"
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -552,17 +552,17 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $me->set(MVC::$mc->head_y($action), true);
         if ($gape) {
             $param = (array)call_user_func([$gape, $action], $sky, $user);
-            if (DEV && 1 == $sky->error_no) { # gate error
+            if (DEV && 71 == $sky->error_no) { # gate error
                 $me->body = $me->return ? '' : '_std.lock';
                 $sky->ca_path = ['ctrl' => $class, 'func' => $action];
             }
         }
-        if (!$sky->error_no || $sky->surl && '_exception' == $sky->surl[0]) {
-            $me->set(call_user_func_array([MVC::$mc, $action], $param));
-        } else {
+        if ($sky->error_no) {
             $me->hnd = "error";
+        } else {
+            $me->set(call_user_func_array([MVC::$mc, $action], $param));
         }
-        if ($sky->error_no > 400 && $sky->error_no < 501)
+        if ($sky->error_no > 99)
             $me->set(MVC::$mc->error_y($action));
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);
         $me->ob = ob_get_clean();

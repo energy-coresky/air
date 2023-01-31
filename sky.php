@@ -56,30 +56,30 @@ class SKY implements PARADISE
             } elseif (DEV) {
                 static $show;
                 if (null === $show)
-                    $show = Debug::show_suppressed();
+                    $show = SKY::d('err') ? '@' : '';
                 if ($detect = $amp = $show)
                     $this->error_last = $no;
                 $this->was_error |= SKY::ERR_SUPPRESSED | ($show ? SKY::ERR_DETECT : 0);
             }
             if ($detect && (SKY::$debug || !SKY::$dd || $this->s_prod_error)) {
-                $error = Debug::error_name($no, $amp);
+                $error = Debug::error_name($no) . $amp;
                 trace(["PHP $error", "$error: $message"], true, $line, $file, $context);
             }
             return true;
         });
 
         set_exception_handler(function ($e) {
-            preg_match("/^(\d{1,3}) ?(.*)$/", $mess = $e->getMessage(), $m);
-            $this->except = [
-                'name' => $name = get_class($e),
-                'crash' => $crash = 'Stop' != $name && ('Exception' != $name || !SKY::$dd || !$this->s_quiet_eerr),
-                'code' => $m ? $m[1] : 0,
-                'mess' => $m ? $m[2] : $mess,
-                'title' => $title = "Thrown $name($mess)",
-            ];
-            if ('Stop' == $name && !$mess)
-                $this->tailed = true;
-            trace($crash ? [$title, $title] : $title, $crash, $e->getLine(), $e->getFile(), $e->getTraceAsString());
+            preg_match("/^(\d{1,3}) ?(.*)$/", $mess = $e->getMessage(), $match);
+            $this->except['name'] = $name = get_class($e);
+            if ($stop = 'Stop' == $name)
+                $this->tailed = "Thrown Stop($mess)\n";
+            $exception = 'Exception' == $name;
+            $this->except['crash'] = !($stop || $exception && $this->s_quiet_eerr);          //!SKY::$dd
+            $this->except['match'] = $match ?: [1 => $stop ? 200 : 404, $mess ?: '?']; # use throw new Stop(0) for CLI
+            $this->except['title'] = $title = "Thrown $name($mess)";
+            $noterror = $stop || $exception or $title = [$title, $title];
+            trace($title, !$noterror, $e->getLine(), $e->getFile(), $e->getTraceAsString());
+            $this->error_no = $stop ? 1 : ($exception ? 11 : 21);
         });
 
         register_shutdown_function([$this, 'shutdown']);
@@ -295,22 +295,22 @@ class SKY implements PARADISE
             $v[0] && $v[2] && SKY::sql($char, false);
     }
 
-    function tracing($plus = '', $trace_x = false) {
-        $plus .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
-        $plus .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
+    function tracing($top = '', $is_x = true) {
+        $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
+        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
         if (DEV)
-            $plus .= DEV::trace(); // move to HEAVEN::tracing(..) ?
-        if ($trace_x && SKY::$dd) {
+            $top .= DEV::trace();
+        if ($is_x && SKY::$dd) {
             if (DEV)
                 SKY::$dd->_xtrace();
-            SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $plus);
+            SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $top);
         }
-        return $plus;
+        return $top;
     }
 
     function shutdown($web = false) {
         chdir(DIR);
-        Plan::$ware = 'main';
+        Plan::$ware = Plan::$view = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if loaded
 
         foreach ($this->shutdown as $object)
@@ -319,22 +319,27 @@ class SKY implements PARADISE
         $this->ghost or $this->tail_ghost(); # run tail_ghost() if !$this->tailed
 
         $e = error_get_last();
-        $msg = 'die';
+        $err = false;
         if ($e && $e['type'] != $this->error_last) {
-            $error = Debug::error_name($e['type']);
-            trace(["PHP $error", $msg = "$error: $e[message]"], true, $e['line'], $e['file']);
+            $name = Debug::error_name($e['type']);
+            trace(["PHP $name", $err = "$name: $e[message]"], true, $e['line'], $e['file']);
         }
+        $code = function ($err) : int {
+            if ($this->except)
+                return (int)$this->except['match'][1];
+            return $err ? 500 : 0; # when "Compile fatal error" for example (before PHP 8)
+        };
 
         if ($dd && $this->error_prod) # write error log
             sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
 
-        if ($web) {
-            $web($msg);
-        } elseif ($this->was_error & SKY::ERR_DETECT || $this->trace_cli) {
-            $class = $this->shutdown ? get_class($this->shutdown[0]) : 'Console';
-            $this->tracing("$class\n", true);
-        }
+        if ($web)
+            return $web($err, $code);
+        # CLI
+        if ($this->was_error & SKY::ERR_DETECT || $this->trace_cli)
+            $this->tracing(($this->shutdown ? get_class($this->shutdown[0]) : 'Console') . "\n");
         SQL::close();
+        exit($code($err));
     }
 }
 

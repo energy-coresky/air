@@ -346,5 +346,7 @@ div#popup div#popup-in {
     margin-top:0;
     line-height: 41px;
     padding-left: 10px;
+    position:sticky; 
+    top:0px;
 }
 

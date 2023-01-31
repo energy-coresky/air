@@ -258,8 +258,10 @@ class Jet
             $in = Plan::view_('g', "$name.jet");
         }
         if ('' !== $marker) {
-            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3)))
-                throw new Error("Jet: cannot find `$name.$marker`");
+            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
+                if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
+                    throw new Error("Jet: cannot find `$name.$marker`");
+            }
             $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
             $this->marker = $marker;
         }
@@ -559,6 +561,8 @@ class Jet
         $file = Jet::$tpl[count(Jet::$tpl) - 1][0];
         if ('.' == $tpl[0])
             $tpl = $file . $tpl;
+        if ('.' == $tpl[-1])
+            $tpl = $tpl . $this->marker;
         if (in_array($tpl, Jet::$inc))
             throw new Error("Jet: cycled $op($tpl)");
         Jet::$inc[] = $this->marker ? "$file.$this->marker" : $file;

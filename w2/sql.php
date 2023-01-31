@@ -341,8 +341,7 @@ final class SQL
         $keys = $vals = [];
         array_walk($ary, function ($v, $k) use (&$keys, &$vals, $esc) {
             $param = sprintf('Parameter N %d`%s` - ', 1 + $this->i, $k);
-            $char = is_string($k) ? $k[0] : false;// 8 Trying to access array offset on value of type int, C:\\web\\air\\w2\\sql.php, 344
-            
+            $char = is_string($k) ? $k[0] : false;
             $pref = false;
             if ($char and $pref = (false !== strpos('.+$!`', $char)))
                 $k = substr($k, 1);

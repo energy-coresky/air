@@ -2,7 +2,7 @@
 
 function e() {
     global $sky;
-    $sky->error_no = 1;
+    $sky->error_no = 71;
     trace(['Gate error in "' . MVC::instance()->hnd . '"', 'Gate error'], true, 1);
 }
 
