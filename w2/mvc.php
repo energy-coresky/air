@@ -279,7 +279,7 @@ class MVC extends MVC_BASE
     static $mc; # main controller
     static $cc; # common controller
     static $ctrl;
-    static $tpl = 'default';
+    static $tpl = '_std';
 
     function __construct($is_sub = false) {
         static $no = 0;
@@ -313,7 +313,8 @@ class MVC extends MVC_BASE
 
     static function fn_parsed($layout, $body) {
         global $sky;
-        return Plan::$view . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
+        $ware = '_std' == MVC::$tpl && 'main' == Plan::$view ? 'dev' : Plan::$view;
+        return $ware . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
     }
 
     static function vars(&$all, &$new, $pref = false) {
@@ -335,7 +336,7 @@ class MVC extends MVC_BASE
     static function &jet($mvc, $layout = '') {
         global $sky;
         $vars = SKY::$vars;
-        if (is_string($mvc)) { # for __std.exception
+        if (is_string($mvc)) { # for __std.crash
             $name = $mvc;
             $vars['sky'] = $sky;
         } else {
@@ -487,8 +488,8 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             $sky->error_no = $in;
             if ($sky->s_error_404)
                 throw new Stop($in); # terminate quick
-            $sky->fly or http_response_code($in);
-            $this->body = '_std.404';
+            HEAVEN::J_FLY == $sky->fly or http_response_code($in);
+            $this->body = '_std.' . (MVC::instance()->return ? '_' . $in : $in);
         }
     }
 
@@ -519,8 +520,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         Plan::gate_rr($fn_dst, $recompile);
         if (!method_exists($gape = new Gape, $action))
             $action = $this->return ? 'default_j' : 'default_a';
-        if ($match)
-            MVC::$tpl = substr($class, 2);
+        MVC::$tpl = $match ? substr($class, 2) : 'default';
         return [$class, $action, $gape];
     }
 
@@ -534,7 +534,6 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         if ('_' == $sky->_0[0]) {
             $class = 'standard_c';
             $action = ($me->return ? 'j' : 'a') . $sky->_0;
-            MVC::$tpl = '_std';
             $me->body = '_std.' . substr($sky->_0, 1);
             $gape = false;
         } else {
@@ -562,10 +561,14 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         } else {
             $me->set(call_user_func_array([MVC::$mc, $action], $param));
         }
-        if ($sky->error_no > 99)
-            $me->set(MVC::$mc->error_y($action));
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);
         $me->ob = ob_get_clean();
+        if ($sky->error_no > 99) {
+            $vars = ['err_no' => $sky->error_no, 'exit' => 0, 'stdout' => $me->ob];
+            $me->ob = '';
+            is_array($ary = MVC::$mc->error_y($action)) ? ($ary += $vars) : ($ary = $vars);
+            $me->set($ary);
+        }
         $me->ob = view($me); # visualize
         if (!$sky->tailed)
             throw new Error('MVC::tail() must used in the layout');

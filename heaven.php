@@ -38,6 +38,9 @@ class HEAVEN extends SKY
     }
 
     function __construct() {
+        global $sky;
+        $sky = $this;
+
         $this->ip = $_SERVER['REMOTE_ADDR'] ?? '';
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
         false !== $this->method or exit('request method');
@@ -59,16 +62,12 @@ class HEAVEN extends SKY
         }
 
         parent::__construct();
-    }
 
-    function load() {
         $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
         preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname) or exit('sname');
 
         define('PROTO', isset($_SERVER['HTTPS']) ? 'https' : 'http');
         define('DOMAIN', $this->sname[3]);
-
-        parent::load(); # database connection start from here
 
         $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
         # use fetch with a_.. actions
@@ -79,15 +78,18 @@ class HEAVEN extends SKY
             in_array($wo = (int)$_SERVER['HTTP_X_ORIENTATION'], [0, 1, 2]) or $wo = 0;
             $this->orientation = $wo;
         }
-        if (DEV && DEV::$static) {
-            $s = substr($this->s_statp, 0, -1) + 1;
-            $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
-        }
 
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
         $this->re = "~^https?://$pref_lg_m" . preg_quote(DOMAIN . PATH);
         $this->lref = preg_match("$this->re(.*)$~", $referer, $m) ? $m[3] : false;
         $this->eref = !$m ? $referer : false;
+
+        if (SKY::$debug)
+            $this->gpc = Debug::gpc();
+    }
+
+    function load() {
+        parent::load(); # database connection start from here
 
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
@@ -105,8 +107,10 @@ class HEAVEN extends SKY
             common_c::rewrite_h($cnt_s, $this->surl);
         }
 
-        if (SKY::$debug)
-            $this->gpc = Debug::gpc();
+        if (DEV && DEV::$static) {
+            $s = substr($this->s_statp, 0, -1) + 1;
+            $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
+        }
     }
 
     function tail_t() {
@@ -134,23 +138,19 @@ class HEAVEN extends SKY
 
         if (HEAVEN::J_FLY == $this->fly) {
             http_response_code(200);
-            $eary = $this->ca_path ?: [];
+            $ary = $this->ca_path ?: [];
             if (DEV && ($msg = Debug::z_err()))
-                $eary = ['err_no' => 2];
-            if (!$eary && $this->error_no > 99) {
-                $tpl = 404 == $this->error_no ? '_std._404' : "error._$this->error_no";
-                $msg = view($tpl, $eary = [
-                    'err_no' => $this->error_no,
-                    'code' => $exit,
-                    'stdout' => $stdout,
-                ]);
+                $ary = ['err_no' => 2];
+            if (!$ary && $this->error_no > 99) {
+                $ary = ['err_no' => $this->error_no, 'exit' => $exit];
+                $msg = $exit ? view("_std._$this->error_no", $ary + ['stdout' => $stdout]) : $stdout;
             }
-            if ($eary || SKY::$debug && SKY::$errors[0]) {
-                if (!$eary) {
+            if ($ary || SKY::$debug && SKY::$errors[0]) {
+                if (!$ary) {
                     $msg = $exit ? '' : $this->check_other();
                     $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 500)) . '</pre>';
                 }
-                $out = json(['catch_error' => $msg ?? ''] + $eary + ['err_no' => 1], true);
+                $out = json(['catch_error' => $msg ?? ''] + $ary + ['err_no' => 1], true);
                 $stdout = $out ?: json_encode(['catch_error' => '<h1>See X-tracing</h1>']);
             }
         } elseif ($exit && !$hs) {
@@ -160,7 +160,7 @@ class HEAVEN extends SKY
  #           $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
         if (SKY::$debug) {
             trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars:');
-            $this->tracing("Exit with $exit\n"); # write X-tracing
+            $this->tracing("Exit with $exit.$this->error_no\n"); # write X-tracing
         }
         echo $stdout; # send to browser
 
@@ -175,10 +175,9 @@ class HEAVEN extends SKY
             trace(implode(', ', array_keys(SKY::$mem)), 'CHARS of Ghost');
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
-
-            $uri = $this->methods[$this->method] . ' ' . URI . "\n\$sky->lref: $this->lref";
-            $this->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "\n\$sky->fly: $this->fly"
-                . "\nSURL: " . html("$this->surl_orig -> " . implode('/', $this->surl)) . "\n\n" . $this->tracing;
+            $rewritten = implode('/', $this->surl) . ($_GET ? '?' . array_join($_GET, '=', '&') : '');
+            $uri = $this->methods[$this->method] . ' ' . URI . " --> $rewritten\n\$sky->lref: $this->lref";
+            $this->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "\n\$sky->fly: $this->fly\n\n" . $this->tracing;
 
             if (SKY::$debug > 1) {
                 flush();
@@ -229,7 +228,7 @@ class HEAVEN extends SKY
                 for ($stdout = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
                 if ($hs) { # try redirect
                     $redirect = '--></script></style>';
-                    $to = PATH . ($has_err_file ? "main/error/$http_code" : "_exception?$http_code");
+                    $to = PATH . ($has_err_file ? "error/$http_code" : "_crash?$http_code");
                     if (DEV) {
                         $redirect .= tag('Headers sent. To: ' . a($to, $to), '', 'h1');
                     } else {
@@ -251,7 +250,7 @@ class HEAVEN extends SKY
                 }
 
                 $this->k_static = [[], [], []]; # skip app css and js files
-                $vars = MVC::jet('__std.exception');
+                $vars = MVC::jet('__std.crash');
                 $vars += [
                     'h1' => DEV ? $h1 : false,
                     'http_code' => $http_code,
@@ -286,6 +285,8 @@ function jump($uri = '', $code = 302, $exit = true) {
 
 function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
     global $sky;
+
+//if (!isset($sky)) return;
 
     if ($err = true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;

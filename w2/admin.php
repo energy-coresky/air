@@ -165,14 +165,11 @@ class Admin
         jump(me);
     }
 
-    static function drop_all_cache() { // 2do Plans!
-        $dirs = ['var/cache', 'var/gate', 'var/jet'];//, 'var/extra'
-        $result = 1;
-        foreach ($dirs as $dir) {
-            foreach (glob("$dir/*.php") as $fn)
-                $result &= (int)unlink($fn);
-        }
+    static function drop_all_cache() {
         global $sky;
+        $result = 1;
+        foreach (['cache', 'gate', 'jet'] as $plan)
+            $result &= call_user_func(['Plan', "{$plan}_da"], '*');
         $s = (int)substr($sky->s_statp, 0, -1) + 1;
         $sky->s_statp = $s > 9999 ? '1000p' : $s . 'p';
         return $result;

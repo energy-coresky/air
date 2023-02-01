@@ -302,11 +302,11 @@ class Root
             '<fieldset><legend>Primary settings</legend>',
                 ['', [['<b><u>Production</u></b>', 'li']]],
                 'trace_root'    => ['Debug mode on production for `root` profile', 'chk'],
-                ['', [['<b><u>Production & DEV</u></b>', 'li']]],
                 'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
                 'error_404'     => ['Use `Stop` on "return 404"', 'chk'],
                 'error_403'     => ['Use 403 code for `die`', 'chk'],
                 'quiet_eerr'    => ['No `Exception` in Log CRASH', 'chk'],
+                'crash_main'    => ['Show fatal errors at <b>/error/XXX</b> - c_main::a_error($no)', 'chk'],
                 ['Log ERROR', [
                     'prod_error'    => ['', 'radio', ['Off', 'On']],
                     'crash_log'     => ['Log CRASH', 'radio', ['Off', 'On']],

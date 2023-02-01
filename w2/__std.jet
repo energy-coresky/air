@@ -1,16 +1,17 @@
 #.jet core template
 
-#._ this template for 404 (or others) error inside app layout
-@php ~php@eat
-#if(Plan::view_t('error.jet'))
+#._ this template for soft & fatal (FLY != 0) errors
+#if('_std' == MVC::$tpl && 'main' == Plan::$ware)
+    @inc(__dev.)@eat
+#elseif(Plan::view_t('error.jet'))
     @inc(error.)@eat
-#else
-    <h1>404 - Page not found</h1>
+#else@eat
+    <h1>Error {{$sky->error_no}}</h1>
     <pre>{!$tracing ?? ''!}</pre>
 #end
-#._
+#._ default marker used !
 
-#.exception //////////////////////////////////////////////////////////////////////////////
+#.crash //////////////////////////////////////////////////////////////////////////////
 @php # this template for Exceptions and die() functions
 $ru = DEFAULT_LG && defined('LG') && 'ru' == LG;
 $list = [ # production errors
@@ -23,18 +24,20 @@ $p_prev = $ru ? 'вернуться на предыдущую страницу' 
 $p_main = $ru ? 'открыть главную' : 'open main page';
 isset($error) && $error && (SKY::$debug || DEV) or $error = isset($list[$no]) ? $list[$no] : $list[500];
 ~php
-#if(Plan::view_t('error.jet'))@inc(error.exception)#else
+#if(Plan::view_t('error.jet') && '_std' != MVC::$tpl)
+    @inc(error.crash)~{- for dev-tools also needed -}
+#else
 <!doctype html><html>
 <head>@head</head>
 <body style="background:url({!PATH!}img/cloud.jpg);background-size:cover;margin:0 10px;@if(!$tracing)text-align:center;~if">
-#.ex_inner
+#.inner
 <style>.error {background-color:red !important;color:#fff !important}</style>
     @if(!$tracing)<div style="display:inline-block; background:#fff; padding:10px; margin-top:15%">~if
     <h1>{{$error}}</h1>
     @if(11 == $no)
         @if($ky[1])<p>Cookies - {!sprintf($ky[3] ? span_r : span_g, $ky[3] ? 'FAIL' : 'OK')!}</p>~if
         @if($ky[2])<p>Javascript - {!sprintf($ky[4] ? span_r : span_g, $ky[4] ? 'FAIL' : 'OK')!}</p>~if
-        <a href="{!PATH!}_exception">@if($ru)я устранил проблему @else I fix the problem ~if</a>
+        <a href="{!PATH!}_crash">@if($ru)я устранил проблему @else I fix the problem ~if</a>
     @else
         <a href="javascript:;" onclick="history.back()">{{$p_prev}}</a>
         @if($ru) или@else or~if
@@ -45,18 +48,18 @@ isset($error) && $error && (SKY::$debug || DEV) or $error = isset($list[$no]) ? 
     @else
         <p><div id="err-top">{!$tracing!}</div></p>
     ~if
-#.ex_inner
+#.inner
 </body>
 </html>
 #end
-#.exception
+#.crash
 
 #.save_cache
 <p class="clear"><br><br><h1>EXTRA = {{EXTRA}}</h1>
 <form method="post" style="display:inline-block">
 Save HTML from URL: <input size="50" name="extra" /> <input type="submit" value="Save"/>
 </form>
-<p>Note: use `/main/error` link (c_main::a_error) for static exception error page
+<p>Note: use `/error/XXX` link (c_main::a_error) for static exception error page
 #.save_cache
 
 ==============================================================================================

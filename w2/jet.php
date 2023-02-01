@@ -7,7 +7,6 @@ class Jet
     private $parsed = [];
     private $files = [];
     private $loop = [];
-    private $tailed = false;
 
     private static $custom = [];
     private static $verb;
@@ -31,7 +30,7 @@ class Jet
     function __construct($name, $layout = false, $fn = false, $return = null) {
         if ($fn) {
             Jet::$block = Jet::$use = Jet::$ptr = Jet::$inc = Jet::$verb = [];
-            $this->parsed[Jet::$id = 1] = '';
+            $this->parsed[Jet::$id = 1] = $this->tailed = '';
             Jet::$top =& $this->parsed[1];
             Jet::$fn = explode('-', basename($fn));
             $this->occupied = ['k', 'e', 'y'];
@@ -261,6 +260,7 @@ class Jet
             if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
                 if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
                     throw new Error("Jet: cannot find `$name.$marker`");
+                trace("Used default marker from $name.jet", 'JET');
             }
             $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
             $this->marker = $marker;
@@ -321,7 +321,6 @@ class Jet
             return;
         if (isset(Jet::$custom[$tag]))
             return call_user_func(Jet::$custom[$tag], $arg, $this); # user defined
-
         switch ($tag) {
             case 'inc':
                 $this->_inc('' === $arg ? '*' : $arg);

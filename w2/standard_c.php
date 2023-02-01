@@ -55,7 +55,7 @@ class standard_c extends Controller
         }
     }
 
-    function a_exception() {
+    function a_crash() {
         global $sky;
 
         $no = $sky->_1 or $no = $sky->error_no;

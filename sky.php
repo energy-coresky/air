@@ -37,6 +37,9 @@ class SKY implements PARADISE
     const CORE = '0.211 2022-12-30T19:48:13+02:00 energy';
 
     function __construct() {
+        global $argv, $sky;
+        $sky = $this;
+
         ob_get_level() && ob_end_clean();
         $this->constants();
         SKY::$debug = DEBUG;
@@ -83,10 +86,16 @@ class SKY implements PARADISE
         });
 
         register_shutdown_function([$this, 'shutdown']);
+
+        if (CLI)
+            $this->gpc = '$argv = ' . html(var_export($argv, true));
+        if (DEV)
+            DEV::init();
+        if (Plan::$put_cache)
+            Plan::main();
     }
 
     function load() {
-        global $argv;
         if (SKY::$dd === false)
             return false;
         try {
@@ -95,17 +104,11 @@ class SKY implements PARADISE
             SKY::$dd = false;
             throw new Error($e->getMessage());
         }
-        if (CLI)
-            $this->gpc = '$argv = ' . html(var_export($argv, true));
-        if (DEV)
-            DEV::init();
 
         $this->memory(3, 's');
         if ($this->s_prod_error || SKY::$debug)
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
-        if (Plan::$put_cache)
-            Plan::main();
         return SKY::$dd;
     }
 

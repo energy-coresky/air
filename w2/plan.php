@@ -61,6 +61,8 @@ class Plan
 
     static function view_($op, $a0) { # g or m
         list ($ware, $a0) = is_array($a0) ? $a0 : [Plan::$ware, $a0];
+        if (!preg_match($re = "/^\w+\.jet$/", $a0))
+            throw new Error("Jet: file `$a0` do not match $re");
         if ('_' == ($a0[1] ?? '') && '_' == $a0[0]) {
             $a0 = DIR_S . '/w2/' . $a0;
             return 'g' == $op ? file_get_contents($a0) : stat($a0)['mtime'];

@@ -1,5 +1,11 @@
 #.jet core template
 
+#._ errors for dev-tools
+<h1>Error {{$sky->error_no}}</h1>
+<pre>{!$tracing ?? ''!}</pre>
+#._ magic marker used !
+
+
 #.attach
 +
 <div class="other-task">

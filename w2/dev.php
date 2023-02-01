@@ -31,7 +31,7 @@ class DEV
     }
 
     static function init() {
-        if (DEV && !CLI && SKY::$dd) {
+        if (DEV && !CLI) {// && SKY::$dd
             global $sky;
 
             $sky->dev = new DEV;
