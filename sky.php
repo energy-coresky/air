@@ -87,12 +87,16 @@ class SKY implements PARADISE
         require DIR_S . '/w2/plan.php';
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
-        DEV ? DEV::init() : Plan::open('cache');
+        DEV && !CLI ? DEV::init() : Plan::open('cache');
     }
 
     function open($msg = 'OK') {
         if (SKY::$dd || SKY::$dd === false)
             return false;
+        if (SKY::$cli) {
+            require DIR_S . '/w2/mvc.php';
+            Plan::app_r('mvc/common_c.php');
+        }
         try {
             SKY::$dd = SQL::open();
         } catch (Error $e) {
