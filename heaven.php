@@ -86,11 +86,9 @@ class HEAVEN extends SKY
 
         if (SKY::$debug)
             $this->gpc = Debug::gpc();
-    }
 
-    function load() {
-        parent::load(); # database connection start from here
-
+        require DIR_S . '/w2/mvc.php';
+        Plan::app_r('mvc/common_c.php');
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
             $cnt_s = count($this->surl);
@@ -107,10 +105,7 @@ class HEAVEN extends SKY
             common_c::rewrite_h($cnt_s, $this->surl);
         }
 
-        if (DEV && DEV::$static) {
-            $s = substr($this->s_statp, 0, -1) + 1;
-            $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
-        }
+        MVC::top(); # 16 classes at that point on DEV
     }
 
     function tail_t() {
@@ -221,7 +216,7 @@ class HEAVEN extends SKY
                 if ($this->fly)
                     $this->tail_x($exit); # exit at the end
 
-                # else $sky->fly == 0
+                # else crash for $sky->fly == 0
                 $has_err_file = Plan::mem_t('error.html');
                 $this->k_refresh = false;
                 $h1 = $die ? '<h1>Unexpected Exit</h1>' : false;
@@ -286,12 +281,10 @@ function jump($uri = '', $code = 302, $exit = true) {
 function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
     global $sky;
 
-//if (!isset($sky)) return;
-
     if ($err = true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;
         if (null === SKY::$dd)
-            $sky->load();
+            $sky->open(is_array($var) ? $var[1] : $var);
         if (SKY::$errors[0]++ > 99) {
             //$sky->tracing("Error 500"); ???
             throw new Error("500 Internal SKY error");

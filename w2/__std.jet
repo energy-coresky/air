@@ -7,7 +7,7 @@
     @inc(error.)@eat
 #else@eat
     <h1>Error {{$sky->error_no}}</h1>
-    <pre>{!$tracing ?? ''!}</pre>
+    #if(DEV)<pre>{!$tracing ?? ''!}</pre>#end
 #end
 #._ default marker used !
 

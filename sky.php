@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = false;
 
-    const CORE = '0.211 2022-12-30T19:48:13+02:00 energy';
+    const CORE = '0.303 2023-02-02T09:52:16+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -43,13 +43,12 @@ class SKY implements PARADISE
         ob_get_level() && ob_end_clean();
         $this->constants();
         SKY::$debug = DEBUG;
-        SKY::$cli = CLI;
+        if (SKY::$cli = CLI)
+            $this->gpc = '$argv = ' . html(var_export($argv, true));
         date_default_timezone_set(PHP_TZ);
         mb_internal_encoding(ENC);
         define('NOW', date(DATE_DT));
         srand((double) microtime() * 1e6);
-        require DIR_S . '/w2/plan.php';
-        spl_autoload_register('Plan::_autoload', true, true);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
             $amp = '';
@@ -64,7 +63,7 @@ class SKY implements PARADISE
                     $this->error_last = $no;
                 $this->was_error |= SKY::ERR_SUPPRESSED | ($show ? SKY::ERR_DETECT : 0);
             }
-            if ($detect && (SKY::$debug || !SKY::$dd || $this->s_prod_error)) {
+            if ($detect && (SKY::$debug || null === SKY::$dd || $this->s_prod_error)) {
                 $error = Debug::error_name($no) . $amp;
                 trace(["PHP $error", "$error: $message"], true, $line, $file, $context);
             }
@@ -77,7 +76,7 @@ class SKY implements PARADISE
             if ($stop = 'Stop' == $name)
                 $this->tailed = "Thrown Stop($mess)\n";
             $exception = 'Exception' == $name;
-            $this->except['crash'] = !($stop || $exception && $this->s_quiet_eerr);          //!SKY::$dd
+            $this->except['crash'] = !($stop || $exception && SKY::$dd && $this->s_quiet_eerr);
             $this->except['match'] = $match ?: [1 => $stop ? 200 : 404, $mess ?: '?']; # use throw new Stop(0) for CLI
             $this->except['title'] = $title = "Thrown $name($mess)";
             $noterror = $stop || $exception or $title = [$title, $title];
@@ -85,18 +84,14 @@ class SKY implements PARADISE
             $this->error_no = $stop ? 1 : ($exception ? 11 : 21);
         });
 
+        require DIR_S . '/w2/plan.php';
+        spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
-
-        if (CLI)
-            $this->gpc = '$argv = ' . html(var_export($argv, true));
-        if (DEV)
-            DEV::init();
-        if (Plan::$put_cache)
-            Plan::main();
+        DEV ? DEV::init() : Plan::open('cache');
     }
 
-    function load() {
-        if (SKY::$dd === false)
+    function open($msg = 'OK') {
+        if (SKY::$dd || SKY::$dd === false)
             return false;
         try {
             SKY::$dd = SQL::open();
@@ -109,6 +104,12 @@ class SKY implements PARADISE
         if ($this->s_prod_error || SKY::$debug)
             ini_set('error_reporting', -1);
         $this->trace_cli = $this->s_trace_cli;
+
+        if (DEV && DEV::$static) {
+            $s = substr($this->s_statp, 0, -1) + 1;
+            $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
+        }
+        trace($msg, 'SKY OPENED', 1);
         return SKY::$dd;
     }
 
@@ -117,7 +118,7 @@ class SKY implements PARADISE
             if (false === SKY::$dd)
                 return '';
             $dd or $dd = SKY::$dd;
-            $dd or $dd = $this->load();
+            $dd or $dd = $this->open();
             if (!$dd)
                 return '';
             
@@ -246,7 +247,7 @@ class SKY implements PARADISE
     }
 
     function log($mode, $data) {
-        if (!in_array(SKY::s('test_mode'), [$mode, 'all']))
+        if (!SKY::$dd || !in_array(SKY::s('test_mode'), [$mode, 'all']))
             return;
         $new = date(DATE_DT) . " $mode $data\n";
         SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', $new);

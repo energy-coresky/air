@@ -17,7 +17,6 @@ class Plan
     static $apps = [];
     static $ctrl = [];
     static $parsed_fn;
-    static $put_cache = false;
     private static $connections = [];
     /*
         path   => required!
@@ -44,14 +43,6 @@ class Plan
                 throw new Error('Vendor autoload');
             spl_autoload_unregister($vendor = 'Plan' === $ary[0][0] ? $ary[1] : $ary[0]);
         }
-    }
-
-    static function main() {
-        Plan::$ctrl += Gate::controllers();
-        SKY::$plans['main'] += ['ctrl' => Plan::$ctrl];
-        Plan::$put_cache['main'] += ['ctrl' => Plan::$ctrl];
-        Plan::cache_p('sky_plan.php', '<?php SKY::$plans = ' . var_export(Plan::$put_cache, true) . ';');
-        Plan::$put_cache = false;
     }
 
     static function _g($a0, $w2 = false) {
@@ -121,6 +112,12 @@ class Plan
             case 'rr': # gate
                 $recompile = $arg[1];
                 return require $obj->path . '/' . $a0;
+            case 'da':
+            case 'dq':
+            case 'd':
+                if (in_array($pn, ['view', 'mem', 'app']))
+                    throw new Error("Failed when Plan::{$pn}_$op(..)");
+                return 'da' == $op ? $obj->con->drop_all($a0) : $obj->con->drop($a0);
             case 'autoload':
                 trace("autoload($a0)");
                 if (strpos($a0, '\\'))
@@ -138,14 +135,16 @@ class Plan
                 }
                 $fn = DIR_S . '/w2/' . $low . '.php';
                 return is_file($fn) ? require $fn : Plan::_rq("w3/$low.php") || Plan::vendor($a0);
-            case 'da':
-            case 'dq':
-            case 'd':
-                if (in_array($pn, ['view', 'mem', 'app']))
-                    throw new Error("Failed when Plan::{$pn}_$op(..)");
-                return 'da' == $op ? $obj->con->drop_all($a0) : $obj->con->drop($a0);
-            default: throw new Error("Plan::$func(..) - method not exists");
+            default:
+                throw new Error("Plan::$func(..) - method not exists");
         }
+    }
+
+    static function main($plans) {
+        Plan::$ctrl += Gate::controllers();
+        SKY::$plans['main'] += ['ctrl' => Plan::$ctrl];
+        $plans['main'] += ['ctrl' => Plan::$ctrl];
+        Plan::cache_p('sky_plan.php', '<?php SKY::$plans = ' . var_export($plans, true) . ';');
     }
 
     static function &open($pn, $ware = false) {
@@ -174,7 +173,7 @@ class Plan
                     unset($plans['app']['require'], $plans['app']['class']);
                     SKY::$plans[$key] = ['app' => ['path' => $path] + $plans['app']] + $plans;
                 }
-                Plan::$put_cache = SKY::$plans;
+                Plan::main(SKY::$plans);
             }
             $cfg =& SKY::$plans['main'][$pn];
         } elseif (isset(SKY::$plans[$ware][$pn])) {
@@ -197,3 +196,4 @@ class Plan
         return $cfg;
     }
 }
+

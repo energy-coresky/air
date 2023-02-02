@@ -31,45 +31,43 @@ class DEV
     }
 
     static function init() {
-        if (DEV && !CLI) {// && SKY::$dd
-            global $sky;
+        global $sky;
 
-            $sky->dev = new DEV;
-            $vars = Plan::mem_gq('dev_vars.txt');
-            SKY::ghost('d', $vars, function ($s) {
-                Plan::mem_p(['main', 'dev_vars.txt'], $s);
-            });
-            if (!$static = $sky->d_static)
-                return;
+        $sky->dev = new DEV;
+        $vars = Plan::mem_gq('dev_vars.txt');
+        SKY::ghost('d', $vars, function ($s) {
+            Plan::mem_p(['main', 'dev_vars.txt'], $s);
+        });
+        if (!$static = $sky->d_static)
+            return;
 
-            $stat = array_map(function ($v) {
-                return '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v;
-            }, explode(',', $static));
+        $stat = array_map(function ($v) {
+            return '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v;
+        }, explode(',', $static));
 
-            $files = [];
-            foreach ($stat as $one) {
-                if ('' !== $one && is_dir($one)) {
-                    $files += array_flip(glob("$one/*.css"));
-                    $files += array_flip(glob("$one/*.js"));
-                } elseif (is_file($one)) {
-                    $files[$one] = 0;
-                }
+        $files = [];
+        foreach ($stat as $one) {
+            if ('' !== $one && is_dir($one)) {
+                $files += array_flip(glob("$one/*.css"));
+                $files += array_flip(glob("$one/*.js"));
+            } elseif (is_file($one)) {
+                $files[$one] = 0;
             }
-            if ($list = $sky->d_files) {
-                $saved = array_explode($list, '#', ',');
-                if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
-                    DEV::$static = true;
-                $files = $saved + $files;
-            }
-            foreach ($files as $one => &$_mt) {
-                if ($_mt != ($mt = filemtime($one))) {
-                    $_mt = $mt;
-                    DEV::$static = true;
-                }
-            }
-            if (DEV::$static)
-                SKY::d('files', array_join($files, '#', ','));
         }
+        if ($list = $sky->d_files) {
+            $saved = array_explode($list, '#', ',');
+            if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
+                DEV::$static = true;
+            $files = $saved + $files;
+        }
+        foreach ($files as $one => &$_mt) {
+            if ($_mt != ($mt = filemtime($one))) {
+                $_mt = $mt;
+                DEV::$static = true;
+            }
+        }
+        if (DEV::$static)
+            SKY::d('files', array_join($files, '#', ','));
     }
 
     static function vars($in, $no, $is_blk = false) {

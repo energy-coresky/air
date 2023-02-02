@@ -81,19 +81,14 @@ final class SQL
         if (isset(SQL::$connections[$name])) {
             $dd = SQL::$connections[$name];
         } else {
-            if ($main = '' === $name) {
-                require DIR_S . '/w2/mvc.php';
-                Plan::_r('mvc/common_c.php');
-            }
-            $main && !isset(SKY::$databases[''])? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
+            '' === $name && !isset(SKY::$databases['']) ? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
             $driver = "dd_$cfg[driver]";
             
             $dd = new $driver($cfg['dsn'], $cfg['pref'] ?? '');
             if (!$dd->conn)
                 return false;
             SQL::$connections[$name] = $dd;
-            if (!$main)
-                trace("name=$name, driver=$dd->name", 'DATABASE');
+            trace("name=$name, driver=$dd->name", 'DATABASE');
 
             unset($cfg['dsn']);
             common_c::dd_h($name, $dd);
@@ -395,32 +390,6 @@ final class SQL
 }
 
 //////////////////////////////////////////////////////////////////////////
-trait QUERY_BUILDER
-{
-    
-}
-
-//////////////////////////////////////////////////////////////////////////
-trait SQL_COMMON
-{
-    protected $table; # for overload in models if needed
-
-    function __call($name, $args) {
-        if (!in_array($name, ['sql', 'sqlf', 'qp', 'table']))
-            throw new Error('Method ' . get_class($this) . "::$name(..) not exists");
-        $mode = $args && is_int($args[0]) ? array_shift($args) : 0;
-        return call_user_func_array($name, [-2 => $this, -1 => 1 + $mode] + $args);
-    }
-
-    function __toString() {
-        return $this->table;
-    }
-
-    function onduty($table) {
-        $this->table = $table;
-    }
-}
-
 interface Database_driver
 {
     function info();

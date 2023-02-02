@@ -15,12 +15,15 @@ class standard_c extends Controller
             $this->_y = ['page' => substr($action, 2)];
             MVC::$layout = '__dev.layout';
         }
-        if (in_array($action, ['a_trace', 'j_trace', 'j_file', 'j_init']))
+        if (in_array($action, ['a_trace', 'j_trace', 'j_file', 'j_init'])) {
+            $sky->open();
             return $user = new USER;
+        }
         if (!DEV) {
             $this->_y = MVC::$layout = '';
             return 404;
         }
+        $sky->open();
         if ($sky->d_dev) {
             SKY::$debug = 0;
             $sky->s_prod_error = 1;
@@ -104,9 +107,10 @@ class standard_c extends Controller
         if ($pos = strrpos($sky->_1, '.'))
             $ext = substr($sky->_1, $pos + 1);
         if (DEV && in_array($ext, ['js', 'css'])) {
+            $sky->open(); # on DEV only now
             is_file($fn = DIR_S . "/assets/$sky->_1")
                 or $fn = Plan::_t([$this->d_last_ware, "assets/$sky->_1"]);
-        } else {
+        } else {//2do: use Plans (to get var) to save optionally user log on Prod
             $fn = WWW . "m/etc/$sky->_1";
         }
         if (is_file($fn)) {

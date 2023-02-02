@@ -84,7 +84,7 @@ class Schedule
     function database($rule = true) {
         global $sky;
         if ($rule && null === SKY::$dd)
-            $sky->load();
+            $sky->open();
         SQL::$dd = SKY::$dd;
     }
 
