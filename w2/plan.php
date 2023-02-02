@@ -197,23 +197,3 @@ class Plan
     }
 }
 
-trait SQL_COMMON
-{
-    protected $table; # for overload in models if needed
-
-    function __call($name, $args) {
-        if (!in_array($name, ['sql', 'sqlf', 'qp', 'table']))
-            throw new Error('Method ' . get_class($this) . "::$name(..) not exists");
-        $mode = $args && is_int($args[0]) ? array_shift($args) : 0;
-        return call_user_func_array($name, [-2 => $this, -1 => 1 + $mode] + $args);
-    }
-
-    function __toString() {
-        return $this->table;
-    }
-
-    function onduty($table) {
-        $this->table = $table;
-    }
-}
-

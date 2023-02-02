@@ -342,7 +342,12 @@ class Root
             case 1:
             case 2:
             case 3:
-                $ary = ['var/cache', 'var/jet', 'var/gate', 'var/extra'];
+                $ary = [
+                    Plan::cache_obj(['main'])->path,
+                    Plan::jet_obj(['main'])->path,
+                    Plan::gate_obj(['main'])->path,
+                    'var/extra',
+                ];
                 if (isset($_POST['extra'])) {
                     $html = file_get_contents($url = $_POST['extra']);
                     $url = SNAME . urlencode($u = substr($url, strlen(LINK)));
