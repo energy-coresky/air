@@ -63,26 +63,6 @@ abstract class Bolt {
 }
 
 //////////////////////////////////////////////////////////////////////////
-trait SQL_COMMON
-{
-    protected $table; # for overload in models if needed
-
-    function __call($name, $args) {
-        if (!in_array($name, ['sql', 'sqlf', 'qp', 'table']))
-            throw new Error('Method ' . get_class($this) . "::$name(..) not exists");
-        $mode = $args && is_int($args[0]) ? array_shift($args) : 0;
-        return call_user_func_array($name, [-2 => $this, -1 => 1 + $mode] + $args);
-    }
-
-    function __toString() {
-        return $this->table;
-    }
-
-    function onduty($table) {
-        $this->table = $table;
-    }
-}
-
 abstract class Model_m extends MVC_BASE
 {
     use SQL_COMMON;
@@ -238,8 +218,7 @@ trait HOOK
     }
 
     static function re_dev($cnt, &$surl) {
-        //global $sky;
-        if (DEV && $cnt && 'm' == $surl[0]) // $sky->s_statp == $surl[0]
+        if (DEV && $cnt && 'm' == $surl[0])
             return $surl[0] = '_etc';
     }
 
@@ -281,7 +260,8 @@ trait HOOK
     static function dd_h($name, $dd) {
         if ('MySQLi' != $dd->name)
             return;
-        mysqli_set_charset($dd->conn, 'utf8') or exit('charset');
+        if (!mysqli_set_charset($dd->conn, 'utf8'))
+            throw new Error('mysqli_set_charset');
         $dd->sqlf('set time_zone=%s', date('P'));
     }
 }
@@ -454,7 +434,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $csrf = isset($user) ? $user->v_csrf : '';
         $plus .= tag($sky->k_static[0] + ['csrf-token' => $csrf, 'sky.home' => LINK]); # meta tags
         $plus .= js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->k_static[1]);
-        $plus .= css($sky->k_static[2] + [-1 => '~/m/sky.css']) . js($js);
+        $plus .= css($sky->k_static[2] + [-1 => '~/m/sky.css']) . js($js);//
         echo $plus . '<link href="' . PATH . 'favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
     }
 
@@ -511,8 +491,6 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             !$in or $this->body = '';
         } elseif (is_int($in)) { # soft error
             $sky->error_no = $in;
-            if ($sky->s_error_404)
-                throw new Stop($in); # terminate quick
             HEAVEN::J_FLY == $sky->fly or http_response_code($in);
             $this->body = '_std.' . (MVC::instance()->return ? '_' . $in : $in);
         }

@@ -24,10 +24,8 @@ class standard_c extends Controller
             return 404;
         }
         $sky->open();
-        if ($sky->d_dev) {
+        if ($sky->d_dev)
             SKY::$debug = 0;
-            $sky->s_prod_error = 1;
-        }
         $v = explode('.', $this->_1, 2);
         $this->_c = '*' == $v[0] ? 'default_c' : "c_$v[0]";
         $this->_a = $v[1] ?? '';

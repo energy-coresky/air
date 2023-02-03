@@ -12,17 +12,17 @@
 #._ default marker used !
 
 #.crash //////////////////////////////////////////////////////////////////////////////
-@php # this template for Exceptions and die() functions
-$ru = DEFAULT_LG && defined('LG') && 'ru' == LG;
+@php # this template for fatal FLY=0
+$ru = defined('LG') && 'ru' == LG;
 $list = [ # production errors
     403 => $ru ? 'Ошибка 403 - Попытка взлома заблокирована' : 'Error 403 - Denied hacking attempt',
     404 => $ru ? 'Ошибка 404 - Страница не найдена'          : 'Error 404 - Page not found',
     500 => $ru ? 'Ошибка 500 - Внутренняя ошибка сервера'    : 'Error 500 - Internal server error',
-    11  => $ru ? 'Для работы этого приложения требуется:'    : 'This application require to be tunning on:',
 ];
 $p_prev = $ru ? 'вернуться на предыдущую страницу' : 'return to previouse page';
 $p_main = $ru ? 'открыть главную' : 'open main page';
-isset($error) && $error && (SKY::$debug || DEV) or $error = isset($list[$no]) ? $list[$no] : $list[500];
+$error = isset($list[$no]) ? $list[$no] : $list[500];
+
 ~php
 #if(Plan::view_t('error.jet') && '_std' != MVC::$tpl)
     @inc(error.crash)~{- for dev-tools also needed -}
@@ -34,16 +34,10 @@ isset($error) && $error && (SKY::$debug || DEV) or $error = isset($list[$no]) ? 
 <style>.error {background-color:red !important;color:#fff !important}</style>
     @if(!$tracing)<div style="display:inline-block; background:#fff; padding:10px; margin-top:15%">~if
     <h1>{{$error}}</h1>
-    @if(11 == $no)
-        @if($ky[1])<p>Cookies - {!sprintf($ky[3] ? span_r : span_g, $ky[3] ? 'FAIL' : 'OK')!}</p>~if
-        @if($ky[2])<p>Javascript - {!sprintf($ky[4] ? span_r : span_g, $ky[4] ? 'FAIL' : 'OK')!}</p>~if
-        <a href="{!PATH!}_crash">@if($ru)я устранил проблему @else I fix the problem ~if</a>
-    @else
-        <a href="javascript:;" onclick="history.back()">{{$p_prev}}</a>
-        @if($ru) или@else or~if
-        <a href="{!PATH!}">{{$p_main}}</a>
-        @if(DEV)or <a href="_dev">open DEV</a>~if
-    ~if
+    <a href="javascript:;" onclick="history.back()">{{$p_prev}}</a>
+    @if($ru) или@else or~if
+    <a href="{!PATH!}">{{$p_main}}</a>
+    @if(DEV)or <a @href(dev('_dev?main=0'))>open DEV</a>~if
     @if(!$tracing)</div>
     @else
         <p><div id="err-top">{!$tracing!}</div></p>

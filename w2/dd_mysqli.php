@@ -106,7 +106,7 @@ class dd_mysqli implements Database_driver
             }
         } while (mysqli_more_results($this->conn) && mysqli_next_result($this->conn));
     
-        if (SKY::$debug || $no && $sky->s_prod_error) {
+        if (SKY::$debug || $no && $sky->s_log_error) {
             SQL::$query_num++;
             if ($show_error = (bool)$no)
                 $sky->error_title = 'Multi SQL Error';
@@ -122,11 +122,11 @@ class dd_mysqli implements Database_driver
         if ($sky->was_error & SKY::ERR_DETECT || $sky->begin_transaction)
             return false;
         trace('transaction started', false, 1);
-        if (!SKY::$debug && !$sky->s_prod_error)
-            $sky->s_prod_error = $sky->begin_debug = true;
+        if (!SKY::$debug && !$sky->s_log_error)
+            $sky->s_log_error = $sky->begin_debug = true;
         $sky->begin_transaction = mysqli_autocommit($this->conn, false) or trace(mysqli_error($this->conn), true, 1);
         if (!$sky->begin_transaction && $sky->begin_debug)
-            $sky->s_prod_error = $sky->begin_debug = false;
+            $sky->s_log_error = $sky->begin_debug = false;
         if ($sky->begin_transaction && ($sky->lock_table = $lock_table))
             $this->sql('lock tables $$', $lock_table);
         return $sky->begin_transaction;
@@ -136,7 +136,7 @@ class dd_mysqli implements Database_driver
         global $sky;
 
         if ($sky->begin_debug)
-            $sky->s_prod_error = $sky->begin_debug = false;
+            $sky->s_log_error = $sky->begin_debug = false;
         if (!$sky->begin_transaction)
             return;
         ($ok = !($sky->was_error & SKY::ERR_DETECT) && mysqli_commit($this->conn)) ? mysqli_autocommit($this->conn, true) : mysqli_rollback($this->conn);

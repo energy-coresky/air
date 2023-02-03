@@ -16,20 +16,6 @@ class DEV
         return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn " . var_export($v, true) . ";\n";
     }
 
-    static function trace() {
-        ksort(DEV::$vars);
-        $dev_data = [
-            'cnt' => [
-                $c = count($a1 = Debug::get_classes(get_declared_classes())[1]),
-                $c + count($a2 = Debug::get_classes(get_declared_interfaces())[1]),
-            ],
-            'classes' => array_merge($a1, $a2, get_declared_traits()),
-            'vars' => DEV::$vars,
-            'errors' => SKY::$errors,
-        ];
-        return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
-    }
-
     static function init() {
         global $sky;
 
@@ -68,6 +54,20 @@ class DEV
         }
         if (DEV::$static)
             SKY::d('files', array_join($files, '#', ','));
+    }
+
+    static function trace() {
+        ksort(DEV::$vars);
+        $dev_data = [
+            'cnt' => [
+                $c = count($a1 = Debug::get_classes(get_declared_classes())[1]),
+                $c + count($a2 = Debug::get_classes(get_declared_interfaces())[1]),
+            ],
+            'classes' => array_merge($a1, $a2, get_declared_traits()),
+            'vars' => DEV::$vars,
+            'errors' => SKY::$errors,
+        ];
+        return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
     }
 
     static function vars($in, $no, $is_blk = false) {
@@ -568,7 +568,6 @@ class DEV
             return;
         list ($char, $id) = explode('.', $_POST['cid']);
         $sky->memory($id, $char);
-        //call_user_func_array("SKY::$char", [$_POST['v'], null]);
         trace("SKY:: $char $_POST[v], null");
         SKY::$char($_POST['v'], null);
     }
@@ -583,4 +582,3 @@ class DEV
         echo Display::reflect($name, $type);
     }
 }
-

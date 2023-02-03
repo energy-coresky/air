@@ -114,8 +114,8 @@ class Debug
     }
 
     static function context($ary, $depth) {
-        if (-1 === $ary)
-            return function_exists('get_context') ? get_context(1 + $depth) : '';
+        //if (-1 === $ary)
+          //  return function_exists('get_context') ? get_context(1 + $depth) : '';
         if (is_null($ary))
             return ''; # else array
         $out = $ary ? "\n" : ''; # $ary as reference!
@@ -126,10 +126,19 @@ class Debug
         return substr($out, 0, 1000);
     }
 
-    static function check_other(&$plus) {
+    static function _check_other(&$plus) {
         $c = array_intersect(array_keys(sqlf('@explain $_users')), array_keys(sqlf('@explain $_visitors')));
         if (count($c) == 1 && 'id' == current($c))
             return $plus;
         return $plus .= "<h1>Other Errors</h1><pre>users vs visitors columns:\n\n" . html(print_r($c, true)) . '</pre>';
+    }
+
+    static function check_other($class_debug = true) {
+        $error = '';
+ #       if ('utf8' != mysqli_character_set_name($this->conn))
+  #          $error = '<h1>wrong database character set</h1>'; # cannot use trace() to SQL insert..
+     #   if ($class_debug && SKY::$debug)
+      #      Debug::_check_other($error);
+        return $error;
     }
 }

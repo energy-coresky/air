@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = false;
 
-    const CORE = '0.303 2023-02-02T09:52:16+02:00 energy';
+    const CORE = '0.304 2023-02-03T16:31:23+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -43,6 +43,7 @@ class SKY implements PARADISE
         ob_get_level() && ob_end_clean();
         $this->constants();
         SKY::$debug = DEBUG;
+        ini_set('error_reporting', $this->log_error = -1);
         if (SKY::$cli = CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
         date_default_timezone_set(PHP_TZ);
@@ -63,7 +64,7 @@ class SKY implements PARADISE
                     $this->error_last = $no;
                 $this->was_error |= SKY::ERR_SUPPRESSED | ($show ? SKY::ERR_DETECT : 0);
             }
-            if ($detect && (SKY::$debug || null === SKY::$dd || $this->s_prod_error)) {
+            if ($detect && (SKY::$debug || $this->log_error)) {
                 $error = Debug::error_name($no) . $amp;
                 trace(["PHP $error", "$error: $message"], true, $line, $file, $context);
             }
@@ -72,16 +73,13 @@ class SKY implements PARADISE
 
         set_exception_handler(function ($e) {
             preg_match("/^(\d{1,3}) ?(.*)$/", $mess = $e->getMessage(), $match);
-            $this->except['name'] = $name = get_class($e);
-            if ($stop = 'Stop' == $name)
-                $this->tailed = "Thrown Stop($mess)\n";
-            $exception = 'Exception' == $name;
-            $this->except['crash'] = !($stop || $exception && SKY::$dd && $this->s_quiet_eerr);
-            $this->except['match'] = $match ?: [1 => $stop ? 200 : 404, $mess ?: '?']; # use throw new Stop(0) for CLI
-            $this->except['title'] = $title = "Thrown $name($mess)";
-            $noterror = $stop || $exception or $title = [$title, $title];
+            if ($stop = 'Stop' == ($class = get_class($e)))
+                $this->tailed = "Thrown Stop($mess)\n"; # = 1
+            $this->error_no = 'Hacker' == $class ? 11 : 51;
+            $this->except['match'] = $match ?: [1 => 404, $mess ?: '?'];
+            $this->except['title'] = $title = "Thrown $class($mess)";
+            $noterror = $stop || 11 == $this->error_no or $title = [$title, $title];
             trace($title, !$noterror, $e->getLine(), $e->getFile(), $e->getTraceAsString());
-            $this->error_no = $stop ? 1 : ($exception ? 11 : 21);
         });
 
         require DIR_S . '/w2/plan.php';
@@ -93,10 +91,6 @@ class SKY implements PARADISE
     function open($msg = 'OK') {
         if (SKY::$dd || SKY::$dd === false)
             return false;
-        if (SKY::$cli) {
-            require DIR_S . '/w2/mvc.php';
-            Plan::app_r('mvc/common_c.php');
-        }
         try {
             SKY::$dd = SQL::open();
         } catch (Error $e) {
@@ -105,11 +99,10 @@ class SKY implements PARADISE
         }
 
         $this->memory(3, 's');
-        if ($this->s_prod_error || SKY::$debug)
-            ini_set('error_reporting', -1);
+        $this->log_error = $this->s_log_error or SKY::$debug or ini_set('error_reporting', 0);
         $this->trace_cli = $this->s_trace_cli;
 
-        if (DEV && DEV::$static) {
+        if (DEV && !CLI && DEV::$static) {
             $s = substr($this->s_statp, 0, -1) + 1;
             $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
         }
@@ -135,24 +128,24 @@ class SKY implements PARADISE
     }
 
     function __get($name) {
-        $pre = substr($name, 0, 2);
-        if ('k_' == $pre) {
+        $xx = substr($name, 0, 2);
+        if ('k_' == $xx) {
             return array_key_exists($name, SKY::$vars) ? SKY::$vars[$name] : '';
-        } elseif (2 == strlen($pre) && '_' == $pre[1]) {
-            $name = substr($name, 2);
-            $char = $pre[0];
-            return array_key_exists($name, SKY::$mem[$char][3]) ? SKY::$mem[$char][3][$name] : '';
+        } elseif ('_' == ($xx[1] ?? '')) {
+            if (!isset(SKY::$mem[$char = $xx[0]]))
+                return '';
+            return SKY::$mem[$char][3][substr($name, 2)] ?? '';
         }
         return array_key_exists($name, SKY::$reg) ? SKY::$reg[$name] : '';
     }
 
     function __set($name, $value) {
-        $pre = substr($name, 0, 2);
-        if ('k_' == $pre) {
+        $xx = substr($name, 0, 2);
+        if ('k_' == $xx) {
             SKY::$vars[$name] = $value;
-        } elseif (2 == strlen($pre) && '_' == $pre[1]) {
-            SKY::$mem[$char = $pre[0]][0] |= 1; # set flag
-            SKY::$mem[$char][3][substr($name, 2)] = $value;
+        } elseif ('_' == ($xx[1] ?? '')) {
+            SKY::$mem[$char = $xx[0]][0] |= 1; # set flag
+            SKY::$mem[$char][3][substr($name, 2)] = $value; # (string) ?
         } else {
             SKY::$reg[$name] = $value;
         }
@@ -173,7 +166,7 @@ class SKY implements PARADISE
         if (is_array($k = $args[0])) {  # s - system conf
             $x[3] = $k + $x[3];         # a - conf for root-admin section
             return $x[0] |= 1;          # n - cron conf
-        }                               # u - user
+        }                               # u,v - user, visitor (session)
         if (1 == count($args))          # i,j - used in Language class
             return $x[3][$k] ?? '';     # d - development conf
         $v = $args[1];
@@ -269,15 +262,6 @@ class SKY implements PARADISE
         ];
     }
 
-    function check_other($class_debug = true) {
-        $error = '';
- #       if ('utf8' != mysqli_character_set_name($this->conn))
-  #          $error = '<h1>wrong database character set</h1>'; # cannot use trace() to SQL insert..
-     #   if ($class_debug && SKY::$debug)
-      #      Debug::check_other($error);
-        return $error;
-    }
-
     function constants() {
         define('ENC', 'UTF-8');
         define('CLI', 'cli' == PHP_SAPI);
@@ -319,7 +303,7 @@ class SKY implements PARADISE
     function shutdown($web = false) {
         chdir(DIR);
         Plan::$ware = Plan::$view = 'main';
-        $dd = SQL::$dd = SKY::$dd; # set main database driver if loaded
+        $dd = SQL::$dd = SKY::$dd; # set main database driver if opened
 
         foreach ($this->shutdown as $object)
             call_user_func([$object, 'shutdown']);
@@ -331,6 +315,7 @@ class SKY implements PARADISE
         if ($e && $e['type'] != $this->error_last) {
             $name = Debug::error_name($e['type']);
             trace(["PHP $name", $err = "$name: $e[message]"], true, $e['line'], $e['file']);
+            $this->error_no = 52;
         }
         $code = function ($err) : int {
             if ($this->except)
@@ -338,7 +323,7 @@ class SKY implements PARADISE
             return $err ? 500 : 0; # when "Compile fatal error" for example (before PHP 8)
         };
 
-        if ($dd && $this->error_prod) # write error log
+        if ($dd && $this->log_error) # write error log
             sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
 
         if ($web)
@@ -354,13 +339,11 @@ class SKY implements PARADISE
 
 //////////////////////////////////////////////////////////////////////////
 if (!class_exists('Error', false)) {
-    # Use when exception is caused by programmer actions. Assume like crash, `throw new Error` should never works!
-    class Error extends Exception {}
+    class Error extends Exception {} # Assume as crash and error, `throw new Error` should never works!
 }
-# Assume like stop and not a crash
-class Stop extends Exception {}
+class Stop extends Exception {} # Assume as just "stop", NOT crash, NOT error
+class Hacker extends Exception {} # Assume as crash but NOT error on the web-scripts
 
-# use exception `Exception`, `die` when exceptional situation is caused by events of the outside world. Configure as crash or not.
 
 interface Cache_driver
 {
@@ -375,6 +358,27 @@ interface Cache_driver
     function glob($mask = '*');
     function drop($name);
     function drop_all($mask = '*');
+}
+
+//////////////////////////////////////////////////////////////////////////
+trait SQL_COMMON
+{
+    protected $table; # for overload in models if needed
+
+    function __call($name, $args) {
+        if (!in_array($name, ['sql', 'sqlf', 'qp', 'table']))
+            throw new Error('Method ' . get_class($this) . "::$name(..) not exists");
+        $mode = $args && is_int($args[0]) ? array_shift($args) : 0;
+        return call_user_func_array($name, [-2 => $this, -1 => 1 + $mode] + $args);
+    }
+
+    function __toString() {
+        return $this->table;
+    }
+
+    function onduty($table) {
+        $this->table = $table;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////

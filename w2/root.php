@@ -132,7 +132,6 @@ class Root
                     'Primary configuration' => sprintf('DEV = %d, DEBUG = %d, DIR_S = %s, ENC = %s, PHPDIR = %s', DEV, DEBUG, DIR_S, ENC, PHP_BINDIR),
                     'System' => PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a', PHP_OS),
                     'Server IP' => $_SERVER['SERVER_ADDR'] ?? '::1',
-                    'Server localtime' => $ltime . ' ' . ($sky->date(NOW) . ' ' == $ltime ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
                     'Server uptime' => $utime,    # $_exec('uptime')
                     'Zend engine version:' => zend_version(),
                     'PHP:' => phpversion(),
@@ -141,6 +140,7 @@ class Root
                     'Visitors online:' => $sky->s_online,
                     'PHP NOW:' => NOW . ' (' . PHP_TZ . '), ' . gmdate(DATE_DT) . ' (GMT)',
                     'SQL NOW:' => ($t = sql('+select $now')) . ' ' . (NOW == $t ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
+                    'Server localtime' => $ltime . ' ' . ($sky->date(NOW) . ' ' == $ltime ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
                     'Cron layer last tick:' => (new Schedule)->n_cron_dt,
                     'Backup settings:' => sql('+select dt from $_memory where id=7'),
                     'Timestamp NOW:' => time(),
@@ -303,13 +303,11 @@ class Root
                 ['', [['<b><u>Production</u></b>', 'li']]],
                 'trace_root'    => ['Debug mode on production for `root` profile', 'chk'],
                 'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
-                'error_404'     => ['Use `Stop` on "return 404"', 'chk'],
                 'error_403'     => ['Use 403 code for `die`', 'chk'],
-                'quiet_eerr'    => ['No `Exception` in Log CRASH', 'chk'],
-                'crash_main'    => ['Show fatal errors at <b>/error/XXX</b> - c_main::a_error($no)', 'chk'],
+                'empty_die'     => ['Empty response for `die`', 'chk'],
                 ['Log ERROR', [
-                    'prod_error'    => ['', 'radio', ['Off', 'On']],
-                    'crash_log'     => ['Log CRASH', 'radio', ['Off', 'On']],
+                    'log_error'    => ['', 'radio', ['Off', 'On']],//crash_log prod_error quiet_eerr
+                    'log_crash'     => ['Log CRASH', 'radio', ['Off', 'On']],
                 ]],
             '</fieldset>',
             '<fieldset><legend>Visitor\'s & users settings</legend>',

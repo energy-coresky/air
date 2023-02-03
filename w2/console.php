@@ -19,11 +19,17 @@ class Console
             return $this->s($argv[2] ?? 8000);
         } elseif ($found[0]) {
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
-                $sky->open();
+                Console::dd_h($sky->open());
             return call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
         }
 
         $this->__call("c_$argv[1]", []);
+    }
+
+    static function dd_h($dd) {
+        require DIR_S . '/w2/mvc.php';
+        Plan::app_r('mvc/common_c.php');
+        common_c::dd_h('', $dd);
     }
 
     function __call($name, $args) {

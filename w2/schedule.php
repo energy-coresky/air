@@ -11,6 +11,7 @@ class Schedule
     private $handle = [];
     private $stdout = [];
     private $script = 'php ';
+    private $dd_h;
 
     function __construct($max_exec_minutes = 10, $debug_level = 1, $single_thread = false) {
         global $argv, $sky;
@@ -19,6 +20,9 @@ class Schedule
         $this->script .= $argv[0] ?? 0;
         $this->single_thread = !function_exists('popen') || $single_thread;
         $this->max_exec_sec = 60 * $max_exec_minutes;
+        $this->dd_h = function ($dd) {
+            Console::dd_h($dd);
+        };
 
         if (isset($argv[1])) {
             if ('@' == $argv[1][0]) {
@@ -81,10 +85,15 @@ class Schedule
         return $ip == gethostbyname($host);
     }
 
+    function set_dd_h($func) {
+        $this->dd_h = $func;
+        return $this;
+    }
+
     function database($rule = true) {
         global $sky;
         if ($rule && null === SKY::$dd)
-            $sky->open();
+            call_user_func($this->dd_h, $sky->open());
         SQL::$dd = SKY::$dd;
     }
 
@@ -93,19 +102,19 @@ class Schedule
         return $this;
     }
 
-    function at($schedule, $load_sky = true, $func = null) {
+    function at($schedule, $sky_open = true, $func = null) {
         # Minutes Hours Days Months WeekDays-0=sunday  *   or  12   or  */3   or   1,2,3
         $this->task++;
         if (!$this->is_on)
             return $this;
 
-        if (is_callable($load_sky))
-            $func = $load_sky;
+        if (is_callable($sky_open))
+            $func = $sky_open;
 
         if (!$this->arg) {
             if ($this->ok($schedule)) {
                 if ($this->single_thread) {
-                    $this->database($load_sky);
+                    $this->database($sky_open);
                     $sec = time();
                     $func($this->task);
                     if (is_file($fn = "var/cron/task_$this->task"))
@@ -119,7 +128,7 @@ class Schedule
                 }
             }
         } elseif ($this->task == $this->arg) {
-            $this->database($load_sky);
+            $this->database($sky_open);
             $func($this->task);
         }
         return $this;

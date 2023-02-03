@@ -213,22 +213,23 @@ function dev(addr, pf) {
 }
 
 function box(html, c) {
-    var el = $('#box-in div.error:eq(0)').get(0),
-        h = $(window).height() - 100, css, box, w = $(window).width() - 100;
-    switch (c) {
-        case 't': css = {backgroundColor:'#005', color:'#7ff', width:w, height:h}; break;
-        case 'x': css = {backgroundColor:'#000', color:'#0f0', width:w, height:h}; break;
-        case 'e': css = {backgroundColor:'#fff', color:'#000', width:500, height:500}; break;
-        default: css = c || {backgroundColor:'#fff', color:'#111'}; break;
-    }
-    box = $('#box').click(sky.true).show(); //html(html).
+    var el = $('#box-in div.error:eq(0)').get(0), css, box;
+    css = c || {
+            backgroundColor:'white', color:'#111',
+            //margin:'50px 0 0 50px',
+            position:'fixed', left:'50px', top:'50px',
+            overflow:'hidden',
+            width:'calc(100vw - 100px)', height:'calc(100vh - 100px)'
+        };
+    box = $('#box').show()//.css({
+        //position:'fixed', left:0, top:0,        width: '100vw', height: '100vh', zIndex: 888,
+        //backgroundColor: 'rgba(0,0,0, 0.5)'//, padding: '50px'
+    //}); //html(html).
     if (null !== html)
-        box.children('#box-in').css(css).html(html).click(sky.true);
+        box.children('#box-in').html(html).click(sky.true);
+        //box.children('#box-in').css(css).html(html).click(sky.true);
     sky.show();
-    //if ('e' == c)
-      //  sky.set_file_clk('#box-in');
-    if (el && ('t' == c || 'x' == c))
-        el.scrollIntoView({block:'center',behavior:'smooth'});
+    //el.scrollIntoView({block:'center',behavior:'smooth'});
 }
 
 function ajax(j_, postfields, func, c_) {

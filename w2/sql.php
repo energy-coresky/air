@@ -91,7 +91,7 @@ final class SQL
             trace("name=$name, driver=$dd->name", 'DATABASE');
 
             unset($cfg['dsn']);
-            common_c::dd_h($name, $dd);
+            SKY::$cli or common_c::dd_h($name, $dd);
         }
         return $p2 || !SQL::$dd ? (SQL::$dd = $dd) : $dd;
     }
@@ -158,7 +158,7 @@ final class SQL
         $ts = microtime(true);
         if ($no = SQL::$last_error = $this->_dd->query($qstr, $this->stmt))
             $sky->was_error |= SKY::ERR_DETECT;
-        if (SKY::$debug || $no && $sky->s_prod_error) {
+        if (SKY::$debug || $no && $sky->s_log_error) {
             $this->mode++; # add 1 depth
             $ts = !DEV || ($ts = microtime(true) - $ts) < 0.1 ? '' : sprintf("%01.3f sec ", $ts);
             SQL::$query_num++;
