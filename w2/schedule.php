@@ -36,7 +36,7 @@ class Schedule
             $this->single_thread = SKY::$cli = true;
         }
         SKY::$debug = $debug_level;
-        $sky->shutdown[] = $this;
+        $sky->shutdown[] = [$this, 'shutdown'];
         if (!$this->arg && !$this->amp)
             echo "Multy-threads: " . ($this->single_thread ? "No\n" : "Yes\n");
     }
@@ -85,16 +85,16 @@ class Schedule
         return $ip == gethostbyname($host);
     }
 
-    function set_dd_h($func) {
-        $this->dd_h = $func;
-        return $this;
-    }
-
     function database($rule = true) {
         global $sky;
         if ($rule && null === SKY::$dd)
             call_user_func($this->dd_h, $sky->open());
         SQL::$dd = SKY::$dd;
+    }
+
+    function set_dd_h($func) {
+        $this->dd_h = $func;
+        return $this;
     }
 
     function turn($func) {
@@ -218,38 +218,20 @@ class Schedule
             return;
         }
 
-        $write = $except = NULL;
-        $time = 0;
         while ($this->handle) {
-            $read = [];
-            foreach ($this->handle as &$one)
-                $read[] =& $one;
-            $cnt = stream_select($read, $write, $except, 0, $time);
+            $cnt = stream_select($this->handle, $write, $except, null);
             if (false === $cnt) {
                 $this->write("Error stream_select()", 'ALL', true);
-                foreach ($this->handle as &$one)
-                    pclose($one);
+                foreach ($this->handle as $x)
+                    pclose($x);
                 break;
             } elseif ($cnt) {
-                foreach ($read as &$hdl) {
-                    $str = fread($hdl, 2096);
-                    if ('' !== $str)
-                        foreach ($this->handle as $i => &$one)
-                            if ($one == $hdl)
-                                $this->stdout[$i] .= $str;
-                }
-                $time = 0; # 0.1 sec
-            } else {
-                $time += 5e5; # 0.5 sec
-                if ($time > 3e6)
-                    $time = 3e6; # 3 sec
+                foreach ($this->handle as $i => $x)
+                    $this->stdout[$i] .= fread($x, 2096);
             }
-            $eof = [];
-            foreach ($this->handle as $i => &$one)
-                $eof[$i] =& $one;
 
-            foreach ($eof as $i => &$hdl) {
-                if (feof($hdl)) {
+            foreach ($this->handle as $i => $x) {
+                if (feof($x)) {
                     if ('' !== $this->stdout[$i])
                         $this->write($this->stdout[$i], $i);
                     pclose($this->handle[$i]);

@@ -305,8 +305,8 @@ class SKY implements PARADISE
         Plan::$ware = Plan::$view = 'main';
         $dd = SQL::$dd = SKY::$dd; # set main database driver if opened
 
-        foreach ($this->shutdown as $object)
-            call_user_func([$object, 'shutdown']);
+        foreach ($this->shutdown as $func)
+            call_user_func($func);
 
         $this->ghost or $this->tail_ghost(); # run tail_ghost() if !$this->tailed
 
@@ -330,7 +330,7 @@ class SKY implements PARADISE
             return $web($err, $code);
         # CLI
         if ($this->was_error & SKY::ERR_DETECT || $this->trace_cli)
-            $this->tracing(($this->shutdown ? get_class($this->shutdown[0]) : 'Console') . "\n");
+            $this->tracing(($this->shutdown ? get_class($this->shutdown[0][0]) : 'Console') . "\n");
         SQL::close();
         exit($code($err));
     }
