@@ -24,6 +24,7 @@ final class SQL
     static $last_error = 0;
     static $query_num = 0;
     static $dd;  # selected database driver
+    static $dd_h = 'common_c::dd_h';
 
     private static $re_func = '\B\$([a-z]+)([ \t]*)(\(((?>[^()]+)|(?3))*\))?'; // revision later
     private static $connections = [];
@@ -91,7 +92,7 @@ final class SQL
             trace("name=$name, driver=$dd->name", 'DATABASE');
 
             unset($cfg['dsn']);
-            SKY::$cli or common_c::dd_h($name, $dd);
+            call_user_func(SQL::$dd_h, $dd, $name);
         }
         return $p2 || !SQL::$dd ? (SQL::$dd = $dd) : $dd;
     }

@@ -11,7 +11,6 @@ class Schedule
     private $handle = [];
     private $stdout = [];
     private $script = 'php ';
-    private $dd_h;
 
     function __construct($max_exec_minutes = 10, $debug_level = 1, $single_thread = false) {
         global $argv, $sky;
@@ -20,9 +19,7 @@ class Schedule
         $this->script .= $argv[0] ?? 0;
         $this->single_thread = !function_exists('popen') || $single_thread;
         $this->max_exec_sec = 60 * $max_exec_minutes;
-        $this->dd_h = function ($dd) {
-            Console::dd_h($dd);
-        };
+        SQL::$dd_h = 'Console::dd_h';
 
         if (isset($argv[1])) {
             if ('@' == $argv[1][0]) {
@@ -88,13 +85,8 @@ class Schedule
     function database($rule = true) {
         global $sky;
         if ($rule && null === SKY::$dd)
-            call_user_func($this->dd_h, $sky->open());
+            $sky->open();
         SQL::$dd = SKY::$dd;
-    }
-
-    function set_dd_h($func) {
-        $this->dd_h = $func;
-        return $this;
     }
 
     function turn($func) {

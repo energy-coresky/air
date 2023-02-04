@@ -18,8 +18,9 @@ class Console
         } elseif ('s' == $argv[1]) {
             return $this->s($argv[2] ?? 8000);
         } elseif ($found[0]) {
+            SQL::$dd_h = 'Console::dd_h';
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
-                Console::dd_h($sky->open());
+                $sky->open();
             return call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
         }
 
@@ -29,7 +30,7 @@ class Console
     static function dd_h($dd) {
         require DIR_S . '/w2/mvc.php';
         Plan::app_r('mvc/common_c.php');
-        common_c::dd_h('', $dd);
+        common_c::dd_h($dd);
     }
 
     function __call($name, $args) {
@@ -110,6 +111,11 @@ class Console
             chdir(DIR_S);
         echo "\n>git remote get-url origin\n";
         system('git remote get-url origin');
+
+        echo "\n>git status\n";
+        $line = system('git status');
+        if ('nothing to commit, working tree clean' == trim($line))
+            return;
         if ($air) {
             if (!preg_match("/'(\d+\.\d+[^']+? energy)'/s", $php = file_get_contents('sky.php'), $m))
                 throw new Error('Wrong preg_match');
@@ -122,10 +128,6 @@ class Console
             if ('y' == strtolower($q))
                 file_put_contents('sky.php', str_replace($m[1], implode(' ', $v), $php));
         }
-        echo "\n>git status\n";
-        $line = system('git status');
-        if ('nothing to commit, working tree clean' == trim($line))
-            return;
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
         echo "\n>git add *\n";

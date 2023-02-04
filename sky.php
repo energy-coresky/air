@@ -59,7 +59,7 @@ class SKY implements PARADISE
             } elseif (DEV) {
                 static $show;
                 if (null === $show)
-                    $show = SKY::d('err') ? '@' : '';
+                    $show = $this->d_err ? '@' : '';
                 if ($detect = $amp = $show)
                     $this->error_last = $no;
                 $this->was_error |= SKY::ERR_SUPPRESSED | ($show ? SKY::ERR_DETECT : 0);
@@ -331,6 +331,7 @@ class SKY implements PARADISE
         # CLI
         if ($this->was_error & SKY::ERR_DETECT || $this->trace_cli)
             $this->tracing(($this->shutdown ? get_class($this->shutdown[0][0]) : 'Console') . "\n");
+
         SQL::close();
         exit($code($err));
     }

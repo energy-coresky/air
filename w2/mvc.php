@@ -257,7 +257,7 @@ trait HOOK
         return preg_match("/^($lg)/", strtolower($locale), $match) ? $match[1] : DEFAULT_LG;
     }
 
-    static function dd_h($name, $dd) {
+    static function dd_h($dd, $name = '') {
         if ('MySQLi' != $dd->name)
             return;
         if (!mysqli_set_charset($dd->conn, 'utf8'))
