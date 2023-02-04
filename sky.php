@@ -323,7 +323,7 @@ class SKY implements PARADISE
             return $err ? 500 : 0; # when "Compile fatal error" for example (before PHP 8)
         };
 
-        if ($dd && $this->log_error) # write error log
+        if ($dd && $this->error_prod && $this->log_error) # write error log
             sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ', 1, 5000) where id=4', $this->error_prod);
 
         if ($web)

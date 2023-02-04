@@ -43,7 +43,7 @@ if ($d || 'php' == $argv[1]) {
         define('DIR', $cd);
         require "$m/conf.php";
         $sky = new SKY;
-       SKY::$debug = 1;
+        SKY::$debug = 1;
     } else {
         define('DIR_S', __DIR__);
         require DIR_S . '/w2/console.php';

@@ -83,16 +83,6 @@ abstract class Model_m extends MVC_BASE
     }
 }
 
-trait QUERY_BUILDER
-{
-    
-}
-/** Query builder methods */
-abstract class Model_q extends Model_m
-{
-    use QUERY_BUILDER;
-}
-
 /** SQL parser methods */
 abstract class Model_t extends Model_m
 {
@@ -560,7 +550,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             }
         }
         if ($sky->error_no) {
-            $me->hnd = "error";
+            $me->hnd = "error$sky->error_no";
         } else {
             $me->set(call_user_func_array([MVC::$mc, $action], $param));
         }
@@ -572,7 +562,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             is_array($ary = MVC::$mc->error_y($action)) ? ($ary += $vars) : ($ary = $vars);
             $me->set($ary);
         }
-        $me->ob = view($me); # visualize
+        view($me); # visualize
         if (!$sky->tailed)
             throw new Error('MVC::tail() must used in the layout');
     }

@@ -45,7 +45,8 @@ class Debug
             "\n\$_COOKIE: " . html(var_export($_COOKIE, true)) . "\n";
     }
 
-    static function get_classes($all, $ext = [], $t = -2) {
+    static function get_classes($all = [], $ext = [], $t = -2) {
+        $all or $all = get_declared_classes();
         $ext or $ext = get_loaded_extensions();
         $ary = [];
         $types = array_filter($ext, function ($v) use (&$ary, $t) {

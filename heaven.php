@@ -61,7 +61,7 @@ class HEAVEN extends SKY
             }
         }
 
-        parent::__construct();
+        parent::__construct(); # 9/7 classes at that point on DEV/Prod
 
         $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
         preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname) or exit('sname');
@@ -105,7 +105,7 @@ class HEAVEN extends SKY
             common_c::rewrite_h($cnt_s, $this->surl);
         }
 
-        MVC::top(); # 16 classes at that point on DEV
+        MVC::top(); # 16/14 classes at that point on DEV/Prod
     }
 
     function tail_t() {
