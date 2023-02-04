@@ -6,19 +6,19 @@ class HEAVEN extends SKY
     const J_FLY = 1;
     const Z_FLY = 2;
 
-    public $jump = false; # INPUT_POST=0 INPUT_GET=1
-    public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
-    public $method;
-    public $re;
-    public $sname = [];
-    public $profiles = ['Anonymous', 'Root'];
-    public $admins = 1; # root only has admin access or list pids in array
-    public $has_public = true; # web-site or CRM
-    public $page_p = 'p';
-    public $show_pdaxt = false;
     public $fly = 0;
     public $surl_orig = '';
     public $surl = [];
+    public $jump = false; # INPUT_POST=0 INPUT_GET=1
+    public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
+    public $method;
+    public $profiles = ['Anonymous', 'Root'];
+    public $admins = 1; # root only has admin access or list pids in array
+    public $re;
+    public $sname = [];
+    public $has_public = true; # web-site or CRM
+    public $page_p = 'p';
+    public $show_pdaxt = false;
 
     function __get($name) {
         if ('_' == $name[0] && 2 == strlen($name) && is_num($name[1])) {
@@ -208,8 +208,8 @@ class HEAVEN extends SKY
                     $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
                     sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
                 }
-                if (($hs = headers_sent()) && $this->fly)
-                    $this->fly = HEAVEN::Z_FLY;
+
+                $hs = headers_sent();
                 if (!$hs && 12 == $this->error_no && $this->s_empty_die)
                     return http_response_code($exit); # no response
 
@@ -242,13 +242,14 @@ class HEAVEN extends SKY
 
                 for ($stdout = $tracing = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
                 if (SKY::$debug || DEV) { /* SKY::$errors . */
-                    $tracing .= "<h1>$h1</h1>" . tag($this->tracing("Exit with $exit.$this->error_no\n"), 'id="trace"', 'pre');
+                    $tracing .= "<h1>$h1</h1>" . tag($this->tracing("Fatal exit with $exit.$this->error_no\n"), 'id="trace"', 'pre');
                     $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
                 }
 
                 $this->k_static = [[], [], []]; # skip app css and js files
                 $vars = MVC::jet('__std.crash');
                 $vars += [
+                    'redirect' => $redirect ?? '',
                     'no' => $http_code,
                     'tracing' => $tracing,
                 ];

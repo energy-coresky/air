@@ -1,12 +1,14 @@
 
+
 *,
 ::before,
 ::after {
   box-sizing: border-box;
 }
 
-html {
+html, body {
     overflow: hidden;
+    height: 100%;
 }
 body, pre {
     margin: 0;

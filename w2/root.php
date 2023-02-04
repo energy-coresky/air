@@ -63,15 +63,19 @@ class Root
             'lgt' => ['SkyLang table name', '', 'size="25"'],
             'manual' => ['PHP manual language', 'select', $phpman],
             'se' => ['Search engine tpl', '', 'size="50"'],
+            'nopopup'  => ['No dev-tools on soft 404', 'chk'],
             Form::X([], '<hr>'),
             ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
             'static' => ['', '', 'size="50"'],
+            'etc'  => ['Turn ON tracing for standard_c::a_etc()', 'chk'],
             ['Save', 'submit'],
         ];
         if (isset($_POST['app'])) {
             SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
         } elseif ($_POST) {
-            SKY::d($_POST);
+            $ary = $_POST + SKY::$mem['d'][3];
+            ksort($ary);
+            SKY::d($ary);
         }
         return [
             'form1' => Form::A(array_combine($key, $val), $form1),

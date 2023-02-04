@@ -24,7 +24,7 @@ class SKY implements PARADISE
     static $mem = [];
     static $reg = [];
     static $vars = [];
-    static $databases;
+    static $databases = [];
     static $dd = null;
     static $plans = [];
     static $cli;
@@ -228,9 +228,9 @@ class SKY implements PARADISE
 
     static function lang($lg, $page = false) {
         define('LG', $lg);
-        SKY::$reg['trans_late'] = Plan::_r("lng/$lg.php");
+        SKY::$reg['trans_late'] = Plan::_r(['main', "lng/$lg.php"]);
         if (SKY::$reg['lg_page'] = $page)
-            SKY::$reg['trans_late'] += Plan::_r("lng/{$lg}_$page.php");
+            SKY::$reg['trans_late'] += Plan::_r(['main', "lng/{$lg}_$page.php"]);
         if (DEV)
             SKY::$reg['trans_coll'] = [];
     }
@@ -509,13 +509,6 @@ function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL i
     return $sql->exec();
 }
 
-/* function table(...$in) {
-    $sql = new SQL($in, 'init_qb');
-   $sql->table($sql->qstr);
-   $sql->qstr = '';
-    return $sql;
-}*/
-
 function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
     $str = htmlspecialchars($str, $mode, ENC);
     return $hide_percent ? str_replace('%', '&#37;', $str) : $str;
@@ -523,7 +516,7 @@ function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
 
 function unhtml($str, $mode = ENT_QUOTES) {
     return html_entity_decode($str, $mode, ENC);
-} # list($month, $day, $year) = sscanf('Январь 01 2000', "%s %d %d");
+}
 
 function escape($in, $reverse = false) {
     $ary = ["\\" => "\\\\", "\r" => "\\r", "\n" => "\\n"];

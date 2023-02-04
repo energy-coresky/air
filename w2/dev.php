@@ -40,7 +40,7 @@ class DEV
                 $files[$one] = 0;
             }
         }
-        if ($list = $sky->d_files) {
+        if ($list = $sky->d_statics) {
             $saved = array_explode($list, '#', ',');
             if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
                 DEV::$static = true;
@@ -53,7 +53,7 @@ class DEV
             }
         }
         if (DEV::$static)
-            SKY::d('files', array_join($files, '#', ','));
+            SKY::d('statics', array_join($files, '#', ','));
     }
 
     static function trace() {

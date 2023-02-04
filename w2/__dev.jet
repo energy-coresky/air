@@ -203,7 +203,7 @@ $(function() {
     @loop($_ < 4)<a @href(sky.d.trace({{"$_,'$y_page'"}},this))@active($_ == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
     </div>
     <div id="top-head" style="width:calc(100% - 380px)">@block(`` as header)</div>
-    <div style="text-align:right; width:110px"><a @href(sky.d.close_box())>Esc - Close @inc(__std.x)</a></div>
+    <div style="text-align:right; width:110px"><a @href(sky.d.close_box())>Esc - Close @inc(__img.x)</a></div>
 </div>
 
 <div id="v-menu">

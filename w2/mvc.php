@@ -422,10 +422,11 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         }
         $plus = "<title>$sky->k_title</title>$plus";
         $csrf = isset($user) ? $user->v_csrf : '';
+       defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
         $plus .= tag($sky->k_static[0] + ['csrf-token' => $csrf, 'sky.home' => LINK]); # meta tags
         $plus .= js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->k_static[1]);
         $plus .= css($sky->k_static[2] + [-1 => '~/m/sky.css']) . js($js);//
-        echo $plus . '<link href="' . PATH . 'favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
+        echo $plus . '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
     }
 
     static function tail() {

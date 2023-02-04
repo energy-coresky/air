@@ -9,7 +9,7 @@ class standard_c extends Controller
     function head_y($action) {
         global $sky, $user;
 
-        if ('a_etc' == $action)
+        if (in_array($action, ['a_crash', 'a_etc']))
             return;
         if ('a_' == substr($action, 0, 2)) {
             $this->_y = ['page' => substr($action, 2)];
@@ -58,16 +58,19 @@ class standard_c extends Controller
 
     function a_crash() {
         global $sky;
-
-        $no = $sky->_1 or $no = $sky->error_no;
-        $sky->error_no < 10000 or $no = 11;
-        $no or jump();
-        $sky->k_static = [[], [], []];
-        MVC::$layout = $this->_y = '';
+        $sky->open();
+        $this->k_static = [[], [], []];
+        SKY::$debug = $tracing = 0;
+        http_response_code($this->_1 ?: 404);
+        if (DEV) {
+            $x = (int)SKY::d('tracing_toggle');
+            $x or $tracing = tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre');
+            SKY::d('tracing_toggle', 1 - $x);
+        }
         return [
-            'ky' => $sky->error_no,
-            'no' => $no,
-            'tracing' => '',
+            'redirect' => '',
+            'no' => $this->_1 ?: 404,
+            'tracing' => $tracing,
         ];
     }
 
@@ -105,7 +108,8 @@ class standard_c extends Controller
         if ($pos = strrpos($sky->_1, '.'))
             $ext = substr($sky->_1, $pos + 1);
         if (DEV && in_array($ext, ['js', 'css'])) {
-            $sky->open(); # on DEV only now
+            if (SKY::d('etc'))
+                $sky->open(); # save tracing on DEV only now
             is_file($fn = DIR_S . "/assets/$sky->_1")
                 or $fn = Plan::_t([$this->d_last_ware, "assets/$sky->_1"]);
         } else {//2do: use Plans (to get var) to save optionally user log on Prod
@@ -116,7 +120,8 @@ class standard_c extends Controller
                 case 'txt': MVC::mime('text/plain; charset=' . ENC); break;
                 case 'css': MVC::mime('text/css'); break;
                 case 'xml': MVC::mime('application/xml'); break;
-                case 'js': MVC::mime('application/javascript'); break;
+                case 'js':  MVC::mime('application/javascript'); break;
+                //case 'ico': MVC::mime('image/x-icon'); break;
             }
             MVC::last_modified(filemtime($fn), false, function() use ($sky) {
                 $sky->log('etc', "304 $sky->_1");
