@@ -119,8 +119,10 @@
 #.pp
 #.drop
 
-#.main //////////////////////////////////////////////////////////////////////////////
-@use(`<h4>{{$h4}}</h4>` as header)
+#.m_header
+
+#.main.m_header //////////////////////////////////////////////////////////////////////////////
+@use(`<h4>{!$h4!}@if(6 == $sky->_2)@view(databases)~if</h4>` as header)
 @use(.m_dev)
 @if($sky->_2)
 @if($sky->_2 < 7)
@@ -251,7 +253,7 @@ $(function() {
     </div>
     <div style="width:25%">
         <span></span>
-        <span style="float:right;font-weight:bold">{{SKY::version()['app'][3]}}</span>
+        <span id="app-rb">{{SKY::version()['app'][3]}}</span>
     </div>
     <div id="tpl-list-copy" style="display:none">@inc(.bottom)</div>
 </div>

@@ -11,7 +11,7 @@
 #end
 #._ default marker used !
 
-#.crash //////////////////////////////////////////////////////////////////////////////
+#.crash ////////////////////////////////////////////////////////////////////////////// @inc(__img.cloud2)
 @php # this template for fatal FLY=0
 $ru = defined('LG') && 'ru' == LG;
 $list = [ # production errors
@@ -29,7 +29,7 @@ echo $redirect;
 #else
 <!doctype html><html>
 <head>@head</head>
-<body style="background:url(@inc(__img.cloud2));background-size:cover;margin:0 10px;@if(!$tracing)text-align:center;~if">
+<body style="background:url({{PATH}}_img?cloud2);background-size:cover;margin:0 10px;@if(!$tracing)text-align:center;~if">
 #.inner
 <style>.error {background-color:red !important;color:#fff !important}</style>
     @if(!$tracing)<div style="display:inline-block; background:#fff; padding:10px; margin-top:15%">~if
@@ -37,24 +37,33 @@ echo $redirect;
     <a href="javascript:;" onclick="history.back()">{{$p_prev}}</a>
     @if($ru) или@else or~if
     <a href="{!PATH!}">{{$p_main}}</a>
-    @if(DEV)or <a @href(dev('_dev?main=0'))>open DEV</a>~if
-    @if(!$tracing)</div>
-    @else
-        <p><div id="err-top">{!$tracing!}</div></p>
-    ~if
+    @if(DEV)or <a @href(dev('_trace/1'))>open X-Tracing</a>~if
+    @if(!$tracing)</div>~if
+    <p><div id="trace-t">{!$tracing!}</div></p>
+    <div id="trace-x" x="1" style="display:none"></div>
 #.inner
 </body>
 </html>
 #end
 #.crash
 
-#.save_cache
+#.save_cache ------------------------------------------------------------------------------
 <p class="clear"><br><br><h1>EXTRA = {{EXTRA}}</h1>
 <form method="post" style="display:inline-block">
 Save HTML from URL: <input size="50" name="extra" /> <input type="submit" value="Save"/>
 </form>
 <p>Note: use `/main/error` link (c_main::a_error) for static exception error page
 #.save_cache
+
+#.databases ------------------------------------------------------------------------------
+DATABASES ({{count($databases)}})
+<select style="font-size:12px" onchange="location.href='?{!$is_main ? 'main=6&' : '' !}db='+$(this).val()">
+@loop($databases as $one)
+    <option value="{{$one}}"@selected($one== ($is_main ? $sky->_4 : $sky->_2))>{{$one}}</option>
+~loop
+</select>
+#.databases ------------------------------------------------------------------------------
+
 
 ==============================================================================================
 |||||||||||||||||||||||||||||||||||||||||||| GATE ||||||||||||||||||||||||||||||||||||||||||||

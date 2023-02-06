@@ -1,5 +1,4 @@
 
-
 *,
 ::before,
 ::after {
@@ -359,5 +358,9 @@ div#popup div#popup-in {
     padding-left: 10px;
     position:sticky; 
     top:0px;
+}
+#app-rb {
+    float:right;
+    font-weight:bold;
 }
 

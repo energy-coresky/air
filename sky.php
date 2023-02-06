@@ -287,19 +287,6 @@ class SKY implements PARADISE
             $v[0] && $v[2] && SKY::sql($char, false);
     }
 
-    function tracing($top = '', $is_x = true) {
-        $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
-        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
-        if (DEV)
-            $top .= DEV::trace();
-        if ($is_x && SKY::$dd) {
-            if (DEV)
-                SKY::$dd->_xtrace();
-            SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $top);
-        }
-        return $top;
-    }
-
     function shutdown($web = false) {
         chdir(DIR);
         Plan::$ware = Plan::$view = 'main';
@@ -334,6 +321,21 @@ class SKY implements PARADISE
 
         SQL::close();
         exit($code($err));
+    }
+
+    function tracing($top = '', $is_x = true) {
+        $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
+        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
+        if (DEV)
+            $top .= DEV::trace();
+        if ($is_x && SKY::$dd) {
+            if (DEV)
+                SKY::$dd->_xtrace();
+            SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $top);
+        }
+        if (Plan::$z_error)
+            Plan::cache_a(['main', 'dev_z_err'], tag($top, 'class="trace"', 'pre'));
+        return $top;
     }
 }
 

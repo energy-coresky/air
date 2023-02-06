@@ -173,14 +173,14 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <td{!$row->yell and ' bgcolor="yellow"'!}></td>
         <td{!$row->red and ' bgcolor="red"'!}></td>
         <td>
-            <a @href(sky.g.delete(this, '{{$row->id}}', {{$row->red}}))><img src="@inc(__img.d2)"/></a> {{$row->val}}
+            <a @href(sky.g.delete(this, '{{$row->id}}', {{$row->red}}))><img src="_img?d2"/></a> {{$row->val}}
         </td>
         <td style="text-align:right{{$row->bgid}}">{{$row->id}}
-            <a @href(sky.g.edit(this, '{{$row->id}}', 1))><img src="@inc(__img.e2)"/></a>
+            <a @href(sky.g.edit(this, '{{$row->id}}', 1))><img src="_img?e2"/></a>
         </td>
         <td{!$row->pink and ' bgcolor="pink"'!}></td>
         <td>{{$row->val2}}</td>
-        <td><a @href(sky.g.edit(this, '{{$row->id}}', 0))><img src="@inc(__img.e2)"/></a> {{$row->key}}</td>
+        <td><a @href(sky.g.edit(this, '{{$row->id}}', 0))><img src="_img?e2"/></a> {{$row->key}}</td>
         </tr>
     ~loop
 #.save.group
@@ -210,7 +210,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
 @else~{- constant -}
     <input type="hidden" name="const-prev" value="{{$val}}"/>
     <input id="tr-textarea" value="{{$val}}"/>
-    <a @href($(this).prev().val(''))><img src="@inc(__img.d2)"/></a>
+    <a @href($(this).prev().val(''))><img src="_img?d2"/></a>
     <input onclick="sky.g.cancel()" type="button" value="Cancel"/>
     <input onclick="sky.g.save('{{$_POST['id']}}', 1)" type="button" value="F2 - Save" class="f2"/>
 ~if
@@ -225,7 +225,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
         <dd>
             <input type="hidden" name="const-prev" value="{{$row->val[0]}}"/>
             <input size="30" name="const" value="{{$row->val[0]}}"/>
-            <a @href($(this).prev().val(''))><img src="@inc(__img.d2)"/></a>
+            <a @href($(this).prev().val(''))><img src="_img?d2"/></a>
         </dd>
         </dl>
     ~if

@@ -2,30 +2,14 @@
 
 class Debug
 {
-    static function start() {
-        global $sky;
-        if (DEV && $sky->d_cron) {
-            $cron = new Schedule;
-            $ts = strtotime(substr($cron->n_cron_dt, 0, 19));
-            if (START_TS - $ts > 60)
-                exec('php ' . DIR . '/' . DIR_M . '/cron.php');
+    static function cron() {
+        if (!Plan::_t(['main', 'cron.php']))
+            return trace('cron.php not found', true);
+        $ts = SKY::d('cron_dev_ts') ?: 0;
+        if (START_TS - $ts > 60) {
+            SKY::d('cron_dev_ts', START_TS);
+            exec('php ' . DIR . '/' . DIR_M . '/cron.php @ 2>&1');
         }
-    }
-
-    static function table($in, $no_h = true) {
-        $hash = !is_num(key($in));
-        
-        $out = th($hash ? ['', 'NAME', 'VALUE'] : array_shift($in), 'class="debug-table"');
-        $i = 1;
-        foreach ($in as $k => $v) {
-            if ($hash) {
-                is_string($v) or is_int($v) or $v = print_r($v, true);
-                $no_h or $v = html($v);
-                $v = [$i, [$k, 'style="min-width:100px"'], "<pre>$v</pre>"];
-            }
-            $out .= td($v, eval(zebra));
-        }
-        return "$out</table>";
     }
 
     function short($str) { # 2do
@@ -66,24 +50,31 @@ class Debug
         return 'Plan::' == substr($line, 0, 6) ? $line : 'Extended Closure';
     }
 
-    static function z_err($was_error = null) {
-        if (!DEV)
-            return '';
-        $msg = Plan::cache_gq($err = ['main', 'dev_z_err']);
-        if (null === $was_error) {
-            $msg && Plan::cache_dq($err); # erase flash file
+    static function z_err($z_fly, $is_error = false, $drop = true) {
+        static $msg = null;
+
+        if (null !== $msg)
+            return $msg; # empty string or msg
+        $msg = Plan::cache_gq($addr = ['main', 'dev_z_err']);
+        if (!SKY::$debug) # j_trace don't erase file
             return $msg;
-        }
+        $z_fly = HEAVEN::Z_FLY == $z_fly;
         if ($msg) {
-            SKY::$debug = false; # skip tracing to show first error
-        } elseif ($was_error) {
+            if ($drop) {
+                $z_fly or Plan::cache_dq($addr); # erase flash file
+                SKY::$debug = false; # skip self tracing to show z-error's one
+            }
+        } elseif ($z_fly && $is_error) {
             $msg = tag("Z-error at " . NOW, 'class="z-err"', 'h1');
-            $ary = SKY::$errors;
-            array_shift($ary);
-         #   foreach ($ary as $one)
-            #    $msg .= "<h1>$one[0]</h1><pre>$one[1]</pre>";
-            Plan::cache_p($err, $msg);
+            $p =& SKY::$errors;
+            if (isset($p[1]))
+                $msg .= '<h1>' . $p[1][0] . '</h1><pre>' . $p[1][1] . '</pre>';
+            if (isset($p[2]))
+                $msg .= '<h1>' . $p[2][0] . '</h1><pre>' . $p[2][1] . '</pre>';
+            Plan::cache_p($addr, $msg);
+            Plan::$z_error = true;
         }
+        return $msg;
     }
 
     static function error_name($no) {
@@ -108,15 +99,12 @@ class Debug
         //return 
     }
 
-    static function epush($title, $err, $ary, $depth) {
-        $i = !isset(SKY::$errors[1]) ? 1 : 2;
-        $n = SKY::$errors[0];
-        SKY::$errors[$i] = ["#$n $title", $err . Debug::context($ary, $depth)];
+    static function epush($title, $desc, $ary, $depth) {
+        $p =& SKY::$errors;
+        $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", $desc . Debug::context($ary, $depth)];
     }
 
     static function context($ary, $depth) {
-        //if (-1 === $ary)
-          //  return function_exists('get_context') ? get_context(1 + $depth) : '';
         if (is_null($ary))
             return ''; # else array
         $out = $ary ? "\n" : ''; # $ary as reference!

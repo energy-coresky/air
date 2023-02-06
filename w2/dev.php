@@ -24,6 +24,8 @@ class DEV
         SKY::ghost('d', $vars, function ($s) {
             Plan::mem_p(['main', 'dev_vars.txt'], $s);
         });
+
+        SKY::d('cron') && Debug::cron();
         if (!$static = $sky->d_static)
             return;
 

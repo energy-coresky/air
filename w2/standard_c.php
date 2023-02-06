@@ -23,7 +23,7 @@ class standard_c extends Controller
             $this->_y = MVC::$layout = '';
             return 404;
         }
-        $sky->open();
+        in_array($action, ['a_img']) ? (SKY::$debug = 0) : $sky->open();//, 'a_svg'
         if ($sky->d_dev)
             SKY::$debug = 0;
         $v = explode('.', $this->_1, 2);
@@ -70,7 +70,7 @@ class standard_c extends Controller
         return [
             'redirect' => '',
             'no' => $this->_1 ?: 404,
-            'tracing' => $tracing,
+            'tracing' => tag($tracing, 'class="trace"', 'pre'),
         ];
     }
 
@@ -190,6 +190,16 @@ class standard_c extends Controller
         return parent::__call($func, $args);
     }
 
+    function a_img() {/////////////////
+        list(,$s) = explode("#.$this->_1", file_get_contents(DIR_S . '/w2/__img.jet'), 3);
+        list($type, $data) = explode(",", trim($s), 2);
+        header('Cache-Control: private, max-age=3600');
+        MVC::mime(substr($type, 5, strlen($type) - 12));
+        ob_end_clean();
+        echo base64_decode($data);
+        throw new Stop;
+    }
+
     function a_svg() {
         MVC::mime('image/svg+xml');
         echo new SVG(substr($this->_c, 2), $this->_a);
@@ -234,6 +244,12 @@ class standard_c extends Controller
 
     function x_c23_edit() {
         return DEV::ary_c23();
+    }
+
+    function x_databases() {
+        $list = ['main' => 0] + SKY::$databases;
+        unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
+        return ['databases' => array_keys($list), 'is_main' => 'main' == Plan::$ware];
     }
 
     # ---------------- j_ + a_, see self::__call(..)

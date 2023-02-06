@@ -11,11 +11,11 @@ var sky = {
     err_t: 0,
     err_core: function(r) {
         if (r) { // from ajax
-            $('#trace-x').html(r.catch_error).attr('x', r.err_no);
-            if (1 == r.err_no && r.ctrl) {
+            $('#trace-x').html(r.catch_error).attr('x', 1);
+            if (r.func) {
                 sky.g.box(r.ctrl, r.func, 0)
             } else {
-                dev('_trace/' + r.err_no);
+                dev('_trace/1');
             }
         } else if (sky.err_t) { // from layout
             dev('_trace/' + $('#trace-x').attr('x'));
@@ -23,7 +23,6 @@ var sky = {
     },
     g: { // sky gate & dev utilities
         box: function(ctrl, func, layout) {
-            
             if (layout) {
                 sky.err_t = 0;
             } else {

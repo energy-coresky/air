@@ -35,4 +35,14 @@ data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAUDBAoKCgoJCQoICQkJCAkIC
 </svg>
 #.cloud
 
-<img src="@inc(__img.d2)"/>
+#.ok
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="12px" height="12px" viewBox="0 0 12 12" enable-background="new 0 0 12 12" xml:space="preserve">
+<image width="12" height="12" x="0" y="0" href="
+#.ok2
+data:image/gif;base64,R0lGODlhDwAKALMAAAAAzP///////////////////////////////////////////////////////////yH5BAEAAAEALAAAAAAPAAoAAAQYMMhJq60AXKz3zN7XhaBVBqeppVc2kmEEADs=
+#.ok2
+" />
+</svg>
+#.ok
+
+<img src="@inc(__img.ok2)"/>

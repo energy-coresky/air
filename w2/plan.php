@@ -17,6 +17,7 @@ class Plan
     static $apps = [];
     static $ctrl = [];
     static $parsed_fn;
+    static $z_error = false;
     private static $connections = [];
     /*
         path   => required!

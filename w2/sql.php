@@ -88,6 +88,7 @@ final class SQL
             $dd = new $driver($cfg['dsn'], $cfg['pref'] ?? '');
             if (!$dd->conn)
                 return false;
+            $dd->cname = $name;
             SQL::$connections[$name] = $dd;
             trace("name=$name, driver=$dd->name", 'DATABASE');
 

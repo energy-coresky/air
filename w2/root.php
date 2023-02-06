@@ -2,7 +2,7 @@
 
 class Root
 {
-    static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Database'];
+    static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Databases'];
     static $menu2 = [7 => 'Special', 'Log CRON', 'Log CRASH', 'Log ERROR'];
     static $h4 = ['',
         'OVERVIEW SYSTEM INFORMATION',
@@ -10,7 +10,7 @@ class Root
         'SYSTEM CONFIGURATION',
         'SYSTEM CACHE',
         'SYSTEM GUARD PAGE',
-        'DATABASE MIGRATIONS',
+        '',
         'USER LOG',
         'LOG CRON',
         'LOG CRASH',
@@ -429,7 +429,7 @@ class Root
         switch ($i) {
             case 0:
             case 1:
-                $ok = '<img src="img/ok.gif" />';
+                $ok = '<img src="_img?ok2" />';
                 foreach ($out as $path => $j) if ('_' == $path[0]) $out[$path] = sprintf(span_r, 'Dir must NOT exist on production!'); else {
                     if (is_file($fn = "$path/$file")) {
                         $fs = filesize($fn);
@@ -451,19 +451,50 @@ class Root
 
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
-    static function _database($i = null) {
+    static function _databases($i = null) {
         global $sky;
 
-        if (is_file($fn = 'var/update.sql')) {
-            $str = trim(file_get_contents($fn));
-            ';' == substr($str, -1) or $str .= ';';
-            preg_match_all("/(?>[^;']|(''|(?>'([^']|\\')*[^\\\]')))+;/ixU", $str, $m, PREG_SET_ORDER);
-            array_walk($m, function(&$v) {
-                $v = $v[0];
+        $db = $sky->_4 ?: 'main';
+        $tpl = "?main=6&db=$db&dt=";
+        $act = (int)!$sky->_6;
+        $TOP = a('Summary', $tpl, $sky->_6 ? '' : 'class="active"');
+        $TOP .= '<b style="margin:0 10px 0 30px">Migrations:</b> ';
+        $out = $sel = [];
+        if ($list = Plan::mem_b(['main', "migration_*_$db.sql"])) {
+            $list = array_reverse($list);
+            array_walk($list, function($v) use (&$TOP, &$sel, $tpl, $sky, &$act) {
+                static $i = 0;
+                //list($year, $month, $day) = sscanf(substr($v, -14, 10), "%d-%d-%d");
+                $d = date('j M Y', $ts = strtotime(substr(basename($v), 10, 10)));
+                if ($i++ < 3) {
+                    $TOP .= ' ' . a($d, $tpl . $ts, ($q = $ts == $sky->_6) ? 'class="active"' : '');
+                    $act |= (int)$q;
+                } else {
+                    $sel[$tpl . $ts] = $d;
+                }
             });
-            Admin::out($m, false);
+            if ($sel) {
+                $style = 'style="font-size:12px" onchange="location.href=$(this).val()"';
+                $sel = option(substr(URI, 4), [$tpl => '..other days'] + $sel);
+                $TOP .= a(tag($sel, $style, 'select'), '#', ($act ? '' : 'active ') . 'style="margin-left:30px;"');
+            }
         }
-        return ' ' . a('Migrations', "?main=6&");
+        if (!$sky->_6) {
+            $dd = SQL::open('main' == $db ? '' : $db);
+            Admin::out([
+                'Migrations days' => count($list),
+                'Last exec migration' => '',
+                'Tables' => count($dd->_tables()),
+            ], 0);
+        } else {
+            $out = explode("\n", unl(trim(Plan::mem_g('migration_' . date("Y-m-d", $sky->_6) . "_$db.sql"))));
+            $i = 0;
+            echo th(['#', 'SQL'], 'id="table"');
+            foreach ($out as $v)
+                echo td([[1 + $i, 'style="width:5%"'], '<pre>'.html(escape($v, true)).'</pre>'], eval(zebra));
+            echo '</table>';
+        }
+        return $TOP;
     }
 
     static function start() {

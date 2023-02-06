@@ -113,8 +113,9 @@ class HEAVEN extends SKY
         $this->ghost or $this->tail_ghost();
 
         if (SKY::$debug) { # render tracing in the layout
+            $z_err = DEV ? Debug::z_err($this->fly) : '';
             echo tag('<h1>Tracing</h1>' . tag($this->tracing('', false), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"');
-            echo tag($z_err = Debug::z_err(), 'id="trace-x" x="' . ($z_err ? 1 : 0) . '" style="display:none"');
+            echo tag($z_err, 'id="trace-x" x="' . ($z_err ? 1 : 0) . '" style="display:none"');
             if (DEV && (SKY::$errors[0] || $z_err))
                 echo js('sky.err_t = 1');
         }
@@ -130,23 +131,26 @@ class HEAVEN extends SKY
 
         if ($hs = headers_sent())
             $this->fly = HEAVEN::Z_FLY;
+        $msg = DEV ? Debug::z_err($this->fly, $this->was_error & SKY::ERR_DETECT) : '';
 
         if (HEAVEN::J_FLY == $this->fly) {
             http_response_code(200);
-            $ary = $this->ca_path ?: [];
-            if (DEV && ($msg = Debug::z_err()))
-                $ary = ['err_no' => 2];
-            if (!$ary && $this->error_no > 99) {
+            $ary = false;
+            if ($msg) {
+                $ary = ['err_no' => 1];
+            } elseif ($this->ca_path) {
+                $ary = ['err_no' => 1] + $this->ca_path;
+            } elseif ($this->error_no > 99) {
                 $ary = ['err_no' => $this->error_no, 'exit' => $exit];
                 $msg = $exit ? view("_std._$this->error_no", $ary + ['stdout' => $stdout]) : $stdout;
+            } elseif (DEV && SKY::$debug && SKY::$errors[0]) {
+                $ary = ['err_no' => 1];
+                $msg = $exit ? '' : Debug::check_other();
+                $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 500)) . '</pre>';
             }
-            if ($ary || SKY::$debug && SKY::$errors[0]) {
-                if (!$ary) {
-                    $msg = $exit ? '' : Debug::check_other();
-                    $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 500)) . '</pre>';
-                }
-                $out = json(['catch_error' => $msg ?? ''] + $ary + ['err_no' => 1], true);
-                $stdout = $out ?: json_encode(['catch_error' => '<h1>See X-tracing</h1>']);
+            if ($ary) {
+                if (!$stdout = json($ary + ['catch_error' => $msg], true))
+                    $stdout = json_encode(['err_no' => $this->error_no, 'exit' => $exit, 'catch_error' => '<h1>See X-tracing</h1>']);
             }
         } elseif ($exit && !$hs) {
             http_response_code($exit);
@@ -154,7 +158,7 @@ class HEAVEN extends SKY
 #        if (DEV)
  #           $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
         if (SKY::$debug) {
-            trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars:');
+            trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars');
             $this->tracing("Exit with $exit.$this->error_no\n"); # write X-tracing
         }
         echo $stdout; # send to browser
@@ -163,6 +167,95 @@ class HEAVEN extends SKY
             SQL::close(); # end of script
         $this->tailed = true;
         exit;
+    }
+
+    function shutdown($web = false) {
+        global $user;
+        $toggle = false; # always on PROD
+        if (!$this->tailed) {
+            if (isset($user))
+                $user->flag(USER::NOT_TAILED, 1);
+            if (DEV && !$this->fly)
+                SKY::d('tracing_toggle', $toggle = 1 - (int)$this->d_tracing_toggle);
+                # PHP bug: SKY::d('tracing_toggle') always return NULL from here
+        }
+
+        parent::shutdown(function ($err, $func) use ($user, $toggle) {
+            $is_x = DEV ? !Debug::z_err($this->fly, $this->was_error & SKY::ERR_DETECT, $this->fly || $this->tailed) : true;
+
+            if ($this->tailed) {
+                if (SKY::$debug && is_string($this->tailed))
+                    $this->tracing($this->tailed);
+            } else {
+                $title = $h1 = $this->except['title'] ?? ($err ?: 'die');
+                if (!$exit = $func($err)) { # for exit, die. sky->open =OK after error
+                    trace([$h1 = 'Unexpected Exit', $h1], true, 3);
+                    $this->error_no = 12;
+                    $exit = $this->s_error_403 ? 403 : 404; # exit err code
+                }
+                # save to Crash log
+                if (($dd = SKY::$dd) && $this->s_log_crash) {
+                    $str = NOW . "[$this->error_no] $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . $title . ', ';
+                    $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
+                    sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
+                }
+
+                $hs = headers_sent();
+                if (!$hs && 12 == $this->error_no && $this->s_empty_die) # tracing not saved!
+                    return http_response_code($exit); # no response
+
+                if ($this->fly)
+                    $this->tail_x($exit); # exit at the end
+                # else crash for $sky->fly == 0
+
+                $http_code = $exit > 99 ? $exit : 404; # http code
+                $redirect = '';
+                $this->k_refresh = '';
+
+                if ($hs) { # try redirect
+                    $redirect = '--></script></style>';
+                    $to = PATH . "_crash?$http_code";
+                    if (DEV) {
+                        $redirect .= tag('Headers sent, redirect to: ' . a($to, $to) . '. Wait 3 sec', '', 'h1');
+                        $this->k_refresh = "3!$to";
+                    } else {
+                        $redirect .= js("document.location.href='$to'");
+                        $this->k_refresh = "0!$to";
+                    }
+                } else {
+                    http_response_code($http_code);# 503 -Service Unavailable
+                    if (Plan::mem_t('error.html')) {
+                        if ($is_x && SKY::$debug)
+                            $this->tracing("Fatal exit with $exit.$this->error_no\n");
+                        Plan::mem_r('error.html');
+                        SQL::close();
+                        exit;
+                    }
+                }
+
+                for ($stdout = $tracing = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
+                if (SKY::$debug) {
+                    if (!$is_x) {
+                        $toggle = true; # Z-err on DEV only
+                        $tracing .= "<h1>See Z-error first</h1>" . js('sky.err_t = 1');
+                        $this->k_refresh = '';
+                        if ($hs)
+                            $redirect = '--></script></style>'; # cancel redirect
+                    } // SKY::$errors ??
+                    $tracing .= "<h1>$h1</h1>" . tag($this->tracing("Fatal exit with $exit.$this->error_no\n", $is_x), 'class="trace"', 'pre');
+                    $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
+                }
+                $this->k_static = [[], [], []]; # skip app css and js files
+                $vars = MVC::jet('__std.crash');
+                $vars += [
+                    'redirect' => $redirect,
+                    'no' => $http_code,
+                    'tracing' => $toggle ? $tracing : '',
+                ];
+                view(false, Plan::$parsed_fn, $vars);
+            }
+        });
+        SQL::close();
     }
 
     function tracing($top = '', $is_x = true) {
@@ -181,82 +274,6 @@ class HEAVEN extends SKY
             }
         }
         return parent::tracing($top, $is_x);
-    }
-
-    function shutdown($web = false) {
-        global $user;
-        if (!$this->tailed && isset($user))
-            $user->flag(USER::NOT_TAILED, 1);
-
-        parent::shutdown(function ($err, $func) use ($user) {
-            if (DEV && HEAVEN::Z_FLY == $this->fly)
-                Debug::z_err($this->was_error & SKY::ERR_DETECT);
-
-            if ($this->tailed) {
-                if (SKY::$debug && is_string($this->tailed))
-                    $this->tracing($this->tailed);
-            } else {
-                # save to Crash log
-                $title = $h1 = $this->except['title'] ?? ($err ?: 'die');
-                if (!$exit = $func($err)) { # for exit, die. sky->open =OK after error
-                    trace([$h1 = 'Unexpected Exit', $h1], true, 3);
-                    $this->error_no = 12;
-                    $exit = $this->s_error_403 ? 403 : 404; # exit err code
-                }
-                if (($dd = SKY::$dd) && $this->s_log_crash) {
-                    $str = NOW . "[$this->error_no] $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . $title . ', ';
-                    $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
-                    sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=11', "$str\n");
-                }
-
-                $hs = headers_sent();
-                if (!$hs && 12 == $this->error_no && $this->s_empty_die)
-                    return http_response_code($exit); # no response
-
-                if ($this->fly)
-                    $this->tail_x($exit); # exit at the end
-                # else crash for $sky->fly == 0
-
-                $http_code = $exit > 99 ? $exit : 404; # http code
-                $has_err_file = Plan::mem_t('error.html');
-                $this->k_refresh = false;
-
-                if ($hs) { # try redirect
-                    $redirect = '--></script></style>';
-                    $to = PATH . "_crash?$http_code";
-                    if (DEV) {
-                        $redirect .= tag('Headers sent, redirect to: ' . a($to, $to) . '. Wait 3 sec', '', 'h1');
-                        $this->k_refresh = "3!$to";
-                    } else {
-                        $redirect .= js("document.location.href='$to'");
-                        $this->k_refresh = "0!$to";
-                    }
-                } else {
-                    http_response_code($http_code);# 503 -Service Unavailable
-                    if ($has_err_file) {
-                        Plan::mem_r('error.html');
-                        SQL::close();
-                        exit;
-                    }
-                }
-
-                for ($stdout = $tracing = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
-                if (SKY::$debug || DEV) { /* SKY::$errors . */
-                    $tracing .= "<h1>$h1</h1>" . tag($this->tracing("Fatal exit with $exit.$this->error_no\n"), 'id="trace"', 'pre');
-                    $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
-                }
-
-                $this->k_static = [[], [], []]; # skip app css and js files
-                $vars = MVC::jet('__std.crash');
-                $vars += [
-                    'redirect' => $redirect ?? '',
-                    'no' => $http_code,
-                    'tracing' => $tracing,
-                ];
-                view(false, Plan::$parsed_fn, $vars);
-            }
-        });
-        SQL::close();
     }
 }
 
