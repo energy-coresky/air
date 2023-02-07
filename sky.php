@@ -91,12 +91,8 @@ class SKY implements PARADISE
     function open($msg = 'OK') {
         if (SKY::$dd || SKY::$dd === false)
             return false;
-        try {
-            SKY::$dd = SQL::open();
-        } catch (Error $e) {
-            SKY::$dd = false;
-            throw new Error($e->getMessage());
-        }
+        SKY::$dd = false; # let stay false if thrown
+        SKY::$dd = SQL::open();
 
         $this->memory(3, 's');
         $this->log_error = $this->s_log_error or SKY::$debug or ini_set('error_reporting', 0);

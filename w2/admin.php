@@ -2,10 +2,7 @@
 
 function pad($n = 3) {
     return str_repeat(' &nbsp;', $n);
-}
-
-function pad00($str, $n = 2) {
-    return str_pad($str, $n, 0, STR_PAD_LEFT);
+    //return str_pad($str, $n, 0, STR_PAD_LEFT); pad00($str, $n = 2)
 }
 
 class Admin

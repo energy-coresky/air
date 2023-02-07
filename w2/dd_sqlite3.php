@@ -20,11 +20,11 @@ class dd_sqlite3 implements Database_driver
     function info() {
         $d = array_map(function($k) {
             $struct = $this->_struct($k);
-            return ['Columns' => implode(",<br>", array_map(function($v) {
+            return ['Columns' => pre(implode(",\n", array_map(function($v) {
                 return $v[2];
-            }, $struct))];
+            }, $struct)))];
         }, $tables = $this->_tables());
-        $ary = [    
+        $ary = [
             'name' => $this->name,
             'version' => SQLite3::version()['versionString'],
             'charset' => $this->sqlf('+pragma encoding'),

@@ -480,14 +480,15 @@ class Root
             }
         }
         if (!$sky->_6) {
-            $dd = false;
             $DSN = SKY::$databases[$db]['dsn'] ?? ($db ? '' : (SKY::$databases['dsn'] ?? ''))
                 or $DSN = sprintf(span_g, 'DSN erased at that point');
             if (!DEV)
                 $DSN = sprintf(span_r, 'Production');
             try {
                 $dd = SQL::open($db = 'main' == $db ? '' : $db);
-            } catch (Throwable $e) {}
+            } catch (Throwable $e) {
+                $dd = false;
+            }
             if ($dd) {
                 $info = $dd->info();
                 Admin::out([

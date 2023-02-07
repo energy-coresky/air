@@ -235,6 +235,8 @@ class HEAVEN extends SKY
 
                 for ($stdout = $tracing = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
                 if (SKY::$debug) {
+                    if ($this->dev)
+                        $toggle = true; # for dev-tools
                     if (!$is_x) {
                         $toggle = true; # Z-err on DEV only
                         $tracing .= "<h1>See Z-error first</h1>" . js('sky.err_t = 1');
@@ -536,6 +538,10 @@ function css($x = '') {
     foreach ($x as $src)
         $css .= '<link rel="stylesheet" href="' . ('~' == $src[0] ? PATH . substr($src, 2) . $pf : $src) . '" />';
     return $css;
+}
+
+function pre($in, $x = 'class="code"') {
+    return tag($in, $x, 'pre');
 }
 
 function tag($in, $x = 'class="fr"', $tag = 'div') {
