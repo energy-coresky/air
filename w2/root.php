@@ -99,9 +99,9 @@ class Root
     static function _overview($i) {
         global $sky;
 
-        $menu = ['Summary', 'Constants', 'Functions', 'Classes', 'Other'];
+        $menu = ['Summary', 'Constants', 'Functions', 'Classes', 'Other', 'License', 'Readme'];
         $top = menu($i, $menu);
-        $ml = 'style="margin-left:55px;"';
+        $ml = 'style="margin-left:35px;"';
         $tpl = '<span ' . $ml . '><u>Extension</u></span> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
         $priv = tag('<input ' . ($sky->d_pp ? 'checked ' : '') . $ml . ' type="checkbox" onchange="sky.d.pp(this)"> show private & protected', '', 'label');
         $ext = get_loaded_extensions();
@@ -208,6 +208,14 @@ class Root
                         . '/' . count($e->getClassNames()) . '&nbsp;') . " $v ";
                 }, $ext), 'e');
                 $top .= $priv;
+                break;
+            case 'License': $fn = '/LICENSE';
+            case 'Readme':
+                //$fn = $menu[$i] == 'Readme';
+                $file = file_get_contents(DIR_S . ($fn ?? '/README.md'));
+                echo isset(SKY::$plans['main']['class']['Parsedown'])
+                    ? (new Parsedown)->text($file)
+                    : pre($file);
                 break;
         }
         return $top;
@@ -516,7 +524,7 @@ class Root
             $i = 0;
             echo th(['#', 'SQL'], 'id="table"');
             foreach ($out as $v)
-                echo td([[1 + $i, 'style="width:5%"'], '<pre>'.html(escape($v, true)).'</pre>'], eval(zebra));
+                echo td([[1 + $i, 'style="width:5%"'], pre(html(escape($v, true)))], eval(zebra));
             echo '</table>';
         }
         return $TOP;
