@@ -95,7 +95,7 @@ class Jet
         Jet::$top .= "extract(\$_vars, EXTR_REFS) ?>";
         if (DEV) {
             Jet::$top .= "<?php\ntrace('TPL: $list'); MVC::in_tpl(true);";           //////////??????????????????
-            Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || HEAVEN::J_FLY == $sky->fly && !$sky->is_sub))';
+            Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || HEAVEN::J_FLY == $sky->fly && !$sky->no))';
             Jet::$top .= "\nthrow new Error('Return status do not match for file: ' . __FILE__) ?>";
         }
         array_walk_recursive($this->parsed, function ($str, $id) use (&$out) {

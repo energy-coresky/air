@@ -21,12 +21,12 @@ function view($_in, $_return = false, &$_vars = null) {
         if (DEV && !$layout)
             DEV::vars(['$' => $mvc->ob], $mvc->no);
     }
-    trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->is_sub ? 'SUB-VIEW' : 'TOP-VIEW', 1);
+    trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->no ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 
     global $sky;
     if ($layout || $mvc->body)
         $mvc->ob = view(false, 0, MVC::jet($mvc, $layout));
-    if ($mvc->is_sub)
+    if ($mvc->no)
         return $mvc->return ? $mvc->ob : null;
     if ($sky->fly || !$layout)
         $sky->tail_x(0, $mvc->ob); # tail_x ended with "exit"
@@ -144,14 +144,6 @@ abstract class Model_t extends Model_m
     function delete($rule = null) {
         return $this->sql(1, 'delete from $_ $$', $this->where($rule));
     }
-
-    function _list($ipp = 0) { # items per page
-        if ($ipp) {
-            list ($limit, $pages, $cnt) = pagination($ipp);
-            return ['query' => $this->sql(1, 'select * from $_ limit $., $.', $limit, $ipp), 'pages' => $pages, 'cnt' => $cnt];
-        }
-        return ['query' => $q = $this->sql(1, 'select * from $_'), 'pages' => false, 'cnt' => $q->_dd->_rows_count($this->table)];
-    }
 }
 
 class Controller extends MVC_BASE
@@ -263,7 +255,6 @@ class MVC extends MVC_BASE
     public $_v = []; # body vars
     public $body = '';
     public $ob;
-    public $is_sub;
     public $return;
     public $hnd;
     public $no;
@@ -276,11 +267,10 @@ class MVC extends MVC_BASE
     static $ctrl;
     static $tpl = '_std';
 
-    function __construct($is_sub = false) {
+    function __construct() {
         static $no = 0;
         $this->no = $no++;
         MVC::$stack[] = $this;
-        $this->is_sub = $is_sub;
     }
 
     static function in_tpl($bool = null) {
@@ -336,7 +326,7 @@ class MVC extends MVC_BASE
             $vars['sky'] = $sky;
         } else {
             $name = "_$mvc->body";
-            $mvc->is_sub or MVC::vars($vars, MVC::$_y, 'y_');
+            $mvc->no or MVC::vars($vars, MVC::$_y, 'y_');
             MVC::vars($vars, $mvc->_v);
             $vars['sky'] = $mvc;
         }
@@ -444,7 +434,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
 
     static function sub(&$action, $param = null, $no_handle = false) {
         global $sky;
-        $me = new MVC(true);
+        $me = new MVC;
         ob_start();
         if (is_string($action)) {
             if (DEV && $sky->s_red_label && 'r_' == substr($action, 0, 2)) {
@@ -546,7 +536,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         if ($gape) {
             $param = (array)call_user_func([$gape, $action], $sky, $user);
             if (DEV && 71 == $sky->error_no) { # gate error
-                $me->body = $me->return ? '' : '_std.lock';
+                $me->body = $sky->fly ? '' : '_std.lock';
                 $sky->ca_path = ['ctrl' => $class, 'func' => $action];
             }
         }

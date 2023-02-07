@@ -480,12 +480,36 @@ class Root
             }
         }
         if (!$sky->_6) {
-            $dd = SQL::open('main' == $db ? '' : $db);
-            Admin::out([
-                'Migrations days' => count($list),
-                'Last exec migration' => '',
-                'Tables' => count($dd->_tables()),
-            ], 0);
+            $dd = false;
+            $DSN = SKY::$databases[$db]['dsn'] ?? ($db ? '' : (SKY::$databases['dsn'] ?? ''))
+                or $DSN = sprintf(span_g, 'DSN erased at that point');
+            if (!DEV)
+                $DSN = sprintf(span_r, 'Production');
+            try {
+                $dd = SQL::open($db = 'main' == $db ? '' : $db);
+            } catch (Throwable $e) {}
+            if ($dd) {
+                $info = $dd->info();
+                Admin::out([
+                    'Server' => 'Version: ' . $info['version'] . ', Charset: ' . $info['charset'],
+                    'Driver, DSN' => "$dd->name, $DSN",
+                    'Table\'s prefix' => $dd->pref ?: sprintf(span_g, 'no prefix'),
+                    'Tables count' => count($info['tables']),
+                    'Migrations days' => count($list),
+                    'Last exec migration' => '',
+                ], 0);
+                if (!$list = $info['tables']) {
+                    echo '<h1>No tables in this database</h1>';
+                } else {
+                    $i = 0;
+                    echo th([-2 => '##', -1 => 'Table'] + array_keys(current($list)), 'id="table"');
+                    foreach ($list as $k => $v)
+                        echo td([-1 => [1 + $i, 'style="width:5%"'], -2 => $k] + array_values($v), eval(zebra));
+                    echo '</table>';
+                }
+            } else {
+                echo "<h1>Can't connect to the database. DSN: $DSN</h1>";
+            }
         } else {
             $out = explode("\n", unl(trim(Plan::mem_g('migration_' . date("Y-m-d", $sky->_6) . "_$db.sql"))));
             $i = 0;

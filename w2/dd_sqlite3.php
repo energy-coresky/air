@@ -18,12 +18,18 @@ class dd_sqlite3 implements Database_driver
     }
 
     function info() {
-        $ary = [
+        $d = array_map(function($k) {
+            $struct = $this->_struct($k);
+            return ['Columns' => implode(",<br>", array_map(function($v) {
+                return $v[2];
+            }, $struct))];
+        }, $tables = $this->_tables());
+        $ary = [    
             'name' => $this->name,
             'version' => SQLite3::version()['versionString'],
-            'charset' => sql('+pragma encoding'),
+            'charset' => $this->sqlf('+pragma encoding'),
         ];
-        return $ary + ['str' => implode(', ', $ary)];
+        return $ary + ['str' => implode(', ', $ary)] + ['tables' => array_combine($tables, $d)];
     }
 
     function close() {

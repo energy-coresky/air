@@ -24,7 +24,7 @@ class dd_ibase implements Database_driver
             'version' => '',///////
             'charset' => '',///////////
         ];
-        return $ary + ['str' => implode(', ', $ary)];
+        return $ary + ['str' => implode(', ', $ary)] + ['tables' => []];
     }
 
     function close() {

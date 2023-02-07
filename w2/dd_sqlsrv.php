@@ -25,7 +25,7 @@ class dd_sqlsrv implements Database_driver
             'version' => sqlf('+select version()'),
             'charset' => mysqli_character_set_name($this->conn),
         ];
-        return $ary + ['str' => implode(', ', $ary)];
+        return $ary + ['str' => implode(', ', $ary)] + ['tables' => []];
     }
 
     function close() {

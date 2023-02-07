@@ -5,6 +5,7 @@ class dd_mysqli implements Database_driver
     use SQL_COMMON;
 
     public $name = 'MySQLi';
+    public $dbname = '';
     public $quote = '`';
     public $conn;
     public $pref;
@@ -14,6 +15,7 @@ class dd_mysqli implements Database_driver
             throw new Error('Function mysqli_init() not exists');
         $this->conn = mysqli_init();
         list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
+        $this->dbname = $dbname;
         mysqli_real_connect($this->conn, $host, $user, $pass, $dbname);
         $this->pref = $pref;
     }
@@ -24,7 +26,7 @@ class dd_mysqli implements Database_driver
             'version' => $this->sqlf('+select version()'),
             'charset' => mysqli_character_set_name($this->conn),
         ];
-        return $ary + ['str' => implode(', ', $ary)];
+        return $ary + ['str' => implode(', ', $ary)] + ['tables' => $this->sqlf("%show table status from `$this->dbname`")];
     }
 
     function close() {
