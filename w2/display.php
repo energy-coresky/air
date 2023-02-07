@@ -94,7 +94,7 @@ class Display
                 return 'jet' == $m[1] ? Display::jet(unhtml($m[2]), '-', true) : tag(html($m[2]), '', 'pre');
             }, $text);
         };
-        if (isset(SKY::$plans['main']['class']['Parsedown'])) {
+        if (Plan::has_class('Parsedown')) {
             $md = new Parsedown;
             return $code($md->text($text), '<pre><code class="language\-(jet|php)">(.*?)</code></pre>');
         }

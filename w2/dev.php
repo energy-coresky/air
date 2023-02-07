@@ -408,7 +408,7 @@ class DEV
             if ('' == $required[0])
                 array_shift($required);
             foreach ($required as $class) {
-                if (!class_exists($class, false) && !isset(SKY::$plans['main']['class'][$class]))
+                if (!class_exists($class, false) && !Plan::has_class($class))
                     return print("Class `$class` not found");
             }
             $name = basename($dir);

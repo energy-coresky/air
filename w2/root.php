@@ -213,9 +213,7 @@ class Root
             case 'Readme':
                 //$fn = $menu[$i] == 'Readme';
                 $file = file_get_contents(DIR_S . ($fn ?? '/README.md'));
-                echo isset(SKY::$plans['main']['class']['Parsedown'])
-                    ? (new Parsedown)->text($file)
-                    : pre($file);
+                echo Plan::has_class('Parsedown') ? (new Parsedown)->text($file) : pre($file);
                 break;
         }
         return $top;

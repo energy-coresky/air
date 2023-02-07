@@ -34,6 +34,10 @@ class Plan
         return $prev;
     }
 
+    static function has_class($class) {
+        return isset(SKY::$plans['main']['class'][$class]);
+    }
+
     static function vendor($class = false) {
         static $vendor = false;
         if ($class && $vendor) {
