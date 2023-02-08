@@ -37,7 +37,13 @@ echo $redirect;
     <a href="javascript:;" onclick="history.back()">{{$p_prev}}</a>
     @if($ru) или@else or~if
     <a href="{!PATH!}">{{$p_main}}</a>
-    @if(DEV)or <a @href(dev('_trace/1'))>open X-Tracing</a>~if
+    @if(DEV && !$sky->last_ware)
+        or <a @href(dev('_trace/1'))>open X-Tracing</a>
+    @elseif(DEV)
+        or this link
+        <input value="_{{$sky->last_ware}}?ware" size="33"/>
+        <input type="button" onclick="location.href = $(this).prev().val()" value="Open"/>
+    ~if
     @if(!$tracing)</div>~if
     <p><div id="trace-t">{!$tracing!}</div></p>
     <div id="trace-x" x="1" style="display:none"></div>

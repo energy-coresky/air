@@ -171,7 +171,7 @@ class standard_c extends Controller
         if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
             define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
-            $this->d_last_ware = Plan::$ware = Plan::$view = $name;
+            $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
             //Plan::_r([$name, 'mvc/' . ($class = $name . '_c') . '.php']);
             Plan::_r('mvc/' . ($class = $name . '_c') . '.php');
             MVC::$cc = MVC::$mc;

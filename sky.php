@@ -267,6 +267,8 @@ class SKY implements PARADISE
         define('span_r', '<span style="color:red">%s</span>');
         define('span_g', '<span style="color:#2b3">%s</span>');
         define('span_b', '<span style="color:blue">%s</span>');
+        define('span_m', '<span style="color:#93c">%s</span>');
+        define('span_y', '<span style="color:#990">%s</span>');
         define('RE_LOGIN', '/^[a-z][a-z_\d]{1,19}$/i');
         define('RE_PASSW', '/^\S{3,15}$/');
         define('RE_EMAIL', '/^([\w\-]+\.)*[\w\-]+@([\w\-]+\.)+[a-z]{2,7}$/i');

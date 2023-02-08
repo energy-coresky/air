@@ -146,7 +146,8 @@ class HEAVEN extends SKY
             } elseif (DEV && SKY::$debug && SKY::$errors[0]) {
                 $ary = ['err_no' => 1];
                 $msg = $exit ? '' : Debug::check_other();
-                $msg .= "<h1>Stdout, depth=$depth</h1><pre>" . html(mb_substr($stdout, 0, 500)) . '</pre>';
+                $out = '' === $stdout ? sprintf(span_m, 'EMPTY STRING') : html(mb_substr($stdout, 0, 500));
+                $msg .= "<h1>Stdout, depth=$depth</h1><pre>$out</pre>";
             }
             if ($ary) {
                 if (!$stdout = json($ary + ['catch_error' => $msg], true))
@@ -235,7 +236,7 @@ class HEAVEN extends SKY
 
                 for ($stdout = $tracing = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
                 if (SKY::$debug) {
-                    if ($this->dev)
+                    if ('__dev.layout' == MVC::$layout)
                         $toggle = true; # for dev-tools
                     if (!$is_x) {
                         $toggle = true; # Z-err on DEV only
@@ -477,6 +478,14 @@ function unjson($in, $assoc = false) {
         trace("unjson() error=$err, in=$in", true);
     }
     return $out;
+}
+
+function get($addr, $headers = '') {
+    $response = file_get_contents($addr, false, stream_context_create(['http' => [
+        'method' => "GET",
+        'header' => "User-Agent: Coresky\r\n$headers",
+    ]]));
+    return $response ? unjson($response, true) : false;
 }
 
 function api($addr, $in) {

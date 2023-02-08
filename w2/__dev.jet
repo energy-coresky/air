@@ -1,8 +1,10 @@
 #.jet core template
 
 #._ errors for dev-tools
-<h1>Error {{$sky->error_no}}</h1>
+<h1>Error-no {{$sky->error_no}}, Exit {{$exit ?? 0}}</h1>
 <pre>{!$tracing ?? ''!}</pre>
+<h1>Stdout</h1>
+<pre>{!isset($stdout) ? html($stdout) : sprintf(span_m, 'Var $stdout not set') !}</pre>
 #._ magic marker used !
 
 
@@ -210,7 +212,7 @@ $(function() {
 
 <div id="v-menu">
 #if('_trace'!=:0)
-    <div class="other-task" style="position:sticky; top:0px">Tasks</div>
+    <div class="other-task" style="position:sticky; top:0px">Tool box</div>
     @loop($y_tasks as $uri => $name)
         <a href="{{$uri}}"@active($sky->_0 == explode('?', $uri)[0] && !in_array($sky->_1, ['view', 'ware']))>{{$name}}</a>
         @if('_gate' == $uri)@block(`` as m_gate)

@@ -6,7 +6,11 @@ class Vendor
     }
 
     function c_md() {
-        echo tag(Display::md(file_get_contents($_POST['fn'])), 'style="padding-left:10px"');
+        if ('https://' == substr($fn = $_POST['fn'], 0, 8)) {
+            $ary = get($fn);
+            $fn = $ary['download_url'];
+        }
+        echo tag(Display::md(file_get_contents($fn)), 'style="padding-left:10px"');
         return true;
     }
 
@@ -16,10 +20,23 @@ class Vendor
         return true;
     }
 
-    function c_detail($name = false) {
+    function c_detail($name = false, $repo = false) {
         $return = $name or $name = $_POST['n'];
+        $repo or $repo = $_POST['r'];
            //$one = file_get_contents("https://packagist.org/packages/$name.json");
         $response = file_get_contents("https://repo.packagist.org/p2/$name.json");
+
+        $docs = [];
+        if ($repo && 'https://github.com/' == substr($repo, 0, 19)) {
+            $ghname = substr($repo, 19);
+            //https://raw.githubusercontent.com/$name/master/README.md
+            $ary = get("https://api.github.com/repos/$ghname/contents");
+            foreach ($ary as $one)
+                if ('LICENSE' == $one['name'] || '.md' == substr($one['name'], -3))
+                    $docs[$one['name']] = $one['url'];
+            //trace($docs);
+        }
+
         $tags = function ($a) {
             return implode('', array_map(function ($v) {
                 return '<div class="tags" onclick="sky.d.vend(1,\'' . $v . '\')">' . "$v</div>";
@@ -57,6 +74,8 @@ class Vendor
             'authors' => $last ? $authors($last->authors) : '-',
             'vendors' => array_diff(array_map('basename', glob('vendor/*')), $skip),
             'mds' => $mds($name),
+            'docs' => $docs,
+            //Plan::has_class('Parsedown') ? (new Parsedown)->text($readme) : pre($readme)
         ]), 'tags' => $last ? $tags($last->keywords) : ''];
         return $return ? (object)$json : json($json);
     }
@@ -87,9 +106,9 @@ class Vendor
             'packages' => view('_vend.packages', [
                 'act_name' => $name,
                 'list' => $std->results,
-                'row' => $name ? $this->c_detail($name) : '',
                 'url' => $std->results[0]->url ?? '',
-                'repo' => $std->results[0]->repository ?? '',
+                'repo' => $repo = $std->results[0]->repository ?? '',
+                'row' => $name ? $this->c_detail($name, $repo) : '',
             ]),
             'raw' => tag(print_r($std,1), '', 'pre'),
         ]);
