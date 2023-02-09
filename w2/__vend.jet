@@ -65,6 +65,8 @@
         <a @href(sky.d.md('{{$url}}'))>{{$name}}</a><br>
       ~loop
     </div>
+    <button onclick="sky.d.toggle()">Toggle</button>
+    <div id="vr-toggle" style="display:none"></div>
 #else{!$row->html!}#end
 #.detail
     </div>
@@ -90,6 +92,11 @@
 <script>
 sky.d.act = 0;
 sky.d.packs = [];
+sky.d.toggle = function() {
+    var html = $('#vr-toggle').html();
+    if (html)
+        $('div#vend-pk > div:eq(0) > div:eq(1)').html(html);
+};
 sky.d.vend = function(next, tag) {
     $('#f1 input:eq(0)').val(next);
     if (tag)
@@ -110,7 +117,10 @@ sky.d.exec = function(s, el) {
 };
 sky.d.md = function(fn) {
     ajax('md', {fn: fn}, function (r) {
-        $('div#vend-pk > div:eq(0) > div:eq(1)').html(r);
+        var el = $('div#vend-pk > div:eq(0) > div:eq(1)')
+        if ('' === $('#vr-toggle').html())
+            $('#vr-toggle').html(el.html())
+        el.html(r);
     });
 };
 sky.d.detail = function(el) {

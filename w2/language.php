@@ -46,7 +46,7 @@ class Language
 
     function __construct() {
         global $sky;
-        MVC::$cc->setLG_h();
+        common_c::langs_h();
 
         if (!$sky->d_lgt && '_lang?list' == URI)
             $sky->d_lgt = '_lgt';

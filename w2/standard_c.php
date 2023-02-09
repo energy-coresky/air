@@ -39,7 +39,6 @@ class standard_c extends Controller
             if (1 == $sky->method && '_trace' != $sky->_0 && 'view' != $sky->_1)
                 $sky->d_last_page = URI;
             $sky->k_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
-            defined('LINK') or define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             return $this->_y + [
                 'tx' => '_trace' == $sky->_0 ? $sky->_1 : 0,
                 'ware_dir' => '',
@@ -170,7 +169,6 @@ class standard_c extends Controller
         $x = $x[0];
         if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
-            define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
             $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
             //Plan::_r([$name, 'mvc/' . ($class = $name . '_c') . '.php']);
             Plan::_r('mvc/' . ($class = $name . '_c') . '.php');

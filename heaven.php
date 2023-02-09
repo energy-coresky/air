@@ -14,8 +14,6 @@ class HEAVEN extends SKY
     public $method;
     public $profiles = ['Anonymous', 'Root'];
     public $admins = 1; # root only has admin access or list pids in array
-    public $re;
-    public $sname = [];
     public $has_public = true; # web-site or CRM
     public $page_p = 'p';
     public $show_pdaxt = false;
@@ -41,18 +39,18 @@ class HEAVEN extends SKY
         global $sky;
         $sky = $this;
 
-        $this->ip = $_SERVER['REMOTE_ADDR'] ?? '';
         $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
         false !== $this->method or exit('request method');
-        define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
-        define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
-        define('SNAME', $_SERVER['SERVER_NAME']);
+        define('PROTO', isset($_SERVER['HTTPS']) ? 'https' : 'http');
+        define('DOMAIN', $_SERVER['SERVER_NAME']);
         define('PORT', 80 == $_SERVER['SERVER_PORT'] ? '' : ':' . $_SERVER['SERVER_PORT']);
-
+        define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
+        define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
+        define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
         header('Content-Type: text/html; charset=UTF-8');
 
         if (EXTRA && INPUT_GET == $this->method) {
-            $fn = "var/extra/" . SNAME . urlencode(URI) . '.html';
+            $fn = "var/extra/" . DOMAIN . urlencode(URI) . '.html';
             if (is_file($fn) && ($fh = @fopen($fn, 'r'))) {
                 for(; ob_get_level(); ob_end_clean());
                 fpassthru($fh);
@@ -63,12 +61,7 @@ class HEAVEN extends SKY
 
         parent::__construct(); # 9/7 classes at that point on DEV/Prod
 
-        $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
-        preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname) or exit('sname');
-
-        define('PROTO', isset($_SERVER['HTTPS']) ? 'https' : 'http');
-        define('DOMAIN', $this->sname[3]);
-
+        $this->ip = $_SERVER['REMOTE_ADDR'] ?? '';
         $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
         # use fetch with a_.. actions
         $this->is_front = true;
@@ -80,8 +73,7 @@ class HEAVEN extends SKY
         }
 
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
-        $this->re = "~^https?://$pref_lg_m" . preg_quote(DOMAIN . PATH);
-        $this->lref = preg_match("$this->re(.*)$~", $referer, $m) ? $m[3] : false;
+        $this->lref = preg_match('~^' . PROTO . '://' . preg_quote(DOMAIN . PATH) . '(.*)$~', $referer, $m) ? $m[1] : false;
         $this->eref = !$m ? $referer : false;
 
         if (SKY::$debug)
@@ -106,6 +98,14 @@ class HEAVEN extends SKY
         }
 
         MVC::top(); # 16/14 classes at that point on DEV/Prod
+    }
+
+    function domain(&$match_lg = null) {
+        if (!preg_match("/^([a-z]{2}\.)?(m\.)?(.*)$/", DOMAIN, $m))
+            throw new Error('User domain match');
+        $match_lg = in_array($m[1] = substr($m[1], 0, 2), $this->langs);
+        $this->is_mobile = (bool)$m[2];
+        return ['.' . $m[3]] + $m;
     }
 
     function tail_t() {

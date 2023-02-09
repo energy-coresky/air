@@ -358,7 +358,7 @@ class Root
                 ];
                 if (isset($_POST['extra'])) {
                     $html = file_get_contents($url = $_POST['extra']);
-                    $url = SNAME . urlencode($u = substr($url, strlen(LINK)));
+                    $url = DOMAIN . urlencode($u = substr($url, strlen(LINK)));
                     is_dir('var/extra') or mkdir('var/extra');
                     'main/error' == $u
                         ? Plan::mem_p(['main', 'error.html'], $html)

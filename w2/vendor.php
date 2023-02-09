@@ -34,7 +34,6 @@ class Vendor
             foreach ($ary as $one)
                 if ('LICENSE' == $one['name'] || '.md' == substr($one['name'], -3))
                     $docs[$one['name']] = $one['url'];
-            //trace($docs);
         }
 
         $tags = function ($a) {

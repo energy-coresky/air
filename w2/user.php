@@ -16,9 +16,12 @@ class USER
     const NO_JS = 64;
     const IS_BOT = 128;
     const NOT_TAILED = 1048576;
+    const POINT_LG = 1;
+    const POINT_M = 2;
 
     public $row = [];
     public $root = 0;
+    public $cookie_srv; # set to .exampl.net when use en.m.exampl.net domain
 
     protected $pretty;
 
@@ -42,9 +45,10 @@ class USER
         return call_user_func_array(['Rare', $name], $args);
     }
 
-    function __construct() {
+    function __construct($cookie_srv = '') {
         global $sky;
 
+        $this->cookie_srv = $cookie_srv;
         $ua = preg_replace("|[\r\n\t]+|", ' ', $_SERVER['HTTP_USER_AGENT'] ?? '');
         define('IS_BOT', (int)!preg_match("#firefox/|msie \d|opera/|safari/|chrome/#i", $ua));
         $hash = md5($sky->ip . $ua . ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
@@ -132,7 +136,7 @@ class USER
                 'uri'   => URI,
                 'flags' => (IS_BOT ? self::IS_BOT : 0) | ($_COOKIE ? 0 : self::NO_ANY_C) | ($this->pretty ? 0 : self::NO_PRETTY),
             ];
-            $lg = common_c::getLG_h();
+            $lg = $this->get_lg();
             $this->row = $ary + [
                 'vid' => 0,
                 'pid' => 0,
@@ -157,6 +161,14 @@ class USER
             trace($this->row, '$user->row');
     }
 
+    function get_lg() {
+        global $sky;
+
+        $locale = Locale::acceptFromHttp($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? DEFAULT_LG); # safe for \n & other
+        trace($locale, 'Best locale'); //2do: check all HTTP_ACCEPT_LANGUAGE locales list to match best in multilangs apps
+        return !$sky->langs ? $locale : Locale::lookup($sky->langs, $locale, true, in_array('en', $sky->langs) ? 'en' : DEFAULT_LG);
+    }
+
     function flag($flag = 0, $val = null, $char = 'v') {
         $storage =& SKY::$mem[$char][2]['flags'];
         if ($val == null)
@@ -164,16 +176,15 @@ class USER
         SKY::$char(null, ['flags' => $val ? $flag | $storage : ~$flag & $storage]);
     }
 
-    function cookize($cookie = false) {
+    private function cookize($cookie = false) {
         global $sky;
 
         if (!$cookie)
             for ($i = 0; sqlf('+select count(1) from $_visitors where sky=%s', $cookie = strand()); )
                 if (++$i > 99)
                     throw new Error(1);
-        $ttl = ceil(START_TS + I_YEAR * 3);
-        $srv = !$sky->sname[1] && !$sky->sname[2] ? '' : '.' . DOMAIN;
-        if (!setcookie($sky->s_c_name, $cookie, $ttl, PATH, $srv, false))
+        trace("name, PATH, srv = $sky->s_c_name, " . PATH . ", $this->cookie_srv", 'SET-COOKIE');
+        if (!setcookie($sky->s_c_name, $cookie, ceil(START_TS + I_YEAR * 3), PATH, $this->cookie_srv, false))
             throw new Error(2);
         return $cookie;
     }
