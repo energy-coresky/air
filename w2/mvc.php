@@ -236,6 +236,10 @@ trait HOOK
     static function langs_h() {
     }
 
+    static function user_h(&$lg = null) {
+        return new USER;
+    }
+
     static function dd_h($dd, $name = '') {
         if ('MySQLi' != $dd->name)
             return;

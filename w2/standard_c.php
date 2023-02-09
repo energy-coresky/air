@@ -17,7 +17,7 @@ class standard_c extends Controller
         }
         if (in_array($action, ['a_trace', 'j_trace', 'j_file', 'j_init'])) {
             $sky->open();
-            return $user = new USER;
+            return $user = common_c::user_h();
         }
         if (!DEV) {
             $this->_y = MVC::$layout = '';

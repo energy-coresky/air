@@ -81,6 +81,7 @@ class HEAVEN extends SKY
 
         require DIR_S . '/w2/mvc.php';
         Plan::app_r('mvc/common_c.php');
+        $cnt_s = 0;
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
             $cnt_s = count($this->surl);
@@ -94,8 +95,8 @@ class HEAVEN extends SKY
                     array_shift($_GET);
                 }
             }
-            common_c::rewrite_h($cnt_s, $this->surl);
         }
+        common_c::rewrite_h($cnt_s, $this->surl);
 
         MVC::top(); # 16/14 classes at that point on DEV/Prod
     }
