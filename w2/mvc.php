@@ -338,8 +338,8 @@ class MVC extends MVC_BASE
             $vars['sky'] = $mvc;
         }
         $fn = MVC::fn_parsed($layout, $name);
-        $ok = Plan::jet_tp($fn) && ($sky->s_jet_cact || !DEV);
-        if ($ok && (DEV || $sky->s_jet_prod)) { # this `if` can be skipped on the production by the config
+        $ok = Plan::jet_tp($fn) && (!DEV || $sky->d_jet_cache);
+        if ($ok && DEV) {
             list ($mtime, $files) = Plan::jet_mf($fn); # to get max speed (avoid mtime checking)
             foreach ($files as $one) {
                 $ok &= Plan::view_('m', "$one.jet") < $mtime; # check for file mtime
@@ -444,7 +444,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $me = new MVC;
         ob_start();
         if (is_string($action)) {
-            if (DEV && $sky->s_red_label && 'r_' == substr($action, 0, 2)) {
+            if (DEV && $sky->d_red_label && 'r_' == substr($action, 0, 2)) {
                 echo tag("view($action)", 'class="red_label"'); # show red label
                 $me->hnd = 'red-label';
             } else {

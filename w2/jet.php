@@ -574,7 +574,7 @@ class Jet
                 return $this->parsed[Jet::$id] .= '<?php echo $sky->ob ?>';
             $tpl = $this->body;
         } elseif (DEV && 'r_' == substr($tpl, 0, 2)) { # red label
-            $red = '<?php if ($sky->s_red_label): ?>' . tag("@inc($tpl)", 'class="red_label"');
+            $red = '<?php if ($sky->d_red_label): ?>' . tag("@inc($tpl)", 'class="red_label"');
             $this->parsed[Jet::$id] .= $red . '<?php else: ?>';
             $red = '<?php endif ?>';
         }

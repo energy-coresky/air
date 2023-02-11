@@ -134,7 +134,7 @@ class Rare
             if (isset($ary[$m[0]]))
                 return $ary[$m[0]];
             if ('R_' == substr($m[2], 0, 2)) {
-                if (DEV && $sky->s_red_label)
+                if (DEV && $sky->d_red_label)
                     return $ary[$m[0]] = tag($m[0], 'class="red_label"');
             }
             $label = strtolower('_' == $m[2][1] ? $m[2] : "x_$m[2]");

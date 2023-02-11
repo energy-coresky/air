@@ -3,7 +3,7 @@
 class Root
 {
     static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Databases'];
-    static $menu2 = [7 => 'Special', 'Log CRON', 'Log CRASH', 'Log ERROR'];
+    static $menu2 = [7 => 'Special', 'Log Cron', 'Log Crash', 'Log Error'];
     static $h4 = ['',
         'OVERVIEW SYSTEM INFORMATION',
         'PHP CORE INFORMATION',
@@ -68,6 +68,8 @@ class Root
             ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
             'static' => ['', '', 'size="50"'],
             'etc'  => ['Turn ON tracing for standard_c::a_etc()', 'chk'],
+            'red_label' => ['Red label', 'radio', ['Off', 'On']],
+            'jet_cache' => ['Jet cache', 'radio', ['Off', 'On']],
             ['Save', 'submit'],
         ];
         if (isset($_POST['app'])) {
@@ -283,7 +285,7 @@ class Root
 
         switch ($char) {
             case 's':
-                $form = Root::form_conf();
+                $form = Root::form_prod();
                 break;
             case 'a':
                 $form = [
@@ -307,7 +309,7 @@ class Root
         return $TOP;
     }
 
-    static function form_conf() {
+    static function form_prod() {
         return [
             '<fieldset><legend>Primary settings</legend>',
                 ['', [['<b><u>Production</u></b>', 'li']]],
@@ -315,9 +317,11 @@ class Root
                 'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
                 'error_403'     => ['Use 403 code for `die`', 'chk'],
                 'empty_die'     => ['Empty response for `die`', 'chk'],
-                ['Log ERROR', [
-                    'log_error'    => ['', 'radio', ['Off', 'On']],//crash_log prod_error quiet_eerr
-                    'log_crash'     => ['Log CRASH', 'radio', ['Off', 'On']],
+                'log_error'     => ['Log ERROR', 'radio', ['Off', 'On']],//crash_log prod_error quiet_eerr
+                'log_crash'     => ['Log CRASH', 'radio', ['Off', 'On']],
+                ['Hard cache', [
+                    'cache_act' => ['', 'radio', ['Off', 'On']],
+                    'cache_sec' => ['Default TTL, seconds', 'number', 'style="width:100px"', 300],
                 ]],
             '</fieldset>',
             '<fieldset><legend>Visitor\'s & users settings</legend>',
@@ -327,14 +331,6 @@ class Root
                 ]],
                 'visit'     => ['One visit break after, off minutes', 'number', '', 5],
                 'reg_req'   => ['Users required for registrations', 'radio', ['Both', 'Login', 'E-mail']],
-            '</fieldset>',
-            '<fieldset><legend>Cache & Jet settings</legend>',
-                ['Hard cache', [
-                    'cache_act' => ['', 'radio', ['Off', 'On']],
-                    'cache_sec' => ['Default TTL, seconds', 'number', 'style="width:100px"', 300],
-                ]],
-                'red_label' => ['Red label', 'radio', ['Off', 'On'], 1],
-                'jet_cact' => ['Jet cache', 'radio', ['Off', 'On'], 1],
             '</fieldset>',
         ];
     }
