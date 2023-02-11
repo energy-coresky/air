@@ -102,13 +102,7 @@
     ~if
     </div>
 </div>
-#.single.wares_memu ------------------------------------------------------------------------------
-    <br><div class="other-task">Wares</div>
-    <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse All..</a>
-    @loop($y_wares as $uri => $name)
-        <a href="{{$uri}}?ware"@active($uri == URI)>{{$name}}</a>
-    ~loop
-#.wares_memu
+#.single ------------------------------------------------------------------------------
 
 
 #.development //////////////////////////////////////////////////////////////////////////////
@@ -210,7 +204,19 @@ $(function() {
     <div style="width:144px">
     @loop($_ < 4)<a @href(sky.d.trace({{"$_,'$y_page'"}},this))@active($_ == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
     </div>
-    <div id="top-head" style="width:calc(100% - 380px)">@block(`` as header)</div>
+    <div id="top-head" style="width:calc(100% - 380px)">
+    @block(header)
+        <div class="fl"><span style="color:red;margin:0 10px;">See also</span>
+        <a href="{{PATH}}_dev?main=10">@inc(__lng.rar) Log Error</a>
+        <a href="{{PATH}}_gate">@inc(__lng.rar) SkyGate</a>
+        <a href="{{PATH}}_glob?report">@inc(__lng.rar) Globals Report</a>
+        </div>
+        <div style="display:inline-block; line-height:27px !important; padding:0 10px; background:
+            @if($sky->d_dev)#cfc">{{SKY::version()['app'][3]}}@else#ccf">TOOLS.DEV.SKY~if
+        </div>
+        <a href="{{PATH}}_dev?main=0" style="font-family:Verdana;color:{{SKY::d('err')?'red':'#1b1'}}">&#9668;</a>
+    ~block
+    </div>
     <div style="text-align:right; width:110px"><a @href(sky.d.close_box())>Esc - Close @inc(__img.x)</a></div>
 </div>
 
@@ -226,18 +232,23 @@ $(function() {
         @elseif('_dev' == explode('?', $uri)[0])@block(`` as m_dev)
         ~if
     ~loop
-    @if(in_array($sky->_0, ['_glob', '_lang', '_earth', '_mercury']) || 'view' == $sky->_1)
-        <a href="_dev?ware">Browse All Wares</a>
-    ~if
+    @block(`<a href="_dev?ware">Browse All Wares</a>` as all_wares)
     <a @href(var x=this;ajax('',function(r) { sky.d.drop_cache(r,x) },'_drop'))>Drop All Cache</a>
-    @block(.wares_memu as menu)
+    @block(menu)
+        @use(`` as all_wares)
+        <br><div class="other-task">Wares</div>
+        <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse All..</a>
+        @loop($y_wares as $uri => $name)
+            <a href="{{$uri}}?ware"@active($uri == URI)>{{$name}}</a>
+        ~loop
+    ~block
     <div id="dev-empty"></div>
 #end
 </div>
 
 <div id="v-body">
     <div style="display:table-cell; width:inherit;" id="dev-{{$y_page}}">@inc(*)</div>
-    @if('trace' != $y_page)<div style="display:none" id="dev-trace">{!$trace_x ?? ''!}</div>@else@use(.header)~if
+    @if('trace' != $y_page)<div style="display:none" id="dev-trace">{!$trace_x ?? ''!}</div>~if
 </div>
 
 <div id="v-tail">
@@ -265,18 +276,4 @@ $(function() {
 </div>
 </div>
 @tail</body></html>
-#.layout.header --------
-<div class="fl"><span style="color:red;margin:0 10px;">See also</span>
-<a href="{{PATH}}_dev?main=10">@inc(__lng.rar) Log Error</a>
-<a href="{{PATH}}_gate">@inc(__lng.rar) SkyGate</a>
-<a href="{{PATH}}_glob?report">@inc(__lng.rar) Globals Report</a>
-</div>
-@if($sky->d_dev)
-    <div style="display:inline-block;line-height:27px !important;background:#cfc; padding:0 10px">{{SKY::version()['app'][3]}}</div>
-@else
-    <div style="display:inline-block;line-height:27px !important;background:#ccf; padding:0 10px">TOOLS.DEV.SKY</div>
-~if
-<a href="{{PATH}}_dev?main=0" style="font-family:Verdana;color:{{SKY::d('err')?'red':'#1b1'}}">&#9668;</a>
-#.header
-
-
+#.layout
