@@ -3,7 +3,11 @@
 function e() {
     global $sky;
     $sky->error_no = 71;
-    trace(['Gate error in "' . MVC::instance()->hnd . '"', 'Gate error'], true, 1);
+    $mvc = MVC::instance();
+    $mvc->body = $sky->fly ? '' : '_std.e71';
+    list ($class, $action) = explode('::', substr($mvc->hnd, 0, -2));
+    $sky->ca_path = ['ctrl' => $class, 'func' => $action];
+    trace(["Gate error in $mvc->hnd", 'Gate error'], true, 1);
 }
 
 class DEV

@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = false;
 
-    const CORE = '0.307 2023-02-09T18:32:42+02:00 energy';
+    const CORE = '0.308 2023-02-11T16:58:18+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -114,7 +114,7 @@ class SKY implements PARADISE
             $dd or $dd = $this->open();
             if (!$dd)
                 return '';
-            
+
             list($dt, $imemo, $tmemo) = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
             SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id, 0, $dd);
             if (9 == $id && defined('WWW') && 'n' == $char)

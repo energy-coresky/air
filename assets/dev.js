@@ -82,7 +82,7 @@ sky.d.draw = {
     c: function(data, str) {
         str = '';
         const base = [
-            'Bolt', 'Controller', 'DEV', 'Debug', 'dc_file', 'Func', 'Gape', 'HEAVEN', 'MVC', 'MVC_BASE',
+            'Bolt', 'Controller', 'DEV', 'Debug', 'dc_file', 'Func', 'HEAVEN', 'MVC', 'MVC_BASE',
             'Model_m', 'Model_q', 'Model_t', 'Plan', 'SKY', 'SQL', 'Stop', 'USER', 'common_c', 'eVar',
             'PARADISE', 'Cache_driver', 'Database_driver', 'SQL_COMMON', 'HOOK', 'Hacker'
         ];

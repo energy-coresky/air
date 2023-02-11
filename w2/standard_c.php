@@ -11,6 +11,7 @@ class standard_c extends Controller
 
         if (in_array($action, ['a_crash', 'a_etc']))
             return;
+       $sky->eview = 'dev';
         if ('a_' == substr($action, 0, 2)) {
             $this->_y = ['page' => substr($action, 2)];
             MVC::$layout = '__dev.layout';
@@ -38,7 +39,7 @@ class standard_c extends Controller
         if ($this->_y) {
             if (1 == $sky->method && '_trace' != $sky->_0 && 'view' != $sky->_1)
                 $sky->d_last_page = URI;
-            $sky->k_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
+            $sky->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
             return $this->_y + [
                 'tx' => '_trace' == $sky->_0 ? $sky->_1 : 0,
                 'ware_dir' => '',
@@ -58,18 +59,18 @@ class standard_c extends Controller
     function a_crash() {
         global $sky;
         $sky->open();
-        $this->k_static = [[], [], []];
-        SKY::$debug = $tracing = 0;
+        SKY::$debug = $this->_static = 0;
+        $tracing = '';
         http_response_code($this->_1 ?: 404);
         if (DEV) {
             $x = (int)SKY::d('tracing_toggle');
-            $x or $tracing = tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre');
+            $x or $tracing = pre(sqlf('+select tmemo from $_memory where id=1'));
             SKY::d('tracing_toggle', 1 - $x);
         }
         return [
             'redirect' => '',
             'no' => $this->_1 ?: 404,
-            'tracing' => tag($tracing, 'class="trace"', 'pre'),
+            'tracing' => $tracing,
         ];
     }
 
@@ -169,7 +170,7 @@ class standard_c extends Controller
         $x = $x[0];
         if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
-            $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
+            $this->eview = $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
             //Plan::_r([$name, 'mvc/' . ($class = $name . '_c') . '.php']);
             Plan::_r('mvc/' . ($class = $name . '_c') . '.php');
             MVC::$cc = MVC::$mc;

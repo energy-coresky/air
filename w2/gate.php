@@ -93,7 +93,7 @@ class Gate
             return $list;
 
         $gape = DEV ? "trace('GATE: $dst_class, ' . (\$recompile ? 'recompiled' : 'used cached'));\n\n" : '';
-        $gape .= "class Gape extends Bolt\n{";
+        $gape .= "class {$dst_class}_G extends Bolt\n{";
 
         foreach ($list as $name => $pars) {
             $this->argc($pars);
@@ -101,13 +101,13 @@ class Gate
             $cmode = $this->contr_mode($dst_class, $name);
             $php = $this->code(Gate::$controller_data[$name], $cmode, false);
             $php = "\t\t" . str_replace("\n", "\n\t\t", substr($php, 0, -1)) . "\n";
-            $gape .= "\n\tfunction $name(\$sky, \$user) {\n$php\t}\n";
+            $gape .= "\n\tfunction $name() {\n$php\t}\n";
         }
 
         $content = Plan::_g([Plan::$gate, $src_fn]);
         if (!preg_match("/^<\?(php)?(.*?)class $dst_class extends(.+)$/s", $content, $match))
             throw new Error("File `$src_fn` must start from &lt;?");
-        return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_cached extends" . $match[3];
+        return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_R extends" . $match[3];
     }
 
     function contr_mode($class, $func) {
@@ -134,10 +134,10 @@ class Gate
         if (!$cnt_meth = count($meth))
             $errors .= "$this->_e # no HTTP methods defined\n";
         $eq0 = 1 == $cnt_meth
-            ? ["$meth[0] == \$sky->method"]
-            : ['in_array($sky->method, [' . implode(', ', $meth) . '])'];
+            ? ["$meth[0] == \$this->method"]
+            : ['in_array($this->method, [' . implode(', ', $meth) . '])'];
         if (Gate::AUTHORIZED & $flag)
-            $eq0[] = '$user->auth';
+            $eq0[] = '$this->auth';
         $is_post = in_array(0, $meth);
         if ($this->pfs_c = count($pfs))
             $is_post or $errors .= "$this->_e # no POST HTTP method selected\n";
@@ -186,7 +186,7 @@ class Gate
     }
 
     function comp_ary($opcnt, $sz, $s) {
-        $ary = ['s' => '$sky->surl', 'g' => '$_GET', 'p' => '$_POST'];
+        $ary = ['s' => '$this->surl', 'g' => '$_GET', 'p' => '$_POST'];
         if (-1 == $sz)
             return "!$ary[$s]";
         if ($opcnt)
@@ -304,7 +304,7 @@ class Gate
             if ($this->pfs_ends = $this->ends) {
                 $earg = implode(', ', array_pad(["false"], count($this->ends), "false"));
                 $start = $start ? "$start => " : '';
-                $php = "if (0 == \$sky->method) {\n$php\$post = [$start" . implode(', ', $this->ends) . "];";
+                $php = "if (0 == \$this->method) {\n$php\$post = [$start" . implode(', ', $this->ends) . "];";
                 $php = "\$post = [$start$earg];\n" . str_replace("\n", "\n\t", $php) . "\n}\n";
             }
             $this->ends = $tmp;
@@ -333,7 +333,7 @@ class Gate
         $int += substr_count($this->ns, '+');
         $sz = '_' == $name[1] ? $this->sz_ary : $this->sz_surl;
         if ($int >= $sz) {
-            $ary = ['s' => '$sky->surl', 'g' => '$_GET', 'p' => '$_POST'];
+            $ary = ['s' => '$this->surl', 'g' => '$_GET', 'p' => '$_POST'];
             $n = array_keys($ary)[$k = '_' != $name[1] ? 0 : ('G' == $name[2] ? 1 : 2)];
             if (!$this->opcnt[$k] && !$qreq && !$sz)
                 return $s ? "count($ary[$n]) > $s" : $ary[$n];
@@ -381,9 +381,9 @@ class Gate
         } else {
             $ary = '$_GET';
             if ($this->i - $skip <= 3 && !$this->ns)
-                return ['$sky->_' . ($this->i - $skip - 1), 3];
+                return ['$this->_' . ($this->i - $skip - 1), 3];
             if (!$this->start)
-                return ['$sky->surl[' . $this->comp_ns($this->i - 1 - $df) . ']', 0];
+                return ['$this->surl[' . $this->comp_ns($this->i - 1 - $df) . ']', 0];
         }
         if (!$k = $this->i - $this->start)
             return ["key($ary)", 2];
@@ -412,7 +412,7 @@ class Gate
             if ($b5)
                 $rb = false;
             $nsd = $this->i - 1 - $df;
-            if (!$this->start && $df && ($comp = $this->comp_ns($nsd, $qreq, '$sky->surl'))) {
+            if (!$this->start && $df && ($comp = $this->comp_ns($nsd, $qreq, '$this->surl'))) {
                 $out .= $ns ? "if ($comp)\n\t" : "$comp or $this->_e\n";
             }
             if ($e5 = !$this->start && $qreq) {

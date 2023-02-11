@@ -99,7 +99,7 @@ class Admin
         if (2 != $user->auth)
             return true;
 
-        $sky->k_list = 'list' == $sky->_1 || in_array($sky->page_p, [$sky->_1, $sky->_2, $sky->_3]);
+        $sky->_list = 'list' == $sky->_1 || in_array($sky->page_p, [$sky->_1, $sky->_2, $sky->_3]);
 
         $me = new Admin;
         trace(self::$adm);
@@ -143,11 +143,11 @@ class Admin
 
     function process($delete = false) {
         global $sky;
-        if ('list' == $sky->k_type)
+        if ('list' == $sky->_type)
             return qp('select * from $_ ');
-        if ('show' == $sky->k_type || 'edit' == $sky->k_type && !$_POST)
+        if ('show' == $sky->_type || 'edit' == $sky->_type && !$_POST)
             return qp('select * from $_ where id=$.', $_GET['id']);
-        if ('delete' == $sky->k_type) {
+        if ('delete' == $sky->_type) {
             $cnt = sql('delete from $_ where id=$.', $_GET['id']);
             if ($delete)
                 $delete($cnt);
@@ -155,9 +155,9 @@ class Admin
         }
         if (!$_POST)
             return;
-        if ('new' == $sky->k_type)
+        if ('new' == $sky->_type)
             (new Rare)->insert(substr(me, 1));
-        if ('edit' == $sky->k_type)
+        if ('edit' == $sky->_type)
             (new Rare)->update(substr(me, 1), $_GET['id']);
         jump(me);
     }

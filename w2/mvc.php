@@ -60,6 +60,11 @@ abstract class MVC_BASE
 abstract class Bolt {
     function __call($name, $args) {
     }
+
+    function __get($name) {
+        global $sky;
+        return $sky->$name;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -172,7 +177,7 @@ class Controller extends MVC_BASE
         if (SKY::$debug) {
             switch ($class = get_class($this)) {
                 case __CLASS__:
-                case 'default_c':
+                case 'default_c_R':
                     if (DEV && Plan::_t([Plan::$gate, "mvc/c_$sky->_0.php"])) {
                         Plan::cache_d(['main', 'sky_plan.php']);
                         $sky->fly or jump(URI);
@@ -212,9 +217,9 @@ trait HOOK
     }
 
     static function head_h() {
-        global $sky, $user;
+        global $user;
         $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
-        return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";// var addr='".LINK."';";
+        return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";
     }
 
     //add named limits and permission to sky-gate!!!!!!
@@ -274,17 +279,17 @@ class MVC extends MVC_BASE
         MVC::$stack[] = $this;
     }
 
+    static function instance($level = 0) {
+        MVC::$stack or new MVC;
+        return MVC::$stack[$level < 0 ? count(MVC::$stack) + $level : $level];
+    }
+
     static function in_tpl($bool = null) {
         global $sky;
         static $mem = [];
         if (is_bool($bool))
             $mem[] = $sky->in_tpl;
         $sky->in_tpl = null === $bool ? array_pop($mem) : $bool;
-    }
-
-    static function instance($level = 0) {
-        MVC::$stack or new MVC;
-        return MVC::$stack[$level < 0 ? count(MVC::$stack) + $level : $level];
     }
 
     static function mime($mime) {
@@ -299,18 +304,19 @@ class MVC extends MVC_BASE
 
     static function fn_parsed($layout, $body) {
         global $sky;
-        $ware = '_std' == MVC::$tpl && 'main' == Plan::$view ? 'dev' : Plan::$view;
-        return $ware . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
+        return ($sky->eview ?: Plan::$view) . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
     }
 
     static function vars(&$all, &$new, $pref = false) {
         array_walk($new, function (&$v, string $k) use (&$all, $pref) {
-            if ('' === $k || '_' == $k[0])
-                throw new Error("Cannot use `$k` var");
+            if ('' === $k)
+                throw new Error("Cannot use empty varname");
 
             $p = strlen($k) > 1 && '_' == $k[1] ? $k[0] : false;
             if ('e' === $p) {
                 $all[$k] = new eVar($v);
+            } elseif ('_' == $k[0]) {
+                SKY::$reg[$k] = $v;
             } elseif (!$p && $pref) {
                 $all[$pref . $k] =& $v;
             } else {
@@ -350,7 +356,7 @@ class MVC extends MVC_BASE
         global $sky;
 
         is_numeric($time) or $time = strtotime($time);
-            if (@$_SERVER['HTTP_IF_MODIFIED_SINCE'] && ($if_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']))) {
+        if (@$_SERVER['HTTP_IF_MODIFIED_SINCE'] && ($if_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']))) {
             !$use_site_ts or $sky->s_site_ts < $time or $time = $sky->s_site_ts; # overall site design timestamp
             if ($if_time >= $time) {
                 http_response_code(304); # Not Modified
@@ -392,31 +398,32 @@ class MVC extends MVC_BASE
     }
 
     static function head($plus = '') {
-        global $sky, $user;
+        global $sky;
 
-$js = '_' == $sky->_0[0] ? '' : common_c::head_h();
-        if (!$sky->k_title) {
+        if (!$sky->_title) {
             $v =& MVC::instance()->_v;
             if (isset($v['y_h1']))
-                $sky->k_title = $v['y_h1'];
+                $sky->_title = $v['y_h1'];
         }
-        if (!$sky->k_tkd)
-            $sky->k_tkd = [$sky->s_title, $sky->s_keywords, $sky->s_description];
-        $sky->k_title = html($sky->k_title ? "$sky->k_title - {$sky->k_tkd[0]}" : $sky->k_tkd[0]);
-        if ($sky->k_refresh) {
-            list($secs, $link) = explode('!', $sky->k_refresh);
-            $sky->k_head = $sky->k_head . sprintf('<meta http-equiv="refresh" content="%d%s">', $secs, $link ? ";url=$link" : '');
+        if (!$sky->_tkd)
+            $sky->_tkd = [$sky->s_title, $sky->s_keywords, $sky->s_description];
+        $sky->_title = html($sky->_title ? "$sky->_title - {$sky->_tkd[0]}" : $sky->_tkd[0]);
+        if ($sky->_refresh) {
+            list($secs, $link) = explode('!', $sky->_refresh);
+            $sky->_head = $sky->_head . sprintf('<meta http-equiv="refresh" content="%d%s">', $secs, $link ? ";url=$link" : '');
         }
-        if (!$sky->k_static) {
+        if ('' === $sky->_static) {
             $fn = $sky->is_mobile ? 'mobile' : 'desktop';
-            $sky->k_static = [[], ["~/m/$fn.js"], ["~/m/$fn.css"]]; # default app meta_tags, js, css files
+            $sky->_static = [[], ["~/m/$fn.js"], ["~/m/$fn.css"]]; # default app meta_tags, js, css files
+        } elseif (!$sky->_static) {
+            $sky->_static = [[], [], []];
         }
-        $plus = "<title>$sky->k_title</title>$plus";
-        $csrf = isset($user) ? $user->v_csrf : '';
-        $plus .= tag($sky->k_static[0] + ['csrf-token' => $csrf, 'sky.home' => LINK]); # meta tags
-        $plus .= js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->k_static[1]);
-        $plus .= css($sky->k_static[2] + [-1 => '~/m/sky.css']) . js($js);//
-        echo $plus . '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->k_head;
+        echo "<title>$sky->_title</title>$plus";
+        echo tag($sky->_static[0] + ['csrf-token' => $sky->csrf, 'sky.home' => LINK]); # meta tags
+        echo js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->_static[1]);
+$js = '_' == $sky->_0[0] ? '' : common_c::head_h();
+        echo css($sky->_static[2] + [-1 => '~/m/sky.css']) . js($js);
+        echo '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->_head;
     }
 
     static function tail() {
@@ -445,7 +452,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $me->body = "$tpl." . substr($action, 2);
                 $me->set($no_handle ? $param : MVC::handle($action, $param));
-                $me->hnd = $no_handle ? 'no-handle' : ('_cached' == substr(MVC::$ctrl, -7) ? substr(MVC::$ctrl, 0, -7) : MVC::$ctrl) . "::$action()";
+                $me->hnd = $no_handle ? 'no-handle' : ('_R' == substr(MVC::$ctrl, -2) ? substr(MVC::$ctrl, 0, -2) : MVC::$ctrl) . "::$action()";
             }
         } elseif ($action instanceof Closure) {
             $me->set($action($param));
@@ -461,7 +468,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     }
 
     function set($in, $is_common = false) {
-        global $sky, $user;
+        global $sky;
 
         if (is_array($in)) {
             $is_common ? (MVC::$_y = $in + MVC::$_y) : ($this->_v = $in + $this->_v);
@@ -470,9 +477,18 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         } elseif (is_bool($in)) {
             MVC::$layout = ''; # if false set to empty layout only
             !$in or $this->body = '';
-        } elseif (is_int($in)) { # soft error
-            $sky->error_no = $in;
-            HEAVEN::J_FLY == $sky->fly or http_response_code($in);
+        } elseif (is_int($in)) { # errors
+            switch ($in) {
+                case 0: $sky->error_no = 200; break;
+                case 1: throw new Stop;
+                case 11: throw new Hacker;
+                case 12: die;
+                default:
+                    if ($in < 100)
+                        throw new Error("Returned $in");
+                    $sky->error_no = $in;
+                    HEAVEN::J_FLY == $sky->fly or http_response_code($in);
+            }
             $this->body = '_std.' . (MVC::instance()->return ? '_' . $in : $in);
         }
     }
@@ -487,13 +503,13 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         if ($match = '*' !== $sky->_0 && isset(SKY::$plans['main']['ctrl'][$sky->_0]))
             Plan::$gate = Plan::$ware = SKY::$plans['main']['ctrl'][$sky->_0];
 
-        $class = $match ? 'c_' . $sky->_0 : 'default_c';//////if no * - 404 !!!
+        $class = $match ? 'c_' . $sky->_0 : 'default_c';
         $dst = Plan::gate_t($fn_dst = "$class.php");
         $recompile = false;
         if (!$dst || DEV) {
             if ('main' != Plan::$ware)
                 trace(Plan::$ware, 'WARE');
-            if (!$src = Plan::_t([Plan::$gate, $fn_src = "mvc/$class.php"]))
+            if (!Plan::_t([Plan::$gate, $fn_src = "mvc/$class.php"]))
                 return $recalculate || !$match ? ['Controller', '_', false] : $this->gate(true);
             if ($recompile = !$dst || Plan::_m([Plan::$gate, $fn_src]) > Plan::gate_m($fn_dst))
                 Gate::put_cache($class, $fn_src, $fn_dst);
@@ -502,55 +518,49 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             ? ('' === $sky->_1 ? ($this->return ? 'empty_j' : 'empty_a') : ($this->return ? 'j_' : 'a_') . $sky->_1)
             : ($this->return ? 'j_' : 'a_') . $sky->_0;
         Plan::gate_rr($fn_dst, $recompile);
-        if (!method_exists($gape = new Gape, $action))
+        $cls_g = $class . '_G';
+        if (!method_exists($gate = new $cls_g, $action))
             $action = $this->return ? 'default_j' : 'default_a';
         MVC::$tpl = $match ? substr($class, 2) : 'default';
-        return [$class, $action, $gape];
+        return [$class, $action, $gate];
     }
 
     static function top() {
-        global $sky, $user;
+        global $sky;
 
         $me = new MVC;
         ob_start();
-        $param = [];
         $me->return = HEAVEN::J_FLY == $sky->fly;
+        MVC::$cc = new common_c;
         if ('_' == $sky->_0[0]) {
-            $class = 'standard_c';
             $action = ($me->return ? 'j' : 'a') . $sky->_0;
+            $me->hnd = "standard_c::$action()";
             $me->body = '_std.' . substr($sky->_0, 1);
-            $gape = false;
+            MVC::$mc = new standard_c;
+            $me->set(MVC::$mc->head_y($action), true); # call head_y
         } else {
-            list ($class, $action, $gape) = $me->gate(false);
+            list ($class, $action, $gate) = $me->gate(false);
             switch ($action[0]) {
                 case 'd': $me->body = MVC::$tpl . ".default"; break; # default_X
                 case 'e': $me->body = MVC::$tpl . ".empty"; break; # empty_X
                 default:  $me->body = MVC::$tpl . "." . substr($action, 2); break; # a_.. or j_..
             }
-            $cached = $class . '_cached';
+            $me->hnd = "$class::$action()";
+            $class .= $gate ? '_R' : '';
+            MVC::$mc = new $class;
+            $me->set(MVC::$mc->head_y($action), true); # call head_y
+            if ($gate)
+                $param = call_user_func([$gate, $action]); # call gate
         }
-        $me->hnd = "$class::$action()";
-        MVC::$mc = $gape ? new $cached : new $class;
-        MVC::$cc = new common_c;
-        $me->set(MVC::$mc->head_y($action), true);
-        if ($gape) {
-            $param = (array)call_user_func([$gape, $action], $sky, $user);
-            if (DEV && 71 == $sky->error_no) { # gate error
-                $me->body = $sky->fly ? '' : '_std.lock';
-                $sky->ca_path = ['ctrl' => $class, 'func' => $action];
-            }
-        }
-        if ($sky->error_no) {
-            $me->hnd = "error$sky->error_no";
-        } else {
-            $me->set(call_user_func_array([MVC::$mc, $action], $param));
-        }
-        is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true);
+        if (!$sky->error_no)
+            $me->set(call_user_func_array([MVC::$mc, $action], $param ?? [])); # call master action
+        is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true); # call tail_y
+
         $me->ob = ob_get_clean();
         if ($sky->error_no > 99) {
             $vars = ['err_no' => $sky->error_no, 'exit' => 0, 'stdout' => $me->ob];
             $me->ob = '';
-            is_array($ary = MVC::$mc->error_y($action)) ? ($ary += $vars) : ($ary = $vars);
+            is_array($ary = MVC::$mc->error_y($action)) ? ($ary += $vars) : ($ary = $vars); # call error_y
             $me->set($ary);
         }
         view($me); # visualize

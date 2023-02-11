@@ -97,6 +97,7 @@ class USER
             } else {
                 $this->row['pid'] = $this->row['auth'] = 0;
             }
+            $sky->auth = $this->row['auth'];
             if ($this->visit) $ary += [
                 '!dt_v'      => $now,
                 '!cnt_visit' => 'cnt_visit+1',
@@ -150,6 +151,7 @@ class USER
                 ], 7),
             ];
         }
+        $sky->csrf = $this->v_csrf;
 
         if (START_TS - $sky->s_online_ts > 60) {
             $query = '+select 1 + count(1) from $_visitors where ' . $now . ' < ' . $dd->f_dt('dt_l', '+', '%d', 'minute') . ' and id<>%d';
@@ -211,7 +213,7 @@ class USER
         $csrf = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? false;
         unset($_POST['_csrf']);
         if ($csrf !== $this->v_csrf)
-            throw new Exception('CSRF protection');
+            throw new Hacker('CSRF protection');
 
         trace('CSRF is OK');
     }

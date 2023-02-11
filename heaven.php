@@ -12,6 +12,7 @@ class HEAVEN extends SKY
     public $jump = false; # INPUT_POST=0 INPUT_GET=1
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
     public $method;
+    public $auth = false;
     public $profiles = ['Anonymous', 'Root'];
     public $admins = 1; # root only has admin access or list pids in array
     public $has_public = true; # web-site or CRM
@@ -212,17 +213,17 @@ class HEAVEN extends SKY
 
                 $http_code = $exit > 99 ? $exit : 404; # http code
                 $redirect = '';
-                $this->k_refresh = '';
+                $this->_refresh = false;
 
                 if ($hs) { # try redirect
                     $redirect = '--></script></style>';
                     $to = PATH . "_crash?$http_code";
                     if (DEV) {
                         $redirect .= tag('Headers sent, redirect to: ' . a($to, $to) . '. Wait 3 sec', '', 'h1');
-                        $this->k_refresh = "3!$to";
+                        $this->_refresh = "3!$to";
                     } else {
                         $redirect .= js("document.location.href='$to'");
-                        $this->k_refresh = "0!$to";
+                        $this->_refresh = "0!$to";
                     }
                 } else {
                     http_response_code($http_code);# 503 -Service Unavailable
@@ -242,14 +243,14 @@ class HEAVEN extends SKY
                     if (!$is_x) {
                         $toggle = true; # Z-err on DEV only
                         $tracing .= "<h1>See Z-error first</h1>" . js('sky.err_t = 1');
-                        $this->k_refresh = '';
+                        $this->_refresh = false;
                         if ($hs)
                             $redirect = '--></script></style>'; # cancel redirect
                     } // SKY::$errors ??
-                    $tracing .= "<h1>$h1</h1>" . tag($this->tracing("Fatal exit with $exit.$this->error_no\n", $is_x), 'class="trace"', 'pre');
+                    $tracing .= "<h1>$h1</h1>" . pre($this->tracing("Fatal exit with $exit.$this->error_no\n", $is_x));
                     $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
                 }
-                $this->k_static = [[], [], []]; # skip app css and js files
+                $this->_static = false; # skip app css and js files
                 $vars = MVC::jet('__std.crash');
                 $vars += [
                     'redirect' => $redirect,
@@ -585,8 +586,8 @@ function hidden($set = '_csrf', $r = 0) {
             $name = $val;
             $val = isset($r[$name]) ? $r[$name] : '';
         } elseif ('_csrf' == $name && 0 === $r) {
-            global $user;
-            $val = isset($user) ? $user->v_csrf : 0;
+            global $sky;
+            $val = $sky->csrf;
         }
         $out .= sprintf(TPL_HIDDEN, $name, html($val));
     }

@@ -1,9 +1,9 @@
 #.jet core template
 
 #._ this template for soft & fatal (FLY != 0) errors
-#if('_std' == MVC::$tpl && 'main' == Plan::$ware)
+#if($sky->eview)@eat
     @inc(__dev.)@eat
-#elseif(Plan::view_t('error.jet'))
+#elseif(Plan::view_t('error.jet'))@eat
     @inc(error.)@eat
 #else@eat
     <h1>Error {{$sky->error_no}}</h1>
@@ -11,7 +11,19 @@
 #end
 #._ default marker used !
 
-#.crash ////////////////////////////////////////////////////////////////////////////// @inc(__img.cloud2)
+#._0.0 for return 0;
+@php trace('empty template used') ~php
+#._0.0
+
+#.e71
+<script>
+$(function() {
+    sky.g.box("{{$sky->ca_path['ctrl']}}", "{{$sky->ca_path['func']}}", 1);
+});
+</script>
+#.e71
+
+#.crash //////////////////////////////////////////////////////////////////////////////
 @php # this template for fatal FLY=0
 $ru = defined('LG') && 'ru' == LG;
 $list = [ # production errors
@@ -24,7 +36,7 @@ $p_main = $ru ? 'открыть главную' : 'open main page';
 $error = isset($list[$no]) ? $list[$no] : $list[500];
 echo $redirect;
 ~php@eat
-#if(Plan::view_t('error.jet') && '_std' != MVC::$tpl)
+#if(Plan::view_t('error.jet') && '' === $sky->eview)
     @inc(error.crash)~{- for dev-tools also needed -}
 #else
 <!doctype html><html>
@@ -74,14 +86,6 @@ DATABASES ({{count($databases)}})
 ==============================================================================================
 |||||||||||||||||||||||||||||||||||||||||||| GATE ||||||||||||||||||||||||||||||||||||||||||||
 ==============================================================================================
-
-#.lock
-<script>
-$(function() {
-    sky.g.box("{{$sky->ca_path['ctrl']}}", "{{$sky->ca_path['func']}}", 1);
-});
-</script>
-#.lock
 
 #.m_gate //////////////////////////////////////////////////////////////////////////////
 @loop($list as $one => $ex)
