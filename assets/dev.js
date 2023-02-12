@@ -233,7 +233,7 @@ sky.d.init = function(from) {
     for (var a = []; m = str.match(/(TOP|SUB|BLK)\-VIEW: (\d+) (\S+) (\S+)(.*)/s); str = m[5]) {
         a.push({type:m[1], no:m[2], hnd:m[3], tpl:'^' == m[4] ? ('BLK' == m[1] ? 'injected-to-parent' : 'not-used') : m[4]});
         if ('TOP' == m[1])
-            top = 'Top-view: <b>' + m[3] + '</b> &nbsp; Template: <b>' + a[a.length - 1].tpl + '</b>';
+            top = 'TOP: <b>' + m[3] + '</b> &nbsp; <b>' + a[a.length - 1].tpl + '</b>';
     }
 
     var csql = '?';
