@@ -126,6 +126,7 @@ a:181:{s:2:"ab";s:9:"Abkhazian";s:2:"aa";s:4:"Afar";s:2:"af";s:9:"Afrikaans";s:2
     Set it <a href="_dev?main=0">here</a>
 @elseif(2 == $obj->error)
     <h1>Array $sky->langs is not set</h1>
+    <a target="_blank" href="https://github.com/energy-coresky/air/wiki/%D0%9C%D1%83%D0%BB%D1%8C%D1%82%D0%B8%D1%8F%D0%B7%D1%8B%D1%87%D0%BD%D1%8B%D0%B5-%D0%BF%D1%80%D0%B8%D0%BB%D0%BE%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F">Quick start with Coresky multilanguage applications</a>
 @elseif(3 == $obj->error)
     <h1>DEFAULT_LG is not in array $sky->langs</h1>
 @elseif(4 == $obj->error)
