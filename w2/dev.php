@@ -80,21 +80,15 @@ class DEV
         $ary = [];
         isset(DEV::$vars[$no]) or DEV::$vars[$no] = [];
         $p =& DEV::$vars[$no];
-        $types = ['unknown type', 'NULL', 'boolean', 'integer', 'double', 5 => 'resource', 'string', 'array', 'object'];
-        $cut = function ($v, $n) {
-            return mb_strlen($v) > $n ? html(mb_substr($v, 0, $n)) . sprintf(span_g, '&nbsp;cutted...') : html($v);
-        };
+        
         foreach ($in as $k => $v) {
             if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
                 continue;
             if ('$' == $k && isset($p['$$']))
                 return;
-            $t = array_search(gettype($v), $types);
-            if ($t > 5) {
-                6 == $t or $v = @var_export($v, true);
-                $v = $cut($v, 6 == $t ? 100 : 200);
-                6 == $t or $v = tag($v, '', 7 == $t ? 'r' : 'o');
-            }
+            //$types = ['unknown type', , 5 => 'resource', 'string', 'array', 'object']; // k u r o  str100 : arr+obj 200
+            if (!in_array(gettype($v), ['NULL', 'boolean', 'integer', 'double']))//
+                $v = Display::var($v, '', false);
             $ary[$k] = $v;
         }
         ksort($ary);
@@ -468,6 +462,7 @@ class DEV
         $dir = array_diff($wares, $works);
         $wares = Plan::_rq('wares.php');
         return [
+            'app' => SKY::version()['app'][4],
             'e_installed' => [
                 'row_c' => function ($row) use (&$installed, &$wares) {
                     $name = $installed ? key($installed) : 0;

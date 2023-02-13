@@ -61,7 +61,7 @@
     ~loop
 </div><br>
 <div class="other-task">
-    <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{DIR_M}}</span>.SKY. application:</div>
+    <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{$app}}</span> application:</div>
 </div>
 <div id="inet-wares" style="padding:10px;">
     <h1>Connecting ...</h1>

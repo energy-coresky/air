@@ -166,15 +166,66 @@ class Display
         return '<pre>' . $html. '</pre>';
     }
 
-    static function var($v, $html = true) { # tune var_export
-        $var = @var_export($v, true);
-        if ($len = strlen($var) > 50)
-            $var = sprintf(span_r, '>50 chars, ' . gettype($v));
-        if ("array (\n)" == $var)
-            $var = '[]';
-        if ("'\n'" == $var)
-            $var = '"\n"';
-        return $html && !$len ? html($var) : $var; // need more
+    static function array($var, $add = '', $pad = 0) {
+        static $skey, $len;
+        if (!$pad)
+            $skey = $len = 0;
+        if (!$var)
+            return '[]';
+        $i = 0;
+        $ary = [];
+        foreach ($var as $k => $v) {
+            $v = is_array($v) ? self::array($v, $add, 1 + $pad) : self::var($v, $add);
+            if (is_string($k)) {
+                $skey = true;//////////////
+                $ary[] = "'" . html($k) . "' =&gt; $v";
+            } else {
+                $ary[] = $i !== $k ? "$k =&gt; $v" : $v;
+                $i = $k < 0 ? 0 : 1 + $k;
+            }
+            if (($len += strlen($v)) > 200) {
+                $ary[] = sprintf(span_g, 'cutted..');
+                break;
+            }
+        }
+        $pad = str_pad('', $pad * 2, ' ');
+        $s = implode(', ', $ary);
+        if (strlen($s) < 55)
+            return "[$s]";
+        return "[\n  $pad$add" . implode(",\n  $pad$add", $ary) . "\n$pad$add]";
+    }
+
+    static function var($var, $add = '    ', $quote = true) { # tune var_export for display in html
+        switch ($type = gettype($var)) {
+            case 'object':
+                $cls = get_class($var);
+                return $quote ? sprintf(span_m, "object $cls") : "<o_$cls>" . self::reflect($var, 'c', 2) . "</o>";
+            case 'resource':
+                return sprintf(span_m, $type); // php8 - get_debug_type($var) class@anonymous stdClass
+            case 'unknown type':
+                return sprintf(span_m, $type);
+            case 'array':
+                $var = self::array($var, $add);
+                if ($quote)
+                    return $var;
+                return strlen($var) < 50 ? sprintf(span_y, 'Array ') . $var : "<r>$var</r>";
+            case 'string':
+                if ($gt = mb_strlen($var) > 50) // 100
+                    $var = mb_substr($var, 0, 50);
+                if ($quote) {
+                    if (false === strpbrk($var, "\r\n\t")) {
+                        $var = var_export($var, true);
+                        if ($gt)
+                            $var = substr($var, 0, -1);
+                    } else {
+                        $ary = ["\t" => "\\t", "\r" => "\\r", "\n" => "\\n", '"' => '\\"'];
+                        $var = '"' . strtr($var, $ary) . ($gt ? '' : '"');
+                    }
+                }
+                return $gt ? html($var) . sprintf(span_g, '&nbsp;cutted..') : html($var);
+            default: # boolean integer double NULL
+                return var_export($var, true);
+        }
     }
 
     static function reflect($name, $type, $pp = null) {
@@ -191,7 +242,7 @@ class Display
                     return $one;
                 return "$one = " . ($func->isInternal() && PHP_VERSION_ID < 80000
                     ? sprintf(span_r, 'err')
-                    : ($p->isDefaultValueConstant() ? $p->getDefaultValueConstantName() : Display::var($p->getDefaultValue())));
+                    : ($p->isDefaultValueConstant() ? $p->getDefaultValueConstantName() : self::var($p->getDefaultValue())));
             }, $func->getParameters());
         };
 
@@ -209,38 +260,49 @@ class Display
                 $m = Reflection::getModifierNames(~ReflectionMethod::IS_PUBLIC & $obj->getModifiers());
                 return $m ? implode(' ', $m) . ' ' : '';
             };
-
-            $cls = new ReflectionClass($name);
+            $obj = $name;
+            $cls = is_string($name) ? new ReflectionClass($name) : new ReflectionObject($obj);
             $name = ('t' == $type ? 'trait' : ('i' == $type ? 'interface' : 'class')) . " $cls->name";
             if ($x = $cls->getParentClass())
                 $name .= " extends " . $x->getName();
             if ($x = $cls->getInterfaceNames())
                 $name .= ' implements ' . implode(', ', $x);
+            $name = 2 == $pp ? '' : "$name\n";
+                
 
-            $data = array_map(function ($v, $k) {
-                return "const $k = " . Display::var($v);
+            $data = 2 == $pp ? [] : array_map(function ($v, $k) {
+                return "const $k = " . self::var($v);
             }, $c = $cls->getConstants(), array_keys($c));
             $defs = $cls->getDefaultProperties();
             $props = $cls->getProperties($pp ? null : ReflectionProperty::IS_PUBLIC);
-            $data = array_merge($data, array_map(function ($p) use ($defs) {
-                $m = $p->getModifiers();
-                ReflectionProperty::IS_PUBLIC == $m or $m &= ~ReflectionProperty::IS_PUBLIC;
+            $data = array_merge($data, array_map(function ($p) use ($defs, $pp, $obj) {
                 $one = $p->getName();
-                if (null !== $defs[$one] && $p->isDefault())
-                    $one .= " = " . Display::var($defs[$one]);
-                return implode(' ', Reflection::getModifierNames($m)) . ' $' . $one;
+                $m = $p->getModifiers();
+                if (2 == $pp) {
+                    $p->setAccessible(true);
+                    $pfx = ReflectionProperty::IS_STATIC & $m ? '::$' : '->';
+                    if ($m &= ~ReflectionProperty::IS_STATIC & ~ReflectionProperty::IS_PUBLIC)
+                        $pfx = implode(' ', Reflection::getModifierNames($m)) . " $pfx";
+                    $one = "$pfx$one = " . self::var($p->getValue($obj));
+                } else {
+                    if (null !== $defs[$one] && $p->isDefault())
+                        $one .= " = " . self::var($defs[$one]);
+                    ReflectionProperty::IS_PUBLIC == $m or $m &= ~ReflectionProperty::IS_PUBLIC;
+                    $one = implode(' ', Reflection::getModifierNames($m)) . " \$$one";
+                }
+                return $one;
             }, $props));
             sort($data);
 
-            $funcs = array_map(function ($v) use ($params, $modifiers) {
+            $funcs = 2 == $pp ? [] : array_map(function ($v) use ($params, $modifiers) {
                 return $modifiers($v) . 'function ' . ($v->returnsReference() ? '&' : '')
                     . $v->name . '(' . implode(', ', $params($v)) . ')'
                     . (($rt = $v->getReturnType()) ? ': ' . $rt->getName() : '');
-            }, $cls->getMethods($pp ? null : ReflectionMethod::IS_PUBLIC));
+            }, $cls->getMethods(1 == $pp ? null : ReflectionMethod::IS_PUBLIC));
             sort($funcs);
             $traits = implode(', ', $cls->getTraitNames());
             $data = array_merge($traits ? ['use ' . $traits] : [], $data, $data && $funcs ? [''] : [], $funcs);
-            return tag($modifiers($cls) . "$name\n{\n    " . implode("\n    ", $data) . "\n}", '', 'pre');
+            return tag($modifiers($cls) . "$name{\n    " . implode("\n    ", $data) . "\n}", '', 'pre');
         }
     }
 }

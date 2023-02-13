@@ -302,7 +302,7 @@ function jump($uri = '', $code = 302, $exit = true) {
         exit;
 }
 
-function trace($var, $is_error = false, $line = 0, $file = '', $context = null) {
+function trace($var, $is_error = false, $line = 0, $file = '', $context = false) {
     global $sky;
 
     if ($err = true === $is_error) {
@@ -321,13 +321,12 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
             $var = "$is_error: $var";
             $is_error = false;
         }
-        if ($has_depth = !$file) {
+        if (!$file) {
             $depth = 1 + $line;
             $db = debug_backtrace();
             list ($file, $line) = array_values($db[$line]);
             if (is_array($line)) { # file-line don't supported
                 list ($file, $line) = array_values($db[$depth - 2]);
-                $depth--;
                 $fln = sprintf(span_r, "<span>$file^$line</span>");
             }
         }
@@ -353,13 +352,13 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = null) 
                 return;
             if (is_string($context)) {
                 $backtrace = html($context);
-                $context = null;
+                $context = false;
             } else {
                 ob_start();
                 debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
                 $backtrace = html(ob_get_clean());
             }
-            Debug::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context, $has_depth ? $depth : 2);
+            Debug::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context);
         } elseif ($is_warning) {
             $sky->was_warning = 1;
             $sky->tracing .= "$fln\n" . '<div class="warning">' . html($var) . "</div>\n";

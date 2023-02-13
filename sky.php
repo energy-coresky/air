@@ -90,7 +90,7 @@ class SKY implements PARADISE
 
     function open($msg = 'OK') {
         if (SKY::$dd || SKY::$dd === false)
-            return false;
+            return SKY::$dd;
         SKY::$dd = false; # let stay false if thrown
         SKY::$dd = SQL::open();
 
@@ -251,6 +251,7 @@ class SKY implements PARADISE
         $core = explode(' ', SKY::CORE);    # timestamp, CS-ver, APP-ver, APP-name
         $app = explode(' ', $sky->s_version) + [time(), $core[0], '0.0001', 'APP'];
         $len = strlen(substr($app[2], 1 + strpos($app[2], '.')));
+        $app[4] = "$app[3].SKY.";
         $app[3] = ($len < 3 ? '' : ($len < 4 ? 'βῆτα.' : 'ἄλφα.')) . "$app[2].$app[3].SKY.";
         return [
             'core' => $core,
@@ -268,7 +269,7 @@ class SKY implements PARADISE
         define('span_g', '<span style="color:#2b3">%s</span>');
         define('span_b', '<span style="color:blue">%s</span>');
         define('span_m', '<span style="color:#93c">%s</span>');
-        define('span_y', '<span style="color:#990">%s</span>');
+        define('span_y', '<span style="color:#b88">%s</span>');
         define('RE_LOGIN', '/^[a-z][a-z_\d]{1,19}$/i');
         define('RE_PASSW', '/^\S{3,15}$/');
         define('RE_EMAIL', '/^([\w\-]+\.)*[\w\-]+@([\w\-]+\.)+[a-z]{2,7}$/i');

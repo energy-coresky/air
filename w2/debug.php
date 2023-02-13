@@ -94,25 +94,16 @@ class Debug
         return $list[$no] ?? "ErrorNo_$no";
     }
 
-    // 2do: fix for php 8 https://www.php.net/manual/en/language.operators.errorcontrol.php
-    static function show_suppressed() {
-        //return 
-    }
-
-    static function epush($title, $desc, $ary, $depth) {
-        $p =& SKY::$errors;
-        $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", $desc . Debug::context($ary, $depth)];
-    }
-
-    static function context($ary, $depth) {
-        if (is_null($ary))
-            return ''; # else array
-        $out = $ary ? "\n" : ''; # $ary as reference!
-        foreach ($ary as $k => $v) {
-            if (is_scalar($v) && 's_' != substr($k, 0, 2))
-                $out .= "\$$k = " . html(var_export($v, 1)) . ";\n";
+    // 2do suppressed: fix for php 8 https://www.php.net/manual/en/language.operators.errorcontrol.php
+    static function epush($title, $desc, $context) {
+        if ($context) {
+            $desc .= "\n";
+            foreach ($context as $k => $v)
+                if (is_scalar($v) || is_null($v))
+                    $desc .= "\$$k = " . html(var_export($v, 1)) . ";\n";
         }
-        return substr($out, 0, 1000);
+        $p =& SKY::$errors;
+        $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", mb_substr($desc, 0, 1000)];
     }
 
     static function _check_other(&$plus) {

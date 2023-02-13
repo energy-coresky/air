@@ -78,7 +78,7 @@
     <span style="position:absolute;top:1px;left:8px;"><span style="font:bold 17px serif">⬇</span> {{$row->downloads ?? 0}}</span>
     <span style="position:absolute;top:3px;right:8px;"><big>★</big>{{$row->favers ?? 0}}</span>
     <h2 style="line-height:20px;">{{$row->name}}</h2><script>sky.d.packs.push(['{{$row->url}}', '{{$row->repository}}'])</script>
-    <div class="were-desc" style="height:75px; position:absolute; bottom:5px;">
+    <div class="were-desc" style="height:70px; position:absolute; top:90px;">
         @if($row->description){{$row->description}}@else
             This package don't have description
         ~if

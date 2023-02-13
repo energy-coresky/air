@@ -33,7 +33,7 @@ sky.d.draw = {
     x: '',
     v: function(data, str) {
         str = '';
-        var j, vars, blks = {}, blkc = {};
+        var j, vars, cls, blks = {}, blkc = {};
         for (var view of data.views) {
             vars = 'BLK' == view.type ? blks[view.no][blkc[view.no]++] : data.vars[view.no];
             var c = 'BLK' == view.type ? '.' + blkc[view.no] : '';
@@ -51,16 +51,19 @@ sky.d.draw = {
                     let s = ++j + '. <b>$' + name + '</b>', v = vars[name];
                     if ('$' == name.charAt(0))
                         s = '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
-                    if ('number' == typeof v) {
+                    if ('' === v) {
+                        v = '<span style="color:#93c">empty string</span>';
+                    } else if ('number' == typeof v) {
                         v = '<span style="color:red">' + v + '</span>';
                     } else if (null === v || 'boolean' == typeof v) {
                         v = '<span style="color:#93c">' + v + '</span>';
-                    } else if ('<' == v.charAt(0)) {
-                        var cls = v.match(/<o>([\(\)\w]+)/i);
-                        !cls || (cls = '(object)' == cls[1] ? 'stdClass' : cls[1]);
-                        v = '<span style="color:#b88">' + ('o' == v.charAt(1) ? 'Object ' + cls : 'Array') + '</span>'
+                    } else if ('<' == v.charAt(0) && (cls = v.match(/<(r|o_\w+)>/i))) {
+                        
+                        //!cls || (cls = '(object)' == cls[1] ? 'stdClass' : cls[1]);
+                        
+                        v = '<span style="color:#b88">' + ('r' == cls[1] ? 'Array' : 'Object ' + cls[1].substr(2)) + '</span>'
                             + ' <a href="javascript:;" onclick="sky.toggle(this)">&gt;&gt;&gt;</a>'
-                            + v.replace('<'+v.charAt(1)+'>', '<pre style="display:none">').replace('</'+v.charAt(1)+'>', '</pre>');
+                            + v.replace('<' + cls[1] + '>', '<pre style="display:none">').replace('</' + v.charAt(1) + '>', '</pre>');
                     }
                     str += s +'&nbsp;=&nbsp;' + v + '<br>';
                 }
@@ -224,7 +227,7 @@ sky.d.init = function(from) {
         }
     }
     if (data.errors[0])
-        $('#v-body h1').each(function () {
+        $('#dev-trace h1').each(function () {
             $(this).css({color:'red', backgroundColor:'pink'});
         });
 
