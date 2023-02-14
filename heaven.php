@@ -78,7 +78,7 @@ class HEAVEN extends SKY
         $this->eref = !$m ? $referer : false;
 
         if (SKY::$debug)
-            $this->gpc = Debug::gpc();
+            $this->gpc = Plan::gpc();
 
         require DIR_S . '/w2/mvc.php';
         Plan::app_r('mvc/common_c.php');
@@ -315,7 +315,9 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
     if (SKY::$debug || $sky->log_error && $err) {
         if ($err && is_array($var))
             list ($title, $var) = $var;
-        is_string($var) or $var = var_export($var, true);
+
+        $var = is_string($var) ? html($var) : Plan::var($var, '', false, '?');
+
         $is_warning = 'WARNING' === $is_error;
         if (is_string($is_error)) {
             $var = "$is_error: $var";
@@ -331,11 +333,11 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
             }
         }
         isset($fln) or $fln = "<span>$file^$line</span>";
-        $mgs = "$fln\n" . html($var);
+        $mgs = "$fln\n$var";// . html($var);
         if ($err) {
             $sky->was_error |= SKY::ERR_SHOW;
             if (SKY::$cli)
-                echo "\n$file^$line\n$var\n\n";
+                echo "\n$file^$line\n$var\n\n";//2do striptags
             if ($sky->log_error) { # collect error log
                 $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
                 $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
@@ -347,7 +349,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
         if (!SKY::$debug)
             return; # else collect tracing
         if ($err) {
-            $sky->tracing .= "$fln\n" . '<div class="error">' . html($var) . "</div>\n";
+            $sky->tracing .= "$fln\n" . '<div class="error">' . "$var</div>\n";//html() . 
             if (!DEV)
                 return;
             if (is_string($context)) {
@@ -361,7 +363,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
             Debug::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context);
         } elseif ($is_warning) {
             $sky->was_warning = 1;
-            $sky->tracing .= "$fln\n" . '<div class="warning">' . html($var) . "</div>\n";
+            $sky->tracing .= "$fln\n" . '<div class="warning">' . "$var</div>\n";//html() . 
         } else {
             $sky->tracing .= "$mgs\n\n";
         }
@@ -468,7 +470,7 @@ function json($in, $return = false, $off_layout = true) {
     if ($err = json_last_error())
         trace('json error: ' . $err, true, 1);
     if (DEV && !$return)
-        DEV::vars(['$$' => $in], MVC::instance(-1)->no);
+        Debug::vars(['$$' => $in], MVC::instance(-1)->no);
     return $return ? $out : print($out);
 }
 

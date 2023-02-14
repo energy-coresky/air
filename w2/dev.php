@@ -62,44 +62,6 @@ class DEV
             SKY::d('statics', array_join($files, '#', ','));
     }
 
-    static function trace() {
-        ksort(DEV::$vars);
-        $dev_data = [
-            'cnt' => [
-                $c = count($a1 = Debug::get_classes(get_declared_classes())[1]),
-                $c + count($a2 = Debug::get_classes(get_declared_interfaces())[1]),
-            ],
-            'classes' => array_merge($a1, $a2, get_declared_traits()),
-            'vars' => DEV::$vars,
-            'errors' => SKY::$errors,
-        ];
-        return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
-    }
-
-    static function vars($in, $no, $is_blk = false) {
-        $ary = [];
-        isset(DEV::$vars[$no]) or DEV::$vars[$no] = [];
-        $p =& DEV::$vars[$no];
-        
-        foreach ($in as $k => $v) {
-            if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
-                continue;
-            if ('$' == $k && isset($p['$$']))
-                return;
-            //$types = ['unknown type', , 5 => 'resource', 'string', 'array', 'object']; // k u r o  str100 : arr+obj 200
-            if (!in_array(gettype($v), ['NULL', 'boolean', 'integer', 'double']))//
-                $v = Display::var($v, '', false);
-            $ary[$k] = $v;
-        }
-        ksort($ary);
-        if ($is_blk) {
-            isset($p['']) or $p += ['' => []];
-            $p[''][] = $ary;
-        } else {
-            $p += $ary;
-        }
-    }
-
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
     static function post_data($me) {
          isset($_POST['args']) && $me->argc($_POST['args']);//////////
@@ -580,6 +542,6 @@ class DEV
     function j_reflect() {
         $name = explode(' ', $_POST['n'], 3);
         $name = 'e' == ($type = $_POST['t']) ? $name[1] : $name[0];
-        echo Display::reflect($name, $type);
+        echo Plan::object($name, $type, SKY::d('pp'));
     }
 }

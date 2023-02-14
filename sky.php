@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = false;
 
-    const CORE = '0.308 2023-02-11T16:58:18+02:00 energy';
+    const CORE = '0.309 2023-02-14T17:42:17+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -65,7 +65,7 @@ class SKY implements PARADISE
                 $this->was_error |= SKY::ERR_SUPPRESSED | ($show ? SKY::ERR_DETECT : 0);
             }
             if ($detect && (SKY::$debug || $this->log_error)) {
-                $error = Debug::error_name($no) . $amp;
+                $error = Plan::error_name($no) . $amp;
                 trace(["PHP $error", "$error: $message"], true, $line, $file, $context);
             }
             return true;
@@ -119,6 +119,7 @@ class SKY implements PARADISE
             SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id, 0, $dd);
             if (9 == $id && defined('WWW') && 'n' == $char)
                 Schedule::setWWW($this->n_www);
+//trace($this, 'Object $sky');
         }
         return SKY::$mem[$char][3];
     }
@@ -299,8 +300,8 @@ class SKY implements PARADISE
         $e = error_get_last();
         $err = false;
         if ($e && $e['type'] != $this->error_last) {
-            $name = Debug::error_name($e['type']);
-            trace(["PHP $name", $err = "$name: $e[message]"], true, $e['line'], $e['file']);
+            $error = Plan::error_name($e['type']);
+            trace(["PHP $error", $err = "$error: $e[message]"], true, $e['line'], $e['file']);
             $this->error_no = 52;
         }
         $code = function ($err) : int {
@@ -326,7 +327,7 @@ class SKY implements PARADISE
         $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
         $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
         if (DEV)
-            $top .= DEV::trace();
+            $top .= Debug::trace();
         if ($is_x && SKY::$dd) {
             if (DEV)
                 SKY::$dd->_xtrace();

@@ -44,11 +44,12 @@ sky.d.draw = {
                 str += '<span style="color:red">empty-response</span>';
             } else Object.keys(vars).forEach(function (name) {
             //} else for (let [name, _var] of vars) { vars is not iterable
-                if ('' === name) { // BLKs vars
+                if ('@' === name) { // BLKs vars
                     blks[view.no] = vars[name];
                     blkc[view.no] = 0;
                 } else {
-                    let s = ++j + '. <b>$' + name + '</b>', v = vars[name];
+                    let dollar = -1 == name.indexOf('::') ? '$' : '';
+                    let s = ++j + '. <b>' + dollar + name + '</b>', v = vars[name];
                     if ('$' == name.charAt(0))
                         s = '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
                     if ('' === v) {
@@ -57,11 +58,8 @@ sky.d.draw = {
                         v = '<span style="color:red">' + v + '</span>';
                     } else if (null === v || 'boolean' == typeof v) {
                         v = '<span style="color:#93c">' + v + '</span>';
-                    } else if ('<' == v.charAt(0) && (cls = v.match(/<(r|o_\w+)>/i))) {
-                        
-                        //!cls || (cls = '(object)' == cls[1] ? 'stdClass' : cls[1]);
-                        
-                        v = '<span style="color:#b88">' + ('r' == cls[1] ? 'Array' : 'Object ' + cls[1].substr(2)) + '</span>'
+                    } else if ('<' == v.charAt(0) && (cls = v.match(/<(r|o c="([^"]+)")>/i))) {
+                        v = '<span style="color:#b88">' + ('r' == cls[1] ? 'Array' : 'Object ' + cls[2]) + '</span>'
                             + ' <a href="javascript:;" onclick="sky.toggle(this)">&gt;&gt;&gt;</a>'
                             + v.replace('<' + cls[1] + '>', '<pre style="display:none">').replace('</' + v.charAt(1) + '>', '</pre>');
                     }
@@ -246,7 +244,7 @@ sky.d.init = function(from) {
     }
 
     if (1 == from || '' !== $('#master').html()) {
-        data.views = a;
+        data.views = a.length ? a : [{type:'UNKNOWN', no:0, hnd:'?', tpl:'?'}];
         $('#tpl-list').html($('#tpl-list-copy').html()).find('a')
             .mouseenter(function() {
                 sky.d.to && clearTimeout(sky.d.to);

@@ -12,7 +12,9 @@
 
 #.code
 #use(.m_glob)
-2do: find places for functions usage and more..
+2do: <br>
+1. collect php-modules based on used functions, classes, etc.<br>
+2. find places for functions usage and more..<br>
 #.code
 
 #.m_glob ==========================================================================================================

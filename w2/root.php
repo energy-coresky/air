@@ -185,6 +185,8 @@ class Root
                 break;
 
             case 'Classes':
+                new Admin;
+                new Display;
                 $ary = Debug::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
                 $echo($ary[1]);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $ary[0])) . $priv;

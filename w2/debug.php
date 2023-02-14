@@ -12,21 +12,55 @@ class Debug
         }
     }
 
-    function short($str) { # 2do
-        $n = substr_count($str, "\n");
-        if ($n > 10) {
-            
-        } elseif (strlen($str) > 500) $x = 300;
-        else return $str;
-        $back = '<br>' . a('back', ($href = 'href="javascript:;" onclick=') . '"sky.short()"') . '<br>';
-        return substr($str, 0, $x) . a('more..', $href . '"sky.short(this)"') . tag($back . substr($str, $x) . $back, 'style="display:none"');
+    static function trace() {
+        isset(DEV::$vars[0]) or self::vars(['sky' => $GLOBALS['sky']], 0, 0);
+        ksort(DEV::$vars);
+        $dev_data = [
+            'cnt' => [
+                $c = count($a1 = Debug::get_classes(get_declared_classes())[1]),
+                $c + count($a2 = Debug::get_classes(get_declared_interfaces())[1]),
+            ],
+            'classes' => array_merge($a1, $a2, get_declared_traits()),
+            'vars' => DEV::$vars,
+            'errors' => SKY::$errors,
+        ];
+        return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
     }
 
-    static function gpc() {
-        return "\$_GET: " . html(var_export($_GET, true)) .
-            "\n\$_POST: " . html(var_export($_POST, true)) .
-            "\n\$_FILES: " . html(var_export($_FILES, true)) .
-            "\n\$_COOKIE: " . html(var_export($_COOKIE, true)) . "\n";
+    static function vars($in, $no, $is_blk = false) {
+        $ary = [];
+        isset(DEV::$vars[$no]) or DEV::$vars[$no] = [];
+        $p =& DEV::$vars[$no];
+        if (!$no && false === $is_blk)
+            $in += ['sky via __get($name)' => $GLOBALS['sky']];
+        Plan::$see_also = $obs = [];
+        foreach ($in as $k => $v) {
+            if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
+                continue;
+            if ('$' == $k && isset($p['$$']))
+                return;
+            //$types = ['unknown type', , 5 => 'resource', 'string', 'array', 'object']; // k u r o  str100 : arr+obj 200
+            $type = gettype($v);
+            if ($is_obj = 'object' == $type)
+                $obs[get_class($v)] = 1;
+            if (!in_array($type, ['NULL', 'boolean', 'integer', 'double']))
+                $v = Plan::var($v, '', false, $is_obj ? $k : false);
+            $ary[$k] = $v;
+        }
+
+        if (!$no && !$is_blk) {
+            if (0 === $is_blk)
+                return $ary;
+            $obs = array_diff_key(Plan::$see_also, $obs);
+            $ary += self::vars(array_combine(array_map('key', $obs), array_map('current', $obs)), 0, 0);
+        }
+        ksort($ary);
+        if ($is_blk) {
+            isset($p['@']) or $p += ['@' => []];
+            $p['@'][] = $ary;
+        } else {
+            $p += $ary;
+        }
     }
 
     static function get_classes($all = [], $ext = [], $t = -2) {
@@ -77,23 +111,6 @@ class Debug
         return $msg;
     }
 
-    static function error_name($no) {
-        $list = [
-            E_ERROR => 'Fatal error',
-            E_WARNING => 'Warning',
-            E_PARSE => 'Parse error',
-            E_NOTICE => 'Notice',
-            E_CORE_ERROR => 'Core fatal error',
-            E_CORE_WARNING => 'Core warning',
-            E_COMPILE_ERROR => 'Compile fatal error',
-            E_COMPILE_WARNING => 'Compile warning',
-            E_STRICT => 'Strict',
-            E_RECOVERABLE_ERROR => 'Recoverable error',
-            E_DEPRECATED => 'Deprecated',
-        ];
-        return $list[$no] ?? "ErrorNo_$no";
-    }
-
     // 2do suppressed: fix for php 8 https://www.php.net/manual/en/language.operators.errorcontrol.php
     static function epush($title, $desc, $context) {
         if ($context) {
@@ -120,5 +137,15 @@ class Debug
      #   if ($class_debug && SKY::$debug)
       #      Debug::_check_other($error);
         return $error;
+    }
+
+    function short($str) { # 2do
+        $n = substr_count($str, "\n");
+        if ($n > 10) {
+            
+        } elseif (strlen($str) > 500) $x = 300;
+        else return $str;
+        $back = '<br>' . a('back', ($href = 'href="javascript:;" onclick=') . '"sky.short()"') . '<br>';
+        return substr($str, 0, $x) . a('more..', $href . '"sky.short(this)"') . tag($back . substr($str, $x) . $back, 'style="display:none"');
     }
 }
