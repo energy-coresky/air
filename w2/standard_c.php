@@ -247,7 +247,7 @@ class standard_c extends Controller
     function x_databases() {
         $list = ['main' => 0] + SKY::$databases;
         unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
-        return ['databases' => array_keys($list), 'is_main' => 'main' == Plan::$ware];
+        return ['databases' => array_keys($list), 'is_merc' => 'mercury' == Plan::$ware];
     }
 
     # ---------------- j_ + a_, see self::__call(..)

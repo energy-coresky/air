@@ -367,8 +367,8 @@ class DEV
             if (!is_file("$dir/conf.php"))
                 return print("File `$dir/conf.php` not found");
 
-            require "$dir/conf.php";
-            $required = explode(' ', $plans['app']['require'] ?? '');
+            $conf = require "$dir/conf.php";
+            $required = explode(' ', $conf['app']['require'] ?? '');
             if ('' == $required[0])
                 array_shift($required);
             foreach ($required as $class) {
@@ -451,10 +451,10 @@ class DEV
                     $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
                     if (!is_dir($path))
                         return true;
-                    require "$path/conf.php";
+                    $conf = require "$path/conf.php";
                     return [
                         'name' => ucfirst($ware),
-                        'type' => $plans['app']['type'],
+                        'type' => $conf['app']['type'],
                         'path' => $path,
                         'desc' => $this->desc($path),
                     ];

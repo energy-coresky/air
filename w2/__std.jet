@@ -75,9 +75,9 @@ Save HTML from URL: <input size="50" name="extra" /> <input type="submit" value=
 
 #.databases ------------------------------------------------------------------------------
 DATABASES ({{count($databases)}})
-<select style="font-size:12px" onchange="location.href='?{!$is_main ? 'main=6&' : '' !}db='+$(this).val()">
+<select style="font-size:12px" onchange="location.href='?{!$is_merc ? '' : "$sky->_1=$sky->_2&" !}db='+$(this).val()">
 @loop($databases as $one)
-    <option value="{{$one}}"@selected($one== ($is_main ? $sky->_4 : $sky->_2))>{{$one}}</option>
+    <option value="{{$one}}"@selected($one== ($is_merc ? $sky->_2 : $sky->_4))>{{$one}}</option>
 ~loop
 </select>
 #.databases ------------------------------------------------------------------------------

@@ -93,7 +93,7 @@ final class SQL
             trace("name=$name, driver=$dd->name", 'DATABASE');
 
             unset($cfg['dsn']);
-          #  call_user_func(SQL::$dd_h, $dd, $name);
+            call_user_func(SQL::$dd_h, $dd, $name);
         }
         return $p2 || !SQL::$dd ? (SQL::$dd = $dd) : $dd;
     }

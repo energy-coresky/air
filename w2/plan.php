@@ -166,16 +166,16 @@ class Plan
                 SKY::$plans['main'] = ['app' => ['path' => DIR_M], 'class' => []] + $plans;
                 $cfg =& SKY::$plans['main']['class'];
                 foreach ($wares as $key => $val) {
-                    $plans = [];
-                    require ($path = $val['path']) . "/conf.php";
+                    $conf = require ($path = $val['path']) . "/conf.php";
                     if ($val['type'] ?? 0)
-                        $plans['app']['type'] = 'pr-dev';
-                    if (!DEV && in_array($plans['app']['type'], ['dev', 'pr-dev']))
+                        $conf['app']['type'] = 'pr-dev';
+                    if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
                         continue;
                     foreach ($val['class'] as $cls)
                         'c_' == substr($cls, 0, 2) ? ($ctrl[substr($cls, 2)] = $key) : ($cfg[$cls] = $key);
-                    unset($plans['app']['require'], $plans['app']['class']);
-                    SKY::$plans[$key] = ['app' => ['path' => $path] + $plans['app']] + $plans;
+                    $ptr =& $conf['app'];
+                    unset($ptr['require'], $ptr['class'], $ptr['databases'], $ptr['options']);
+                    SKY::$plans[$key] = ['app' => ['path' => $path] + $conf['app']] + $conf;
                 }
 
                 $plans = SKY::$plans;
@@ -411,7 +411,7 @@ class Plan
                 $ary[] = $i !== $k ? "$k =&gt; $v" : $v;
                 $i = $k < 0 ? 0 : 1 + $k;
             }
-            if (($len += strlen($v)) > 200) {
+            if (($len += strlen($v)) > 220) {
                 $ary[] = sprintf(span_g, 'cutted..');
                 break;
             }
