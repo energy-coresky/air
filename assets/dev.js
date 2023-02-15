@@ -48,8 +48,8 @@ sky.d.draw = {
                     blks[view.no] = vars[name];
                     blkc[view.no] = 0;
                 } else {
-                    let dollar = -1 == name.indexOf('::') ? '$' : '';
-                    let s = ++j + '. <b>' + dollar + name + '</b>', v = vars[name];
+                    let dollar = -1 == name.indexOf('::') && 'sky$' != name ? '$' : '';
+                    let s = ('sky$' == name ? j + '+' : ++j + '.') + ' <b>' + dollar + name + '</b>', v = vars[name];
                     if ('$' == name.charAt(0))
                         s = '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
                     if ('' === v) {

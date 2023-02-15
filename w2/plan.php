@@ -241,6 +241,16 @@ class Plan
         return $list[$no] ?? "ErrorNo_$no";
     }
 
+    static function catch_error($func) {
+        global $sky;
+        $t = [$sky->was_error, SKY::$debug];
+        SKY::$debug = $sky->was_error = 0;
+        $r = [call_user_func($func), $e = $sky->was_error];
+        list ($sky->was_error, SKY::$debug) = $t;
+        $sky->was_error |= $e;
+        return $r;
+    }
+
     static function z_err($z_fly, $is_error = false, $drop = true) {
         static $msg = null;
 
@@ -303,12 +313,14 @@ class Plan
     }
 
     static function vars($in, $no, $is_blk = false) {
+        static $obs = [];
         $ary = [];
         isset(Plan::$vars[$no]) or Plan::$vars[$no] = [];
         $p =& Plan::$vars[$no];
-        if (!$no && false === $is_blk)
-            $in += ['sky via __get($name)' => $GLOBALS['sky']];
-        Plan::$see_also = $obs = [];
+        if (!$no && false === $is_blk) {
+            $in += ['sky$' => $GLOBALS['sky']];
+        }
+        Plan::$see_also = [];
         foreach ($in as $k => $v) {
             if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
                 continue;
@@ -317,7 +329,7 @@ class Plan
             //$types = ['unknown type', , 5 => 'resource', 'string', 'array', 'object']; // k u r o  str100 : arr+obj 200
             $type = gettype($v);
             if ($is_obj = 'object' == $type)
-                $obs[get_class($v)] = 1;
+                $no or $is_blk or $obs[get_class($v)] = 1;
             if (!in_array($type, ['NULL', 'boolean', 'integer', 'double']))
                 $v = Plan::var($v, '', false, $is_obj ? $k : false);
             $ary[$k] = $v;
@@ -326,8 +338,10 @@ class Plan
         if (!$no && !$is_blk) {
             if (0 === $is_blk)
                 return $ary;
-            $obs = array_diff_key(Plan::$see_also, $obs + ['Closure' => 1]);
-            $ary += Plan::vars(array_combine(array_map('key', $obs), array_map('current', $obs)), 0, 0);
+            if ($new = array_diff_key(Plan::$see_also, $obs + ['Closure' => 1]))
+                $ary += Plan::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
+            if ($new = array_diff_key(Plan::$see_also, $obs + ['Closure' => 1]))
+                $ary += Plan::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
         }
         ksort($ary);
         if ($is_blk) {
@@ -440,16 +454,16 @@ class Plan
             }, $func->getParameters());
         };
 
-        if ('f' == $type) { // function
+        if ('f' == $type) { # function
             $fnc = new ReflectionFunction($name);
             return "<pre>function $fnc->name(" . implode(', ', $params($fnc)) . ')'
                 . (($rt = $fnc->getReturnType()) ? ": " . $rt->getName() : '') . '</pre>';
         
-        } elseif ('e' == $type) { // extensions
+        } elseif ('e' == $type) { # extensions
             $ext = new ReflectionExtension($name);
             return $ext->info();
 
-        } else { // class, interface, trait
+        } else { # class, interface, trait
             $modifiers = function ($obj) {
                 $m = Reflection::getModifierNames(~ReflectionMethod::IS_PUBLIC & $obj->getModifiers());
                 return $m ? implode(' ', $m) . ' ' : '';
@@ -462,24 +476,28 @@ class Plan
             if ($x = $cls->getInterfaceNames())
                 $name .= ' implements ' . implode(', ', $x);
             $name = 2 == $pp ? '' : "$name\n";
-                
 
             $data = $obj ? [] : array_map(function ($v, $k) {
                 return "const $k = " . self::var($v);
             }, $c = $cls->getConstants(), array_keys($c));
-            $defs = $cls->getDefaultProperties();
             $props = $cls->getProperties($pp ? null : ReflectionProperty::IS_PUBLIC);
-            $data = array_merge($data, array_map(function ($p) use ($defs, $pp, $obj) {
+            $defs = $obj ? [] : $cls->getDefaultProperties();
+            global $sky;
+            $data = array_merge($data, array_map(function ($p) use ($defs, $obj, $sky) {
                 $one = $p->getName();
                 $m = $p->getModifiers();
                 if ($obj) {
-                    $p->setAccessible(true);
+                    if ($pp = $p->isPrivate() || $p->isProtected())
+                        $p->setAccessible(true);
                     $arrow = ReflectionProperty::IS_STATIC & $m ? '::$' : '->';
                     $mods = '';
                     if ($m &= ~ReflectionProperty::IS_STATIC & ~ReflectionProperty::IS_PUBLIC)
-                        $mods = implode(' ', Reflection::getModifierNames($m));
-                    self::$var_path[1] = $arrow . $one;// . ($mods ? " ($mods)" : '');
-                    $one = ($mods ? "$mods " : '') . "$arrow$one = " . self::var($p->getValue($obj));
+                        $mods = implode(' ', Reflection::getModifierNames($m)) . ' ';
+                    self::$var_path[1] = $arrow . $one;
+                    $val = @$p->getValue($obj);
+                    $one = "$mods$arrow$one = " . self::var($val);
+                    if ($pp)
+                        $p->setAccessible(false);
                 } else {
                     if (null !== $defs[$one] && $p->isDefault())
                         $one .= " = " . self::var($defs[$one]);

@@ -21,12 +21,12 @@ class SKY implements PARADISE
     public $langs = [];
     public $shutdown = [];
 
+    static $plans = [];
     static $mem = [];
     static $reg = [];
     static $vars = [];
     static $databases = [];
     static $dd = null;
-    static $plans = [];
     static $cli;
     static $debug;
     static $errors = [0]; # cnt_error

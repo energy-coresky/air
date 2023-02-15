@@ -440,31 +440,30 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
     }
 
     static function sub(&$action, $param = null, $no_handle = false) {
-        global $sky;
-        $me = new MVC;
+        $mvc = new MVC;
         ob_start();
         if (is_string($action)) {
-            if (DEV && $sky->d_red_label && 'r_' == substr($action, 0, 2)) {
+            if (DEV && SKY::d('red_label') && 'r_' == substr($action, 0, 2)) {
                 echo tag("view($action)", 'class="red_label"'); # show red label
-                $me->hnd = 'red-label';
+                $mvc->hnd = 'red-label';
             } else {
                 list ($tpl, $action) = 2 == count($ary = explode('.', $action)) ? $ary : [MVC::$tpl, $ary[0]];
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
-                $me->body = "$tpl." . substr($action, 2);
-                $me->set($no_handle ? $param : MVC::handle($action, $param));
-                $me->hnd = $no_handle ? 'no-handle' : ('_R' == substr(MVC::$ctrl, -2) ? substr(MVC::$ctrl, 0, -2) : MVC::$ctrl) . "::$action()";
+                $mvc->body = "$tpl." . substr($action, 2);
+                $mvc->set($no_handle ? $param : MVC::handle($action, $param));
+                $mvc->hnd = $no_handle ? 'no-handle' : ('_R' == substr(MVC::$ctrl, -2) ? substr(MVC::$ctrl, 0, -2) : MVC::$ctrl) . "::$action()";
             }
         } elseif ($action instanceof Closure) {
-            $me->set($action($param));
-            $me->hnd = "Closure";
+            $mvc->set($action($param));
+            $mvc->hnd = "Closure";
         } else {
-            $me->body = MVC::$tpl . '.' . substr($action[1], 2);
-            $me->set(call_user_func($action, $param));
-            $me->hnd = "$action[0]::$action[1]()";
+            $mvc->body = MVC::$tpl . '.' . substr($action[1], 2);
+            $mvc->set(call_user_func($action, $param));
+            $mvc->hnd = "$action[0]::$action[1]()";
         }
-        $me->ob = ob_get_clean();
+        $mvc->ob = ob_get_clean();
         array_pop(MVC::$stack);
-        return $me;
+        return $mvc;
     }
 
     function set($in, $is_common = false) {
@@ -525,45 +524,43 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         return [$class, $action, $gate];
     }
 
-    static function top() {
+    function top() {
         global $sky;
 
-        $me = new MVC;
         ob_start();
-        $me->return = HEAVEN::J_FLY == $sky->fly;
-        MVC::$cc = new common_c;
         if ('_' == $sky->_0[0]) {
-            $action = ($me->return ? 'j' : 'a') . $sky->_0;
-            $me->hnd = "standard_c::$action()";
-            $me->body = '_std.' . substr($sky->_0, 1);
+            $action = ($this->return ? 'j' : 'a') . $sky->_0;
+            $this->hnd = "standard_c::$action()";
+            $this->body = '_std.' . substr($sky->_0, 1);
             MVC::$mc = new standard_c;
-            $me->set(MVC::$mc->head_y($action), true); # call head_y
+            $this->set(MVC::$mc->head_y($action), true); # call head_y
         } else {
-            list ($class, $action, $gate) = $me->gate(false);
+            list ($class, $action, $gate) = $this->gate(false);
             switch ($action[0]) {
-                case 'd': $me->body = MVC::$tpl . ".default"; break; # default_X
-                case 'e': $me->body = MVC::$tpl . ".empty"; break; # empty_X
-                default:  $me->body = MVC::$tpl . "." . substr($action, 2); break; # a_.. or j_..
+                case 'd': $this->body = MVC::$tpl . ".default"; break; # default_X
+                case 'e': $this->body = MVC::$tpl . ".empty"; break; # empty_X
+                default:  $this->body = MVC::$tpl . "." . substr($action, 2); break; # a_.. or j_..
             }
-            $me->hnd = "$class::$action()";
+            $this->hnd = "$class::$action()";
             $class .= $gate ? '_R' : '';
             MVC::$mc = new $class;
-            $me->set(MVC::$mc->head_y($action), true); # call head_y
+            $this->set(MVC::$mc->head_y($action), true); # call head_y
             if ($gate)
                 $param = call_user_func([$gate, $action]); # call gate
         }
         if (!$sky->error_no)
-            $me->set(call_user_func_array([MVC::$mc, $action], $param ?? [])); # call master action
-        is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $me->set($tail, true); # call tail_y
+            $this->set(call_user_func_array([MVC::$mc, $action], $param ?? [])); # call master action
 
-        $me->ob = ob_get_clean();
+        is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $this->set($tail, true); # call tail_y
+
+        $this->ob = ob_get_clean();
         if ($sky->error_no > 99) {
-            $vars = ['err_no' => $sky->error_no, 'exit' => 0, 'stdout' => $me->ob];
-            $me->ob = '';
+            $vars = ['err_no' => $sky->error_no, 'exit' => 0, 'stdout' => $this->ob];
+            $this->ob = '';
             is_array($ary = MVC::$mc->error_y($action)) ? ($ary += $vars) : ($ary = $vars); # call error_y
-            $me->set($ary);
+            $this->set($ary);
         }
-        view($me); # visualize
+        view($this); # visualize
         if (!$sky->tailed)
             throw new Error('MVC::tail() must used in the layout');
     }

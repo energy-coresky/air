@@ -82,13 +82,14 @@ class HEAVEN extends SKY
 
         require DIR_S . '/w2/mvc.php';
         Plan::app_r('mvc/common_c.php');
-        $cnt_s = 0;
+        MVC::$cc = new common_c;
+        $cnt = 0;
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
-            $cnt_s = count($this->surl);
-            if (1 == $cnt_s && '' === $this->surl[0]) {
+            $cnt = count($this->surl);
+            if (1 == $cnt && '' === $this->surl[0]) {
                 $this->surl = [];
-                $cnt_s = 0;
+                $cnt = 0;
                 if ($this->fly && 'AJAX' == key($_GET)) {// && INPUT_POST == $this->method
                     $this->fly = HEAVEN::J_FLY;
                     if ('adm' == $_GET['AJAX'])
@@ -97,9 +98,10 @@ class HEAVEN extends SKY
                 }
             }
         }
-        common_c::rewrite_h($cnt_s, $this->surl);
-
-        MVC::top(); # 16/14 classes at that point on DEV/Prod
+        common_c::rewrite_h($cnt, $this->surl);
+        $mvc = new MVC;
+        $mvc->return = HEAVEN::J_FLY == $this->fly;
+        $mvc->top(); # 16/14 classes at that point on DEV/Prod
     }
 
     function domain(&$match_lg = null) {
@@ -133,7 +135,7 @@ class HEAVEN extends SKY
 
         if ($hs = headers_sent())
             $this->fly = HEAVEN::Z_FLY;
-        $msg = DEV ? Plan::z_err($this->fly, $this->was_error & SKY::ERR_DETECT) : '';
+        $msg = DEV ? Plan::z_err($this->fly, $this->was_error & SKY::ERR_SHOW) : '';//ERR_DETECT
 
         if (HEAVEN::J_FLY == $this->fly) {
             http_response_code(200);
@@ -184,7 +186,7 @@ class HEAVEN extends SKY
         }
 
         parent::shutdown(function ($err, $func) use ($user, $toggle) {
-            $is_x = DEV ? !Plan::z_err($this->fly, $this->was_error & SKY::ERR_DETECT, $this->fly || $this->tailed) : true;
+            $is_x = DEV ? !Plan::z_err($this->fly, $this->was_error & SKY::ERR_SHOW, $this->fly || $this->tailed) : true; //ERR_DETECT
 
             if ($this->tailed) {
                 if (SKY::$debug && is_string($this->tailed))
@@ -309,7 +311,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
         $sky->was_error |= SKY::ERR_DETECT;
         if (null === SKY::$dd)
             $sky->open(is_array($var) ? $var[1] : $var);
-        if (SKY::$errors[0]++ > 99)
+        if (SKY::$debug && SKY::$errors[0]++ > 99)
             throw new Error("500 Internal SKY error");
     }
     if (SKY::$debug || $sky->log_error && $err) {
