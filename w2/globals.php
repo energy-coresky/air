@@ -332,7 +332,7 @@ class Globals
     function c_mark() {
         $nap = Plan::mem_rq('report.nap');
         $nap[$_POST['ident']] = $_POST['desc'];
-        Plan::mem_p('report.nap', DEV::auto($nap));
+        Plan::mem_p('report.nap', Plan::auto($nap));
         return $this->c_report();
     }
 

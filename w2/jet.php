@@ -104,7 +104,7 @@ class Jet
         if ($tail)
             $out .= ' ?>';
         if (DEV && !$this->tailed)
-            $out .= '<?php Debug::vars(get_defined_vars(), $sky->no) ?>';
+            $out .= '<?php Plan::vars(get_defined_vars(), $sky->no) ?>';
         if (DEV)
             $out .= "<?php MVC::in_tpl() ?>";
         if ($return) {
@@ -156,7 +156,7 @@ class Jet
                 $s .= '; MVC::in_tpl()';
             if (!$closure)
                 return ["<?php $s ?>", $jet->parsed];
-            $vars = DEV ? 'Debug::vars(get_defined_vars(), $sky->no, true); ' : '';
+            $vars = DEV ? 'Plan::vars(get_defined_vars(), $sky->no, true); ' : '';
             return ["<?php call_user_func(function() use(&\$_vars,\$sky) { $s ?>", $jet->parsed, "<?php $vars}) ?>"];
 
         } elseif ($pf) { # asterisk
@@ -359,7 +359,7 @@ class Jet
             case 'head':
                 return "<?php MVC::head($arg) ?>";
             case 'tail':
-                $vars = DEV ? ' Debug::vars(get_defined_vars(), $sky->no);' : '';
+                $vars = DEV ? ' Plan::vars(get_defined_vars(), $sky->no);' : '';
                 $this->tailed = true;
                 return "<?php$vars MVC::tail() ?>";
             case 'continue':

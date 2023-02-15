@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = false;
 
-    const CORE = '0.309 2023-02-14T17:42:17+02:00 energy';
+    const CORE = '0.31 2023-02-15T11:14:23+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -183,7 +183,7 @@ class SKY implements PARADISE
     static function &ghost($char, $packed, $tpl = '', $flag = 0, $dd = null) {
         SKY::$mem[$char] = [$flag, $flag & 4 ? null : $packed, $tpl, [], $dd ?? SKY::$dd];
         if (SKY::$debug && $tpl)
-            trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Debug::closure($tpl) : $tpl), 'GHOST', 1);
+            trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Plan::closure($tpl) : $tpl), 'GHOST', 1);
         if ($packed) foreach (explode("\n", unl($packed)) as $v) {
             list($k, $v) = explode(' ', $v, 2);
             SKY::$mem[$char][3][$k] = escape($v, true);
@@ -327,7 +327,7 @@ class SKY implements PARADISE
         $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
         $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
         if (DEV)
-            $top .= Debug::trace();
+            $top .= Plan::trace();
         if ($is_x && SKY::$dd) {
             if (DEV)
                 SKY::$dd->_xtrace();

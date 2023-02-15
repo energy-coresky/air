@@ -85,6 +85,10 @@ class dd_mysqli implements Database_driver
         mysqli_free_result($q);
     }
 
+    function check_other() {
+        return 'utf8' === mysqli_character_set_name($this->conn) ? false : 'error in mysqli_character_set_name';
+    }
+
     function multi_sql($sql) {
         global $sky;
         if (!$sql instanceof SQL) {

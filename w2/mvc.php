@@ -19,7 +19,7 @@ function view($_in, $_return = false, &$_vars = null) {
     if ('' !== $mvc->ob) {
         $mvc->body = '';
         if (DEV && !$layout)
-            Debug::vars(['$' => $mvc->ob], $mvc->no);
+            Plan::vars(['$' => $mvc->ob], $mvc->no);
     }
     trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->no ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 

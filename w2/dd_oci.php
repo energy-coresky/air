@@ -86,6 +86,10 @@ class dd_oci implements Database_driver
         oci_free_statement($q);
     }
 
+    function check_other() {
+        return false;
+    }
+
     function multi_sql($sql) {
     }
 

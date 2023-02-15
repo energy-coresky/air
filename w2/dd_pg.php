@@ -80,6 +80,10 @@ class dd_pg implements Database_driver
         pg_free_result($q);
     }
 
+    function check_other() {
+        return false;
+    }
+
     function multi_sql($sql) {
     }
 

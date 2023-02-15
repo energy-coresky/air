@@ -382,7 +382,7 @@ class Language
                 $code .= stream_get_contents($fp);
                 fclose($fp);
             }
-            Plan::_p("lng/$lg$pg.php", DEV::auto($out, $code));
+            Plan::_p("lng/$lg$pg.php", Plan::auto($out, $code));
         }
     }
 

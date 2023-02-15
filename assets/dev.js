@@ -37,8 +37,8 @@ sky.d.draw = {
         for (var view of data.views) {
             vars = 'BLK' == view.type ? blks[view.no][blkc[view.no]++] : data.vars[view.no];
             var c = 'BLK' == view.type ? '.' + blkc[view.no] : '';
-            str += '<span style="color:#f77">#' + (1 + parseInt(view.no)) + c + ' ' + view.type + '</span> ' + view.hnd + '<br>';
-            str += 'TEMPLATE ' + view.tpl + '<br>';
+            str += '<span style="color:#f77">#' + (1 + parseInt(view.no)) + c + ' ' + view.type + '</span> ' + view.hnd + ' ';
+            str += '<span style="color:#f77">TEMPLATE</span> ' + view.tpl + '<br>';
             j = 0;
             if (!vars) {
                 str += '<span style="color:red">empty-response</span>';

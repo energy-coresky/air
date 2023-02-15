@@ -115,7 +115,7 @@ class HEAVEN extends SKY
         $this->ghost or $this->tail_ghost();
 
         if (SKY::$debug) { # render tracing in the layout
-            $z_err = DEV ? Debug::z_err($this->fly) : '';
+            $z_err = DEV ? Plan::z_err($this->fly) : '';
             echo tag('<h1>Tracing</h1>' . tag($this->tracing('', false), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"');
             echo tag($z_err, 'id="trace-x" x="' . ($z_err ? 1 : 0) . '" style="display:none"');
             if (DEV && (SKY::$errors[0] || $z_err))
@@ -133,7 +133,7 @@ class HEAVEN extends SKY
 
         if ($hs = headers_sent())
             $this->fly = HEAVEN::Z_FLY;
-        $msg = DEV ? Debug::z_err($this->fly, $this->was_error & SKY::ERR_DETECT) : '';
+        $msg = DEV ? Plan::z_err($this->fly, $this->was_error & SKY::ERR_DETECT) : '';
 
         if (HEAVEN::J_FLY == $this->fly) {
             http_response_code(200);
@@ -147,7 +147,7 @@ class HEAVEN extends SKY
                 $msg = $exit ? view("_std._$this->error_no", $ary + ['stdout' => $stdout]) : $stdout;
             } elseif (DEV && SKY::$debug && SKY::$errors[0]) {
                 $ary = ['err_no' => 1];
-                $msg = $exit ? '' : Debug::check_other();
+                $msg = $exit ? '' : Plan::check_other();
                 $out = '' === $stdout ? sprintf(span_m, 'EMPTY STRING') : html(mb_substr($stdout, 0, 500));
                 $msg .= "<h1>Stdout, depth=$depth</h1><pre>$out</pre>";
             }
@@ -184,7 +184,7 @@ class HEAVEN extends SKY
         }
 
         parent::shutdown(function ($err, $func) use ($user, $toggle) {
-            $is_x = DEV ? !Debug::z_err($this->fly, $this->was_error & SKY::ERR_DETECT, $this->fly || $this->tailed) : true;
+            $is_x = DEV ? !Plan::z_err($this->fly, $this->was_error & SKY::ERR_DETECT, $this->fly || $this->tailed) : true;
 
             if ($this->tailed) {
                 if (SKY::$debug && is_string($this->tailed))
@@ -360,7 +360,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
                 debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
                 $backtrace = html(ob_get_clean());
             }
-            Debug::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context);
+            Plan::epush($title ?? 'User Error', "$mgs\n\n$backtrace", $context);
         } elseif ($is_warning) {
             $sky->was_warning = 1;
             $sky->tracing .= "$fln\n" . '<div class="warning">' . "$var</div>\n";//html() . 
@@ -470,7 +470,7 @@ function json($in, $return = false, $off_layout = true) {
     if ($err = json_last_error())
         trace('json error: ' . $err, true, 1);
     if (DEV && !$return)
-        Debug::vars(['$$' => $in], MVC::instance(-1)->no);
+        Plan::vars(['$$' => $in], MVC::instance(-1)->no);
     return $return ? $out : print($out);
 }
 

@@ -14,11 +14,6 @@ class DEV
 {
     const repository = 'https://coresky.net/api';
     static $static = false;
-    static $vars = [];
-
-    static function auto($v, $more = '') {
-        return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn " . var_export($v, true) . ";\n";
-    }
 
     static function init() {
         global $sky;
@@ -29,7 +24,16 @@ class DEV
             Plan::mem_p(['main', 'dev_vars.txt'], $s);
         });
 
-        SKY::d('cron') && Debug::cron();
+        if (SKY::d('cron')) {
+            if (!Plan::_t(['main', 'cron.php']))
+                return trace('cron.php not found', true);
+            $ts = SKY::d('cron_dev_ts') ?: 0;
+            if (START_TS - $ts > 60) {
+                SKY::d('cron_dev_ts', START_TS);
+                exec('php ' . DIR . '/' . DIR_M . '/cron.php @ 2>&1');
+            }
+        }
+
         if (!$static = $sky->d_static)
             return;
 
@@ -120,7 +124,7 @@ class DEV
             $sky_gate[$class][$func] = true === $ary ? DEV::post_data(Gate::instance()) : $ary;
         }
         Plan::gate_dq($class . '.php'); # clear cache
-        Plan::_p([Plan::$gate, 'gate.php'], DEV::auto($sky_gate));
+        Plan::_p([Plan::$gate, 'gate.php'], Plan::auto($sky_gate));
     }
 
     static function cshow() {
@@ -392,7 +396,7 @@ class DEV
         } else {
             unset($wares[strtolower($dir)]);
         }
-        Plan::_p('wares.php', DEV::auto($wares));
+        Plan::_p('wares.php', Plan::auto($wares));
         Plan::cache_d('sky_plan.php');
         echo 'OK';
     }

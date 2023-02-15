@@ -76,6 +76,10 @@ class dd_ibase implements Database_driver
         ibase_free_result($q);
     }
 
+    function check_other() {
+        return false;
+    }
+
     function multi_sql($sql) {
     }
 

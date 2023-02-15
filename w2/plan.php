@@ -2,23 +2,25 @@
 
 class Plan
 {
-    static $defaults = [
+    private static $connections = [];
+    private static $defaults = [
         'view' => ['path' => DIR_M . '/mvc/view'],
         'cache' => ['path' => 'var/cache'],
         'jet' => ['path' => 'var/jet'],
         'gate' => ['path' => 'var/gate'],
         'mem' => ['path' => 'var/mem'],
-        'sql' => ['path' => 'var/sql'], //2do
+        'sql' => ['path' => 'var/sql'], #2do
     ];
+    private static $vars = [];
+
     static $wares = ['main'];
     static $ware = 'main';
     static $view = 'main';
     static $gate = 'main';
-    static $apps = [];
-    static $ctrl = [];
     static $parsed_fn;
+
     static $z_error = false;
-    private static $connections = [];
+
     /*
         path   => required!
         driver => 'file' by default with '' (empty name) connection
@@ -36,6 +38,10 @@ class Plan
 
     static function has_class($class) {
         return isset(SKY::$plans['main']['class'][$class]);
+    }
+
+    static function auto($v, $more = '') {
+        return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn " . var_export($v, true) . ";\n";
     }
 
     static function vendor($class = false) {
@@ -145,13 +151,6 @@ class Plan
         }
     }
 
-    static function main($plans) {
-        Plan::$ctrl += Gate::controllers();
-        SKY::$plans['main'] += ['ctrl' => Plan::$ctrl];
-        $plans['main'] += ['ctrl' => Plan::$ctrl];
-        Plan::cache_p('sky_plan.php', '<?php SKY::$plans = ' . var_export($plans, true) . ';');
-    }
-
     static function &open($pn, $ware = false) {
         $ware or $ware = Plan::$ware;
 
@@ -159,11 +158,11 @@ class Plan
             require DIR_S . "/w2/dc_file.php";
             Plan::$connections[''] = new dc_file;
             $plans = SKY::$plans + Plan::$defaults;
-            if (is_file($fn = $plans['cache']['path'] . '/' . 'sky_plan.php')) {
-                require $fn;
+            if (is_file($fn_plans = $plans['cache']['path'] . '/' . 'sky_plan.php')) {
+                SKY::$plans = require $fn_plans;
             } else {
-                SKY::$plans = [];
-                $wares = is_file($fn = DIR_M . '/wares.php') ? (require $fn) : [];
+                SKY::$plans = $ctrl = [];
+                $wares = is_file($fn_wares = DIR_M . '/wares.php') ? (require $fn_wares) : [];
                 SKY::$plans['main'] = ['app' => ['path' => DIR_M], 'class' => []] + $plans;
                 $cfg =& SKY::$plans['main']['class'];
                 foreach ($wares as $key => $val) {
@@ -174,13 +173,20 @@ class Plan
                     if (!DEV && in_array($plans['app']['type'], ['dev', 'pr-dev']))
                         continue;
                     foreach ($val['class'] as $cls)
-                        'c_' == substr($cls, 0, 2) ? (Plan::$ctrl[substr($cls, 2)] = $key) : ($cfg[$cls] = $key);
+                        'c_' == substr($cls, 0, 2) ? ($ctrl[substr($cls, 2)] = $key) : ($cfg[$cls] = $key);
                     unset($plans['app']['require'], $plans['app']['class']);
                     SKY::$plans[$key] = ['app' => ['path' => $path] + $plans['app']] + $plans;
                 }
-                Plan::main(SKY::$plans);
+
+                $plans = SKY::$plans;
+                $ctrl += Gate::controllers();
+                SKY::$plans['main'] += ['ctrl' => $ctrl];
+                $plans['main'] += ['ctrl' => $ctrl];
+                file_put_contents($fn_plans, Plan::auto($plans));
+                //Plan::cache_p('sky_plan.php', Plan::auto($plans));
             }
             $cfg =& SKY::$plans['main'][$pn];
+            Plan::locale();
         } elseif (isset(SKY::$plans[$ware][$pn])) {
             $cfg =& SKY::$plans[$ware][$pn];
             if ($cfg['con'] ?? false)
@@ -199,6 +205,16 @@ class Plan
             $cfg['con'] = Plan::$connections[$cfg['use'] ?? ''];
         }
         return $cfg;
+    }
+
+    static function locale($lg = 'en') {
+        if ('en' == $lg && setlocale(LC_ALL, 'en_US.utf8', 'en_US.UTF-8'))
+            return 1;
+        return $lg ? setlocale(LC_ALL, "$lg.utf8", "$lg.UTF-8", $lg) : setlocale(LC_ALL, 0);
+    }
+
+    static function check_other() {
+        return SKY::$dd ? (string)SKY::$dd->check_other() : '';
     }
 
     static function gpc() {
@@ -223,6 +239,117 @@ class Plan
             E_DEPRECATED => 'Deprecated',
         ];
         return $list[$no] ?? "ErrorNo_$no";
+    }
+
+    static function z_err($z_fly, $is_error = false, $drop = true) {
+        static $msg = null;
+
+        if (null !== $msg)
+            return $msg; # empty string or msg
+        $msg = Plan::cache_gq($addr = ['main', 'dev_z_err']);
+        if (!SKY::$debug) # j_trace don't erase file
+            return $msg;
+        $z_fly = HEAVEN::Z_FLY == $z_fly;
+        if ($msg) {
+            if ($drop) {
+                $z_fly or Plan::cache_dq($addr); # erase flash file
+                SKY::$debug = false; # skip self tracing to show z-error's one
+            }
+        } elseif ($z_fly && $is_error) {
+            $msg = tag("Z-error at " . NOW, 'class="z-err"', 'h1');
+            $p =& SKY::$errors;
+            if (isset($p[1]))
+                $msg .= '<h1>' . $p[1][0] . '</h1><pre>' . $p[1][1] . '</pre>';
+            if (isset($p[2]))
+                $msg .= '<h1>' . $p[2][0] . '</h1><pre>' . $p[2][1] . '</pre>';
+            Plan::cache_p($addr, $msg);
+            Plan::$z_error = true;
+        }
+        return $msg;
+    }
+
+    // 2do suppressed: fix for php 8 https://www.php.net/manual/en/language.operators.errorcontrol.php
+    static function epush($title, $desc, $context) {
+        if ($context) {
+            $desc .= "\n";
+            foreach ($context as $k => $v)
+                if (is_scalar($v) || is_null($v))
+                    $desc .= "\$$k = " . html(var_export($v, 1)) . ";\n";
+        }
+        $p =& SKY::$errors;
+        $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", mb_substr($desc, 0, 1000)];
+    }
+
+    static function closure($fun) {
+        $fun = new ReflectionFunction($fun);
+        $file = file($fun->getFileName());
+        $line = trim($file[$fun->getStartLine()]);
+        return 'Plan::' == substr($line, 0, 6) ? $line : 'Extended Closure';
+    }
+
+    static function trace() {
+        isset(Plan::$vars[0]) or Plan::vars(['sky' => $GLOBALS['sky']], 0, 0);
+        ksort(Plan::$vars);
+        $dev_data = [
+            'cnt' => [
+                $c = count($a1 = Plan::get_classes(get_declared_classes())[1]),
+                $c + count($a2 = Plan::get_classes(get_declared_interfaces())[1]),
+            ],
+            'classes' => array_merge($a1, $a2, get_declared_traits()),
+            'vars' => Plan::$vars,
+            'errors' => SKY::$errors,
+        ];
+        return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
+    }
+
+    static function vars($in, $no, $is_blk = false) {
+        $ary = [];
+        isset(Plan::$vars[$no]) or Plan::$vars[$no] = [];
+        $p =& Plan::$vars[$no];
+        if (!$no && false === $is_blk)
+            $in += ['sky via __get($name)' => $GLOBALS['sky']];
+        Plan::$see_also = $obs = [];
+        foreach ($in as $k => $v) {
+            if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
+                continue;
+            if ('$' == $k && isset($p['$$']))
+                return;
+            //$types = ['unknown type', , 5 => 'resource', 'string', 'array', 'object']; // k u r o  str100 : arr+obj 200
+            $type = gettype($v);
+            if ($is_obj = 'object' == $type)
+                $obs[get_class($v)] = 1;
+            if (!in_array($type, ['NULL', 'boolean', 'integer', 'double']))
+                $v = Plan::var($v, '', false, $is_obj ? $k : false);
+            $ary[$k] = $v;
+        }
+
+        if (!$no && !$is_blk) {
+            if (0 === $is_blk)
+                return $ary;
+            $obs = array_diff_key(Plan::$see_also, $obs + ['Closure' => 1]);
+            $ary += Plan::vars(array_combine(array_map('key', $obs), array_map('current', $obs)), 0, 0);
+        }
+        ksort($ary);
+        if ($is_blk) {
+            isset($p['@']) or $p += ['@' => []];
+            $p['@'][] = $ary;
+        } else {
+            $p += $ary;
+        }
+    }
+
+    static function get_classes($all = [], $ext = [], $t = -2) {
+        $all or $all = get_declared_classes();
+        $ext or $ext = get_loaded_extensions();
+        $ary = [];
+        $types = array_filter($ext, function ($v) use (&$ary, $t) {
+            if (!$cls = (new ReflectionExtension($v))->getClassNames())
+                return false;
+            $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
+            return true;
+        });
+        $types = [-1 => 'all', -2 => 'user'] + $types;
+        return [$types, -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]]))];
     }
 
     static $see_also = [];
@@ -375,6 +502,26 @@ class Plan
             $out = $modifiers($cls) . "$name{\n    " . implode("\n    ", $data) . "\n}";
             return $obj ? $out : tag($out, '', 'pre');
         }
+    }
+}
+
+
+class SVG {
+    static $size = [16, 16];
+    static $fill = "currentColor";
+    private $name;
+    private $pack;
+
+    function __construct($c, $a = false) { # new image from array
+        $this->name = $a ? $a : $c;
+        $this->pack = 'svg_list_' . ($a ? $c : 0) . '.pack';
+    }
+
+    function __toString() { # compile image
+        global $sky;
+        $tpl = unl(Plan::view_g([$sky->d_last_ware ?: 'main', $this->pack]));
+        preg_match("/\n:$this->name(| [^\n]+)\n(.+?)\n:/s", $tpl, $m);
+        return sprintf('<svg %s xmlns="http://www.w3.org/2000/svg">%s</svg>', $m[1], $m[2]);
     }
 }
 

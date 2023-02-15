@@ -136,9 +136,9 @@ class Root
                 echo Admin::out([
                     'Default site title' => $sky->s_title,
                     'Primary configuration' => sprintf('DEV = %d, DEBUG = %d, DIR_S = %s, ENC = %s, PHPDIR = %s', DEV, DEBUG, DIR_S, ENC, PHP_BINDIR),
-                    'System' => PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a', PHP_OS),
-                    'Server IP' => $_SERVER['SERVER_ADDR'] ?? '::1',
-                    'Server uptime' => $utime,    # $_exec('uptime')
+                    'System' => (PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a', PHP_OS)),
+                    'Server IP, uptime' => ($_SERVER['SERVER_ADDR'] ?? '::1') . ' ' . $utime, # $_exec('uptime')
+                    'Locale / mb_internal_encoding / mb_detect_order' => setlocale(LC_ALL, 0) . ' / ' . mb_internal_encoding() . ' / ' . implode(', ', mb_detect_order()),
                     'Zend engine version:' => zend_version(),
                     'PHP:' => phpversion(),
                     'Database:' => "$db[name], $db[version], Client charset: $db[charset]",
@@ -187,7 +187,7 @@ class Root
             case 'Classes':
                 new Admin;
                 new Display;
-                $ary = Debug::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
+                $ary = Plan::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
                 $echo($ary[1]);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $ary[0])) . $priv;
                 break;

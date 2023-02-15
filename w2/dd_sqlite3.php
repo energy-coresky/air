@@ -83,6 +83,10 @@ class dd_sqlite3 implements Database_driver
         $q->finalize();
     }
 
+    function check_other() {
+        return false;
+    }
+
     function multi_sql($sql) {
     }
 
