@@ -51,8 +51,6 @@ abstract class MVC_BASE
 
     function __set($name, $value) {
         global $sky;
-        if (DEV && $sky->in_tpl && !$sky->in_row_c)
-            throw new Error("Cannot set \$sky->$name property from the templates");
         $sky->$name = $value;
     }
 }
@@ -261,7 +259,7 @@ class MVC extends MVC_BASE
     public $_v = []; # body vars
     public $body = '';
     public $ob;
-    public $return;
+    public $return = false;
     public $hnd;
     public $no;
 
@@ -282,14 +280,6 @@ class MVC extends MVC_BASE
     static function instance($level = 0) {
         MVC::$stack or new MVC;
         return MVC::$stack[$level < 0 ? count(MVC::$stack) + $level : $level];
-    }
-
-    static function in_tpl($bool = null) {
-        global $sky;
-        static $mem = [];
-        if (is_bool($bool))
-            $mem[] = $sky->in_tpl;
-        $sky->in_tpl = null === $bool ? array_pop($mem) : $bool;
     }
 
     static function mime($mime) {
@@ -431,15 +421,18 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         $sky->tail_t();
     }
 
-    static function handle($method, &$param = null) {
+    static function handle($method, &$param = null, $mandatory = false) {
         if (MVC::$ctrl = method_exists(MVC::$mc, $method) ? get_class(MVC::$mc) : false)
             return MVC::$mc->$method($param);
         if (MVC::$ctrl = method_exists(MVC::$cc, $method) ? 'common_c' : false)
             return MVC::$cc->$method($param);
-        MVC::$ctrl = 'not-found';///???
+        if ($mandatory) {
+            MVC::$ctrl = 'not-found';
+            trace("Method `$method` not found", true, 1);
+        }
     }
 
-    static function sub(&$action, $param = null, $no_handle = false) {
+    static function sub($action, $param = null, $no_handle = false) {
         $mvc = new MVC;
         ob_start();
         if (is_string($action)) {
@@ -450,7 +443,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
                 list ($tpl, $action) = 2 == count($ary = explode('.', $action)) ? $ary : [MVC::$tpl, $ary[0]];
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $mvc->body = "$tpl." . substr($action, 2);
-                $mvc->set($no_handle ? $param : MVC::handle($action, $param));
+                $mvc->set($no_handle ? $param : MVC::handle($action, $param, true));
                 $mvc->hnd = $no_handle ? 'no-handle' : ('_R' == substr(MVC::$ctrl, -2) ? substr(MVC::$ctrl, 0, -2) : MVC::$ctrl) . "::$action()";
             }
         } elseif ($action instanceof Closure) {
@@ -548,6 +541,8 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             if ($gate)
                 $param = call_user_func([$gate, $action]); # call gate
         }
+        if (DEV)
+            trace($sky->error_no ? 'not-called' : "->$action(..)", 'MASTER ACTION');
         if (!$sky->error_no)
             $this->set(call_user_func_array([MVC::$mc, $action], $param ?? [])); # call master action
 

@@ -298,7 +298,12 @@ class Plan
     }
 
     static function trace() {
-        isset(Plan::$vars[0]) or Plan::vars(['sky' => $GLOBALS['sky']], 0, 0);
+        if (!isset(Plan::$vars[0])) {
+            $top = MVC::instance();
+            trace("0 $top->hnd " . MVC::$layout . "^$top->body", 'TOP-VIEW', 1);
+            //Plan::vars(['sky' => $GLOBALS['sky']]);
+            Plan::vars([]);
+        }
         ksort(Plan::$vars);
         $dev_data = [
             'cnt' => [
@@ -312,13 +317,14 @@ class Plan
         return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
     }
 
-    static function vars($in, $no, $is_blk = false) {
+    static function vars($in, $no = 0, $is_blk = false) {
         static $obs = [];
         $ary = [];
         isset(Plan::$vars[$no]) or Plan::$vars[$no] = [];
         $p =& Plan::$vars[$no];
-        if (!$no && false === $is_blk) {
-            $in += ['sky$' => $GLOBALS['sky']];
+        global $sky;
+        if (!$no && false === $is_blk && (!isset($in['sky']) || $sky != $in['sky'])) {
+            $in += [isset($in['sky']) ? 'sky$' : 'sky' => $sky];
         }
         Plan::$see_also = [];
         foreach ($in as $k => $v) {
@@ -331,7 +337,8 @@ class Plan
             if ($is_obj = 'object' == $type)
                 $no or $is_blk or $obs[get_class($v)] = 1;
             if (!in_array($type, ['NULL', 'boolean', 'integer', 'double']))
-                $v = Plan::var($v, '', false, $is_obj ? $k : false);
+                //$v = Plan::var($v, '', false, $is_obj ? $k : false);
+                $v = Plan::var($v, '', false, 'sky$' == $k ? 'sky' : $k);
             $ary[$k] = $v;
         }
 
@@ -381,10 +388,9 @@ class Plan
                     return sprintf(span_m, "Object $cls");
                 }
                 return tag(self::object($var, 'c', 2), 'c="' . $cls . '"', 'o');
+            case 'unknown type':
             case 'resource':
                 return sprintf(span_m, $type); // for php8 - get_debug_type($var) class@anonymous stdClass
-            case 'unknown type':
-                return sprintf(span_m, $type);
             case 'array':
                 $var = self::array($var, $add);
                 if ($quote)
@@ -487,15 +493,16 @@ class Plan
                 $one = $p->getName();
                 $m = $p->getModifiers();
                 if ($obj) {
+                    $skip = $obj instanceof SKY && in_array($one, ['mem', 'reg', 'vars']);
                     if ($pp = $p->isPrivate() || $p->isProtected())
                         $p->setAccessible(true);
-                    $arrow = ReflectionProperty::IS_STATIC & $m ? '::$' : '->';
+                    $arrow = ReflectionProperty::IS_STATIC & $m ? '::$' : '-&gt;';
                     $mods = '';
                     if ($m &= ~ReflectionProperty::IS_STATIC & ~ReflectionProperty::IS_PUBLIC)
-                        $mods = implode(' ', Reflection::getModifierNames($m)) . ' ';
+                        $mods = ' (' . implode(' ', Reflection::getModifierNames($m)) . ')';
                     self::$var_path[1] = $arrow . $one;
-                    $val = @$p->getValue($obj);
-                    $one = "$mods$arrow$one = " . self::var($val);
+                    $val = $skip ? sprintf(span_g, 'see below..') : self::var(@$p->getValue($obj));
+                    $one = "$arrow$one$mods = $val";
                     if ($pp)
                         $p->setAccessible(false);
                 } else {
@@ -517,12 +524,46 @@ class Plan
 
             $traits = implode(', ', $cls->getTraitNames());
             $data = array_merge($traits ? ['use ' . $traits] : [], $data, $data && $funcs ? [''] : [], $funcs);
-            $out = $modifiers($cls) . "$name{\n    " . implode("\n    ", $data) . "\n}";
-            return $obj ? $out : tag($out, '', 'pre');
+            $out = $modifiers($cls) . "$name{\n    " . implode("\n    ", $data);
+            if ($obj && $obj instanceof SKY) {
+                ksort(SKY::$mem);
+                foreach (SKY::$mem as $char => $ary) {
+                    $out .= "\n\n    ghost-$char:" . (is_array($ary[2]) ? ' <u>type-2</u>' : '') . ($ary[3] ? ' <u>sky-memory</u>' : '');
+                    ksort($ary[3]);
+                    foreach ($ary[3] as $k => $v)
+                        $out .= "\n    -&gt;{$char}_$k = " . self::var($v);
+                }
+                $out .= "\n\n    SKY::\$reg:";
+                ksort(SKY::$reg);
+                foreach (SKY::$reg as $k => $v) {
+                    self::$var_path[1] = "-&gt;$k";
+                    $out .= "\n    -&gt;$k = " . self::var($v);
+                }
+                $out .= "\n\n    SKY::\$vars:";
+                ksort(SKY::$vars);
+                foreach (SKY::$vars as $k => $v) {
+                    self::$var_path[1] = "-&gt;$k";
+                    $out .= "\n    -&gt;$k = " . self::var($v);
+                }
+            }
+            return $obj ? "$out\n}" : tag("$out\n}", '', 'pre');
         }
     }
 }
 
+function e() {
+    global $sky;
+    $top = MVC::instance();
+    if (DEV && !SKY::s('gate_404')) {
+        $sky->error_no = 71;
+        $top->body = $sky->fly ? '' : '_std.e71';
+        list ($class, $action) = explode('::', substr($top->hnd, 0, -2));
+        $sky->ca_path = ['ctrl' => $class, 'func' => $action];
+        trace(["Gate error in $top->hnd", 'Gate error'], true, 1);
+    } else {
+        $top->set(404);
+    }
+}
 
 class SVG {
     static $size = [16, 16];

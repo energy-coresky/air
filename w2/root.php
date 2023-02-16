@@ -319,6 +319,7 @@ class Root
                 'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
                 'error_403'     => ['Use 403 code for `die`', 'chk'],
                 'empty_die'     => ['Empty response for `die`', 'chk'],
+                'gate_404'      => ['Gate errors as 0.404 (soft)', 'chk'], //2do: clear all cache when changed
                 'log_error'     => ['Log ERROR', 'radio', ['Off', 'On']],//crash_log prod_error quiet_eerr
                 'log_crash'     => ['Log CRASH', 'radio', ['Off', 'On']],
                 ['Hard cache', [

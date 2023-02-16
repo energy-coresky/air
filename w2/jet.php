@@ -94,7 +94,7 @@ class Jet
             Jet::$top .= "ob_start(); ";
         Jet::$top .= "extract(\$_vars, EXTR_REFS) ?>";
         if (DEV) {
-            Jet::$top .= "<?php\ntrace('TPL: $list'); MVC::in_tpl(true);";           //////////??????????????????
+            Jet::$top .= "<?php\ntrace('TPL: $list');";
             Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || HEAVEN::J_FLY == $sky->fly && !$sky->no))';
             Jet::$top .= "\nthrow new Error('Return status do not match for file: ' . __FILE__) ?>";
         }
@@ -105,8 +105,6 @@ class Jet
             $out .= ' ?>';
         if (DEV && !$this->tailed)
             $out .= '<?php Plan::vars(get_defined_vars(), $sky->no) ?>';
-        if (DEV)
-            $out .= "<?php MVC::in_tpl() ?>";
         if ($return) {
             $out .= '<?php return ' . ($tail ? 'implode("", $_ob);' : 'ob_get_clean();');
         } else {
@@ -143,17 +141,13 @@ class Jet
             if ($closure = strpos($s, '?'))
                 $closure = preg_match("/\\$\w+/s", $s);
             $s = $closure ? '$_a = SKY::$vars; ' : '';
-            if (DEV)
-                $s .= 'MVC::in_tpl(false); ';
             if ($closure)
                 $s .= '$_b = (array)';
-            $s .= "MVC::handle('$pf[0]_$name', \$_vars)";
+            $s .= "MVC::handle('$pf[0]_$name', \$_vars, true)";
             if ($closure)
                 $s .= '; MVC::vars($_a, $_b); extract($_a, EXTR_REFS)';
             if (DEV && $closure)
                 $s .= "; trace(\$sky->no . ' ' . ('_R' == substr(MVC::\$ctrl, -2) ? substr(MVC::\$ctrl, 0, -2) : MVC::\$ctrl) . '::$pf[0]_$name() ^', 'BLK-VIEW')";
-            if (DEV)
-                $s .= '; MVC::in_tpl()';
             if (!$closure)
                 return ["<?php $s ?>", $jet->parsed];
             $vars = DEV ? 'Plan::vars(get_defined_vars(), $sky->no, true); ' : '';
@@ -164,7 +158,7 @@ class Jet
                 throw new Error("Jet blocks: char `$pf[0]` occupied");
             $this->occupied[] = $pf[0];
             $pf[1] = '_';
-            Jet::$top .= "\$_$pf = (array)MVC::handle('$pf$name', \$_vars); MVC::vars(\$_vars, \$_$pf, '$pf');\n";
+            Jet::$top .= "\$_$pf = (array)MVC::handle('$pf$name', \$_vars, true); MVC::vars(\$_vars, \$_$pf, '$pf');\n";
         }
         return $jet->parsed;
     }
@@ -260,7 +254,7 @@ class Jet
             if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
                 if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
                     throw new Error("Jet: cannot find `$name.$marker`");
-                trace("Used default marker from $name.jet", 'JET');
+                trace("Used magic marker from $name.jet", 'JET');
             }
             $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
             $this->marker = $marker;
@@ -329,7 +323,7 @@ class Jet
             case 'use':
                 return !$arg ? null : $this->_block($arg, $str, 'block' == $tag);
             case 'view':
-                return $q(DEV ? "MVC::in_tpl(false);view(%s);MVC::in_tpl()" : 'view(%s)', $arg);
+                return $q('view(%s)', $arg);
             case 'eat':
                 for ($len = strlen($str), $i = 0; $i < $len && in_array($str[$i], [' ', "\r", "\n", "\t"]); $i++);
                 if ($i)

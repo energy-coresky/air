@@ -91,10 +91,9 @@ class SKY implements PARADISE
     function open($msg = 'OK') {
         if (SKY::$dd || SKY::$dd === false)
             return SKY::$dd;
-        SKY::$dd = false; # let stay false if thrown
-        SKY::$dd = SQL::open();
 
-        $this->memory(3, 's');
+        SKY::$dd = false; # let stay false if thrown
+        $this->memory(3, 's', SKY::$dd = SQL::open());
         $this->log_error = $this->s_log_error or SKY::$debug or ini_set('error_reporting', 0);
         $this->trace_cli = $this->s_trace_cli;
 
@@ -108,17 +107,11 @@ class SKY implements PARADISE
 
     function memory($id = 9, $char = 'n', $dd = null) {
         if (!isset(SKY::$mem[$char])) {
-            if (false === SKY::$dd)
-                return '';
-            $dd or $dd = SKY::$dd;
-            $dd or $dd = $this->open();
+            $dd or $dd = $this->open("OK, first char is `$char`");
             if (!$dd)
                 return '';
-
             list($dt, $imemo, $tmemo) = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
             SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id, 0, $dd);
-            if (9 == $id && defined('WWW') && 'n' == $char)
-                Schedule::setWWW($this->n_www);
 //trace($this, 'Object $sky');
         }
         return SKY::$mem[$char][3];
@@ -316,18 +309,20 @@ class SKY implements PARADISE
         if ($web)
             return $web($err, $code);
         # CLI
-        if ($this->was_error & SKY::ERR_DETECT || $this->trace_cli)
-            $this->tracing(($this->shutdown ? get_class($this->shutdown[0][0]) : 'Console') . "\n");
-
+        $hnd = $this->shutdown ? get_class($this->shutdown[0][0]) : 'Console';
+        trace("0 $hnd ^", 'TOP-VIEW', 1);
+        if (DEV)
+            Plan::vars(['sky' => $this]);
+        if ($this->was_error & SKY::ERR_SHOW || $this->trace_cli)
+            $this->tracing("$hnd\n");
         SQL::close();
         exit($code($err));
     }
 
     function tracing($top = '', $is_x = true) {
+        $vars = DEV ? Plan::trace() : '';
         $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
-        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS);
-        if (DEV)
-            $top .= Plan::trace();
+        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS) . $vars;
         if ($is_x && SKY::$dd) {
             if (DEV)
                 SKY::$dd->_xtrace();

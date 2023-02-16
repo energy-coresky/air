@@ -78,11 +78,12 @@ class HEAVEN extends SKY
         $this->eref = !$m ? $referer : false;
 
         if (SKY::$debug)
-            $this->gpc = Plan::gpc();
+            $this->gpc = Plan::gpc(); # original input
 
         require DIR_S . '/w2/mvc.php';
         Plan::app_r('mvc/common_c.php');
         MVC::$cc = new common_c;
+        $mvc = new MVC;
         $cnt = 0;
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
@@ -91,7 +92,7 @@ class HEAVEN extends SKY
                 $this->surl = [];
                 $cnt = 0;
                 if ($this->fly && 'AJAX' == key($_GET)) {// && INPUT_POST == $this->method
-                    $this->fly = HEAVEN::J_FLY;
+                    $mvc->return = $this->fly = HEAVEN::J_FLY;
                     if ('adm' == $_GET['AJAX'])
                         $this->surl = ['adm'];
                     array_shift($_GET);
@@ -99,8 +100,6 @@ class HEAVEN extends SKY
             }
         }
         common_c::rewrite_h($cnt, $this->surl);
-        $mvc = new MVC;
-        $mvc->return = HEAVEN::J_FLY == $this->fly;
         $mvc->top(); # 16/14 classes at that point on DEV/Prod
     }
 

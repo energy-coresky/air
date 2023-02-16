@@ -16,12 +16,14 @@ class Gate
 
     function __construct() {
         global $sky;
-        $sky->memory();
+        $sky->memory(); # this also do $sky->open();
+        if (defined('WWW'))
+            Schedule::setWWW($sky->n_www);
     }
 
     static function instance() {
-        static $me;
-        return $me ?: ($me = new Gate);
+        static $gate;
+        return $gate ?: ($gate = new Gate);
     }
 
     static function load_array($class = false) {
@@ -123,13 +125,14 @@ class Gate
     }
 
     function code($ary, $cmode, $is_view = true) {
-        global $sky;
         list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
         if ($this->_j)
             $meth = [0];
         if (!$meth && 'main' == $cmode[1] && '' === $cmode[2]) # for main page
             $meth = [1];
-        $this->_e = !DEV || $is_view && $sky->n_sg_prod ? 'die;' : 'e();';
+        $this->_e = 'e();';
+        if (!SKY::s('gate_404') && (!DEV || $is_view && SKY::d('sg_prod')))
+            $this->_e = 'die;';
         $errors = $s0 = '';
         if (!$cnt_meth = count($meth))
             $errors .= "$this->_e # no HTTP methods defined\n";
@@ -201,13 +204,12 @@ class Gate
     }
 
     function process_addr($addr, $flag, $cmode, &$eq0) {
-        global $sky;
         list($i, $p0, $p1) = $cmode;
         $this->i = $i;
 
         $ctrl = $p0 ? $this->span($p0, 2 == $i && !$p1 ? 'green' : 'blue', 2) : '';
         $act = '' === $p1 ? '' : $this->span($p1, $this->_j ? 'red' : 'green', 2);
-        $this->url = $sky->n_sg_prod || !defined('PATH') ? _PUBLIC . '/' : DOMAIN . PATH;
+        $this->url = SKY::d('sg_prod') || !defined('PATH') ? _PUBLIC . '/' : DOMAIN . PATH;
         $this->ends = [];
         $php = $this->ra = $this->ns = '';
         $this->raw_input = $this->sz_surl = $this->sz_ary = 0;
