@@ -3,7 +3,6 @@
 class DEV
 {
     const repository = 'https://coresky.net/api';
-    static $static = false;
 
     static function init() {
         global $sky;
@@ -43,16 +42,16 @@ class DEV
         if ($list = $sky->d_statics) {
             $saved = array_explode($list, '#', ',');
             if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
-                DEV::$static = true;
+                $sky->static_new = true;
             $files = $saved + $files;
         }
         foreach ($files as $one => &$_mt) {
             if ($_mt != ($mt = filemtime($one))) {
                 $_mt = $mt;
-                DEV::$static = true;
+                $sky->static_new = true;
             }
         }
-        if (DEV::$static)
+        if ($sky->static_new)
             SKY::d('statics', array_join($files, '#', ','));
     }
 

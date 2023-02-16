@@ -154,7 +154,7 @@ class dd_mysqli implements Database_driver
     }
 
     function _xtrace() {
-        $this->sqlf('update $_memory d left join $_memory s on (s.id= if(d.id=15, 1, 15)) set d.tmemo=s.tmemo where d.id in (15, 16)');
+        $this->sqlf('update $_memory d left join $_memory s on (s.id= if(d.id=2, 1, 2)) set d.tmemo=s.tmemo where d.id in (2, 3)');
     }
 
     function _tables($table = false) {

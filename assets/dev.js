@@ -33,7 +33,7 @@ sky.d.draw = {
     x: '',
     v: function(data, str) {
         str = '';
-        var j, vars, cls, blks = {}, blkc = {};
+        var j, vars, cls, blks = {}, blkc = {}, see_more = false;
         for (var view of data.views) {
             vars = 'BLK' == view.type ? blks[view.no][blkc[view.no]++] : data.vars[view.no];
             var c = 'BLK' == view.type ? '.' + blkc[view.no] : '';
@@ -48,14 +48,19 @@ sky.d.draw = {
                     blks[view.no] = vars[name];
                     blkc[view.no] = 0;
                 } else {
-                    let s, dollar = -1 == name.indexOf('::') ? '$' : '', v = vars[name],
+                    let s = '', dollar = -1 == name.indexOf('::') ? '$' : '', v = vars[name],
                         red_plus = '<span style="color:#f00">+</span>';
-
+                    if (false === see_more && !dollar) {
+                        see_more = j > 10 ? true : 0;
+                        if (see_more)
+                            s += '<a href="javascript:;" onclick="$(this).hide().next().show()">see more ('
+                                + (Object.keys(vars).length - j - 2) + ')..</a><div style="display:none">'
+                    }
                     if ('$' == name.charAt(0)) {
-                        s = '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
+                        s += '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
                     } else {
-                        s = ('sky$' == name ? j + red_plus : ++j + '.') + ' <b>' + dollar
-                       s += ('sky$' == name ? 'sky' : name) + '</b>'
+                        s += ('sky$' == name ? j + red_plus : ++j + '.') + ' <b>' + dollar
+                        s += ('sky$' == name ? 'sky' : name) + '</b>'
                     }
                     if ('' === v) {
                         v = '<span style="color:#93c">empty string</span>';
@@ -71,6 +76,8 @@ sky.d.draw = {
                     str += s +'&nbsp;=&nbsp;' + v + '<br>';
                 }
             });
+            if (see_more)
+                str += '</div>';
             str += '<hr>';
         }
         return str;

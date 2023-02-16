@@ -350,7 +350,12 @@ class Plan
             if ($new = array_diff_key(Plan::$see_also, $obs + ['Closure' => 1]))
                 $ary += Plan::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
         }
-        ksort($ary);
+        uksort($ary, function ($a, $b) {
+            $a_ = (bool)strpos($a, ':');
+            if ($a_ != ($b_ = (bool)strpos($b, ':')))
+                return $a_ ? 1 : -1;
+            return strcasecmp($a, $b);
+        });
         if ($is_blk) {
             isset($p['@']) or $p += ['@' => []];
             $p['@'][] = $ary;
@@ -387,7 +392,10 @@ class Plan
                     self::$see_also[$cls] = [$p[':' == $p[1][0] ? 3 : 0] . $p[1] . implode('', $p[2]) => $var];
                     return sprintf(span_m, "Object $cls");
                 }
-                return tag(self::object($var, 'c', 2), 'c="' . $cls . '"', 'o');
+                $s = self::object($var, 'c', 2);
+                if ("{\n    \n}" == $s)
+                    return sprintf(span_y, "Object $cls") . ' - ' . sprintf(span_m, 'no properties');
+                return tag($s, 'c="' . $cls . '"', 'o');
             case 'unknown type':
             case 'resource':
                 return sprintf(span_m, $type); // for php8 - get_debug_type($var) class@anonymous stdClass

@@ -79,13 +79,13 @@ class standard_c extends Controller
     }
 
     function j_trace() {
-        if (!$id = array_search($this->_1, [2 => 0, 1 => 1, 15 => 2, 16 => 3]))
+        if ($this->_1 && !in_array($this->_1, [1, 2, 3]))
             return 404;
         global $sky, $user;
         if (!$user->root && !DEBUG)
             return 404;
         SKY::$debug = 0;
-        if (2 != $id)
+        if ($id = $this->_1)
             $body = '<h1>Tracing</h1>' . tag(sqlf('+select tmemo from $_memory where id=%d', $id), 'class="trace"', 'pre');
         echo $body ?? 'err';
     }

@@ -79,8 +79,8 @@ class Admin
     static function access() {
         global $sky, $user;
 
-        list(, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=8');
-        SKY::ghost('a', $tmemo, 'update $_memory set dt=now(), tmemo=%s where id=8');
+        list(, $tmemo) = sqlf('-select imemo, tmemo from $_memory where id=10');
+        SKY::ghost('a', $tmemo, 'update $_memory set dt=now(), tmemo=%s where id=10');
         $menu = SKY::a('menu') or Root::admin($sky);
         self::$menu = unserialize($menu);
         self::$adm = [

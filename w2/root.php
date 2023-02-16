@@ -93,7 +93,7 @@ class Root
             $funs[2] = substr($funs[2], 0, 7);
             return call_user_func(['Root', '_' . $funs[$n]], $id);
         }
-        $cr = [7 => 10, 2, 11, 4];
+        $cr = [7 => 7, 6, 5, 4];
         echo Display::log(sqlf('+select tmemo from $_memory where id=%d', $cr[$n]));
     }
 

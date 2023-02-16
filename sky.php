@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = false;
 
-    const CORE = '0.311 2023-02-15T16:03:03+02:00 energy';
+    const CORE = '0.333 2023-02-16T22:53:08+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -93,11 +93,11 @@ class SKY implements PARADISE
             return SKY::$dd;
 
         SKY::$dd = false; # let stay false if thrown
-        $this->memory(3, 's', SKY::$dd = SQL::open());
+        $this->memory(8, 's', SKY::$dd = SQL::open());
         $this->log_error = $this->s_log_error or SKY::$debug or ini_set('error_reporting', 0);
         $this->trace_cli = $this->s_trace_cli;
 
-        if (DEV && !CLI && DEV::$static) {
+        if (DEV && !CLI && $this->static_new) {
             $s = substr($this->s_statp, 0, -1) + 1;
             $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
         }
@@ -237,7 +237,7 @@ class SKY implements PARADISE
         if (!SKY::$dd || !in_array(SKY::s('test_mode'), [$mode, 'all']))
             return;
         $new = date(DATE_DT) . " $mode $data\n";
-        SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=10', $new);
+        SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=7', $new);
     }
 
     static function version() : array {
