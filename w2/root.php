@@ -114,6 +114,8 @@ class Root
                 global $sky;
                 if ('e' == $t)
                     $v = explode(' ', $v)[2];
+                if ('c' == $t || 'f' == $t)
+                    $v = explode(' ', $v)[0];
                 $sky->d_manual or $sky->d_manual = 'en';
                 $sky->d_se or $sky->d_se = 'https://yandex.ru/search/?text=%s';
                 $vv = str_replace('_', '-', strtolower($v));
@@ -172,15 +174,22 @@ class Root
                 break;
 
             case 'Functions':
+                $mods = [];
                 $types = array_keys($ary = get_defined_functions());
-                $types = array_merge($types, array_filter($ext, function ($v) use (&$ary) {
+                $types = array_merge($types, array_filter($ext, function ($v) use (&$ary, &$mods) {
                     if (!$func = get_extension_funcs($v))
                         return false;
                     $ary[$v] = $func;
+                    $mods += array_combine($func, array_pad([], count($func), $v));
                     return true;
                 }));
-                $t = isset($_GET['t']) ? intval($_GET['t']) : array_search('user', $types);
-                $echo($ary[$types[$t]], 'f');
+                $idx = $types[$t = $_GET['t'] ?? array_search('user', $types)];
+                if ('internal' == $idx) {
+                    $ary[$idx] = array_map(function ($v) use (&$mods) {
+                        return $v . ' (' . ($mods[$v] ?? '??') . ')';
+                    }, $ary[$idx]);
+                }
+                $echo($ary[$idx], 'f');
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 2]), option($t, $types));
                 break;
 
@@ -188,6 +197,11 @@ class Root
                 new Admin;
                 new Display;
                 $ary = Plan::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
+                if (-1 == $t) {
+                    $ary[1] = array_map(function ($v) use (&$ary) {
+                        return $v . ' (' . ($ary[2][$v] ?? 'user') . ')';
+                    }, $ary[1]);
+                }
                 $echo($ary[1]);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $ary[0])) . $priv;
                 break;

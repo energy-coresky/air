@@ -20,6 +20,8 @@ class Plan
     static $parsed_fn;
 
     static $z_error = false;
+    static $see_also = [];
+    static $var_path = ['', '?', [], '']; # var_name, property, array's-path
 
     /*
         path   => required!
@@ -218,10 +220,10 @@ class Plan
     }
 
     static function gpc() {
-        return "\$_GET: " . Plan::var($_GET, '') .
-            "\n\$_POST: " . Plan::var($_POST, '') .
-            "\n\$_FILES: " . Plan::var($_FILES, '') .
-            "\n\$_COOKIE: " . Plan::var($_COOKIE, '') . "\n";
+        return "\$_GET: " . Plan::var($_GET) .
+            "\n\$_POST: " . Plan::var($_POST) .
+            "\n\$_FILES: " . Plan::var($_FILES) .
+            "\n\$_COOKIE: " . Plan::var($_COOKIE) . "\n";
     }
 
     static function error_name($no) {
@@ -301,14 +303,13 @@ class Plan
         if (!isset(Plan::$vars[0])) {
             $top = MVC::instance();
             trace("0 $top->hnd " . MVC::$layout . "^$top->body", 'TOP-VIEW', 1);
-            //Plan::vars(['sky' => $GLOBALS['sky']]);
             Plan::vars([]);
         }
         ksort(Plan::$vars);
         $dev_data = [
             'cnt' => [
-                $c = count($a1 = Plan::get_classes(get_declared_classes())[1]),
-                $c + count($a2 = Plan::get_classes(get_declared_interfaces())[1]),
+                $cnt = count($a1 = Plan::get_classes(get_declared_classes())[1]),
+                $cnt + count($a2 = Plan::get_classes(get_declared_interfaces())[1]),
             ],
             'classes' => array_merge($a1, $a2, get_declared_traits()),
             'vars' => Plan::$vars,
@@ -318,39 +319,47 @@ class Plan
     }
 
     static function vars($in, $no = 0, $is_blk = false) {
-        static $obs = [];
-        $ary = [];
-        isset(Plan::$vars[$no]) or Plan::$vars[$no] = [];
-        $p =& Plan::$vars[$no];
         global $sky;
+        static $collect = ['Closure' => 1], $cache = [];
+
         if (!$no && false === $is_blk && (!isset($in['sky']) || $sky != $in['sky'])) {
             $in += [isset($in['sky']) ? 'sky$' : 'sky' => $sky];
         }
-        Plan::$see_also = [];
+        $out = Plan::$see_also = [];
+        isset(Plan::$vars[$no]) or Plan::$vars[$no] = [];
+        $p =& Plan::$vars[$no];
+
         foreach ($in as $k => $v) {
             if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
                 continue;
             if ('$' == $k && isset($p['$$']))
                 return;
-            //$types = ['unknown type', , 5 => 'resource', 'string', 'array', 'object']; // k u r o  str100 : arr+obj 200
             $type = gettype($v);
-            if ($is_obj = 'object' == $type)
-                $no or $is_blk or $obs[get_class($v)] = 1;
-            if (!in_array($type, ['NULL', 'boolean', 'integer', 'double']))
-                //$v = Plan::var($v, '', false, $is_obj ? $k : false);
-                $v = Plan::var($v, '', false, 'sky$' == $k ? 'sky' : $k);
-            $ary[$k] = $v;
+            if ($is_obj = 'object' == $type) {
+                $cls = get_class($v);
+                $no or $is_blk or $collect[$cls] = 1;
+            }
+            if (in_array($type, ['unknown type', 'resource', 'string', 'array', 'object'])) # else: 'NULL', 'boolean', 'integer', 'double'
+                $v = Plan::var($v, '', false, 'sky$' == $k ? 'sky' : $k);//$is_obj ? $k : false
+
+            if ($is_obj || 'array' == $type) {
+                if ($new = !isset($cache[$type .= $k]) || $cache[$type] != $v)
+                    $cache[$type] = $v;
+                $out[$k] = $new ? $v : sprintf(span_y, $is_obj ? "Object $cls" : 'Array') . ' - ' . sprintf(span_m, 'see prev. View');
+            } else {
+                $out[$k] = $v;
+            }
         }
 
         if (!$no && !$is_blk) {
             if (0 === $is_blk)
-                return $ary;
-            if ($new = array_diff_key(Plan::$see_also, $obs + ['Closure' => 1]))
-                $ary += Plan::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
-            if ($new = array_diff_key(Plan::$see_also, $obs + ['Closure' => 1]))
-                $ary += Plan::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
+                return $out;
+            if ($new = array_diff_key(Plan::$see_also, $collect))
+                $out += Plan::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
+            if ($new = array_diff_key(Plan::$see_also, $collect))
+                $out += Plan::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
         }
-        uksort($ary, function ($a, $b) {
+        uksort($out, function ($a, $b) {
             $a_ = (bool)strpos($a, ':');
             if ($a_ != ($b_ = (bool)strpos($b, ':')))
                 return $a_ ? 1 : -1;
@@ -358,9 +367,9 @@ class Plan
         });
         if ($is_blk) {
             isset($p['@']) or $p += ['@' => []];
-            $p['@'][] = $ary;
+            $p['@'][] = $out;
         } else {
-            $p += $ary;
+            $p += $out;
         }
     }
 
@@ -371,20 +380,22 @@ class Plan
         $types = array_filter($ext, function ($v) use (&$ary, $t) {
             if (!$cls = (new ReflectionExtension($v))->getClassNames())
                 return false;
-            $t < 0 ? ($ary = array_merge($ary, $cls)) : $ary[$v] = $cls;
+            $t < 0 ? ($ary += array_combine($cls, array_pad([], count($cls), $v))) : ($ary[$v] = $cls);
             return true;
         });
         $types = [-1 => 'all', -2 => 'user'] + $types;
-        return [$types, -2 == $t ? array_diff($all, $ary) : (-1 == $t ? $all : array_intersect($all, $ary[$types[$t]]))];
+        if ($t > -2)
+            return [$types, -1 == $t ? $all : array_intersect($all, $ary[$types[$t]]), $ary];
+        return [$types, array_diff($all, array_keys($ary)), []];
     }
 
-    static $see_also = [];
-    static $var_path = ['', '?', [], '']; # var_name, property, array's-path
-
-    static function var($var, $add = '    ', $quote = true, $var_name = '') { # tune var_export for display in html
+    static function var($var, $add = '', $quote = true, $var_name = false) { # tune var_export for display in html
         if ($var_name)
             self::$var_path = [$var_name, '', [], is_object($var) ? get_class($var) : ''];
         switch ($type = gettype($var)) {
+            case 'unknown type':
+            case 'resource':
+                return sprintf(span_m, $type); // for php8 - get_debug_type($var) class@anonymous stdClass
             case 'object':
                 $cls = get_class($var);
                 if ($quote) {
@@ -396,9 +407,6 @@ class Plan
                 if ("{\n    \n}" == $s)
                     return sprintf(span_y, "Object $cls") . ' - ' . sprintf(span_m, 'no properties');
                 return tag($s, 'c="' . $cls . '"', 'o');
-            case 'unknown type':
-            case 'resource':
-                return sprintf(span_m, $type); // for php8 - get_debug_type($var) class@anonymous stdClass
             case 'array':
                 $var = self::array($var, $add);
                 if ($quote)
@@ -450,7 +458,7 @@ class Plan
         $s = implode(', ', $ary);
         if (strlen($s) < 77)
             return "[$s]";
-        return "[\n  $pad$add" . implode(",\n  $pad$add", $ary) . "\n$pad$add]";
+        return "[\n$add  $pad" . implode(",\n$add  $pad", $ary) . "\n$add$pad]";
     }
 
     static function object($name, $type, $pp = 0) {
@@ -472,7 +480,7 @@ class Plan
             $fnc = new ReflectionFunction($name);
             return "<pre>function $fnc->name(" . implode(', ', $params($fnc)) . ')'
                 . (($rt = $fnc->getReturnType()) ? ": " . $rt->getName() : '') . '</pre>';
-        
+
         } elseif ('e' == $type) { # extensions
             $ext = new ReflectionExtension($name);
             return $ext->info();
@@ -492,7 +500,7 @@ class Plan
             $name = 2 == $pp ? '' : "$name\n";
 
             $data = $obj ? [] : array_map(function ($v, $k) {
-                return "const $k = " . self::var($v);
+                return "const $k = " . self::var($v, '  ');
             }, $c = $cls->getConstants(), array_keys($c));
             $props = $cls->getProperties($pp ? null : ReflectionProperty::IS_PUBLIC);
             $defs = $obj ? [] : $cls->getDefaultProperties();
@@ -509,13 +517,13 @@ class Plan
                     if ($m &= ~ReflectionProperty::IS_STATIC & ~ReflectionProperty::IS_PUBLIC)
                         $mods = ' (' . implode(' ', Reflection::getModifierNames($m)) . ')';
                     self::$var_path[1] = $arrow . $one;
-                    $val = $skip ? sprintf(span_g, 'see below..') : self::var(@$p->getValue($obj));
+                    $val = $skip ? sprintf(span_g, 'see below..') : self::var(@$p->getValue($obj), '  ');
                     $one = "$arrow$one$mods = $val";
                     if ($pp)
                         $p->setAccessible(false);
                 } else {
                     if (null !== $defs[$one] && $p->isDefault())
-                        $one .= " = " . self::var($defs[$one]);
+                        $one .= " = " . self::var($defs[$one], '  ');
                     ReflectionProperty::IS_PUBLIC == $m or $m &= ~ReflectionProperty::IS_PUBLIC;
                     $one = implode(' ', Reflection::getModifierNames($m)) . " \$$one";
                 }
@@ -532,26 +540,26 @@ class Plan
 
             $traits = implode(', ', $cls->getTraitNames());
             $data = array_merge($traits ? ['use ' . $traits] : [], $data, $data && $funcs ? [''] : [], $funcs);
-            $out = $modifiers($cls) . "$name{\n    " . implode("\n    ", $data);
+            $out = $modifiers($cls) . "$name{\n  " . implode("\n  ", $data);
             if ($obj && $obj instanceof SKY) {
                 ksort(SKY::$mem);
                 foreach (SKY::$mem as $char => $ary) {
-                    $out .= "\n\n    ghost-$char:" . (is_array($ary[2]) ? ' <u>type-2</u>' : '') . ($ary[3] ? ' <u>sky-memory</u>' : '');
+                    $out .= "\n\n  ghost-$char:" . (is_array($ary[2]) ? ' <u>type-2</u>' : '') . ($ary[3] ? ' <u>sky-memory</u>' : '');
                     ksort($ary[3]);
                     foreach ($ary[3] as $k => $v)
-                        $out .= "\n    -&gt;{$char}_$k = " . self::var($v);
+                        $out .= "\n  -&gt;{$char}_$k = " . self::var($v);
                 }
-                $out .= "\n\n    SKY::\$reg:";
+                $out .= "\n\n  SKY::\$reg:";
                 ksort(SKY::$reg);
                 foreach (SKY::$reg as $k => $v) {
                     self::$var_path[1] = "-&gt;$k";
-                    $out .= "\n    -&gt;$k = " . self::var($v);
+                    $out .= "\n  -&gt;$k = " . self::var($v);
                 }
-                $out .= "\n\n    SKY::\$vars:";
+                $out .= "\n\n  SKY::\$vars:";
                 ksort(SKY::$vars);
                 foreach (SKY::$vars as $k => $v) {
                     self::$var_path[1] = "-&gt;$k";
-                    $out .= "\n    -&gt;$k = " . self::var($v);
+                    $out .= "\n  -&gt;$k = " . self::var($v);
                 }
             }
             return $obj ? "$out\n}" : tag("$out\n}", '', 'pre');
