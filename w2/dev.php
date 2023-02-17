@@ -4,6 +4,15 @@ class DEV
 {
     const repository = 'https://coresky.net/api';
 
+    static function e($top) {
+        global $sky;
+        $sky->error_no = 71;
+        $top->body = $sky->fly ? '' : '_std.e71';
+        list ($class, $action) = explode('::', substr($top->hnd, 0, -2));
+        $sky->ca_path = ['ctrl' => $class, 'func' => $action];
+        trace(["Gate error in $top->hnd", 'Gate error'], true, 1);
+    }
+
     static function init() {
         global $sky;
 
@@ -53,203 +62,6 @@ class DEV
         }
         if ($sky->static_new)
             SKY::d('statics', array_join($files, '#', ','));
-    }
-
-    ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
-    static function post_data($me) {
-         isset($_POST['args']) && $me->argc($_POST['args']);//////////
-        SKY::d('sg_prod', (int)isset($_POST['production']));
-        $addr = $pfs = [];
-        $to =& $addr;
-        if (isset($_POST['key'])) {
-            foreach ($_POST['key'] as $i => $key) {
-                if ($i == $_POST['cnt-addr'])
-                    $to =& $pfs;
-                if ('' === ($val = trim($_POST['val'][$i])) && '' === trim($key))
-                    continue;
-                $to[] = [$_POST['kname'][$i], trim($key), $_POST['vname'][$i], $val, (int)$_POST['chk'][$i]];
-            }
-        }
-        $method = isset($_POST['method']) ? $_POST['method'] : [];
-        foreach($method as &$v)
-            $v = (int)$v;
-        $flag = isset($_POST['flag']) ? array_sum($_POST['flag']) : 0;
-        return [$flag, $method, $addr, $pfs];
-    }
-
-    static function compile($class, $func) {
-        $me = Gate::instance();
-        json([
-            'code' => $me->view_code(DEV::post_data($me), $class, $func),
-            'url'  => PROTO . '://' . $me->url,
-        ]);
-    }
-
-    static function atime() { # search ctrl with last access time
-        $glob = Plan::_b('mvc/c_*.php');
-        if ($fn = Plan::_t('mvc/default_c.php'))
-            array_unshift($glob, $fn);
-        $max = $c = 0;
-        foreach ($glob as $fn) {
-            $stat = stat($fn);
-            if ($max < $stat['atime']) {
-                $max = $stat['atime'];
-                $c = basename($fn, '.php');
-            }
-        }
-        return $c;
-    }
-
-    static function save($class, $func = false, $ary = false) {
-        $cfg =& SKY::$plans['main']['ctrl'];
-        if ('main' != ($cfg[substr($class, 2)] ?? 'main'))
-            Plan::$gate = $cfg[substr($class, 2)];
-        $sky_gate = Gate::load_array();
-        if (!$func) { # delete controller
-            unset($sky_gate[$class]);
-        } elseif (!$ary) { # delete action
-            unset($sky_gate[$class][$func]);
-        } else { # update, add
-            $sky_gate[$class][$func] = true === $ary ? DEV::post_data(Gate::instance()) : $ary;
-        }
-        Plan::gate_dq($class . '.php'); # clear cache
-        Plan::_p([Plan::$gate, 'gate.php'], Plan::auto($sky_gate));
-    }
-
-    static function cshow() {
-        Gate::$cshow = SKY::d('sg_cshow');
-        if (isset($_POST['s']))
-            SKY::d('sg_cshow', Gate::$cshow = $_POST['s']);
-        return Gate::$cshow;
-    }
-
-    static function gate($class, $func = null, $is_edit = true) {
-        $cfg =& SKY::$plans['main']['ctrl'];
-        Plan::$gate = $cfg[substr($class, 2)] ?? 'main';
-        $ary = Gate::load_array($class);
-        $me = Gate::instance();
-        $src = Plan::_t([Plan::$gate, $fn = "mvc/$class.php"]) ? $me->parse($fn) : [];
-        if ($diff = array_diff_key($ary, $src))
-            $src = $diff + $src;
-        if ($has_func = is_string($func)) {
-            $me->argc(is_array($src[$func]) ? '' : $src[$func]);
-            $src = [$func => $src[$func]];
-        }
-        $edit = $has_func && $is_edit;
-        $return = [
-            'row_c' => function($row = false) use (&$src, $ary, $me, $class, $edit) {
-                if ($row && $row->__i && !next($src) || !$src)
-                    return false;
-                $name = key($src);
-                $delete = is_array($pars = current($src));
-                if (Gate::$cshow && !$delete)
-                    $me->argc($pars);
-                $is_j = in_array($name, ['empty_j', 'default_j']) || 'j_' == substr($name, 0, 2);
-                $ary = isset($ary[$name]) ? $ary[$name] : [];
-                list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
-                $vars = [
-                    'func' => $name,
-                    'delete' => $delete,
-                    'pars' => $delete ? '' : $pars,
-                    'code' => $edit || Gate::$cshow ? $me->view_code($ary, $class, $name) : false,
-                    'error' => $delete ? 'Function not found' : '',
-                    'url' => $me->url,
-                ];
-                if (Gate::$cshow)
-                    return $vars;
-                return $vars + [
-                    'c1' => DEV::view_c1($flag, $edit, $meth, $is_j),
-                    'c2' => DEV::view_c23($flag, $edit, $addr, 1),
-                    'c3' => DEV::view_c23($flag, $edit, $pfs, 0),
-                    'prod' => SKY::d('sg_prod') ? ' checked' : '',
-                ];
-            },
-        ];
-        return $has_func ? ['row' => (object)($return['row_c']())] : $return;
-    }
-
-    static function view_c1($flag, $edit, $meth, $is_j) {
-        global $sky;
-
-        $flags = [
-            Gate::HAS_T3 => 'Address has semantic part',
-            Gate::RAW_INPUT => 'Use raw body input',
-            Gate::AUTHORIZED => 'User must be authorized',
-            Gate::OBJ_ADDR => 'Return address as object',
-            Gate::OBJ_PFS => 'Return postfields as object',
-        ];
-        $out = '';
-        if ($is_j)
-            $meth = [0];
-        $skip = !$edit || $is_j;
-        foreach ($sky->methods as $k => $v) {
-            $ok = in_array($k, $meth);
-            if ($skip && !$ok)
-                continue;
-            $input = sprintf('<input type="checkbox" name="method[]" value="%d"%s/>', $k, $ok ? ' checked' : '');
-            $col = $k ? (1 == $k ? '#0f0' : '#aaf') : 'pink';
-            $attr = sprintf('cx="%s" style="background:%s"', $col, $ok ? $col : '#ddd');
-            $out .= ($out ? ' ' : '') . tag($skip ? $v : "$input$v", $attr, 'label');
-        }
-        $out .= sprintf('<div style="width:100%%%s">', $edit ? '' : ';min-height:50px');
-        foreach ($flags as $k => $v) {
-            if ($is_j && $k & Gate::HAS_T3)
-                continue;
-            $ok = (bool)($flag & $k);
-            $input = sprintf('<input type="checkbox" name="flag[]" value="%d"%s%s/>', $k, $ok ? ' checked' : '', $edit ? '' : ' disabled');
-            $attr = sprintf('style="color:%s%s"', $ok ? '#111' : '#777', $ok ? ';font-weight:bold' : '');
-            $chk = tag("$input$v", $attr, 'label');
-            if ($ok || $edit)
-                $out .= "$chk<br>";
-        }
-        $out .= '</div>';
-        return $out;
-    }
-
-    static function ary_c23($is_addr = 1, $v = []) {
-        $v += ['', '', '', '', 0];
-        return [
-            'kname' => $v[0],
-            'key' => $v[1],
-            'vname' => $v[2],
-            'val' => $v[3],
-            'isaddr' => $is_addr,
-            'chk' => $v[4],
-        ];
-    }
-
-    static function view_c23($flag, $edit, $ary, $is_addr) {
-        $out = '';
-        if ($edit) {
-            foreach ($ary as $v) {
-                trace($v, 'x0');
-                $out .= view('c23_2edit', DEV::ary_c23($is_addr, $v));
-            }
-            if ($is_addr)
-                $out .= hidden('cnt-addr', count($ary));
-            $out .= a('add parameter', 'javascript:;', 'onclick="sky.g.tpl(this,' . $is_addr . ')"');
-        } else {
-            foreach ($ary as $v) {
-                trace($v,'x1');
-                $v += ['', '', '', '', 0];
-                $re_val = !preg_match("/^\w*$/", $v[3]);
-                $val = $re_val ? "/^$v[3]$/" . ($v[2] ? " ($v[2])" : '') : $v[3];
-                $re_key = !preg_match("/^\w*$/", $v[1]);
-                $key = $re_key ? "/^$v[1]$/" . ($v[0] ? " ($v[0])" : '') : $v[1];
-                $out .= view('c23_view', [
-                    'data' => "$key => $val",
-                    'isaddr' => $is_addr,
-                    'ns' => $v[4] ? 'ns&nbsp;' : '',
-                ]);
-            }
-        }
-        return $out;
-    }
-
-    static function ctrl() {
-        return array_filter(SKY::$plans['main']['ctrl'], function ($v) {
-            return $v != 'main';
-        });
     }
 
     ///////////////////////////////////// DEV UTILITY /////////////////////////////////////
@@ -511,13 +323,6 @@ class DEV
         return $menu;
     }
 
-    function c_main($n) {
-        $this->_y = ['page' => 'dev'];
-        if ('INFO_' == substr($n, 0, 5) && phpinfo(constant($n)))
-            throw new Stop;
-        return $n ? ['h4' => Root::$h4[$n]] : Root::dev();
-    }
-
     function j_drop() {
         global $sky;
         if (!DEV)
@@ -536,5 +341,65 @@ class DEV
         $name = explode(' ', $_POST['n'], 3);
         $name = 'e' == ($type = $_POST['t']) ? $name[1] : $name[0];
         echo Plan::object($name, $type, SKY::d('pp'));
+    }
+
+    function c_main($n) {
+        $this->_y = ['page' => 'dev'];
+        if ('INFO_' == substr($n, 0, 5) && phpinfo(constant($n)))
+            throw new Stop;
+        if ($n)
+            return ['n' => $n];
+
+        global $sky;
+
+        $val = explode(' ', $sky->s_version) + ['', '', '0', 'APP'];
+        $val[2] += 0.0001;
+        $key = [0, 1, 'ver', 'app'];
+        $form1 = [
+            ['Application', [
+                'app' => ['', '', 'size="11"'],
+                'ver' => ['', 'number', 'style="width:77px" step="0.0001"'],
+                [tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0])), 'ni'],
+            ]],
+            ['Core', 'ni', SKY::CORE],
+            ['Save', 'submit'],
+        ];
+        $phpman = [
+            'en' => 'English',
+            'pt_BR' => 'Brazilian Portuguese',
+            'zh' => 'Chinese (Simplified)',
+            'fr' => 'French',
+            'de' => 'German',
+            'ja' => 'Japanese',
+            'ru' => 'Russian',
+            'es' => 'Spanish',
+            'tr' => 'Turkish',
+        ];
+        if (isset($_POST['app'])) {
+            SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
+        } elseif ($_POST) {
+            $ary = $_POST + SKY::$mem['d'][3];
+            ksort($ary);
+            SKY::d($ary);
+        }
+        return [
+            'form1' => Form::A(array_combine($key, $val), $form1),
+            'form2' => Form::A(SKY::$mem['d'][3], [
+                'dev' => ['Set debug=0 for DEV-tools', 'chk'],
+                'err' => ['Show suppressed PHP errors', 'chk'],
+                'cron'  => ['Run cron when click on DEV instance', 'chk'],
+                'lgt' => ['SkyLang table name', '', 'size="25"'],
+                'manual' => ['PHP manual language', 'select', $phpman],
+                'se' => ['Search engine tpl', '', 'size="50"'],
+                'nopopup'  => ['No dev-tools on soft 404', 'chk'],
+                Form::X([], '<hr>'),
+                ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
+                'static' => ['', '', 'size="50"'],
+                'etc'  => ['Turn ON tracing for standard_c::a_etc()', 'chk'],
+                'red_label' => ['Red label', 'radio', ['Off', 'On']],
+                'jet_cache' => ['Jet cache', 'radio', ['Off', 'On']],
+                ['Save', 'submit'],
+            ]),
+        ];
     }
 }

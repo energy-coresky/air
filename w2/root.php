@@ -4,87 +4,8 @@ class Root
 {
     static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Databases'];
     static $menu2 = [7 => 'Special', 'Log Cron', 'Log Crash', 'Log Error'];
-    static $h4 = ['',
-        'OVERVIEW SYSTEM INFORMATION',
-        'PHP CORE INFORMATION',
-        'SYSTEM CONFIGURATION',
-        'SYSTEM CACHE',
-        'SYSTEM GUARD PAGE',
-        '',
-        'USER LOG',
-        'LOG CRON',
-        'LOG CRASH',
-        'LOG ERROR',
-    ];
-    
+
     const js = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js';
-
-    static function admin($sky) {
-        $files = array_map(function ($v) {
-            return substr(basename($v), 1, -4);
-        }, glob('admin/_*.php'));
-        $files = array_merge(array_splice($files, array_search('main', $files), 1), $files);
-        $buttons = implode("\t", array_map('ucfirst', $files));
-        $root_access = ceil(count($files) / 7) . "\t" . implode("\t", array_keys($files));
-        SKY::a('menu', serialize([-2 => $uris = implode("\t", $files), -1 => $buttons, $uris, $root_access]));
-        $sky->is_front or jump('?main=0');
-    }
-
-    static function dev() {
-        global $sky;
-
-        $val = explode(' ', $sky->s_version) + ['', '', '0', 'APP'];
-        $val[2] += 0.0001;
-        $key = [0, 1, 'ver', 'app'];
-        $form1 = [
-            ['Application', [
-                'app' => ['', '', 'size="11"'],
-                'ver' => ['', 'number', 'style="width:77px" step="0.0001"'],
-                [tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0])), 'ni'],
-            ]],
-            ['Core', 'ni', SKY::CORE],
-            ['Save', 'submit'],
-        ];
-        $phpman = [
-            'en' => 'English',
-            'pt_BR' => 'Brazilian Portuguese',
-            'zh' => 'Chinese (Simplified)',
-            'fr' => 'French',
-            'de' => 'German',
-            'ja' => 'Japanese',
-            'ru' => 'Russian',
-            'es' => 'Spanish',
-            'tr' => 'Turkish',
-        ];
-        $form2 = [
-            'dev' => ['Set debug=0 for DEV-tools', 'chk'],
-            'err' => ['Show suppressed PHP errors', 'chk'],
-            'cron'  => ['Run cron when click on DEV instance', 'chk'],
-            'lgt' => ['SkyLang table name', '', 'size="25"'],
-            'manual' => ['PHP manual language', 'select', $phpman],
-            'se' => ['Search engine tpl', '', 'size="50"'],
-            'nopopup'  => ['No dev-tools on soft 404', 'chk'],
-            Form::X([], '<hr>'),
-            ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
-            'static' => ['', '', 'size="50"'],
-            'etc'  => ['Turn ON tracing for standard_c::a_etc()', 'chk'],
-            'red_label' => ['Red label', 'radio', ['Off', 'On']],
-            'jet_cache' => ['Jet cache', 'radio', ['Off', 'On']],
-            ['Save', 'submit'],
-        ];
-        if (isset($_POST['app'])) {
-            SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
-        } elseif ($_POST) {
-            $ary = $_POST + SKY::$mem['d'][3];
-            ksort($ary);
-            SKY::d($ary);
-        }
-        return [
-            'form1' => Form::A(array_combine($key, $val), $form1),
-            'form2' => Form::A(SKY::$mem['d'][3], $form2),
-            'h4' => '',
-        ];
-    }
 
     static function run($n, $id) {
         if ($n < 7) {
@@ -93,8 +14,7 @@ class Root
             $funs[2] = substr($funs[2], 0, 7);
             return call_user_func(['Root', '_' . $funs[$n]], $id);
         }
-        $cr = [7 => 7, 6, 5, 4];
-        echo Display::log(sqlf('+select tmemo from $_memory where id=%d', $cr[$n]));
+        echo Display::log(sqlf('+select tmemo from $_memory where id=%d', 14 - $n));
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -196,7 +116,7 @@ class Root
             case 'Classes':
                 new Admin;
                 new Display;
-                $ary = Plan::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
+                $ary = Util::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
                 if (-1 == $t) {
                     $ary[1] = array_map(function ($v) use (&$ary) {
                         return $v . ' (' . ($ary[2][$v] ?? 'user') . ')';
@@ -323,33 +243,6 @@ class Root
         }
         echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style=""');
         return $TOP;
-    }
-
-    static function form_prod() {
-        return [
-            '<fieldset><legend>Primary settings</legend>',
-                ['', [['<b><u>Production</u></b>', 'li']]],
-                'trace_root'    => ['Debug mode on production for `root` profile', 'chk'],
-                'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
-                'error_403'     => ['Use 403 code for `die`', 'chk'],
-                'empty_die'     => ['Empty response for `die`', 'chk'],
-                'gate_404'      => ['Gate errors as 0.404 (soft)', 'chk'], //2do: clear all cache when changed
-                'log_error'     => ['Log ERROR', 'radio', ['Off', 'On']],//crash_log prod_error quiet_eerr
-                'log_crash'     => ['Log CRASH', 'radio', ['Off', 'On']],
-                ['Hard cache', [
-                    'cache_act' => ['', 'radio', ['Off', 'On']],
-                    'cache_sec' => ['Default TTL, seconds', 'number', 'style="width:100px"', 300],
-                ]],
-            '</fieldset>',
-            '<fieldset><legend>Visitor\'s & users settings</legend>',
-                ['Cookie name', [
-                    'c_name'    => ['', '', '', 'sky'],
-                    'c_upd'     => ['Cookie updates, minutes', 'number', 'style="width:100px"', 60],
-                ]],
-                'visit'     => ['One visit break after, off minutes', 'number', '', 5],
-                'reg_req'   => ['Users required for registrations', 'radio', ['Both', 'Login', 'E-mail']],
-            '</fieldset>',
-        ];
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -611,5 +504,32 @@ class Root
             foreach ($ins as &$v) $v = eval($v);
             sql('insert into $_` @@', $table, $ins);
         }
+    }
+
+    static function form_prod() {
+        return [
+            '<fieldset><legend>Primary settings</legend>',
+                ['', [['<b><u>Production</u></b>', 'li']]],
+                'trace_root'    => ['Debug mode on production for `root` profile', 'chk'],
+                'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
+                'error_403'     => ['Use 403 code for `die`', 'chk'],
+                'empty_die'     => ['Empty response for `die`', 'chk'],
+                'gate_404'      => ['Gate errors as 0.404 (soft)', 'chk'], //2do: clear all cache when changed
+                'log_error'     => ['Log ERROR', 'radio', ['Off', 'On']],//crash_log prod_error quiet_eerr
+                'log_crash'     => ['Log CRASH', 'radio', ['Off', 'On']],
+                ['Hard cache', [
+                    'cache_act' => ['', 'radio', ['Off', 'On']],
+                    'cache_sec' => ['Default TTL, seconds', 'number', 'style="width:100px"', 300],
+                ]],
+            '</fieldset>',
+            '<fieldset><legend>Visitor\'s & users settings</legend>',
+                ['Cookie name', [
+                    'c_name'    => ['', '', '', 'sky'],
+                    'c_upd'     => ['Cookie updates, minutes', 'number', 'style="width:100px"', 60],
+                ]],
+                'visit'     => ['One visit break after, off minutes', 'number', '', 5],
+                'reg_req'   => ['Users required for registrations', 'radio', ['Both', 'Login', 'E-mail']],
+            '</fieldset>',
+        ];
     }
 }

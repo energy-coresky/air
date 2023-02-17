@@ -312,7 +312,7 @@ class SKY implements PARADISE
         $hnd = $this->shutdown ? get_class($this->shutdown[0][0]) : 'Console';
         trace("0 $hnd ^", 'TOP-VIEW', 1);
         if (DEV)
-            Plan::vars(['sky' => $this]);
+            Util::vars(['sky' => $this]);
         if ($this->was_error & SKY::ERR_SHOW || $this->trace_cli)
             $this->tracing("$hnd\n");
         SQL::close();
@@ -320,9 +320,9 @@ class SKY implements PARADISE
     }
 
     function tracing($top = '', $is_x = true) {
-        $vars = DEV ? Plan::trace() : '';
+        $data = DEV ? Util::data() : '';
         $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
-        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS) . $vars;
+        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS) . $data;
         if ($is_x && SKY::$dd) {
             if (DEV)
                 SKY::$dd->_xtrace();

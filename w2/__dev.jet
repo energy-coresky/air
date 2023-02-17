@@ -102,36 +102,27 @@
     ~if
     </div>
 </div>
-#.single ------------------------------------------------------------------------------
+#.single
 
-
-#.development //////////////////////////////////////////////////////////////////////////////
-@use(`<h4><u>DEVELOPMENT</u> CONFIGURATION</h4>` as header)
-<div style="padding:10px 0 0 10px">
-<fieldset><legend>App name & versions</legend>
-{! $form1 !}
-</fieldset>
-<fieldset><legend>DEV instance configuration, {{$_SERVER['REMOTE_ADDR']}}</legend>
-{! $form2 !}
-</fieldset>
-</div>
-#.development.pp.drop
-#.pp
-#.drop
-
-#.m_header
-
-#.main.m_header //////////////////////////////////////////////////////////////////////////////
-@use(`<h4>{!$h4!}@if(6 == $sky->_2)@view(databases)~if</h4>` as header)
+#.header ------------------------------------------------------------------------------
+<h4>@if(1 == $n)OVERVIEW SYSTEM INFORMATION
+@elseif(2 == $n)PHP CORE INFORMATION
+@elseif(3 == $n)SYSTEM CONFIGURATION
+@elseif(4 == $n)SYSTEM CACHE
+@elseif(5 == $n)SYSTEM GUARD PAGE
+@elseif(6 == $n)@view(databases)
+@elseif(7 == $n)USER LOG
+@elseif(8 == $n)LOG CRON
+@elseif(9 == $n)LOG CRASH@else LOG ERROR~if</h4>
+#.main.header //////////////////////////////////////////////////////////////////////////////
+#use(.header)
 @use(.m_dev)
 @if($sky->_2)
-@if($sky->_2 < 7)
-<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
-    @block(`` as menus)
-</div>
-~if
+    @if($n < 7)
+        <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">@block(`` as menus)</div>
+    ~if
 <div style="padding:10px 0 0 10px">
-@if($menus = Root::run($sky->_2, $sky->_4 ?: 0))@use(`{!$menus!}` as menus)~if
+    @if($menus = Root::run($sky->_2, $sky->_4 ?: 0))@use(`{!$menus!}` as menus)~if
 </div>
 <style>
 #table, .fl {
@@ -157,13 +148,23 @@ $(function() {
 });
 </script>
 @else
-@inc(.development)
+    @inc(.development)
 ~if
 #.main.m_dev ------------------------------------------------------------------------------
 @loop(['Development'] + Root::$menu1 + Root::$menu2 as $i => $name)
     <a class="inner-menu" href="_dev?main={!$i!}"@active($i == $sky->_2)>{!$name!}</a>
 ~loop
-#.m_dev
+#.m_dev.development ------------------------------------------------------------------------------
+@use(`<h4>DEVELOPMENT CONFIGURATION</h4>` as header)
+<div style="padding:10px 0 0 10px">
+<fieldset><legend>App name & versions</legend>
+{! $form1 !}
+</fieldset>
+<fieldset><legend>DEV instance configuration, {{$_SERVER['REMOTE_ADDR']}}</legend>
+{! $form2 !}
+</fieldset>
+</div>
+#.development
 
 
 #.view //////////////////////////////////////////////////////////////////////////////

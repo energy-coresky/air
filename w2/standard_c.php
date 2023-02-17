@@ -206,7 +206,7 @@ class standard_c extends Controller
 
     function j_gate($x = 'j') {
         if ('c_' == $this->_c && 'c' == $x)
-            $this->_c = DEV::atime(); # open last access time controller
+            $this->_c = Util::atime(); # open last access time controller
         $ary = !$this->_4 ? [] : [
             'y_tx' => $this->d_dev ? 1 : 2, # sample: ?_gate=company&func=j_edit&ajax
             'trace_x' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
@@ -214,34 +214,34 @@ class standard_c extends Controller
         return [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
             'h1' => $this->_c,
-            'list' => Gate::controllers(true) + DEV::ctrl(),
-            'cshow' => DEV::cshow() ? ' checked' : '',
-            'e_func' => $this->_c ? DEV::gate($this->_c) : false,
+            'list' => Gate::controllers(true) + Util::ctrl(),
+            'cshow' => Util::cshow() ? ' checked' : '',
+            'e_func' => $this->_c ? Util::gate($this->_c) : false,
             'func' => $this->_3 ?? '',
         ] + $ary;
     }
 
     function j_delete() {
-        DEV::save($this->_c, $this->_a);
+        Util::save($this->_c, $this->_a);
         $this->_a or $this->_c = 'c_';
         return $this->j_gate();
     }
 
     function j_edit() {
-        return DEV::gate($this->_c, $this->_a);
+        return Util::gate($this->_c, $this->_a);
     }
 
     function j_save() {
-        DEV::save($this->_c, $this->_a, true);
-        return DEV::gate($this->_c, $this->_a, false);
+        Util::save($this->_c, $this->_a, true);
+        return Util::gate($this->_c, $this->_a, false);
     }
 
     function j_code() {
-        DEV::compile($this->_c, $this->_a);
+        Util::compile($this->_c, $this->_a);
     }
 
     function x_c23_edit() {
-        return DEV::ary_c23();
+        return Util::ary_c23();
     }
 
     function x_databases() {

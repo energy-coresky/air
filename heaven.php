@@ -471,7 +471,7 @@ function json($in, $return = false, $off_layout = true) {
     if ($err = json_last_error())
         trace('json error: ' . $err, true, 1);
     if (DEV && !$return)
-        Plan::vars(['$$' => $in], MVC::instance(-1)->no);
+        Util::vars(['$$' => $in], MVC::instance(-1)->no);
     return $return ? $out : print($out);
 }
 
