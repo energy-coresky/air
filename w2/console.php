@@ -15,8 +15,6 @@ class Console
         if ('master' == $argv[1]) {
             if ($ns || is_dir(DIR_S . '/.git'))
                 return $this->master(!$ns);
-        #} elseif () {
-         #   return ;
         } elseif ($found[0]) {
             SQL::$dd_h = 'Console::dd_h';
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
@@ -76,7 +74,7 @@ class Console
             echo "\nCoresky app: " . SKY::version()['app'][3];
         if (self::$d[2])
             echo "\nCoresky ware: " . basename(self::$d[2]);
-        if (self::$d[1]) { #2do: use self::$d[1] path for "remote get-url"
+        if (self::$d[1]) {
             chdir(self::$d[1]);
             exec('git remote get-url origin', $output);
             echo "\nRepository: $output[0]";
