@@ -1,5 +1,7 @@
 <?php
 
+# This file included from "sky" console script
+
 class Rare
 {
     static public $u_svn_skips = ['.git', '.svn'];
@@ -129,24 +131,22 @@ class Rare
     static function label($str) {
         $ary = [];
         $str = preg_replace_callback("/%(PHP|HTML)_([A-Z\d_]+)%/", function($m) use (&$ary) {
-            global $sky;
-
             if (isset($ary[$m[0]]))
                 return $ary[$m[0]];
             if ('R_' == substr($m[2], 0, 2)) {
-                if (DEV && $sky->d_red_label)
+                if (DEV && SKY::d('red_label'))
                     return $ary[$m[0]] = tag($m[0], 'class="red_label"');
             }
             $label = strtolower('_' == $m[2][1] ? $m[2] : "x_$m[2]");
             if ('PHP' == $m[1]) {
                 return $ary[$m[0]] = view($label, true);
-            } elseif (is_file($fn = MVC::fn_tpl($label))) {/// 2do /////////////////////////////////////////////////////////
-                return $ary[$m[0]] = file_get_contents($fn);
+            } elseif ($html = Plan::view_gq("$label.html")) {
+                return $ary[$m[0]] = $html;
             }
-            trace("LABEL: file `$fn` not found", true);
+            trace("LABEL: `$label` not found", true);
             return '';
         }, $str);
-        trace('LABEL: ' . implode(', ', array_keys($ary)), 0, 1);
+        trace(implode(', ', array_keys($ary)), 'LABEL', 1);
         return $str;
     }
 

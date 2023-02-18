@@ -71,15 +71,29 @@ class Console
         echo implode("\n  ", array_map(function($k, $v) {
             return str_pad($k, 15, ' ') . $v;
         }, array_keys($ary), $ary));
+        if (self::$d[0])
+            echo "\nCoresky app: " . SKY::version()['app'][3];
+        if (self::$d[2])
+            echo "\nCoresky ware: " . basename(self::$d[2]);
+        if (self::$d[1]) { #2do: use self::$d[1] path for "remote get-url"
+            exec('git remote get-url origin', $output);
+            echo "\nRepository: $output[0]";
+        }
     }
 
     function s($port) {
+        global $dir_run, $sky;
+
+        $public = false;
         if (self::$d[0]) {
             if (!DEV)
                 return print("Cannot run php-server on production");
             echo "\n";
             $this->c_drop();
             echo "\n";
+            $sky->memory();
+            if ($sky->n_www)
+                $public = explode('~', $sky->n_www)[0];
         }
         if (function_exists('socket_create')) {
             for ($i = 0; $i < 9; $i++, $port++) {
@@ -90,7 +104,7 @@ class Console
                     break;
             }
         }
-        chdir(DIR_R);
+        chdir($public ?: $dir_run());
         if (!file_exists($fn = '../s.php')) {
             echo "File `$fn` written\n\n";
             file_put_contents($fn, "<?php\n\n"

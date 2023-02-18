@@ -3,7 +3,6 @@
 
 if (1 == $argc)
     $argv = [0, ''];
-
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) {
     require __DIR__ . '/w2/rare.php';
@@ -15,40 +14,61 @@ if ($d || 'php' == $argv[1]) {
         foreach($files as $one)
             system("php -l $one");
     }
-
-} else {
-    define('DIR_R', getcwd());
-    $found = [];
-    $test = function ($cd, $m) use (&$found) {
-        $app = is_file($fn = "$m/conf.php") && strpos(file_get_contents($fn), 'DIR_M');
-        $git = is_dir('.git');
-        $ware = is_file('conf.php') && strpos($ware = file_get_contents('conf.php'), '$plans') && !strpos($ware, 'START_TS');
-        $found = [$app, $git, $ware];
-        return $app || $git || $ware;
-    };
-    $m = basename(__DIR__);
-    $m2 = 'air' == $m ? 'main' : $m;
-    do {
-        if ($test($cd = getcwd(), $m) || $test($cd, $m = $m2))
-            break;
-        $m = basename($cd);
-        chdir('..');
-        if ($cd == getcwd()) {
-            chdir(DIR_R);
-            break;
-        }
-    } while(true);
-
-    if ($found[0]) {
-        define('DIR', $cd);
-        require "$m/conf.php";
-        $sky = new SKY;
-        SKY::$debug = 1;
-    } else {
-        define('DIR_S', __DIR__);
-        require DIR_S . '/w2/console.php';
-    }
-    new Console($argv, $found);
+    echo "\n";
+    exit;
 }
 
+$dir_run = function ($cwd = false, &$found = null) {
+    static $dir_r, $ary;
+    if (null === $found) # is get "dir run"
+        return $dir_r;
+    $dir_r = $cwd;
+    $ary =& $found;
+    return function (&$m) use (&$ary) {
+        $conf = function ($d = '') {
+            $d and $d .= '/';
+            $has_dir = is_dir($d . 'mvc') || is_dir($d . 'w3');
+            if (!is_file($d . 'conf.php') || !$has_dir)
+                return false;
+            $app = (bool)strpos(file_get_contents($d . 'conf.php'), '/sky.php');
+            return $d && $app || !$d && !$app;
+        };
+        if (is_dir('.git'))
+            $ary[1] = getcwd(); # git dir
+        if ($conf())
+            $ary[2] = getcwd(); # ware
+        in_array($m, $list = ['main', 'blue']) or $m && array_unshift($list, $m);
+        foreach ($list as $main) {
+            if ($conf($main)) {
+                $m = $main;
+                return $ary[0] = true; # the coresky app
+            }
+        }
+        return false;
+    };
+};
+
+$found = [false, false, false];
+$test = $dir_run($cwd = getcwd(), $found);
+$dir_m = '';
+do {
+    if ($test($dir_m))
+        break;
+    $dir_m = basename($cwd);
+    chdir('..'); # updir
+    if ($cwd == ($_cd = getcwd()))
+        break;
+} while($cwd = $_cd);
+
+if ($found[0]) {
+    define('DIR', $cwd);
+    require "$dir_m/conf.php";
+    new SKY;
+    SKY::$debug = 1;
+} else {
+    chdir($found[1] ?: $found[2] ?: $dir_run());
+    define('DIR_S', __DIR__);
+    require DIR_S . '/w2/console.php';
+}
+new Console($argv, $found);
 echo "\n";

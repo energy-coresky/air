@@ -230,12 +230,6 @@ trait HOOK
             return in_array($name, $in);
     }
 
-    function _2do() {
-        $pref_lg_m = '(www\.|[a-z]{2}\.)?(m\.)?';
-        preg_match("/^$pref_lg_m(.+)$/", SNAME, $this->sname) or exit('sname');
-        define('DOMAIN', $this->sname[3]);
-    }
-
     static function langs_h() {
     }
 

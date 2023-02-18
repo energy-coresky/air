@@ -164,11 +164,11 @@ class Plan
             require DIR_S . "/w2/dc_file.php";
             Plan::$connections[''] = new dc_file;
             $plans = SKY::$plans + Plan::$defaults;
-            if (is_file($fn_plans = $plans['cache']['path'] . '/' . 'sky_plan.php')) {
-                SKY::$plans = require $fn_plans;
+            if (is_file($fn = $plans['cache']['path'] . '/' . 'sky_plan.php')) {
+                SKY::$plans = require $fn;
             } else {
                 SKY::$plans = $ctrl = [];
-                $wares = is_file($fn_wares = DIR_M . '/wares.php') ? (require $fn_wares) : [];
+                $wares = is_file($fn = DIR_M . '/wares.php') ? (require $fn) : [];
                 SKY::$plans['main'] = ['app' => ['path' => DIR_M], 'class' => []] + $plans;
                 $cfg =& SKY::$plans['main']['class'];
                 foreach ($wares as $key => $val) {
@@ -188,8 +188,7 @@ class Plan
                 $ctrl += Gate::controllers();
                 SKY::$plans['main'] += ['ctrl' => $ctrl];
                 $plans['main'] += ['ctrl' => $ctrl];
-                //file_put_contents($fn_plans, Plan::auto($plans));
-                Plan::cache_p('sky_plan.php', Plan::auto($plans));
+                Plan::cache_p('sky_plan.php', Plan::auto($plans)); # make dir & save file
             }
             $cfg =& SKY::$plans['main'][$pn];
             Plan::locale();
@@ -318,7 +317,7 @@ class Plan
                     return sprintf(span_m, "Object $cls");
                 }
                 $s = self::object($var, 'c', 2);
-                if ("{\n    \n}" == $s)
+                if ("{\n  \n}" == $s)
                     return sprintf(span_y, "Object $cls") . ' - ' . sprintf(span_m, 'no properties');
                 return tag($s, 'c="' . $cls . '"', 'o');
             case 'array':
