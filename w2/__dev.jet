@@ -11,6 +11,10 @@
 #end
 #._ magic marker used !
 
+#._801
+<h3 style="background:pink;color:red">{{$stdout}}</h3>
+#._801
+
 
 #.attach
 +

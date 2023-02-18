@@ -324,9 +324,17 @@ sky.key[27] = function() { // Escape
     sky.d.close_box();
 };
 
+(function() {
+    sky.a.error(function(r) {
+        if (801 == r.err_no)
+            $('#top-head').html(r.catch_error);
+    });
+})();
+
 $(function() {
     $('body').prepend('<div id="popup" style="display:none"><div id="popup-in"></div></div>');
     sky.d.show_menu('_trace' != sky.a._0);
     sky.d.init();
     $('#drop-var').after('<input type="button" value="Yes" onclick="sky.d.drop()" />');
 });
+

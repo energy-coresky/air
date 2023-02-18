@@ -254,7 +254,8 @@ class standard_c extends Controller
 
     function j_dev($x = 'j') {
         MVC::body('_dev.' . ($page = $this->_1 ?: 'main'));
-        return (array)$this->dev->{"{$x}_$page"}($this->_2);
+        $r = $this->dev->{"{$x}_$page"}($this->_2);
+        return is_int($r) ? $r : (array)$r;
     }
 
     function j_lang() {

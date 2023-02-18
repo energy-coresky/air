@@ -94,7 +94,16 @@ class Display
                 return 'jet' == $m[1] ? Display::jet(unhtml($m[2]), '-', true) : tag(html($m[2]), '', 'pre');
             }, $text);
         };
-        if (Plan::has_class('Parsedown')) {
+        if (!$exist = Plan::has_class('Parsedown')) {
+            if (is_file('composer.json')) {
+                $json = json_decode(file_get_contents('composer.json'));
+                if (isset($json->require->{"erusev/parsedown"})) {
+                    Plan::vendor();
+                    $exist = true;
+                }
+            }
+        }
+        if ($exist) {
             $md = new Parsedown;
             return $code($md->text($text), '<pre><code class="language\-(jet|php)">(.*?)</code></pre>');
         }

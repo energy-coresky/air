@@ -390,6 +390,8 @@ class Root
                 $sel = option(substr(URI, 4), [$tpl => '..other days'] + $sel);
                 $TOP .= a(tag($sel, $style, 'select'), '#', ($act ? '' : 'active ') . 'style="margin-left:30px;"');
             }
+        } else {
+            $TOP .= '<u>none</u>';
         }
         if (!$sky->_6) {
             $DSN = SKY::$databases[$db]['dsn'] ?? ($db ? '' : (SKY::$databases['dsn'] ?? ''))

@@ -153,8 +153,10 @@ class DEV
     function j_second_dir() {
         global $sky;
         $dir = trim($_POST['s'], " \t\r\n/");
-        if (!is_dir($dir))
-            return print("Dir `$dir` not exists");
+        if (!is_dir($dir)) {
+            print("Dir `$dir` not exists");
+            return 801;
+        }
         $sky->d_second_wares = $dir;
         echo 'OK';
     }
@@ -165,16 +167,23 @@ class DEV
         $dir = trim($_POST['s'], " \t\r\n/");
         if ('un' != ($mode = $_POST['mode'])) { # Install
             list ($type, $dir) = explode('.', $dir);
-            if (!is_file("$dir/conf.php"))
-                return print("File `$dir/conf.php` not found");
-
+            if (!is_file("$dir/conf.php")) {
+                print("File `$dir/conf.php` not found");
+                return 801;
+            }
             $conf = require "$dir/conf.php";
             $required = explode(' ', $conf['app']['require'] ?? '');
             if ('' == $required[0])
                 array_shift($required);
             foreach ($required as $class) {
-                if (!class_exists($class, false) && !Plan::has_class($class))
-                    return print("Class `$class` not found");
+                if (!Plan::has_class($class)) {
+                    if ($isv = is_dir('vendor'))
+                        Plan::vendor();
+                    if (!class_exists($class, $isv)) {
+                        print("Class `$class` not found");
+                        return 801;
+                    }
+                }
             }
             $name = basename($dir);
             $cls = [];
@@ -188,8 +197,10 @@ class DEV
                     'dir' => $dir,
                 ];
             } else if (2 == $mode) {
-                if (!$cls = $_POST['cls'] ?? [])
-                    return print('Must select at least one class');
+                if (!$cls = $_POST['cls'] ?? []) {
+                    print('Must select at least one class');
+                    return 801;
+                }
             }
             $wares[$name] = ['path' => $dir, 'class' => $cls];
             if (isset($_POST['dev']))
