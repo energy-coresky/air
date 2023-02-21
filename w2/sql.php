@@ -112,6 +112,13 @@ final class SQL
         return SQL::$dd->onduty($table);
     }
 
+    function has_result() {
+        $s4 = strtolower(substr(trim($this->qstr), 0, 4));
+        if (in_array($s4, ['sele', 'expl']))
+            return true;
+        return $this->_dd->has_result($s4);
+    }
+
     function one($meth = 'A', $free = false) {
         if ($this->qb_ary)
             return $this->build('one', $meth);

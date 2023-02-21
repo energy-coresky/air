@@ -147,54 +147,29 @@ var sky = {
             }
         });
     },
-    key: {},//{27: this.false},
-    false: function() {
-        return false;
-    },
-    true: function() {
-        return true;
-    },
-    _k27: this.false,
-    hide: function() {
-        sky.key[27] = sky._k27;//sky.false;
-        $('#box').click(sky.true).hide().children('div.esc').remove();
-    //  $('#box-in').html('');
-        if (sky.esc_refresh)
-            location.href = location.href;
-    },
-    show: function() {
-        if ($('#box div.esc').html())
-            return;
-        sky._k27 = sky.key[27];
-        sky.key[27] = sky.hide;
-        $('#box').click(sky.true).prepend('<div class="esc"><a href="javascript:;" onclick="sky.hide()" class="red-link fr">Esc - Close [X]</a></div>');
-        $('#box .esc').css('width', $('#box-in').width() - 20);
-    },
     head: function() {
         $('html').animate({scrollTop:0});
     },
     tail: function() {
         $('html').animate({scrollTop:$('main').height()});
     },
-    box_html: '',
-    set_file_clk: function(id) {
-        $(id + ' pre span, ' + id + ' td span').each(function() {
-            $(this).click(function() {
-                if (!$(this).attr('style')) {
-                    var n = $(this).html();
-                    $('#top-head').html('<b>' + n + '</b>');
-                ajax('', {name:n, c:$(this).next().hasClass('error')}, function(r) {
-                    sky.box_html = $('#v-body').html();
-                    $('#v-body').html(r);
-                    $('#v-body div.code').get(0).scrollIntoView({block:'center',behavior:'smooth'});
-                    sky.key[27] = function() { // Escape
-                        $('#v-body').html(sky.box_html);
-                        sky.set_file_clk(id);
-                    };
-                }, '_file')};
-            });
-        });
-        sky.key[27] = sky.hide;
+    key: {},
+    _k27: null,
+    hide: function() {
+        sky.key[27] = sky._k27;
+        $('#box').hide();
+        if (sky.esc_refresh)
+            location.href = location.href;
+    },
+    show: function() {
+        if ('none' == $('#box').css('display')) {
+            sky._k27 = sky.key[27];
+            sky.key[27] = sky.hide;
+        }
+        if (!$('#box-esc')[0])
+            $('#box').prepend('<div id="box-esc"><a href="javascript:;" onclick="sky.hide()" class="red-link">Esc - Close [X]</a></div>');
+        $('#box').show();
+        $('#box-esc a').show();
     },
     trace: function(c) {
         dev('_trace/' + c);
@@ -208,27 +183,12 @@ function dev(addr, pf) {
     if ($.isArray(addr))
         return ajax(addr, {}, 'v-body');
     box('<iframe src="' + sky.home + addr + '" style="width:100%; height:100%;vertical-align:middle;border:0;"></iframe>');
-    $('#box a:first').hide();
+    $('#box-esc a').hide();
 }
 
-function box(html, c) {
-    var el = $('#box-in div.error:eq(0)').get(0), css, box;
-    css = c || {
-            backgroundColor:'white', color:'#111',
-            //margin:'50px 0 0 50px',
-            position:'fixed', left:'50px', top:'50px',
-            overflow:'hidden',
-            width:'calc(100vw - 100px)', height:'calc(100vh - 100px)'
-        };
-    box = $('#box').show()//.css({
-        //position:'fixed', left:0, top:0,        width: '100vw', height: '100vh', zIndex: 888,
-        //backgroundColor: 'rgba(0,0,0, 0.5)'//, padding: '50px'
-    //}); //html(html).
-    if (null !== html)
-        box.children('#box-in').html(html).click(sky.true);
-        //box.children('#box-in').css(css).html(html).click(sky.true);
+function box(html) {
+    $('#box-in').html(html);
     sky.show();
-    //el.scrollIntoView({block:'center',behavior:'smooth'});
 }
 
 function ajax(j_, postfields, func, c_) {
@@ -288,12 +248,13 @@ function ajax(j_, postfields, func, c_) {
 })(jQuery);
 
 $(function() {
-    var html = '<div id="box" style="display:none"><div id="box-in"></div></div>';
-    // set box
-    $('body').prepend(html).keydown(function(e) {
+    var box = '<div id="box" style="display:none"><div id="box-in"></div></div>';
+    $('body').prepend(box).keydown(function(e) {
         if ('function' == typeof sky.key[e.keyCode]) try {
-            sky.key[e.keyCode]();
-        } catch(e) {}
+            sky.key[e.keyCode](e);
+        } catch(e) {
+            sky.err(e)
+        }
     });
 
     sky.err_core();

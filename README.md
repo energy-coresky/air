@@ -45,7 +45,6 @@ cd hole
 # then run PHP's embedded web-server:
 php vendor/energy/air/sky s
 ```
-
 Or with moon:
 
 ```bash
@@ -55,7 +54,6 @@ unzip hole.zip -d hole/public
 cd hole/public
 php moon.php hole.sky
 ```
-
 Or download all with git:
 
 ```bash

@@ -48,6 +48,10 @@ class dd_sqlite3 implements Database_driver
         return $this->conn->lastErrorMsg();
     }
 
+    function has_result($s4) {
+        return in_array($s4, ['prag']);
+    }
+
     function query($sql_string, &$q) {
         $q = @$this->conn->query($sql_string);
         return $this->conn->lastErrorCode();

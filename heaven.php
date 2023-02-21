@@ -74,7 +74,7 @@ class HEAVEN extends SKY
         }
 
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
-        $this->lref = preg_match('~^' . PROTO . '://' . preg_quote(DOMAIN . PATH) . '(.*)$~', $referer, $m) ? $m[1] : false;
+        $this->lref = preg_match('~^' . PROTO . '://' . preg_quote(DOMAIN . PORT . PATH) . '(.*)$~', $referer, $m) ? $m[1] : false;
         $this->eref = !$m ? $referer : false;
 
         if (SKY::$debug)

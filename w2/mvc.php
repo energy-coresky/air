@@ -37,7 +37,7 @@ abstract class MVC_BASE
 {
     function __get($name) {
         static $instances = [];
-        if (in_array(substr($name, 0, 2), ['m_', 'q_', 't_'])) {
+        if (in_array(substr($name, 0, 2), ['m_', 't_'])) {
             $obj = isset($instances[$name]) ? $instances[$name] : ($instances[$name] = new $name);
             if ('m' != $name[0]) {
                 SQL::$dd = $obj->dd;

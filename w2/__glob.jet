@@ -112,7 +112,7 @@ Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$c
 
 #.jscss ==========================================================================================================
 <script>
-sky.set_file_clk('#box-in');
+sky.d.files();
 sky.g.save = function() {
     //$('#box-in a, #box-in button').remove();
     ajax('save', {html:$('#dev-glob').html()}, 'dev-glob');

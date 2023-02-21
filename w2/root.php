@@ -46,6 +46,11 @@ class Root
             }, $ary);
             echo Admin::out(array_combine($ary, $val), false);
         };
+        $add_ext = function (&$ary, &$all) {
+            $ary = array_map(function ($v) use (&$all) {
+                return $v . ' (' . ($all[$v] ?? '<b>user</b>') . ')';
+            }, $ary);
+        };
         switch ($menu[$i]) {
             case 'Summary':
                 $_exec = function_exists('shell_exec') ? 'shell_exec' : function ($arg, $default = false) {
@@ -117,20 +122,20 @@ class Root
                 new Admin;
                 new Display;
                 $ary = Util::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
-                if (-1 == $t) {
-                    $ary[1] = array_map(function ($v) use (&$ary) {
-                        return $v . ' (' . ($ary[2][$v] ?? 'user') . ')';
-                    }, $ary[1]);
-                }
+                -1 != $t or $add_ext($ary[1], $ary[2]);
                 $echo($ary[1]);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $ary[0])) . $priv;
                 break;
 
             case 'Other':
                 echo tag('Traits', '', 'h3');
-                $echo(get_declared_traits(), 't');
+                $ary = Util::get_classes(get_declared_traits(), $ext, -1);
+                $add_ext($ary[1], $ary[2]);
+                $echo($ary[1], 't');
                 echo tag('Interfaces', '', 'h3');
-                $echo(get_declared_interfaces(), 'i');
+                $ary = Util::get_classes(get_declared_interfaces(), $ext, -1);
+                $add_ext($ary[1], $ary[2]);
+                $echo($ary[1], 'i');
                 echo tag('Loaded extensions, Dependencies, Constants/Functions/Classes', '', 'h3');
                 $echo(array_map(function ($v) {
                     $e = new ReflectionExtension($v);
@@ -151,7 +156,7 @@ class Root
             case 'Readme':
                 //$fn = $menu[$i] == 'Readme';
                 $file = file_get_contents(DIR_S . ($fn ?? '/README.md'));
-                echo Plan::has_class('Parsedown') ? (new Parsedown)->text($file) : pre($file);
+                echo Display::md($file);
                 break;
         }
         return $top;

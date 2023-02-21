@@ -86,29 +86,34 @@ class Display
         return '<div class="php">' . $table . '</div>';
     }
 
+    static function bash($text) {
+        return pre(preg_replace_callback("@(#.*)@m", function ($m) {
+            return sprintf(span_y, $m[1]);
+        }, $text), 'style="background:#e0e7ff; padding:5px"');
+    }
+
     static function md($text) {
         $code = function ($text, $re) {
             return preg_replace_callback("@$re@s", function ($m) {
+                if ('bash' == $m[1])
+                    return Display::bash(unhtml($m[2]));
                 if ('php' == $m[1])
                     return Display::php(unhtml($m[2]), '', true);
-                return 'jet' == $m[1] ? Display::jet(unhtml($m[2]), '-', true) : tag(html($m[2]), '', 'pre');
+                return 'jet' == $m[1] ? Display::jet(unhtml($m[2]), '-', true) : pre(html($m[2]), '');
             }, $text);
         };
         if (!$exist = Plan::has_class('Parsedown')) {
-            if (is_file('composer.json')) {
-                $json = json_decode(file_get_contents('composer.json'));
-                if (isset($json->require->{"erusev/parsedown"})) {
-                    Plan::vendor();
-                    $exist = true;
-                }
+            if (is_dir('vendor/erusev/parsedown')) {
+                Plan::vendor();
+                $exist = true;
             }
         }
         if ($exist) {
             $md = new Parsedown;
-            return $code($md->text($text), '<pre><code class="language\-(jet|php)">(.*?)</code></pre>');
+            return $code($md->text($text), '<pre><code class="language\-(jet|php|bash)">(.*?)</code></pre>');
         }
         $text = str_replace("\n\n", '<p>', unl($text));
-        return $code($text, "```(jet|php|)(.*?)```");
+        return $code($text, "```(jet|php|bash|)(.*?)```");
     }
 
     static function php_method($fn, $method) {

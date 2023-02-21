@@ -47,8 +47,13 @@ class dd_mysqli implements Database_driver
         return mysqli_error($this->conn);
     }
 
+    function has_result($s4) {
+        return in_array($s4, ['show', 'help']);
+    }
+
     function query($sql_string, &$q) {
         $q = mysqli_query($this->conn, $sql_string);
+        //$has_result = $q instanceof mysqli_result;
         return mysqli_errno($this->conn);
     }
 

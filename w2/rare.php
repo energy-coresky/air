@@ -39,6 +39,24 @@ class Rare
         return $list;
     }
 
+    static function split(String $in, $b = ';') {
+        $out = [];
+        $s = '';
+        foreach (token_get_all("<?php " . trim($in, "\n\r \t$b")) as $i => $v) {
+            if (!$i)
+                continue;
+            is_array($v) or $v = [0, $v];
+            if (!$v[0] && $v[1] === $b) {
+                '' === ($s = trim($s)) or $out[] = $s;
+                $s = '';
+            } else {
+                $s .= $v[1];
+            }
+        }
+        '' === ($s = trim($s)) or $out[] = $s;
+        return $out;
+    }
+
     static function bracket(String $in, $b = '(') {
         if ('' === $in || $b != $in[0])
             return '';

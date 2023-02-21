@@ -429,7 +429,7 @@ sky.g.group = function(m, to) {
 $(function() {
     var prev = sky.key[27];
     sky.key[27] = function() { // Escape
-     alert(prev)
+     //alert(prev)
         if (sky.g.editing)
             return sky.g.cancel();
         prev();

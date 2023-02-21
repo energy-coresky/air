@@ -39,6 +39,9 @@ class dd_ibase implements Database_driver
         return ibase_errmsg();
     }
 
+    function has_result($sql_string) {
+    }
+
     function query($sql_string, &$q) {
         $q = @ibase_query($this->conn, $sql_string);
         return ibase_errcode();

@@ -40,6 +40,10 @@ class dd_sqlsrv implements Database_driver
         return $this->error['message'];
     }
 
+
+    function has_result($sql_string) {
+    }
+
     function query($sql_string, &$q) {
         $this->q = $q = oci_parse($this->conn, $sql_string);
         oci_execute($q);

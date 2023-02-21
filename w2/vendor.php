@@ -74,7 +74,6 @@ class Vendor
             'vendors' => array_diff(array_map('basename', glob('vendor/*')), $skip),
             'mds' => $mds($name),
             'docs' => $docs,
-            //Plan::has_class('Parsedown') ? (new Parsedown)->text($readme) : pre($readme)
         ]), 'tags' => $last ? $tags($last->keywords) : ''];
         return $return ? (object)$json : json($json);
     }

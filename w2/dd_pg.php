@@ -46,6 +46,10 @@ class dd_pg implements Database_driver
         return $this->error_str;
     }
 
+
+    function has_result($sql_string) {
+    }
+
     function query($sql_string, &$q) {
         $this->q = $q = pg_query($sql_string);
         return $this->error_str = pg_result_error($q);

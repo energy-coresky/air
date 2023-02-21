@@ -258,7 +258,7 @@ $(function() {
             //'<div style="margin:0 10px;">'+
             //window.parent.document.getElementById('trace-x').innerHTML// + '</div>'
 //        $('h1 span.gate-err').html('{{$h1}}::{{$func}}');
-        sky.set_file_clk('#v-body');
+        sky.d.files();
         setTimeout(function() {
             var el = false;
             $('#gate legend b').each(function() {

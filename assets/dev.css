@@ -177,6 +177,11 @@ a[active].inner-menu:hover {
     z-index:0;
 }
 
+#v-body pre span:hover, #v-body td span:hover {
+    color: magenta;
+    cursor: pointer;
+}
+
 #dev-trace {
     width:100vw;
     background-color:#000;

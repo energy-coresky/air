@@ -23,12 +23,6 @@ sky.a.finish = function(to) {
     }, '_trace');
 };
 
-sky.d.close_box = function(url) {
-    $(window.parent.document.getElementById('box')).find('.esc a:first').click();
-    if (url)
-        window.parent.location.href = url;
-};
-
 sky.d.draw = {
     x: '',
     v: function(data, str) {
@@ -241,7 +235,7 @@ sky.d.init = function(from) {
             $(this).css({color:'red', backgroundColor:'pink'});
         });
 
-    sky.set_file_clk('#v-body');
+    sky.d.files();
 
     for (var a = []; m = str.match(/(TOP|SUB|BLK)\-VIEW: (\d+) (\S+) (\S+)(.*)/s); str = m[5]) {
         a.push({type:m[1], no:m[2], hnd:m[3], tpl:'^' == m[4] ? ('BLK' == m[1] ? 'injected-to-parent' : 'not-used') : m[4]});
@@ -320,8 +314,33 @@ sky.d.reflect = function(el, type) {
     });
 };
 
-sky.key[27] = function() { // Escape
-    sky.d.close_box();
+sky.d.files_html = ['', '', ''];
+sky.d.files = function() {
+    $('#v-body pre span, #v-body td span').each(function() {
+        if ($(this).attr('style'))
+            return;
+        $(this).click(function() {
+            var filine = $(this).html();
+            ajax('', {name:filine, c:$(this).next().hasClass('error')}, function(r) {
+                sky.d.files_html = [$('#v-body').html(), $('#top-head').html(), sky.key[27]];
+                $('#v-body').html(r);
+                $('#top-head').html('<b>' + filine + '</b>');
+                $('#v-body div.code').get(0).scrollIntoView({block:'center',behavior:'smooth'});
+                sky.key[27] = function() {
+                    $('#v-body').html(sky.d.files_html[0]);
+                    $('#top-head').html(sky.d.files_html[1]);
+                    sky.d.files();
+                    sky.key[27] = sky.d.files_html[2];
+                };
+            }, '_file');
+        });
+    });
+};
+
+sky.d.close_box = function(url) {
+    $(window.parent.document.getElementById('box')).find('#box-esc a').click();
+    //if (url)
+        //window.parent.location.href = url;
 };
 
 (function() {
@@ -329,6 +348,7 @@ sky.key[27] = function() { // Escape
         if (801 == r.err_no)
             $('#top-head').html(r.catch_error);
     });
+    sky.key[27] = sky.d.close_box;
 })();
 
 $(function() {
