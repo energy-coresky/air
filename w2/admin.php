@@ -48,7 +48,7 @@ class Admin
         return preg_match("~$re", $url, $m) ? $m : false; // $sky->re . 
     }
 
-    static function out($out, $is_html = true) { # check Admin::out() for XSS
+    static function out($out, $is_html = true, $c2 = '30%') { # check Admin::out() for XSS
         if (is_array($out)) {
             echo th(0 === $is_html ? ['','',''] : ['', 'NAME', 'VALUE'], 'id="table"');
             $i = 0;
@@ -56,7 +56,7 @@ class Admin
                 is_string($v) or is_int($v) or $v = print_r($v, true);
                 if ($is_html)
                     $v = html($v);
-                echo td([[1 + $i, 'style="width:5%"'], [$k, 'style="width:30%"'], $v], eval(zebra));
+                echo td([[1 + $i, 'style="width:5%"'], [$k, 'style="width:' . $c2 . '"'], $v], eval(zebra));
             }
             echo '</table>';
         } else {

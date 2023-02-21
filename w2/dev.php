@@ -10,7 +10,7 @@ class DEV
         $top->body = $sky->fly ? '' : '_std.e71';
         list ($class, $action) = explode('::', substr($top->hnd, 0, -2));
         $sky->ca_path = ['ctrl' => $class, 'func' => $action];
-        trace(["Gate error in $top->hnd", 'Gate error'], true, 1);
+        trace(["Gate error in $top->hnd", 'Gate error'], true, 2);
     }
 
     static function init() {

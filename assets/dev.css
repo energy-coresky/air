@@ -53,6 +53,10 @@ pre, fieldset {
     width: 95%;
     margin-bottom:10px;
 }
+div.code {
+    margin-left:-21px;
+    padding-left:21px;
+}
 pre, .code, div#popup-in {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     /* font-size: 12px; */

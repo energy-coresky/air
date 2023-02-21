@@ -281,16 +281,17 @@ class Root
                     jump(URI);
                 }
                 if (is_dir($path = $ary[(int)$i])) {
-                    $files = array_flip(glob("$path/*"));
+                    $files = [];
+                    $glob = glob("$path/*");
                     if (3 == $i && Plan::mem_t('error.html'))
-                        $files += [Plan::mem_obj(['main'])->path . '/error.html' => 1];
-                    foreach ($files as $k => $v) {
-                        $s = stat($k);
-                        $files[$k] = tag(sprintf(TPL_CHECKBOX . ' ', $k, '') . date(DATE_DT, $s['mtime']), '', 'label');
+                        $glob[] = Plan::mem_obj(['main'])->path . '/error.html';
+                    foreach ($glob as $k) {
+                        $v = tag(sprintf(TPL_CHECKBOX . ' ', $k, '') . date(DATE_DT, stat($k)['mtime']), '', 'label');
+                        $files["<span>$k</span>"] = $v;
                     }
                     if ($files) {
                         echo '<div class="fl"><form method="post">';
-                        Admin::out($files, false);
+                        Admin::out($files, false, '');
                         echo '<br>' . js('var x=0;') . a('[un]check all', "javascript:$('#table input').prop('checked',x=!x)");
                         echo pad() . hidden() . '<input type="submit" value="delete checked" /></form></div>';
                     } else {

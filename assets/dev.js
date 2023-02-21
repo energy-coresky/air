@@ -325,7 +325,7 @@ sky.d.files = function() {
                 sky.d.files_html = [$('#v-body').html(), $('#top-head').html(), sky.key[27]];
                 $('#v-body').html(r);
                 $('#top-head').html('<b>' + filine + '</b>');
-                $('#v-body div.code').get(0).scrollIntoView({block:'center',behavior:'smooth'});
+                $('#v-body div.code').get(0).scrollIntoView({inline:'start',block:'center',behavior:'smooth'});
                 sky.key[27] = function() {
                     $('#v-body').html(sky.d.files_html[0]);
                     $('#top-head').html(sky.d.files_html[1]);
