@@ -56,11 +56,11 @@ class USER
         $dd = SKY::$dd;
         $now = $dd->f_dt();
 
-        if ($this->row = sql('~select *, id as vid, 0 as user_id, !! from $_visitors where $$ hash=$+', [
+        if ($this->row = sql('~select *, id as vid, 0 as user_id, !! from $_visitors where $$', [
                 '$1' => qp($dd->f_dt(false, '-', '$.', 'minute') . ' > dt_l as visit', $sky->s_visit),
                 $now . ' <= ' . $dd->f_dt('dt_l', '+', 1, 'second') . ' as flood',
                 $now . ' > ' . $dd->f_dt('dt_l', '+', 1, 'hour') . ' as banend',
-            ], $this->pretty ? qp('sky=$+ or', $cookie) : '', $hash)) {
+            ], $this->pretty ? qp('sky=$+', $cookie) : qp('hash=$+', $hash))) {
 
             $this->uid
                 AND $row = sqlf('~select *, id as user_id from $_users where id=%d', abs($this->uid))
@@ -76,10 +76,12 @@ class USER
                 '!clk_visit' => $this->visit ? 1 : 'clk_visit+1',
                 'uri' => URI,
             ];
-            if ($_POST || $this->banend)
-                $ary['!clk_flood'] = $this->flood ? 'clk_flood+1' : 0;
+
+            #if ($_POST || $this->banend)
+             #   $ary['!clk_flood'] = $this->flood ? 'clk_flood+1' : 0;
+
             if ($this->pretty = $this->pretty && $this->sky === $cookie) {
-                null === $this->hash or $ary['hash'] = 'null';
+                null === $this->hash or $ary['hash'] = null;
                 $_ &= ~self::NO_PRETTY & ~self::NO_C;
             } else {
                 $this->visit or $this->cookize($this->sky); # if not new visit

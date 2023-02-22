@@ -53,8 +53,8 @@ class Root
         };
         switch ($menu[$i]) {
             case 'Summary':
-                $_exec = function_exists('shell_exec') ? 'shell_exec' : function ($arg, $default = false) {
-                    return $default === false ? $arg : $default;
+                $_exec = function_exists('shell_exec') ? 'shell_exec' : function ($arg) {
+                    return $arg;
                 };
 
                 $ltime = PHP_OS == 'WINNT' ? preg_replace("@[\r\n\t ]+@", ' ', $_exec('date /t & time /t')) : $_exec('date'); # 2do - MAC PC
@@ -63,7 +63,7 @@ class Root
                 echo Admin::out([
                     'Default site title' => $sky->s_title,
                     'Primary configuration' => sprintf('DEV = %d, DEBUG = %d, DIR_S = %s, ENC = %s, PHPDIR = %s', DEV, DEBUG, DIR_S, ENC, PHP_BINDIR),
-                    'System' => (PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a', PHP_OS)),
+                    'System' => (PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a')),
                     'Server IP, uptime' => ($_SERVER['SERVER_ADDR'] ?? '::1') . ' ' . $utime, # $_exec('uptime')
                     'Locale / mb_internal_encoding / mb_detect_order' => setlocale(LC_ALL, 0) . ' / ' . mb_internal_encoding() . ' / ' . implode(', ', mb_detect_order()),
                     'Zend engine version:' => zend_version(),
@@ -172,8 +172,8 @@ class Root
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     static function _config($i) {
         global $sky;
-        $menu = ['System', 'Admin', 'Cron', '/etc/'];
-        $etc = 3 == $i;
+        $menu = ['System', 'Cron', 'Admin', 'Install', '/etc/'];
+        $etc = 4 == $i;
         $edit = $etc ? isset($_GET['fn']) : !isset($_GET['show']);
         $show = $edit ? false : ($_GET['show'] ?? true);
         $TOP = menu($i, $menu, TPL_MENU . ($edit ? '&edit' : '&show'), ' &nbsp; ');
@@ -188,12 +188,12 @@ class Root
                 array_walk($ary, function(&$v, $k) use ($path) {
                     $size = filesize($k);
                     $v = date(DATE_DT, filemtime($k)) . ' ';
-                    $v .= $size > 1024 ? "- $size bytes" : tag(a('edit &nbsp;', "?main=3&id=3&fn=" . substr($k, 1 + strlen($path))));
+                    $v .= $size > 1024 ? "- $size bytes" : tag(a('edit &nbsp;', "?main=3&id=4&fn=" . substr($k, 1 + strlen($path))));
                 });
             }
         } else {
            new Admin;
-            $ary = [['s' => 3], ['a' => 8], ['n' => 9]];
+            $ary = [['s' => 8], ['n' => 9], ['a' => 10], ['i' => 11]];
             list ($imemo, $dt) = sqlf('-select imemo, dt from $_memory where id=%d', $id = current($ary = $ary[$i]));
             $ary = $sky->memory($id, $char = key($ary));
             $edit or array_walk($ary, function(&$v, $k) use ($i, $sky) {
@@ -214,24 +214,20 @@ class Root
                 ksort($ary);
                 SKY::$char($ary);
             }
-            isset($_POST['fn']) ? jump('?main=3&id=3') : jump(URI);
+            isset($_POST['fn']) ? jump('?main=3&id=4') : jump(URI);
         }
 
         if (!$edit) {
             echo Admin::out($ary, false);
             if ($etc)
-                echo '<br>' . a('Write new file', '?main=3&id=3&fn');
+                echo '<br>' . a('Write new file', '?main=3&id=4&fn');
             return $TOP;
         }
 
+        $form = ['test' => ['test', '', '', '+2:00']];
         switch ($char) {
             case 's':
                 $form = Root::form_prod();
-                break;
-            case 'a':
-                $form = [
-                    'qq' => ['', 'QQ', '', '+2:00'],
-                ];
                 break;
             case 'n':
                 $form = [
@@ -241,7 +237,7 @@ class Root
                     'www'   => ['Index file directory', '', '', 'web~public_html'],
                 ];
                 break;
-            default: 
+            case 'f':
                 $form = '' === $_GET['fn'] ? ['fn' => ['New filename', '']] : ["<b>$_GET[fn]</b><br>"];
                 $form += ['etc_file' => ['', 'textarea', 'style="width:90%" rows="20"']];
             break;

@@ -343,7 +343,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
                 $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
                 $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
                 if (!SKY::$cli)
-                    $sky->error_prod .= ' uri: ' . html(URI);
+                    $sky->error_prod .= ' ' . $sky->methods[$sky->method] . ' uri: ' . html(URI);
                 $sky->error_prod .= "\n$mgs\n\n";
             }
         }

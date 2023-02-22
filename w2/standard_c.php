@@ -52,6 +52,8 @@ class standard_c extends Controller
                     '_vend?list' => 'Browse All Vendors',
                 ],
                 'wares' => $this->dev->wares_menu(),
+                'ware1' => substr(parse_url($sky->d_ware1, PHP_URL_PATH), 1),
+                'ware2' => substr(parse_url($sky->d_ware2, PHP_URL_PATH), 1),
             ];
         }
     }
@@ -171,6 +173,12 @@ class standard_c extends Controller
         if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
             $this->eview = $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
+            if (1 == $this->method) {
+                $w1 = parse_url($tmp = $this->d_ware1, PHP_URL_PATH);
+                $this->d_ware1 = URI;
+                if ("_$name" != $w1)
+                    $this->d_ware2 = $tmp;
+            }
             Plan::_r('mvc/' . ($class = $name . '_c') . '.php');
             MVC::$cc = MVC::$mc;
             MVC::$mc = new $class;

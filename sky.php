@@ -516,7 +516,7 @@ function unhtml($str, $mode = ENT_QUOTES) {
 }
 
 function escape($in, $reverse = false) {
-    $ary = ["\\" => "\\\\", "\r" => "\\r", "\n" => "\\n"];
+    $ary = ["\\" => "\\\\", "\r" => "\\r", "\n" => "\\n", "\t" => "\\t"];
     return strtr($in, $reverse ? array_flip($ary) : $ary);
 }
 

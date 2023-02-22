@@ -192,7 +192,10 @@ $(function() {
     ~loop
 #.menu
 
-#.layout //////////////////////////////////////////////////////////////////////////////
+#.wares
+    @if($sky->d_ware1)<a@active("_$y_ware1" == $sky->_0) href="{{$sky->d_ware1}}">Ware {{ucfirst($y_ware1)}}</a>~if
+    @if($sky->d_ware2)<a@active("_$y_ware2" == $sky->_0) href="{{$sky->d_ware2}}">Ware {{ucfirst($y_ware2)}}</a>~if
+#.layout.wares //////////////////////////////////////////////////////////////////////////////
 @if($y_ware_dir)@use(`Ware` as bottom)~if
 <!doctype html><html>
 <head>@head<script>
@@ -237,14 +240,14 @@ $(function() {
         @elseif('_dev' == explode('?', $uri)[0])@block(`` as m_dev)
         ~if
     ~loop
-    @block(`<a href="_dev?ware">Browse All Wares</a>` as all_wares)
+    <a @active('_dev?ware' == URI) href="_dev?ware">Browse All Wares</a>
+    @block(.wares as all_wares)
     <a @href(var x=this;ajax('',function(r) { sky.d.drop_cache(r,x) },'_drop'))>Drop All Cache</a>
     @block(menu)
         @use(`` as all_wares)
-        <br><div class="other-task">Wares</div>
-        <a class="inner-menu"@active('_dev?ware' == URI) href="_dev?ware">Browse All..</a>
+        <br><div class="other-task">Dev Wares</div>
         @loop($y_wares as $uri => $name)
-            <a href="{{$uri}}?ware"@active($uri == URI)>{{$name}}</a>
+            <a href="{{$uri}}?ware"@active($uri == URI)>Ware {{$name}}</a>
         ~loop
     ~block
     <div id="dev-empty"></div>
