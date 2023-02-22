@@ -77,8 +77,8 @@ class USER
                 'uri' => URI,
             ];
 
-            #if ($_POST || $this->banend)
-             #   $ary['!clk_flood'] = $this->flood ? 'clk_flood+1' : 0;
+       #     if ($_POST || $this->banend)
+        #        $ary['!clk_flood'] = $this->flood ? 'clk_flood+1' : 0;
 
             if ($this->pretty = $this->pretty && $this->sky === $cookie) {
                 null === $this->hash or $ary['hash'] = null;

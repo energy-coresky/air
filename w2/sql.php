@@ -374,7 +374,7 @@ final class SQL
                 $v = '>>' . gettype($v) . '<<';
             $q = $this->quote;
             $keys[] = '`' == $char ? $q . str_replace($q, $q . $q, trim($k, $q)) . $q : $k;
-            if (!$esc && '$now' == $v)
+            if (!$esc && '$now' === $v)
                 $v = $this->_dd->f_dt();
             $vals[] = !$esc || is_num($v) ? $v : $this->_dd->escape($v);
         });
