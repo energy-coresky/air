@@ -21,6 +21,8 @@ class DEV
         SKY::ghost('d', $vars, function ($s) {
             Plan::mem_p(['main', 'dev_vars.txt'], $s);
         });
+        if ('' === $sky->d_crash_to)
+            $sky->d_crash_to = 8;
 
         if (SKY::d('cron')) {
             if (!Plan::_t(['main', 'cron.php']))
@@ -403,6 +405,7 @@ class DEV
                 'manual' => ['PHP manual language', 'select', $phpman],
                 'se' => ['Search engine tpl', '', 'size="50"'],
                 'nopopup'  => ['No dev-tools on soft 404', 'chk'],
+                'crash_to'  => ['Crash-redirect timeout, sec', 'number', '', 8],
                 Form::X([], '<hr>'),
                 ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
                 'static' => ['', '', 'size="50"'],

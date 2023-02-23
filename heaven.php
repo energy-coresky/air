@@ -91,9 +91,9 @@ class HEAVEN extends SKY
             if (1 == $cnt && '' === $this->surl[0]) {
                 $this->surl = [];
                 $cnt = 0;
-                if ($this->fly && 'AJAX' == key($_GET)) {// && INPUT_POST == $this->method
+                if ($this->fly && 'AJAX' === key($_GET)) {// && INPUT_POST == $this->method
                     $mvc->return = $this->fly = HEAVEN::J_FLY;
-                    if ('adm' == $_GET['AJAX'])
+                    if ('adm' === $_GET['AJAX'])
                         $this->surl = ['adm'];
                     array_shift($_GET);
                 }
@@ -111,18 +111,19 @@ class HEAVEN extends SKY
         return ['.' . $m[3]] + $m;
     }
 
-    function tail_t() {
+    static function tail_t() {
+        global $sky;
         # let ghost's SQLs will in the tracing
-        $this->ghost or $this->tail_ghost();
+        $sky->ghost or $sky->tail_ghost();
 
         if (SKY::$debug) { # render tracing in the layout
-            $z_err = DEV ? Plan::z_err($this->fly) : '';
-            echo tag('<h1>Tracing</h1>' . tag($this->tracing('', false), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"');
+            $z_err = DEV ? Plan::z_err($sky->fly) : '';
+            echo tag('<h1>Tracing</h1>' . tag($sky->tracing('', false), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"');
             echo tag($z_err, 'id="trace-x" x="' . ($z_err ? 1 : 0) . '" style="display:none"');
             if (DEV && (SKY::$errors[0] || $z_err))
                 echo js('sky.err_t = 1');
         }
-        $this->tailed = true;
+        $sky->tailed = true;
     }
 
     function tail_x($exit, $stdout = '') {
@@ -218,10 +219,10 @@ class HEAVEN extends SKY
 
                 if ($hs) { # try redirect
                     $redirect = '--></script></style>';
-                    $to = PATH . "_crash?$http_code";
+                    $to = PATH . ($this->eview ? '_crash?' : 'crash?') . $http_code;
                     if (DEV) {
-                        $redirect .= tag('Headers sent, redirect to: ' . a($to, $to) . '. Wait 3 sec', '', 'h1');
-                        $this->_refresh = "3!$to";
+                        $redirect .= tag('Headers sent, redirect to: ' . a($to, $to) . ". Wait $this->d_crash_to sec", '', 'h1');
+                        $this->_refresh = "$this->d_crash_to!$to";
                     } else {
                         $redirect .= js("document.location.href='$to'");
                         $this->_refresh = "0!$to";
@@ -269,7 +270,7 @@ class HEAVEN extends SKY
             trace(implode(', ', array_keys(SKY::$mem)), 'CHARS of Ghost');
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
-            $rewritten = implode('/', $this->surl) . ($_GET ? '?' . http_build_query($_GET) : '');
+            $rewritten = implode('/', $this->surl) . ($_GET ? '?' . urldecode(http_build_query($_GET)) : '');
             $uri = $this->methods[$this->method] . ' ' . URI . " --> $rewritten\n\$sky->lref: $this->lref";
             $this->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "\n\$sky->fly: $this->fly\n\n" . $this->tracing;
 

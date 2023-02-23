@@ -171,35 +171,18 @@ class Controller extends MVC_BASE
     }
 
     function __call($name, $args) {
-        global $sky;
-        if (SKY::$debug) {
-            switch ($class = get_class($this)) {
-                case __CLASS__:
-                case 'default_c_R':
-                    if (DEV && Plan::_t([Plan::$gate, "mvc/c_$sky->_0.php"])) {
-                        Plan::cache_d(['main', 'sky_plan.php']);
-                        $sky->fly or jump(URI);
-                    }
-                    $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
-                    $msg = preg_match("/^\w+$/", $sky->_0)
-                        ? "Controller `c_$sky->_0.php` or method `default_c::{$x}_$sky->_0()` not exist"
-                        : "Method `default_c::default_$x()` not exist";
-                    trace($msg, (bool)DEV);
-                    break;
-                default:
-                    trace("Method `{$class}::$name()` not exist", (bool)DEV);
-            }
-        }
-        return 404; # 1 == $sky->fly also works via sky.error() and CONTR::error_y()
+        if (SKY::$debug)
+            Util::not_found(get_class($this), $name);
+        return 404;
     }
 }
 
-trait HOOK
+trait HOOK_C
 {
     static function rewrite_h($cnt, &$surl) {
         if (1 == $cnt && 'robots.txt' == $surl[0] && !$_GET)
             return array_unshift($surl, '_etc');
-        return HOOK::re_dev($cnt, $surl);
+        return HOOK_C::re_dev($cnt, $surl);
     }
 
     static function re_dev($cnt, &$surl) {
@@ -220,16 +203,6 @@ trait HOOK
         return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";
     }
 
-    //add named limits and permission to sky-gate!!!!!!
-
-    function mc(Array $in = null) {
-        $name = get_class(MVC::$mc);
-        if (!$in)
-            return $name;
-        if (is_int(key($in)))
-            return in_array($name, $in);
-    }
-
     static function langs_h() {
     }
 
@@ -243,6 +216,100 @@ trait HOOK
         if (!mysqli_set_charset($dd->conn, 'utf8'))
             throw new Error('mysqli_set_charset');
         $dd->sqlf('set time_zone=%s', date('P'));
+    }
+}
+
+trait HOOK_D
+{
+    protected $hook = false;
+
+    function head_y($action) {
+        if (!$this->hook = in_array($action, ['a_crash', 'a_etc', 'j_init']))
+            return parent::head_y($action);
+    }
+
+    function tail_y() {
+        if (!$this->hook)
+            return parent::tail_y();
+    }
+
+    function a_crash() {
+        global $sky;
+        $sky->open();
+        SKY::$debug = $this->_static = 0;
+        $tracing = '';
+        if (DEV) {
+            $x = (int)SKY::d('tracing_toggle');
+            $x or $tracing = pre(sqlf('+select tmemo from $_memory where id=1'));
+            SKY::d('tracing_toggle', 1 - $x);
+        }
+        http_response_code($no = (int)($this->_1 ?: 404));
+        MVC::body('_std.crash');
+        return [
+            'redirect' => '',
+            'no' => $no,
+            'tracing' => $tracing,
+        ];
+    }
+
+    function a_test_crash() {
+        if ($this->_1)
+            return [];
+        throw new Error('Crash pretty');
+    }
+
+    function a_etc($fn = '') {
+        global $sky;
+        $ext = '';
+        $fn or $fn = $sky->_1;
+
+        if ($pos = strrpos($fn, '.'))
+            $ext = substr($fn, $pos + 1);
+        if (DEV && in_array($ext, ['js', 'css'])) {
+            if (SKY::d('etc'))
+                $sky->open(); # save tracing on DEV only now
+            is_file($file = DIR_S . "/assets/$fn")
+                or $file = Plan::_t([$this->d_last_ware, "assets/$fn"]);
+        } else {//2do: use Plans (to get var) to save optionally user log on Prod
+            $file = WWW . "m/etc/$fn";
+        }
+        if (is_file($file)) {
+            switch ($ext) {
+                case 'txt': MVC::mime('text/plain; charset=' . ENC); break;
+                case 'css': MVC::mime('text/css'); break;
+                case 'xml': MVC::mime('application/xml'); break;
+                case 'js':  MVC::mime('application/javascript'); break;
+                //case 'ico': MVC::mime('image/x-icon'); break;
+            }
+            MVC::last_modified(filemtime($file), false, function() use ($sky, $fn) {
+                $sky->log('etc', "304 $fn");
+            });
+            header('Content-Length: ' . filesize($file));
+            $sky->log('etc', "200 $fn");
+            while (@ob_end_flush());
+            readfile($file);
+            throw new Stop;
+        }
+        $sky->log('etc', "404 $fn");
+        http_response_code($sky->error_no = 404);
+        return true;
+    }
+
+    function j_init($tz, $scr) {
+        global $sky, $user;
+        $sky->open();
+        $user = common_c::user_h();
+        if (isset($_POST['unload'])) {
+            #if ($user->id && !$user->v_mem) ???
+             #   $user->logout();
+        } else {
+            $user->v_tz = floatval($tz);
+            preg_match("/^(\d{3,4})x\d{3,4}$/", $scr, $m);
+            $user->v_scr = $m ? $m[0] : '768x1024';
+            if ($user->v_mobi === '' && ($m && $m[1] < 1000 || $sky->orientation))
+                $user->v_mobi = $user->v_mobd = $m[1] < 700 ? 1 : 2;
+        }
+        return true;
     }
 }
 
@@ -295,7 +362,6 @@ class MVC extends MVC_BASE
         array_walk($new, function (&$v, string $k) use (&$all, $pref) {
             if ('' === $k)
                 throw new Error("Cannot use empty varname");
-
             $p = strlen($k) > 1 && '_' == $k[1] ? $k[0] : false;
             if ('e' === $p) {
                 $all[$k] = new eVar($v);
@@ -352,35 +418,6 @@ class MVC extends MVC_BASE
         header('Last-Modified: ' . substr(gmdate('r', $time), 0, -5) . 'GMT');
     }
 
-    static function pdaxt($plus = '') {
-        global $sky, $user;
-
-        if ($sky->show_pdaxt || DEV) {
-            $link = $user->pid
-                ? ($user->u_uri_admin ? $user->u_uri_admin : Admin::$adm['first_page'])
-                : 'auth';
-            echo '<span class="pdaxt">';
-            if (DEV || 1 == $user->pid) {
-                if (!$sky->is_mobile) {
-                    if ($sky->has_public)
-                        echo DEV ? a('P', PROTO . '://' . _PUBLIC) : sprintf(span_r, 'P');
-                    if (DEV) {
-                        echo '_venus' == $sky->d_last_page
-                            ? a('V', PATH . '_venus?ware=' . rawurlencode(URI))
-                            : a('D', ["dev('" . ($sky->d_last_page ?: '_dev') . "')"]);
-                    }
-                    echo a('A', PATH . $link);
-                }
-                $warning = 'style="background:red;color:#fff"';
-                echo a('X', ['sky.trace(1)'], Plan::cache_t(['main', 'sky_xw']) ? $warning : '');
-                echo a('T', ['sky.trace(0)'], $sky->was_warning ? $warning : '');
-            } else {
-                echo a('ADMIN', PATH . $link);
-            }
-            echo "$plus</span>";
-        }
-    }
-
     static function head($plus = '') {
         global $sky;
 
@@ -408,11 +445,6 @@ class MVC extends MVC_BASE
 $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         echo css($sky->_static[2] + [-1 => '~/m/sky.css']) . js($js);
         echo '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->_head;
-    }
-
-    static function tail() {
-        global $sky;
-        $sky->tail_t();
     }
 
     static function handle($method, &$param = null, $mandatory = false) {
@@ -520,7 +552,7 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
         global $sky;
 
         ob_start();
-        if ('_' == $sky->_0[0]) {
+        if (DEV && '_' == $sky->_0[0]) {
             $action = ($this->return ? 'j' : 'a') . $sky->_0;
             $this->hnd = "standard_c::$action()";
             $this->body = '_std.' . substr($sky->_0, 1);

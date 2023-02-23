@@ -333,7 +333,7 @@ class Jet
                 $p = explode('.', $arg, 2);
                 return (string)(new SVG($p[0], $p[1] ?? false));
             case 'pdaxt':
-                return sprintf('<?php MVC::pdaxt(%s) ?>', $arg);
+                return sprintf('<?php Util::pdaxt(%s) ?>', $arg);
             case 'else':
                 return '<?php else: ?>';
             case 'elseif':
@@ -355,7 +355,7 @@ class Jet
             case 'tail':
                 $vars = DEV ? ' Util::vars(get_defined_vars(), $sky->no);' : '';
                 $this->tailed = true;
-                return "<?php$vars MVC::tail() ?>";
+                return "<?php$vars HEAVEN::tail_t() ?>";
             case 'continue':
                 return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>';
             case 'break':

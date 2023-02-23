@@ -265,10 +265,10 @@ $(function() {
         sky.tz = (new Date().getTimezoneOffset()) / 60 * -1;
         if ('' === sky.tz)
             sky.tz = 0;
-        ajax('_', {tz:sky.tz, scr:scr}, function (r) {
+        ajax('', {tz:sky.tz, scr:scr}, function (r) {
             if ('main' == r)
                 location.href = sky.home;
-        }, '_init');
+        }, 'init');
     }
     sky.load();
 });

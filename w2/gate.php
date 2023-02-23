@@ -12,6 +12,7 @@ class Gate
     static $ware = 'main';
     static $controller_data = false; # not loaded initialy
 
+    //add named limits and permission to sky-gate!!!!!!
     public $url = '';
 
     function __construct() {

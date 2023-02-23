@@ -365,19 +365,15 @@ class Rare
         return $user->auth;
     }
 
-    static function logout($ary = []) {
+    static function logout($to = '', $ary = []) {
         global $sky, $user;
 
-        if ($user->auth) {
-            if ($ary)
-                SKY::u(null, $ary);
-            SKY::v(null, ['uid' => $sky->is_front ? 0 : $user->id]);
-        } elseif (!$sky->fly) {
-            throw new Exception('logout when auth=0');
-        }
-        $to = $sky->is_front ? $sky->lref : $user->u_uri_front;
-        if ($sky->fly)
-            return !$to ? LINK : $to;
-        jump([$to, '']);
+        if (!$user->auth)
+            throw new Hacker('Logout when auth=0');
+        if ($ary)
+            SKY::u(null, $ary);
+        SKY::v(null, ['uid' => 2 == $user->auth ? $user->id : 0]);
+        if (!$sky->fly && false !== $to)
+            jump($to);
     }
 }

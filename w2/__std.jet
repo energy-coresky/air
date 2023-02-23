@@ -65,6 +65,12 @@ echo $redirect;
 #end
 #.crash
 
+#.test_crash
+1@php
+    throw new Error('Crash "headers sent"');
+~php
+#.test_crash
+
 #.save_cache ------------------------------------------------------------------------------
 <p class="clear"><br><br><h1>EXTRA = {{EXTRA}}</h1>
 <form method="post" style="display:inline-block">
