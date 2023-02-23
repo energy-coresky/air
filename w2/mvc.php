@@ -500,9 +500,14 @@ $js = '_' == $sky->_0[0] ? '' : common_c::head_h();
             if ($recompile = !$dst || Plan::_m([Plan::$gate, $fn_src]) > Plan::gate_m($fn_dst))
                 Gate::put_cache($class, $fn_src, $fn_dst);
         }
-        $action = $match
-            ? ('' === $sky->_1 ? ($this->return ? 'empty_j' : 'empty_a') : ($this->return ? 'j_' : 'a_') . $sky->_1)
-            : ($this->return ? 'j_' : 'a_') . $sky->_0;
+        $pfx = $this->return ? 'j_' : 'a_';
+        if ($match) {
+            $action = '' === $sky->_1
+                ? ($this->return ? 'empty_j' : 'empty_a')
+                : (is_string($sky->_1) ? $pfx . $sky->_1 : ($this->return ? 'default_j' : 'default_a'));
+        } else { # default_c
+            $action = $pfx . $sky->_0;
+        }
         Plan::gate_rr($fn_dst, $recompile);
         $cls_g = $class . '_G';
         if (!method_exists($gate = new $cls_g, $action))

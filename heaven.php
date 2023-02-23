@@ -269,7 +269,7 @@ class HEAVEN extends SKY
             trace(implode(', ', array_keys(SKY::$mem)), 'CHARS of Ghost');
             if ($this->trans_coll)
                 Language::translate($this->trans_coll);
-            $rewritten = implode('/', $this->surl) . ($_GET ? '?' . array_join($_GET, '=', '&') : '');
+            $rewritten = implode('/', $this->surl) . ($_GET ? '?' . http_build_query($_GET) : '');
             $uri = $this->methods[$this->method] . ' ' . URI . " --> $rewritten\n\$sky->lref: $this->lref";
             $this->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "\n\$sky->fly: $this->fly\n\n" . $this->tracing;
 
