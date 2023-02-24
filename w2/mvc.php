@@ -239,7 +239,7 @@ trait HOOK_D
         SKY::$debug = $this->_static = 0;
         $tracing = '';
         if (DEV) {
-            $x = (int)SKY::d('tracing_toggle');
+            $x = (int)('_' != $sky->_0[0] && SKY::d('tracing_toggle'));
             $x or $tracing = pre(sqlf('+select tmemo from $_memory where id=1'));
             SKY::d('tracing_toggle', 1 - $x);
         }
@@ -442,8 +442,9 @@ class MVC extends MVC_BASE
         echo "<title>$sky->_title</title>$plus";
         echo tag($sky->_static[0] + ['csrf-token' => $sky->csrf, 'sky.home' => LINK]); # meta tags
         echo js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->_static[1]);
-$js = '_' == $sky->_0[0] ? '' : common_c::head_h();
-        echo css($sky->_static[2] + [-1 => '~/m/sky.css']) . js($js);
+        echo css($sky->_static[2] + [-1 => '~/m/sky.css']);
+        if (!$sky->eview && 'crash' != $sky->_0)
+            echo js(common_c::head_h());
         echo '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->_head;
     }
 
