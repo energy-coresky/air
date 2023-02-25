@@ -44,10 +44,6 @@
 var c_ = false, r_ = false, proc = false;
 sky.g.save = function(el) {
     if (el) { // button hit
-        #if('system' == :1)
-            if (!$('input[name=do]').is(':checked'))
-                return ajax('system', $('#inst form').serialize(), sky.false);
-        #end
         $('#inst progress').show();
         $('#log').show().prev().hide();
         $(el).val((proc = !proc) ? 'pause' : 'continue');
@@ -67,7 +63,7 @@ sky.g.save = function(el) {
 
 #.database  //////////////////////////////////////////////////////////////////////////////     -- fix SQL::$dd->pref
 #use(`var/app.sql` as cp_b)
-#use(` &nbsp; &nbsp; <label> <input type="checkbox" name="empty"> empty file from the start</label>` as cp_x)
+#use(` &nbsp; &nbsp; <label> <input type="checkbox" checked name="empty"> empty file from the start</label>` as cp_x)
 <p>
 Current table's prefix: <input value="{{SQL::$dd->pref}}" name="pref" size="5">
 <label><input type="checkbox" name="mixed"> mixed</label>
@@ -177,7 +173,7 @@ sky.g.files = function(fn, dir) {
         sky.g.walk();
         fn = $(fn).text();
     }
-    ajax('files', {fn:fn, dir:2 == dir ? 1 : 0, m:m}, sky.false);
+    ajax('files', {fn:fn, dir:2 == dir ? 1 : 0, m:m});
 };
 </script>
 #.files

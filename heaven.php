@@ -87,6 +87,10 @@ class HEAVEN extends SKY
         $cnt = 0;
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
+            if (false !== strpos($this->surl_orig, '//')) {
+                SKY::$debug && $this->open();
+                throw new Hacker('403 Twice slash');
+            }
             $cnt = count($this->surl);
             if (1 == $cnt && '' === $this->surl[0]) {
                 $this->surl = [];
@@ -94,7 +98,7 @@ class HEAVEN extends SKY
                 if ($this->fly && 'AJAX' === key($_GET)) {// && INPUT_POST == $this->method
                     $mvc->return = $this->fly = HEAVEN::J_FLY;
                     if ('adm' === $_GET['AJAX'])
-                        $this->surl = ['adm'];
+                        $this->surl = ['adm'];//$cnt = 1; !
                     array_shift($_GET);
                 }
             }
