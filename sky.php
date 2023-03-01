@@ -32,7 +32,7 @@ class SKY implements PARADISE
     static $errors = [0]; # cnt_error
 
     protected $ghost = false;
-    protected $except = false;
+    protected $except = [];
 
     const CORE = '0.401 2023-02-24T09:21:22+02:00 energy';
 
