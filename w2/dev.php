@@ -1,5 +1,5 @@
 <?php
-
+#[\AllowDynamicProperties]
 class DEV
 {
     const repository = 'https://coresky.net/api';

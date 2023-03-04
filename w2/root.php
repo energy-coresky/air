@@ -58,7 +58,7 @@ class Root
                 };
 
                 $ltime = PHP_OS == 'WINNT' ? preg_replace("@[\r\n\t ]+@", ' ', $_exec('date /t & time /t')) : $_exec('date'); # 2do - MAC PC
-                $utime = PHP_OS == 'WINNT' ? preg_replace("@^.*?([\d /\.:]{10,}( [A|P]M)?).*$@s", '$1', $_exec('net stats srv')) : $_exec('uptime');
+                $utime = PHP_OS == 'WINNT' ? preg_replace("@^.*?([\d /\.:]{10,}( [A|P]M)?).*$@s", '$1', (string)$_exec('net stats srv')) : $_exec('uptime');
                 $db = SKY::$dd->info();
                 echo Admin::out([
                     'Default site title' => $sky->s_title,

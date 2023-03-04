@@ -381,6 +381,7 @@ trait SQL_COMMON
 }
 
 //////////////////////////////////////////////////////////////////////////
+#[\AllowDynamicProperties]
 class eVar implements Iterator
 {
     private $state = 0;
@@ -508,7 +509,7 @@ function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL i
 }
 
 function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
-    $str = htmlspecialchars($str, $mode, ENC);
+    $str = htmlspecialchars((string)$str, $mode, ENC);
     return $hide_percent ? str_replace('%', '&#37;', $str) : $str;
 }
 

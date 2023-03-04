@@ -1,5 +1,5 @@
 <?php
-
+#[\AllowDynamicProperties]
 class Display
 {
     static $me = false;
