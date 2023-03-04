@@ -9,6 +9,7 @@ class dd_mysqli implements Database_driver
     public $quote = '`';
     public $conn;
     public $pref;
+    public $cname;
 
     function __construct($dsn, $pref) {
         if (!function_exists('mysqli_init'))

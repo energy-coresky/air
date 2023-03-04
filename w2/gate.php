@@ -1,5 +1,5 @@
 <?php
-
+#[\AllowDynamicProperties]
 class Gate
 {
     const HAS_T3     = 1;
@@ -42,7 +42,7 @@ class Gate
             $v = basename($v, '.php');
             $list['default_c' == $v ? '*' : substr($v, 2)] = $val; //2do just Plan::$ware?
         };
-        foreach (Gate::load_array() as $k => $v) {
+        foreach (self::load_array() as $k => $v) {
             $k = 'default_c' == $k ? '*' : substr($k, 2);
             isset($list[$k]) or $deleted[$k] = 0;
         }
@@ -50,11 +50,11 @@ class Gate
     }
 
     static function put_cache($class, $fn_src, $fn_dst) {
-        if (false === Gate::$controller_data) {
-            $sky_gate = Gate::load_array();
-            Gate::$controller_data = $sky_gate[$class] ?? [];
+        if (false === self::$controller_data) {
+            $sky_gate = self::load_array();
+            self::$controller_data = $sky_gate[$class] ?? [];
         }
-        Plan::gate_p($fn_dst, Gate::instance()->parse($fn_src, $class));
+        Plan::gate_p($fn_dst, self::instance()->parse($fn_src, $class));
     }
 
     function view_code($ary, $class, $func) {
@@ -100,9 +100,9 @@ class Gate
 
         foreach ($list as $name => $pars) {
             $this->argc($pars);
-            isset(Gate::$controller_data[$name]) or Gate::$controller_data[$name] = [];
+            isset(self::$controller_data[$name]) or self::$controller_data[$name] = [];
             $cmode = $this->contr_mode($dst_class, $name);
-            $php = $this->code(Gate::$controller_data[$name], $cmode, false);
+            $php = $this->code(self::$controller_data[$name], $cmode, false);
             $php = "\t\t" . str_replace("\n", "\n\t\t", substr($php, 0, -1)) . "\n";
             $gape .= "\n\tfunction $name() {\n$php\t}\n";
         }
@@ -140,7 +140,7 @@ class Gate
         $eq0 = 1 == $cnt_meth
             ? ["$meth[0] == \$this->method"]
             : ['in_array($this->method, [' . implode(', ', $meth) . '])'];
-        if (Gate::AUTHORIZED & $flag)
+        if (self::AUTHORIZED & $flag)
             $eq0[] = '$this->auth';
         $is_post = in_array(0, $meth);
         if ($this->pfs_c = count($pfs))
@@ -214,14 +214,14 @@ class Gate
         $this->ends = [];
         $php = $this->ra = $this->ns = '';
         $this->raw_input = $this->sz_surl = $this->sz_ary = 0;
-        $t3 = Gate::HAS_T3 & $flag;
+        $t3 = self::HAS_T3 & $flag;
         $this->start = $this->_j ? 1 : 0;
 
         if ($this->cnt_ary = $this->addr_c = count($addr)) {
             $this->current = $addr;
             foreach ($addr as $v)
                 $v[4] or '' === $v[1] ? $this->sz_surl++ : $this->sz_ary++;
-            $this->ary_as_object = Gate::OBJ_ADDR & $flag;
+            $this->ary_as_object = self::OBJ_ADDR & $flag;
             foreach ($addr as $pos => $v) {
                 $skip = 0;
                 $key = isset($v[1]) ? $v[1] : '';
@@ -284,7 +284,7 @@ class Gate
             $this->ends = [];
         }
         $php = $this->ra = $this->ns = '';
-        if ($this->raw_input = Gate::RAW_INPUT & $flag)
+        if ($this->raw_input = self::RAW_INPUT & $flag)
             $php .= "\$input = file_get_contents('php://input');\n";
         if ($this->cnt_ary = $this->pfs_c) {
             $this->sz_ary = 0;
@@ -293,7 +293,7 @@ class Gate
             if (!$this->raw_input)
                 foreach ($pfs as $v)
                     $v[4] or $this->sz_ary++;
-            $this->ary_as_object = Gate::OBJ_PFS & $flag;
+            $this->ary_as_object = self::OBJ_PFS & $flag;
             foreach ($pfs as $pos => $v)
                 $php .= $this->each_row($pos, $v, true);
             if ($this->sz_ary) {

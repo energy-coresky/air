@@ -8,6 +8,7 @@ class dd_sqlite3 implements Database_driver
     public $quote = '"'; # no: `switch.sqlite3`.`memory` yes: `memory` yes: "memory" yes: 'memory'
     public $conn;
     public $pref;
+    public $cname;
 
     function __construct($filename, $pref) {
         if (!class_exists('SQLite3', false))

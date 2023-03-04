@@ -1,5 +1,5 @@
 <?php
-
+#[\AllowDynamicProperties]
 class Jet
 {
     const version = '1.0';

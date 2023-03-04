@@ -447,7 +447,7 @@ class Plan
             $funcs = 2 == $pp ? [] : array_map(function ($v) use ($params, $modifiers) {
                 return $modifiers($v) . 'function ' . ($v->returnsReference() ? '&' : '')
                     . $v->name . '(' . implode(', ', $params($v)) . ')'
-                    . (($rt = $v->getReturnType()) ? ': ' . $rt->getName() : '');
+                    . (($rt = $v->getReturnType()) ? ': ' . $rt->getName() : '');// from php8.1 getTentativeReturnType()
             }, $cls->getMethods(1 == $pp ? null : ReflectionMethod::IS_PUBLIC));
             sort($funcs);
 

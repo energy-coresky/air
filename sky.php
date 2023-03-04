@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = [];
 
-    const CORE = '0.401 2023-02-24T09:21:22+02:00 energy';
+    const CORE = '0.402 2023-03-04T11:45:28+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -49,7 +49,8 @@ class SKY implements PARADISE
         date_default_timezone_set(PHP_TZ);
         mb_internal_encoding(ENC);
         define('NOW', date(DATE_DT));
-        srand((double) microtime() * 1e6);
+        //srand((double)microtime() * 1e6);
+        srand(microtime(true) * 1e6);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
             $amp = '';
@@ -417,7 +418,7 @@ class eVar implements Iterator
     function all() {
         return iterator_to_array($this, false);
     }
-
+    #[\ReturnTypeWillChange]
     function rewind() {
         if (!$this->e)
             $this->state = 2;
@@ -441,7 +442,7 @@ class eVar implements Iterator
         $this->max_i = $this->e['max_i'] ?? 500; # -1 is infinite
         $this->next();
     }
-
+    #[\ReturnTypeWillChange]
     function valid() {
         if ($this->state > 1)
             return false;
@@ -452,15 +453,15 @@ class eVar implements Iterator
             call_user_func($this->e['after_c'], $this->i);
         return false;
     }
-
+    #[\ReturnTypeWillChange]
     function current() {
         return $this->row;
     }
-
+    #[\ReturnTypeWillChange]
     function key() {
         return $this->i;
     }
-
+    #[\ReturnTypeWillChange]
     function next() {
         global $sky;
         $exit = function ($fail) {
