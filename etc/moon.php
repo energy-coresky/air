@@ -461,6 +461,9 @@ class Moon
         echo '<table width="100%" style="background:silver;margin-top:20px">';
         list($head) = $this->head($fn);
         $tpl = ' - <a style="font:bold 15px monospace" href="javascript:;" onclick="$$.select(%s)">Install</a>';
+        $tpl .= function_exists('shell_exec')
+            ? ' or.. <a style="" href="javascript:;" onclick="$$.cli(%s)">Run in console</a>'
+            : ' ..cannot use console for %s';
         foreach ($head as $k => $v) {
             if (in_array($k, ['www', 'corr', '_']))
                 continue;
@@ -468,7 +471,7 @@ class Moon
                 $_ = $head['_'];
                 $v .= isset($head['corr'])
                     ? ' - <span style="color:red">file is corrupted</span>'
-                    : sprintf($tpl, "['$v',$_[0],$_[1],$_[2]]");
+                    : sprintf($tpl, "['$v',$_[0],$_[1],$_[2]]", "'$v'");
             } if ('type' == $k) {
                 $v .= ", filesize: " . filesize($fn);
             } elseif ('mod_required' == $k) {
@@ -483,10 +486,18 @@ class Moon
     }
 
     function packages() {
-        if (!$list = glob('*.sky'))
+        if ($list = glob('*.sky')) {
+            foreach ($list as $fn)
+                $this->table($fn);
+        }
+        if ($lst2 = glob('*.sky.bz2')) {
+            foreach ($lst2 as $fn) {
+                echo $fn . ' - <a href="javascript:;" onclick="$$.unpk(\'' . $fn . '\')">unpack</a><br>';
+            }
+        }
+        if (!$list && !$lst2)
             echo '<h2 style="color:red">No package files found!</h2>';
-        foreach ($list as $fn)
-            $this->table($fn);
+        printf('<br>PHP_VERSION: %s, shell_exec: %s', PHP_VERSION, function_exists('shell_exec') ? 'OK' : 'FAILED');
     }
 }
 
@@ -528,6 +539,23 @@ class Rare
     }
 }
 
+if (isset($_POST['cli'])) {
+    shell_exec("php moon.php $_POST[cli] -");
+    exit;
+}
+
+if (isset($_POST['unpk'])) {
+    $bz = bzopen($fn = $_POST['unpk'], 'r');
+    $wr = fopen(substr($fn, 0, -4), 'w');
+    while(!feof($bz)) {
+        $str = bzread($bz);
+        fwrite($wr, $str);
+    }
+    bzclose($bz);
+    unlink($fn);
+    exit;
+}
+
 $moon = new Moon;
 
 if ('cli' == PHP_SAPI):
@@ -544,7 +572,7 @@ if ('cli' == PHP_SAPI):
     $moon->mode = 0;
     $moon->_fn = $argv[1];
     $_POST = ['log' => '00'];
-    if (3 == $argc) {
+    if (3 == $argc && '-' != $argv[2]) {
         if (!preg_match("~^(\w+):([^@]*)@([^:/]+):?(\d+|)/(\w+):?(\w+|)$~", $argv[2], $m))
             exit("\nDSN don't match\n");
         $_POST += [
@@ -566,7 +594,7 @@ if ('cli' == PHP_SAPI):
     if ($moon->json['err'])
         echo "\n" . $moon->json['err'] . "\n";
 
-    if ($moon->success) {
+    if ($moon->success && ($argc < 3 || '-' != $argv[2])) {
         echo "\nsuccess\n";
         system("php ../main/sky s");
     }
@@ -686,6 +714,16 @@ var $$ = {
                 ch = inp[0].checked = !ch;
                 $$.parent_div(1);
             });
+        });
+    },
+    unpk: function(fn) {
+        $.post('moon.php', {unpk:fn}, function(r) {
+            location.href = 'moon.php';
+        });
+    },
+    cli: function(fn) {
+        $.post('moon.php', {cli:fn}, function(r) {
+            location.href = 'index.php';
         });
     },
     run: function(el) {

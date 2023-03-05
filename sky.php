@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = [];
 
-    const CORE = '0.402 2023-03-04T11:45:28+02:00 energy';
+    const CORE = '0.403 2023-03-05T19:47:26+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -381,7 +381,6 @@ trait SQL_COMMON
 }
 
 //////////////////////////////////////////////////////////////////////////
-#[\AllowDynamicProperties]
 class eVar implements Iterator
 {
     private $state = 0;
@@ -395,10 +394,6 @@ class eVar implements Iterator
         $this->e = $e;
     }
 
-    function __get($name) {
-        return $this->e[$name] ?? null;
-    }
-
     function __call($name, $args) {
         return isset($this->e[$name]) ? call_user_func_array($this->e[$name], $args) : null;
     }
@@ -407,6 +402,14 @@ class eVar implements Iterator
         call_user_func($this->e['row_c'], $in, $this);
         $this->state = 0;
         return $this;
+    }
+
+    function __get($name) {
+        return $this->e[$name] ?? null;
+    }
+
+    function __set($name, $value) {
+        $this->e[$name] = $value;
     }
 
     function one() {
