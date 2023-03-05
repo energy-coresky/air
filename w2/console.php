@@ -172,7 +172,7 @@ class Console
     function c_a() {
        Gate::$cshow = true;
        foreach (SKY::$plans['main']['ctrl'] as $k => $_) {
-           $e = new eVar(DEV::gate($mc = '*' != $k ? "c_$k" : 'default_c'));
+           $e = new eVar(standard_c::gate($mc = '*' != $k ? "c_$k" : 'default_c'));
            foreach ($e as $row)
                echo "$mc::$row->func$row->pars  --  " . strip_tags($row->url). "\n";
        }

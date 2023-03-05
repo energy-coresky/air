@@ -91,7 +91,7 @@ class standard_c extends Controller
         SKY::$debug = 0;
         echo '<h1>Tracing</h1>';
         if ($this->_1)
-            echo tag(sqlf('+select tmemo from $_memory where id=%d', $this->_1), 'class="trace"', 'pre');
+            echo pre(sqlf('+select tmemo from $_memory where id=%d', $this->_1), 'class="trace"');
     }
 
     function j_file() {
