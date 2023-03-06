@@ -71,7 +71,7 @@ class Console
             return str_pad($k, 15, ' ') . $v;
         }, array_keys($ary), $ary));
         if (self::$d[0])
-            echo "\nCoresky app: " . SKY::version()['app'][3];
+            echo "\nCoresky app: " . SKY::version()['app'][3] . ' (' . _PUBLIC . ')';
         if (self::$d[2])
             echo "\nCoresky ware: " . basename(self::$d[2]);
         if (self::$d[1]) {
@@ -171,11 +171,17 @@ class Console
     /** Show top-view actions (routes) */
     function c_a() {
        Gate::$cshow = true;
+       $max = 0;
+       $ary = [];
        foreach (SKY::$plans['main']['ctrl'] as $k => $_) {
            $e = new eVar(standard_c::gate($mc = '*' != $k ? "c_$k" : 'default_c'));
-           foreach ($e as $row)
-               echo "$mc::$row->func$row->pars  --  " . strip_tags($row->url). "\n";
+           foreach ($e as $row) {
+               $max > ($len = strlen($a = "$mc::$row->func$row->pars")) or $max = $len;
+               $ary[$a] = strip_tags($row->url);
+           }
        }
+       foreach ($ary as $a => $url)
+           echo str_pad($a, $max, ' '), ' | ', "$url\n";
     }
 
     /** Drop all cache */
