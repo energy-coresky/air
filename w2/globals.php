@@ -16,6 +16,7 @@ class Globals
         'CLASS' => [],
         'EVAL' => [],
     ];
+    static $ns = [];
 
     private $keywords = [
         '__halt_compiler', 'abstract', 'and', 'array', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const', 'continue',
@@ -53,10 +54,10 @@ class Globals
         $this->cnt[0]++;
         $php = $str ? $str : file_get_contents($fn);
         $line = $line_start;
-        $braces = $glob_list = 0;
+        $braces = $glob_list = $in_ns = 0;
         $place = 'GLOB';
         $vars = [];
-        $out = $p1 = $p2 = '';
+        $out = $p1 = $p2 = $ns = '';
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
             $this->pos = "$fn $line";
@@ -77,14 +78,19 @@ class Globals
                     case T_GLOBAL:
                         $glob_list = 1;
                         break;
-                    case T_STRING: case T_NAME_QUALIFIED:
-                        if (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, T_NAMESPACE])) {
-                            $this->push($place = substr(token_name($p1), 2), $str);
+                    case T_NAMESPACE:
+                        $in_ns = 1;
+                        break;
+                    case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
+                        if ($in_ns) {
+                            $ns .= $str;
+                        } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {
+                            $this->push($place = substr(token_name($p1), 2), $ns . $str);
                         } elseif ('GLOB' == $place) {
-                            if (T_FUNCTION == $p1)
-                                $this->push($place = 'FUNCTION', $str);
+                            if (T_FUNCTION == $p1 && T_USE != $p2)
+                                $this->push($place = 'FUNCTION', $ns . $str);
                             if (T_CONST == $p1)
-                                $this->push('CONST', $str);
+                                $this->push('CONST', $ns . $str);
                         }
                         $id = token_name($id) . " $str";
                         break;
@@ -116,7 +122,17 @@ class Globals
                     }
                     break;
                 case ';':
-                    $glob_list = 0;    
+                    $glob_list = 0;
+                    if ($in_ns) {
+                        $in_ns = 0;
+                        if (!isset(self::$ns[$ns])) {
+                            $this->push('NAMESPACE', $ns);
+                            self::$ns[$ns] = 0;
+                        } else {
+                            self::$ns[$ns]++;
+                        }
+                        $ns .= '\\';
+                    }
                     break;
                 case '=': # =& also work
                     $rule = T_DOUBLE_COLON != $p2 && is_array($p1) && T_VARIABLE == $p1[0];

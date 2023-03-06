@@ -82,9 +82,14 @@
       @loop($e_idents([$list, "$key.$ident"]))
       <tr class="{{$row->class}}">
         <td width="5%">{{$row->num}}</td>
-        <td width="20%">{{$ident}}</td>
-        <td width="25%"><span>{{$row->pos}}</span></td>
-        <td width="35%">{{$row->desc}}</td>
+        <td width="30%">{{$ident}}</td>
+        <td width="25%">
+          <span>{{$row->pos}}</span>
+          @if('NAMESPACE' == $key && Globals::$ns[$ident])
+            <span style="color:red">+ {{Globals::$ns[$ident]}} files</span>
+          ~if
+        </td>
+        <td width="25%">{{$row->desc}}</td>
         <td width="15%" align="right">
           @if($row->nap){{$row->nap}}
           @elseif('bg-r'==$row->class)
