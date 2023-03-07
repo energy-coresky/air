@@ -54,7 +54,7 @@ class Globals
         $this->cnt[0]++;
         $php = $str ? $str : file_get_contents($fn);
         $line = $line_start;
-        $braces = $glob_list = $in_ns = 0;
+        $braces = $glob_list = $ns_kw = 0;
         $place = 'GLOB';
         $vars = [];
         $out = $p1 = $p2 = $ns = '';
@@ -79,17 +79,18 @@ class Globals
                         $glob_list = 1;
                         break;
                     case T_NAMESPACE:
-                        $in_ns = 1;
+                        $ns_kw = true;
+                        $ns = '';
                         break;
                     case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
-                        if ($in_ns) {
+                        if ($ns_kw) {
                             $ns .= $str;
-                        } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {
+                        } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {// && T_USE != $p2
                             $this->push($place = substr(token_name($p1), 2), $ns . $str);
                         } elseif ('GLOB' == $place) {
                             if (T_FUNCTION == $p1 && T_USE != $p2)
                                 $this->push($place = 'FUNCTION', $ns . $str);
-                            if (T_CONST == $p1)
+                            if (T_CONST == $p1 && T_USE != $p2)
                                 $this->push('CONST', $ns . $str);
                         }
                         $id = token_name($id) . " $str";
@@ -112,19 +113,23 @@ class Globals
             }
 
             switch ($id) {
-                case '{':
-                    ++$braces;
-                    break;
                 case '}':
                     if (!--$braces) {
                         $place = 'GLOB';
                         $vars = [];
                     }
                     break;
+                case '{':
+                    ++$braces;
+                    if (!$ns_kw) {
+                        break;
+                    } elseif ('' === $ns) {
+                        $ns_kw = false;
+                    }
                 case ';':
                     $glob_list = 0;
-                    if ($in_ns) {
-                        $in_ns = 0;
+                    if ($ns_kw) {
+                        $ns_kw = false;
                         if (!isset(self::$ns[$ns])) {
                             $this->push('NAMESPACE', $ns);
                             self::$ns[$ns] = 0;
@@ -286,7 +291,7 @@ class Globals
         }
 
         foreach ($this->definitions as &$definition)
-            ksort($definition); # natcasesort($definition);
+            uksort($definition, 'strcasecmp');
 
         $nap = Plan::mem_rq('report.nap');
         $cnts = [0, 0]; # no-problem, ok
