@@ -76,19 +76,20 @@ class Globals
                         $this->push('EVAL', $n++ . ".$this->pos");
                         break;
                     case T_GLOBAL:
-                        $glob_list = 1;
+                        $glob_list = true;
                         break;
                     case T_NAMESPACE:
                         $ns_kw = true;
                         $ns = '';
                         break;
+                    //case T_FUNCTION:  ; break;
                     case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
                         if ($ns_kw) {
                             $ns .= $str;
                         } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {// && T_USE != $p2
                             $this->push($place = substr(token_name($p1), 2), $ns . $str);
                         } elseif ('GLOB' == $place) {
-                            if (T_FUNCTION == $p1 && T_USE != $p2)
+                            if (T_FUNCTION == $p1 && T_USE != $p2 || T_FUNCTION == $p2 && '&' === $p1)
                                 $this->push($place = 'FUNCTION', $ns . $str);
                             if (T_CONST == $p1 && T_USE != $p2)
                                 $this->push('CONST', $ns . $str);
@@ -113,6 +114,10 @@ class Globals
             }
 
             switch ($id) {
+                case '(': # anonymous functions
+                    if ('GLOB' == $place && (T_FUNCTION == $p1 || T_FUNCTION == $p2 && '&' === $p1))
+                        $place = 'FUNCTION';
+                    break;
                 case '}':
                     if (!--$braces) {
                         $place = 'GLOB';
@@ -127,7 +132,7 @@ class Globals
                         $ns_kw = false;
                     }
                 case ';':
-                    $glob_list = 0;
+                    $glob_list = false;
                     if ($ns_kw) {
                         $ns_kw = false;
                         if (!isset(self::$ns[$ns])) {

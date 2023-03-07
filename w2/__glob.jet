@@ -48,7 +48,7 @@
         <tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
         @loop($defs as $key => $ary)
             <tr><td style="padding-left:10px"{{'EVAL' == $key ? '' : ' noborder'}}>
-                {{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}:
+                <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
             </td><td{{'EVAL' == $key ? '' : ' noborder'}}>{{count($ary)}}</td></tr>
         ~loop
     </table>
@@ -74,16 +74,16 @@
 </fieldset>
 
 @loop($defs as $key => $ary)
-  @if('VAR'==$key)<h2>VARS ASSIGNING IN THE GLOBAL NAMESPACE</h2>
-  @else<h2>{{$key}}</h2>
-  ~if
+  <h2 id="idnt-{{$_}}">
+  @if('VAR'==$key)VARS ASSIGNING IN THE GLOBAL NAMESPACE@else{{$key}}~if
+  </h2>
   <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
     @loop($ary as $ident => $list)
       @loop($e_idents([$list, "$key.$ident"]))
       <tr class="{{$row->class}}">
-        <td width="5%">{{$row->num}}</td>
+        <td width="3%">{{$row->num}}</td>
         <td width="30%">{{$ident}}</td>
-        <td width="25%">
+        <td width="27%">
           <span>{{$row->pos}}</span>
           @if('NAMESPACE' == $key && Globals::$ns[$ident])
             <span style="color:red">+ {{Globals::$ns[$ident]}} files</span>
