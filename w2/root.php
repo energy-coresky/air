@@ -32,10 +32,7 @@ class Root
             'e' == $t or sort($ary);
             $val = array_map(function ($v) use ($t) {
                 global $sky;
-                if ('e' == $t)
-                    $v = explode(' ', $v)[2];
-                if ('c' == $t || 'f' == $t)
-                    $v = explode(' ', $v)[0];
+                $v = explode(' ', $v)['e' == $t ? 2 : 0];
                 $sky->d_manual or $sky->d_manual = 'en';
                 $sky->d_se or $sky->d_se = 'https://yandex.ru/search/?text=%s';
                 $vv = str_replace('_', '-', strtolower($v));

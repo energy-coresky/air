@@ -70,7 +70,9 @@
 </div>
 <div style="margin:0 10px 10px 10px">
 <fieldset id="gr-modules"><legend>Modules in current PHP Version: {{PHP_VERSION}}</legend>
-    {!implode('', $modules)!}
+    @loop($modules as $module)
+        <span style="{{isset(Globals::$used_ext[$module]) ? 'background-color:#fdd' : ''}}">{{$module}}</span>
+    ~loop
 </fieldset>
 
 @loop($defs as $key => $ary)

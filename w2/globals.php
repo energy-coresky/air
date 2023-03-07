@@ -17,6 +17,9 @@ class Globals
         'EVAL' => [],
     ];
     static $ns = [];
+    static $used_ext = [];
+    static $cls2ext = [];
+    static $fun2ext = [];
 
     private $keywords = [
         '__halt_compiler', 'abstract', 'and', 'array', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const', 'continue',
@@ -34,7 +37,6 @@ class Globals
     private $interfaces;
     private $classes;
     private $traits;
-    private $vars;
 
     private $all;
     private $all_lc;
@@ -78,26 +80,32 @@ class Globals
                     case T_GLOBAL:
                         $glob_list = true;
                         break;
+                    case T_DOUBLE_COLON: # ::
+                        if (is_array($p1) && T_STRING === $p1[0] && isset(self::$cls2ext[$p1[1]]))
+                            self::$used_ext[self::$cls2ext[$p1[1]]] = 1;
+                        break;
                     case T_NAMESPACE:
                         $ns_kw = true;
                         $ns = '';
                         break;
-                    //case T_FUNCTION:  ; break;
                     case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
                         if ($ns_kw) {
                             $ns .= $str;
-                        } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {// && T_USE != $p2
+                        } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {
                             $this->push($place = substr(token_name($p1), 2), $ns . $str);
                         } elseif ('GLOB' == $place) {
-                            if (T_FUNCTION == $p1 && T_USE != $p2 || T_FUNCTION == $p2 && '&' === $p1)
+                            if (T_FUNCTION === $p1 && T_USE != $p2 || T_FUNCTION === $p2 && '&' === $p1)
                                 $this->push($place = 'FUNCTION', $ns . $str);
-                            if (T_CONST == $p1 && T_USE != $p2)
+                            if (T_CONST === $p1 && T_USE != $p2)
                                 $this->push('CONST', $ns . $str);
+                        } elseif (T_NEW === $p1 && isset(self::$cls2ext[$str])) {
+                            self::$used_ext[self::$cls2ext[$str]] = 1;
                         }
-                        $id = token_name($id) . " $str";
+                        //$id = token_name($id) . " $str";
+                        $id = [$id, $str];
                         break;
                     case T_CONSTANT_ENCAPSED_STRING:
-                        if ('(' == $p1 && 'T_STRING define' == $p2)
+                        if ('(' == $p1 && is_array($p2) && 'define' == $p2[1])
                             $this->push('DEFINE', substr($str, 1, -1));
                         break;
                     case T_VARIABLE:
@@ -114,9 +122,14 @@ class Globals
             }
 
             switch ($id) {
-                case '(': # anonymous functions
-                    if ('GLOB' == $place && (T_FUNCTION == $p1 || T_FUNCTION == $p2 && '&' === $p1))
+                case '(': # def anonymous function
+                    if ('GLOB' == $place && (T_FUNCTION === $p1 || T_FUNCTION === $p2 && '&' === $p1)) {
                         $place = 'FUNCTION';
+                    } elseif (is_array($p1) && T_STRING === $p1[0] && '>' != $p2) { # use function
+                        $name = $p1[1];
+                        if (isset(self::$fun2ext[$name]))
+                            self::$used_ext[self::$fun2ext[$name]] = 1;
+                    }
                     break;
                 case '}':
                     if (!--$braces) {
@@ -153,7 +166,6 @@ class Globals
 
             $p2 = $p1;
             $p1 = $id;
-#            $out .= (is_array($id) ? implode(' ', $id) : (is_int($id) ? token_name($id) : $id))." [$braces][$line]\n";
         }
     }
 
@@ -201,8 +213,6 @@ class Globals
                 $assign($place, $ident, 'Dangerous code');
                 break;
         }
-
-        //$this->all_lc[$lc] = $is_lc ? 1 + $this->all_lc[$lc] : 1;
         return '';
     }
 
@@ -269,7 +279,15 @@ class Globals
         $this->interfaces = array_flip(get_declared_interfaces());
         $this->classes = array_flip(get_declared_classes());
         $this->traits = array_flip(get_declared_traits());
-        $this->vars = []; //array_flip(array_keys(get_defined_vars())); // [functions] => 1    [v] => 1    [k] => 1
+        $extns = get_loaded_extensions();
+        foreach ($extns as $extn) {
+            $rn = new ReflectionExtension($extn);
+            $list = $rn->getClassNames();
+            self::$cls2ext += array_combine($list, array_pad([], count($list), $extn));
+            self::$fun2ext += array_map(function() use ($extn) {
+                return $extn;
+            }, $rn->getFunctions());
+        }
 
         $all = $this->constants + $this->interfaces + $this->classes + $this->traits;
         $this->all = array_fill_keys(array_keys($all), 0);
@@ -340,9 +358,7 @@ class Globals
                     ];
                 },
             ],
-            'modules' => array_map(function ($v) {
-                return '<span>' . $v . '</span>';
-            }, get_loaded_extensions()),
+            'modules' => $extns,
             'cnt' => $this->cnt,
         ];
     }
