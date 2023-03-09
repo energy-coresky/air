@@ -43,6 +43,11 @@ class Globals
 
     private $path;
 
+    static function ware($dir) {
+        $glb = new Globals($dir);
+        return array_keys($glb->c_report()['CLASS']);
+    }
+
     function __construct($path = '.') {
         $this->path = $path;
     }
@@ -219,8 +224,8 @@ class Globals
     function exclude_dirs($dir = false) {
         static $dirs;
         if (null === $dirs) {
-            $tmemo = sqlf('+select tmemo from $_memory where id=6');
-            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=6');
+            $tmemo = sqlf('+select tmemo from $_memory where id=11');
+            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=11');
             $dirs = isset($mem['gr_dirs']) ? explode(' ', $mem['gr_dirs']) : [];
         }
         if ($dir) {
@@ -235,7 +240,7 @@ class Globals
         $dirs = Rare::walk_dirs('.');
         if (DIR_M != DIR_S)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
-        SKY::d('gr_start', 0);
+        SKY::d('gr_start', 'dirs');
         return [
             'dirs' => $dirs,
             'continue' => function ($dir) {
@@ -255,17 +260,17 @@ class Globals
         return $this->c_dirs();
     }
 
-    static function ware($dir) {
-        $glb = new Globals($dir);
-        return array_keys($glb->c_report()['CLASS']);
-    }
-
     function c_back() {
         return $this->c_report();
     }
 
+    function c_usage() {
+        SKY::d('gr_start', 'usage');
+        return [];
+    }
+
     function c_report() {
-        SKY::d('gr_start', 1);
+        SKY::d('gr_start', 'report');
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $functions = get_defined_functions();
         $this->functions = array_change_key_case(array_flip($functions['internal']));
@@ -274,12 +279,13 @@ class Globals
                 continue;
             $this->constants += $v;
         }
-        //require __DIR__ . '/internals.php'; collect maximal list? 2do: save it to DB with links to docs
-
         $this->interfaces = array_flip(get_declared_interfaces());
         $this->classes = array_flip(get_declared_classes());
         $this->traits = array_flip(get_declared_traits());
+        //require __DIR__ . '/internals.php'; collect maximal list? 2do: save it to DB with links to docs
+
         $extns = get_loaded_extensions();
+        natcasesort($extns);
         foreach ($extns as $extn) {
             $rn = new ReflectionExtension($extn);
             $list = $rn->getClassNames();
@@ -361,6 +367,14 @@ class Globals
             'modules' => $extns,
             'cnt' => $this->cnt,
         ];
+    }
+
+    function c_saved() {
+        return [];
+    }
+
+    function c_lint() {
+        return [];
     }
 
     function c_code() {

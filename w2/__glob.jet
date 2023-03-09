@@ -10,6 +10,16 @@
 </div>
 #.form
 
+#.saved
+#use(.m_glob)
+2do: saved<br>
+#.saved
+
+#.lint
+#use(.m_glob)
+2do: <br>
+#.lint
+
 #.code
 #use(.m_glob)
 2do: <br>
@@ -17,14 +27,39 @@
 2. find places for functions usage and more..<br>
 #.code
 
+#.usage ==========================================================================================================
+#use(`<h4>EXTENSION USAGE REPORT</h4>` as header)
+@use(.m_glob)
+#.top
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
+    <div class="fs16">
+        App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
+    </div>
+</div>
+<div class="bg-wx bg-x">
+    <div class="fs16">
+        Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
+    </div>
+</div>
+#.top
+
+#.usage  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
+
 #.m_glob ==========================================================================================================
-<a class="inner-menu" href="_glob?report"@active($sky->_1 == 'report')>Show Report</a>
 <a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Select Dirs</a>
-<a class="inner-menu" @href(sky.g.save())>Save Report</a>
+<a class="inner-menu" href="_glob?report"@active($sky->_1 == 'report')>Report Definitions</a>
+<a class="inner-menu" href="_glob?usage"@active($sky->_1 == 'usage')>Report Usage</a>
+<a class="inner-menu" href="_glob?saved"@active($sky->_1 == 'saved')>Saved Reports</a>
+<a class="inner-menu" href="_glob?lint"@active($sky->_1 == 'lint')>Run All Lints</a>
 <a class="inner-menu" href="_glob?code"@active($sky->_1 == 'code')>Code Analysis</a>
 #.m_glob.dirs.skip ----------------------------------------------------------------------------------------------------------
 #use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
 @use(.m_glob)
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
+    <div class="fs16">
+        Presets:
+    </div>
+</div>
 <div style="margin:0 10px 10px 10px">
   <p>
   @loop($dirs as $one)
@@ -54,27 +89,19 @@
     </table>
     </div>
 #.menu.report ----------------------------------------------------------------------------------------------------------
-#use(`<h4>GLOBALS REPORT</h4>` as header)
+#use(`<h4>GLOBAL DEFINITIONS REPORT</h4>` as header)
 #use(.menu)
 @use(.m_glob)
 #.mark.save.back
-<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
-    <div class="fs16">
-        App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
-    </div>
-</div>
-<div class="bg-wx bg-x">
-    <div class="fs16">
-        Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
-    </div>
-</div>
+@inc(.top)
 <div style="margin:0 10px 10px 10px">
 <fieldset id="gr-modules"><legend>Modules in current PHP Version: {{PHP_VERSION}}</legend>
     @loop($modules as $module)
         <span style="{{isset(Globals::$used_ext[$module]) ? 'background-color:#fdd' : ''}}">{{$module}}</span>
     ~loop
+    <hr>
+    Used {{count(Globals::$used_ext)}} of {{count($modules)}}
 </fieldset>
-
 @loop($defs as $key => $ary)
   <h2 id="idnt-{{$_}}">
   @if('VAR'==$key)VARS ASSIGNING IN THE GLOBAL NAMESPACE@else{{$key}}~if
