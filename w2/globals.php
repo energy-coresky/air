@@ -19,7 +19,6 @@ class Globals
     static $ns = [];
     static $used_ext = [];
     static $cls2ext = [];
-    static $fun2ext = [];
 
     private $keywords = [
         '__halt_compiler', 'abstract', 'and', 'array', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const', 'continue',
@@ -31,8 +30,8 @@ class Globals
     ];
     private $predefined_constants = ['__class__', '__dir__', '__file__', '__function__', '__line__', '__method__', '__namespace__', '__trait__'];
 
-    private $functions;
-    private $constants = [];
+    private static $functions = [];
+    private static $constants = [];
 
     private $interfaces;
     private $classes;
@@ -49,6 +48,7 @@ class Globals
     }
 
     function __construct($path = '.') {
+        defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $this->path = $path;
     }
 
@@ -57,11 +57,11 @@ class Globals
         //$this->parse($fn, $line_start, $str);
     }
 
-    function parse($fn, $line_start = 1, $str = false) {
+    function parse($fn, $line_start = 1) {
         $this->cnt[0]++;
-        $php = $str ? $str : file_get_contents($fn);
+        $php = file_get_contents($fn);
         $line = $line_start;
-        $braces = $glob_list = $ns_kw = 0;
+        $curly = $glob_list = $ns_kw = 0;
         $place = 'GLOB';
         $vars = [];
         $out = $p1 = $p2 = $ns = '';
@@ -76,7 +76,7 @@ class Globals
                     case T_WHITESPACE: case T_COMMENT:
                         continue 2;
                     case T_CURLY_OPEN:
-                        ++$braces;
+                        ++$curly;
                         break;
                     case T_EVAL:
                         static $n = 1;
@@ -84,10 +84,6 @@ class Globals
                         break;
                     case T_GLOBAL:
                         $glob_list = true;
-                        break;
-                    case T_DOUBLE_COLON: # ::
-                        if (is_array($p1) && T_STRING === $p1[0] && isset(self::$cls2ext[$p1[1]]))
-                            self::$used_ext[self::$cls2ext[$p1[1]]] = 1;
                         break;
                     case T_NAMESPACE:
                         $ns_kw = true;
@@ -103,10 +99,7 @@ class Globals
                                 $this->push($place = 'FUNCTION', $ns . $str);
                             if (T_CONST === $p1 && T_USE != $p2)
                                 $this->push('CONST', $ns . $str);
-                        } elseif (T_NEW === $p1 && isset(self::$cls2ext[$str])) {
-                            self::$used_ext[self::$cls2ext[$str]] = 1;
                         }
-                        //$id = token_name($id) . " $str";
                         $id = [$id, $str];
                         break;
                     case T_CONSTANT_ENCAPSED_STRING:
@@ -130,20 +123,16 @@ class Globals
                 case '(': # def anonymous function
                     if ('GLOB' == $place && (T_FUNCTION === $p1 || T_FUNCTION === $p2 && '&' === $p1)) {
                         $place = 'FUNCTION';
-                    } elseif (is_array($p1) && T_STRING === $p1[0] && '>' != $p2) { # use function
-                        $name = $p1[1];
-                        if (isset(self::$fun2ext[$name]))
-                            self::$used_ext[self::$fun2ext[$name]] = 1;
                     }
                     break;
                 case '}':
-                    if (!--$braces) {
+                    if (!--$curly) {
                         $place = 'GLOB';
                         $vars = [];
                     }
                     break;
                 case '{':
-                    ++$braces;
+                    ++$curly;
                     if (!$ns_kw) {
                         break;
                     } elseif ('' === $ns) {
@@ -208,11 +197,11 @@ class Globals
                 }
                 break;
             case 'FUNCTION':
-                isset($this->functions[$lc]) ? $assign($place, $ident, "Internal function name used") : $assign($place, $ident);
+                isset(self::$functions[$lc]) ? $assign($place, $ident, "Internal function name used") : $assign($place, $ident);
                 break;
             case 'CONST':
             case 'DEFINE':
-                isset($this->constants[$ident]) ? $assign($place, $ident, "Internal constant name used") : $assign($place, $ident);
+                isset(self::$constants[$ident]) ? $assign($place, $ident, "Internal constant name used") : $assign($place, $ident);
                 break;
             case 'EVAL':
                 $assign($place, $ident, 'Dangerous code');
@@ -264,43 +253,127 @@ class Globals
         return $this->c_report();
     }
 
-    function c_usage() {
-        SKY::d('gr_start', 'usage');
-        return [];
+    function usage($fn, $line_start = 1) {
+        $assign = function ($n, &$ary, $name) {
+            $extn = $ary[$name] ?? '';
+            $p =& self::$used_ext[$extn][$n];
+            if (isset($p[$name])) {
+                $p[$name][0]++;
+            } else {
+                $p[$name] = [0, $this->pos];
+            }
+        };
+        $this->cnt[0]++;
+        $php = file_get_contents($fn);
+        $line = $line_start;
+        $ns_kw = 0;
+        $out = $p1 = $p2 = $p3 = $ns = '';
+        $clist = [T_OBJECT_OPERATOR, T_FUNCTION, T_DOUBLE_COLON, T_NEW];
+        foreach (token_get_all(unl($php)) as $token) {
+            $id = $token;
+            $this->pos = "$fn $line";
+            $line_start = $line;
+            if (is_array($token)) {
+                list($id, $str) = $token;
+                $line += substr_count($str, "\n");
+                switch ($id) {
+                    case T_WHITESPACE: case T_COMMENT:
+                        continue 2;
+                    case T_DOUBLE_COLON: # ::
+                        if (is_array($p1) && T_STRING === $p1[0] && 'self' !== $p1[1])
+                            $assign(0, self::$cls2ext, $ns . $p1[1]);
+                        break;
+                    case T_NAMESPACE:
+                        $ns_kw = true;
+                        $ns = '';
+                        break;
+                    case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
+                        if ($ns_kw) {
+                            $ns .= $str;
+                        } elseif (T_NEW === $p1) {
+                            $assign(0, self::$cls2ext, $ns . $str);
+                        }
+                        $id = [$id, $str];
+                        break;
+                    case T_INLINE_HTML:
+                        break;
+                }
+            }
+
+            switch ($id) {
+                case '(':
+                    if (is_array($p1) && T_STRING === $p1[0] && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) { # use function
+                        $assign(1, self::$functions, $ns . $p1[1]);
+                        //$name = strtolower($p1[1]);
+                        //if (isset(self::$functions[$name]))       self::$used_ext[self::$functions[$name]] = 1;
+                    }
+                    break;
+                case '{':
+                    if (!$ns_kw) {
+                        break;
+                    } elseif ('' === $ns) {
+                        $ns_kw = false;
+                    }
+                case ';':
+                    if ($ns_kw) {
+                        $ns_kw = false;
+                        $ns .= '\\';
+                    }
+                    break;
+            }
+
+            $p3 = $p2;
+            $p2 = $p1;
+            $p1 = $id;
+        }
     }
 
-    function c_report() {
-        SKY::d('gr_start', 'report');
-        defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
-        $functions = get_defined_functions();
-        $this->functions = array_change_key_case(array_flip($functions['internal']));
-        foreach (get_defined_constants(true) as $k => $v) {
-            if ('user' == $k)
-                continue;
-            $this->constants += $v;
-        }
-        $this->interfaces = array_flip(get_declared_interfaces());
-        $this->classes = array_flip(get_declared_classes());
-        $this->traits = array_flip(get_declared_traits());
-        //require __DIR__ . '/internals.php'; collect maximal list? 2do: save it to DB with links to docs
+    function c_usage() {
+        SKY::d('gr_start', 'usage');
+        $extns = self::extensions();
+        trace($extns);
+        self::$used_ext = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
+        self::$used_ext += ['' => [[], [], []]];
+        $this->walk_files([$this, 'usage']);
+        $total = [0, 0, 0];
+        return [
+            'extns' => $extns,
+            'show_unused' => 0,
+            'func' => function ($ary) use (&$total) {
+                $total[0] += ($c0 = count($ary[0]));
+                $total[1] += ($c1 = count($ary[1]));
+                $total[2] += ($c2 = count($ary[2]));
+                return "$c0/$c1/$c2";
+            },
+            'total' => function () use (&$total) {
+                return "$total[0]/$total[1]/$total[2]";
+            },
+        ];
+    }
 
+    static function extensions() {
         $extns = get_loaded_extensions();
+        $const = get_defined_constants(true);
         natcasesort($extns);
-        foreach ($extns as $extn) {
+        foreach ($extns as $n => $extn) {
             $rn = new ReflectionExtension($extn);
             $list = $rn->getClassNames();
             self::$cls2ext += array_combine($list, array_pad([], count($list), $extn));
-            self::$fun2ext += array_map(function() use ($extn) {
+            self::$functions += array_change_key_case(array_map(function() use ($extn) {
                 return $extn;
-            }, $rn->getFunctions());
+            }, $rn->getFunctions()));
+            if (isset($const[$extn])) {
+                self::$constants += array_map(function() use ($extn) {
+                    return $extn;
+                }, $const[$extn]);
+            }
         }
+        return $extns;
+    }
 
-        $all = $this->constants + $this->interfaces + $this->classes + $this->traits;
-        $this->all = array_fill_keys(array_keys($all), 0);
-        $this->all_lc = array_change_key_case($this->all);
-
+    function walk_files($proc) {
         $dirs = Rare::walk_dirs($this->path, $this->exclude_dirs());
-        if (DIR_M != DIR_S && '.' == $this->path)
+        if ($flag = DIR_M != DIR_S && '.' == $this->path)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
         foreach ($dirs as $dir) {
             $this->cnt[1]++;
@@ -308,17 +381,30 @@ class Globals
                 $ary = explode('.', $fn);
                 $this->ext = end($ary);
                 if (in_array($this->ext, $this->exts))
-                    $this->parse($fn);
+                    call_user_func($proc, $fn);
             }
         }
+        if ($flag) {
+            call_user_func($proc, DIR_S . '/heaven.php');
+            call_user_func($proc, DIR_S . '/sky.php');
+        }
+    }
+
+    function c_report() {
+        SKY::d('gr_start', 'report');
+        $extns = self::extensions();
+        $this->interfaces = array_flip(get_declared_interfaces());
+        $this->classes = array_flip(get_declared_classes());
+        $this->traits = array_flip(get_declared_traits());
+        //require __DIR__ . '/internals.php'; collect maximal list? 2do: save it to DB with links to docs
+
+        $all = self::$constants + $this->interfaces + $this->classes + $this->traits;
+        $this->all = array_fill_keys(array_keys($all), 0);
+        $this->all_lc = array_change_key_case($this->all);
+
+        $this->walk_files([$this, 'parse']);
         if ('.' != $this->path)
             return $this->definitions;
-
-        if (DIR_M != DIR_S) {
-            $this->parse(DIR_S . '/heaven.php');
-            $this->parse(DIR_S . '/sky.php');
-        }
-
         foreach ($this->definitions as &$definition)
             uksort($definition, 'strcasecmp');
 
@@ -364,7 +450,7 @@ class Globals
                     ];
                 },
             ],
-            'modules' => $extns,
+            'extns' => $extns,
             'cnt' => $this->cnt,
         ];
     }

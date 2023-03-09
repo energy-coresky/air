@@ -23,12 +23,28 @@
 #.code
 #use(.m_glob)
 2do: <br>
-1. collect php-modules based on used functions, classes, etc.<br>
+1. collect php-extensions based on used functions, classes, etc.<br>
 2. find places for functions usage and more..<br>
 #.code
 
-#.usage ==========================================================================================================
-#use(`<h4>EXTENSION USAGE REPORT</h4>` as header)
+#.umenu ==========================================================================================================
+<br><div class="other-task">Globals report</div>
+<div class="other-info">
+  <table cellspacing="0" cellpadding="0" width="100%">
+    <tr><td>Extensions:</td><td>@block(`-` as cnt) of {{count(Globals::$used_ext)}}</td></tr>
+    @loop(Globals::$used_ext as $key => $ary)
+      @continue(!$ary[0] && !$ary[1] && !$ary[2])
+      @php $name = 'apache2handler' == $key ? 'apache2h..' : $key ~php
+      <tr><td {{!$key ? '' : ' noborder'}}>
+        <u onclick="$('#idnt-{{$key}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$name ?: 'user'}}</u>:
+      </td><td{{!$key ? '' : ' noborder'}}>{{$func($ary)}}</td></tr>
+    ~loop
+    <tr><td noborder>Total:</td><td noborder>{{$total()}}</td></tr>
+  </table>
+</div>
+#.usage.umenu ----------------------------------------------------------------------------------------------------------
+#use(`<h4>CODE USAGE REPORT</h4>` as header)
+#use(.umenu as menu)
 @use(.m_glob)
 #.top
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
@@ -42,8 +58,40 @@
     </div>
 </div>
 #.top
-
+<div style="margin:0 10px 10px 10px">
+  @php $j=0 ~php
+  @loop(Globals::$used_ext as $key => $ary)
+    @if($ary[0] || $ary[1] || $ary[2] || $show_unused)
+      <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key ?: 'user'}}</h2>
+      @php $j++ ~php
+    ~if
+    <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
+      @loop($_2 < 3)@php uksort($ary[$_2], 'strcasecmp') ~php
+        @loop($ary[$_2] as $name => $np)
+        <tr>
+          <td width="3%">{{1 + $_3}}</td>
+          <td width="30%">{{$name}}
+            @if(!$_3)
+              <b>(@if(!$_2)class@elseif(1 == $_2)function@else@eat()constant~if)</b>
+            ~if
+          </td>
+          <td width="67%">{{$np[1]}}
+            @if($np[0])+ {{$np[0]}} usage in XX files~if
+          </td>
+        </tr>
+        ~loop
+      ~loop
+      @if(!$ary[0] && !$ary[1] && !$ary[2] && $show_unused)
+      <tr>
+        <td class="bg-g p-20">not used</td>
+      </tr>
+      ~if
+    </table>
+  ~loop
+  @if(1)@use(`{{$j}}` as cnt)~if
+</div>
 #.usage  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
+
 
 #.m_glob ==========================================================================================================
 <a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Select Dirs</a>
@@ -77,17 +125,17 @@
 #.dirs.skip
 
 #.menu ==========================================================================================================
-    <br><div class="other-task">Globals report</div>
-    <div class="other-info">
-    <table cellspacing="0" cellpadding="0" width="100%">
-        <tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
-        @loop($defs as $key => $ary)
-            <tr><td style="padding-left:10px"{{'EVAL' == $key ? '' : ' noborder'}}>
-                <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
-            </td><td{{'EVAL' == $key ? '' : ' noborder'}}>{{count($ary)}}</td></tr>
-        ~loop
-    </table>
-    </div>
+  <br><div class="other-task">Globals report</div>
+  <div class="other-info">
+  <table cellspacing="0" cellpadding="0" width="100%">
+    <tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
+    @loop($defs as $key => $ary)
+      <tr><td style="padding-left:10px"{{'EVAL' == $key ? '' : ' noborder'}}>
+          <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
+      </td><td{{'EVAL' == $key ? '' : ' noborder'}}>{{count($ary)}}</td></tr>
+    ~loop
+  </table>
+  </div>
 #.menu.report ----------------------------------------------------------------------------------------------------------
 #use(`<h4>GLOBAL DEFINITIONS REPORT</h4>` as header)
 #use(.menu)
@@ -95,12 +143,12 @@
 #.mark.save.back
 @inc(.top)
 <div style="margin:0 10px 10px 10px">
-<fieldset id="gr-modules"><legend>Modules in current PHP Version: {{PHP_VERSION}}</legend>
-    @loop($modules as $module)
-        <span style="{{isset(Globals::$used_ext[$module]) ? 'background-color:#fdd' : ''}}">{{$module}}</span>
+<fieldset id="gr-modules"><legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>
+    @loop($extns as $one)
+        <span style="{{isset(Globals::$used_ext[$one]) ? 'background-color:#fdd' : ''}}">{{$one}}</span>
     ~loop
     <hr>
-    Used {{count(Globals::$used_ext)}} of {{count($modules)}}
+    Used {{count(Globals::$used_ext)}} of {{count($extns)}}
 </fieldset>
 @loop($defs as $key => $ary)
   <h2 id="idnt-{{$_}}">
@@ -145,6 +193,19 @@ Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$c
 #.report
 
 #.jscss ==========================================================================================================
+<style>
+#gr-modules {
+    margin-top:8px;
+    padding-bottom:3px;
+}
+#gr-modules span {
+    display: inline-block;
+    background:#dfd; /* #e0e7ff */
+    margin:0 5px 5px 0;
+    padding:2px 5px;
+    border-radius: 5px;
+}
+</style>
 <script>
 sky.d.files();
 sky.g.save = function() {
