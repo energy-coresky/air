@@ -255,11 +255,14 @@ class Globals
 
     function usage($fn) {
         $assign = function ($x, &$ary, $name, $ns = '') {
-            if ($abs = '\\' === $name[0])
+            if ($abs = '\\' === $name[0]) {
                 $name = substr($name, 1);
+            } elseif (strpos($name, '\\') && $ns) {
+                list ($pfx, $name) = explode('\\', $name, 2);
+            }
             $extn = $ary[$name] ?? '';
-            if (isset($this->use[$x][$name])) {
-                $name = $this->use[$x][$name];
+            if (isset($this->use[$x][$pfx ?? $name])) {
+                $name = isset($pfx) ? $this->use[$x][$pfx] . "\\$name" : $this->use[$x][$name];
                 if (strpos($name, '\\'))
                     $extn = '';
             } elseif (!$abs && '' === $extn) {
@@ -281,6 +284,7 @@ class Globals
         $this->use = [[], [], []]; # cls fun const
         $out = $p1 = $p2 = $p3 = $ns = $name = $pos = '';
         $clist = [T_OBJECT_OPERATOR, T_FUNCTION, T_DOUBLE_COLON, T_NEW];
+        $slist = ['self', 'parent'];
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
             $this->pos = [$fn, $line];
@@ -314,7 +318,7 @@ class Globals
                             $ns .= $str;
                         } elseif ('\\' === $str) {
                             $name .= '' === $name && is_array($p1) ? "$p1[1]\\" : '\\';
-                        } elseif ($name || 'use' == $pos) {
+                        } elseif ($name || 'use' == $pos || 'new' == $pos) {
                             $name .= $str;
                         }
                         $id = [$id, $str];
@@ -322,7 +326,7 @@ class Globals
                     case T_INLINE_HTML:
                         break;
                     case T_DOUBLE_COLON: # ::
-                        if (is_array($p1) && T_STRING === $p1[0] && !in_array($p1[1], ['self', 'parent']))
+                        if (is_array($p1) && T_STRING === $p1[0] && !in_array($p1[1], $slist))
                             $assign(0, self::$cls2ext, $name ?: $p1[1], $ns);
                         $name = '';
                         break;
@@ -356,8 +360,8 @@ class Globals
             }
 
             if ('new' == $pos && T_NEW !== $id && !is_array($id)) {
-                if (!in_array($id, [T_VARIABLE, T_STATIC]) && $name)
-                    $assign(0, self::$cls2ext, $name);
+                if (!in_array($id, [T_VARIABLE, T_STATIC]) && $name && !in_array($name, $slist))
+                    $assign(0, self::$cls2ext, $name, $ns);
                 $pos = $name = '';
             }
             if ($name && T_AS !== $id && !is_array($id)) # reset const for ::
