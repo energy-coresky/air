@@ -278,44 +278,30 @@ class Globals
         $this->cnt[0]++;
         $php = file_get_contents($fn);
         $line = 1;
-        $ns_kw = $new = $use = false;
         $this->use = [[], [], []]; # cls fun const
-        $out = $p1 = $p2 = $p3 = $ns = $name = '';
+        $out = $p1 = $p2 = $p3 = $ns = $name = $pos = '';
         $clist = [T_OBJECT_OPERATOR, T_FUNCTION, T_DOUBLE_COLON, T_NEW];
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
-           $pos = $this->pos = [$fn, $line];
+            $this->pos = [$fn, $line];
             if (is_array($token)) {
                 list($id, $str) = $token;
                 $line += substr_count($str, "\n");
-                switch ($id) {
+                switch ($id) { // 2do extends & implements kw.. const ??
                     case T_WHITESPACE: case T_COMMENT:
                         continue 2;
-                    case T_DOUBLE_COLON: # ::
-                        if (is_array($p1) && T_STRING === $p1[0] && !in_array($p1[1], ['self', 'parent']))
-                            $assign(0, self::$cls2ext, $name ?: $p1[1], $ns);
+                    case T_NAMESPACE:
+                        $pos = 'ns';
+                        $ns = '';
+                        break;
+                    case T_NEW:
+                        $pos = 'new';
                         $name = '';
                         break;
                     case T_USE:
-                        $use = '';
-                        $usn = 0;
-                        break;
-                    case T_NAMESPACE:
-                        $ns_kw = true;
-                        $ns = '';
-                        break;
-                    case T_NS_SEPARATOR:
-                        if ($ns_kw) {
-                            $ns .= '\\';
-                        } elseif (false !== $use) {
-                            $use .= '\\';
-                        } else {
-                            $name .= '' === $name && is_array($p1) ? "$p1[1]\\" : '\\';
-                        }
-                        break;
-                    case T_NEW:
-                        $new = true;
+                        $pos = 'use';
                         $name = '';
+                        $usn = 0;
                         break;
                     case T_FUNCTION:
                         $usn = 1;
@@ -323,56 +309,59 @@ class Globals
                     case T_CONST:
                         $usn = 2;
                         break;
-                    case T_STRING: case T_NAME_QUALIFIED:
-                        if ($ns_kw) {
+                    case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
+                        if ('ns' == $pos) {
                             $ns .= $str;
-                        } elseif (false !== $use) {
-                            $use .= $str;
-                        } elseif (T_NEW === $p1 && 'self' !== $str) {
-                            $assign(0, self::$cls2ext, $str, $ns);
-                            $new = false;
-                        } elseif ($name) {
+                        } elseif ('\\' === $str) {
+                            $name .= '' === $name && is_array($p1) ? "$p1[1]\\" : '\\';
+                        } elseif ($name || 'use' == $pos) {
                             $name .= $str;
                         }
                         $id = [$id, $str];
                         break;
                     case T_INLINE_HTML:
                         break;
+                    case T_DOUBLE_COLON: # ::
+                        if (is_array($p1) && T_STRING === $p1[0] && !in_array($p1[1], ['self', 'parent']))
+                            $assign(0, self::$cls2ext, $name ?: $p1[1], $ns);
+                        $name = '';
+                        break;
                 }
             }
 
             switch ($id) {
                 case '(': # use function
-                    if (is_array($p1) && T_STRING === $p1[0] && !$new && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) {
-                        $assign(1, self::$functions, $p1[1], $ns);
+                    if ('use' === $pos) {
+                        $pos = '';
+                    } elseif ('new' != $pos && is_array($p1) && T_STRING === $p1[0] && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) {
+                        $assign(1, self::$functions, $p1[1], $name ? substr($name, 1, -strlen($p1[1])) : $ns);
                         $name = '';
                     }
-                    if (false !== $use)
-                        $use = false;
                     break;
                 case '{':
-                    if ($ns_kw) {
-                        $ns_kw = false;
+                    if ('ns' == $pos) {
+                        $pos = '';
                         '' === $ns or $ns .= '\\';
                     }
                     break;
                 case ';':
-                    if ($ns_kw) {
-                        $ns_kw = false;
+                    if ('ns' == $pos) {
+                        $pos = '';
                         $ns .= '\\';
-                    } elseif ($use) {
-                        $this->use[$usn][$p1[1]] = T_AS === $p2 ? substr($use, 0, -strlen($p1[1])) : $use;
-                        $use = false;
+                    } elseif ('use' === $pos) {
+                        $this->use[$usn][$p1[1]] = T_AS === $p2 ? substr($name, 0, -strlen($p1[1])) : $name;
+                        $pos = $name = '';
                     }
                     break;
             }
 
-            if ($new && T_NEW !== $id && T_NS_SEPARATOR !== $id && !is_array($id)) {
+            if ('new' == $pos && T_NEW !== $id && !is_array($id)) {
                 if (!in_array($id, [T_VARIABLE, T_STATIC]) && $name)
                     $assign(0, self::$cls2ext, $name);
-                $new = $name = '';
+                $pos = $name = '';
             }
-
+            if ($name && T_AS !== $id && !is_array($id)) # reset const for ::
+                $name = '';
             $p3 = $p2;
             $p2 = $p1;
             $p1 = $id;
