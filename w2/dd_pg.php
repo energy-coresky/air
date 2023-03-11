@@ -1,6 +1,6 @@
 <?php
 
-class dd_pg implements Database_driver
+class dd_pg implements DriverDatabase
 {
     use SQL_COMMON;
 
@@ -17,6 +17,9 @@ class dd_pg implements Database_driver
         list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
         $this->conn = pg_connect("host=$host dbname=$dbname user=$user password=$pass");
         $this->pref = $pref;
+    }
+
+    function init($tz = null) {
     }
 
     function info() {

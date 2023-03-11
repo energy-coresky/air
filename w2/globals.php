@@ -253,26 +253,38 @@ class Globals
         return $this->c_report();
     }
 
-    function usage($fn, $line_start = 1) {
-        $assign = function ($n, &$ary, $name) {
+    function usage($fn) {
+        $assign = function ($x, &$ary, $name, $ns = '') {
+            if ($abs = '\\' === $name[0])
+                $name = substr($name, 1);
             $extn = $ary[$name] ?? '';
-            $p =& self::$used_ext[$extn][$n];
+            if (isset($this->use[$x][$name])) {
+                $name = $this->use[$x][$name];
+                if (strpos($name, '\\'))
+                    $extn = '';
+            } elseif (!$abs && '' === $extn) {
+                $name = $ns . $name;
+            }
+            $p =& self::$used_ext[$extn][$x];
             if (isset($p[$name])) {
-                $p[$name][0]++;
+                $p[$name][1]++;
+                if ($this->pos[0] != $p[$name][0][0])
+                    $p[$name][2]++;
+                $p[$name][0] = $this->pos;
             } else {
-                $p[$name] = [0, $this->pos];
+                $p[$name] = [$this->pos, 0, 0];
             }
         };
         $this->cnt[0]++;
         $php = file_get_contents($fn);
-        $line = $line_start;
-        $ns_kw = 0;
-        $out = $p1 = $p2 = $p3 = $ns = '';
+        $line = 1;
+        $ns_kw = $new = $use = false;
+        $this->use = [[], [], []]; # cls fun const
+        $out = $p1 = $p2 = $p3 = $ns = $name = '';
         $clist = [T_OBJECT_OPERATOR, T_FUNCTION, T_DOUBLE_COLON, T_NEW];
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
-            $this->pos = "$fn $line";
-            $line_start = $line;
+           $pos = $this->pos = [$fn, $line];
             if (is_array($token)) {
                 list($id, $str) = $token;
                 $line += substr_count($str, "\n");
@@ -280,18 +292,47 @@ class Globals
                     case T_WHITESPACE: case T_COMMENT:
                         continue 2;
                     case T_DOUBLE_COLON: # ::
-                        if (is_array($p1) && T_STRING === $p1[0] && 'self' !== $p1[1])
-                            $assign(0, self::$cls2ext, $ns . $p1[1]);
+                        if (is_array($p1) && T_STRING === $p1[0] && !in_array($p1[1], ['self', 'parent']))
+                            $assign(0, self::$cls2ext, $name ?: $p1[1], $ns);
+                        $name = '';
+                        break;
+                    case T_USE:
+                        $use = '';
+                        $usn = 0;
                         break;
                     case T_NAMESPACE:
                         $ns_kw = true;
                         $ns = '';
                         break;
-                    case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
+                    case T_NS_SEPARATOR:
+                        if ($ns_kw) {
+                            $ns .= '\\';
+                        } elseif (false !== $use) {
+                            $use .= '\\';
+                        } else {
+                            $name .= '' === $name && is_array($p1) ? "$p1[1]\\" : '\\';
+                        }
+                        break;
+                    case T_NEW:
+                        $new = true;
+                        $name = '';
+                        break;
+                    case T_FUNCTION:
+                        $usn = 1;
+                        break;
+                    case T_CONST:
+                        $usn = 2;
+                        break;
+                    case T_STRING: case T_NAME_QUALIFIED:
                         if ($ns_kw) {
                             $ns .= $str;
-                        } elseif (T_NEW === $p1) {
-                            $assign(0, self::$cls2ext, $ns . $str);
+                        } elseif (false !== $use) {
+                            $use .= $str;
+                        } elseif (T_NEW === $p1 && 'self' !== $str) {
+                            $assign(0, self::$cls2ext, $str, $ns);
+                            $new = false;
+                        } elseif ($name) {
+                            $name .= $str;
                         }
                         $id = [$id, $str];
                         break;
@@ -301,25 +342,35 @@ class Globals
             }
 
             switch ($id) {
-                case '(':
-                    if (is_array($p1) && T_STRING === $p1[0] && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) { # use function
-                        $assign(1, self::$functions, $ns . $p1[1]);
-                        //$name = strtolower($p1[1]);
-                        //if (isset(self::$functions[$name]))       self::$used_ext[self::$functions[$name]] = 1;
+                case '(': # use function
+                    if (is_array($p1) && T_STRING === $p1[0] && !$new && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) {
+                        $assign(1, self::$functions, $p1[1], $ns);
+                        $name = '';
                     }
+                    if (false !== $use)
+                        $use = false;
                     break;
                 case '{':
-                    if (!$ns_kw) {
-                        break;
-                    } elseif ('' === $ns) {
+                    if ($ns_kw) {
                         $ns_kw = false;
+                        '' === $ns or $ns .= '\\';
                     }
+                    break;
                 case ';':
                     if ($ns_kw) {
                         $ns_kw = false;
                         $ns .= '\\';
+                    } elseif ($use) {
+                        $this->use[$usn][$p1[1]] = T_AS === $p2 ? substr($use, 0, -strlen($p1[1])) : $use;
+                        $use = false;
                     }
                     break;
+            }
+
+            if ($new && T_NEW !== $id && T_NS_SEPARATOR !== $id && !is_array($id)) {
+                if (!in_array($id, [T_VARIABLE, T_STATIC]) && $name)
+                    $assign(0, self::$cls2ext, $name);
+                $new = $name = '';
             }
 
             $p3 = $p2;
@@ -331,30 +382,37 @@ class Globals
     function c_usage() {
         SKY::d('gr_start', 'usage');
         $extns = self::extensions();
-        trace($extns);
+        if (isset($_POST['s']))
+            SKY::d('gr_unused', $_POST['s']);
+        //trace($extns);
         self::$used_ext = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
         self::$used_ext += ['' => [[], [], []]];
         $this->walk_files([$this, 'usage']);
         $total = [0, 0, 0];
+        $used = [];
         return [
-            'extns' => $extns,
-            'show_unused' => 0,
-            'func' => function ($ary) use (&$total) {
+         //   'extns' => $extns,
+            'show_unused' => SKY::d('gr_unused'),
+            'func' => function ($ary, $key) use (&$total, &$used) {
+                $used[] = $key;
                 $total[0] += ($c0 = count($ary[0]));
                 $total[1] += ($c1 = count($ary[1]));
                 $total[2] += ($c2 = count($ary[2]));
                 return "$c0/$c1/$c2";
             },
-            'total' => function () use (&$total) {
+            'total' => function () use (&$total, &$used) {
+                SKY::i('gr_extns', implode(' ', $used));
                 return "$total[0]/$total[1]/$total[2]";
             },
         ];
     }
 
-    static function extensions() {
+    static function extensions($simple = false) {
         $extns = get_loaded_extensions();
-        $const = get_defined_constants(true);
         natcasesort($extns);
+        if ($simple)
+            return $extns;
+        $const = get_defined_constants(true);
         foreach ($extns as $n => $extn) {
             $rn = new ReflectionExtension($extn);
             $list = $rn->getClassNames();
@@ -450,7 +508,8 @@ class Globals
                     ];
                 },
             ],
-            'extns' => $extns,
+            'loaded' => $extns,
+            'used' => explode(' ', SKY::i('gr_extns')),
             'cnt' => $this->cnt,
         ];
     }

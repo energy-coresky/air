@@ -94,7 +94,7 @@ Current table's prefix: <input value="{{SQL::$dd->pref}}" name="pref" size="5">
         </label></div>
     ~if
 ~loop
-<br>&gt;<a @href(alert('2do')))>autodetect with "Globals" utility</a>
+<br>&gt;<a href="?system=copy">autodetect with "Globals" utility</a>
 </fieldset>
 <p>
 PHP version &gt;= <input name="vphp" value="{{$row->vphp or PHP_VERSION}}" size="5">

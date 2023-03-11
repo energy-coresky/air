@@ -211,11 +211,7 @@ trait HOOK_C
     }
 
     static function dd_h($dd, $name = '') {
-        if ('MySQLi' != $dd->name)
-            return;
-        if (!mysqli_set_charset($dd->conn, 'utf8'))
-            throw new Error('mysqli_set_charset');
-        $dd->sqlf('set time_zone=%s', date('P'));
+        $dd->init();
     }
 }
 

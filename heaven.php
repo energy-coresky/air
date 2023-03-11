@@ -279,9 +279,8 @@ class HEAVEN extends SKY
             $this->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "\n\$sky->fly: $this->fly\n\n" . $this->tracing;
 
             if (SKY::$debug > 1) {
-                flush();
-                $top .= 'Request headers:'  . html(substr(print_r(getallheaders(), true), 7, -2));
-                $top .= 'Response headers:' . html(substr(print_r(apache_response_headers(), true), 7, -2));
+                $top .= 'Request headers:'  . html(substr(print_r(Util::request_headers(), true), 7, -2));
+                $top .= 'Response headers:' . html(substr(print_r(Util::response_headers(), true), 7, -2));
             }
         }
         return parent::tracing($top, $is_x);

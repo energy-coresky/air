@@ -1,6 +1,6 @@
 <?php
 
-class dc_file implements Cache_driver
+class dc_file implements DriverCache
 {
     public $type = 'File'; # 2do add opcache control
 

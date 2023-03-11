@@ -1,6 +1,6 @@
 <?php
 
-class dd_odbc implements Database_driver
+class dd_odbc implements DriverDatabase
 {
     use SQL_COMMON;
 
@@ -17,6 +17,9 @@ class dd_odbc implements Database_driver
         list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
         $this->conn = odbc_connect("", $user, $pass);
         $this->pref = $pref;
+    }
+
+    function init($tz = null) {
     }
 
     function info() {

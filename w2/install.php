@@ -20,7 +20,7 @@ class Install
         if ($var) {
             if (is_array($default))
                 return isset($this->mem[$var]) ? explode(' ', $this->mem[$var]) : $default;
-            return isset($this->mem[$var]) ? $this->mem[$var] : $default;
+            return $this->mem[$var] ?: $default;
         }
         return $this->mem;
     }
@@ -155,8 +155,13 @@ class Install
 
     function _system() {
         global $sky;
+        if ('copy' == $sky->_2) {
+            $this->memo();
+            $this->mem['modules'] = $sky->i_gr_extns;
+            SKY::i('modules', $sky->i_gr_extns);
+        }
         if (!isset($_POST['step'])) return [
-            'modules' => get_loaded_extensions(),
+            'modules' => Globals::extensions(true),
             'mem' => $this->memo('modules', []),
             'and' => $this->memo('and', 0),
             'mysql' => mysqli_get_client_version(),//mysqli_get_server_info

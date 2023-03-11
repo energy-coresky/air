@@ -31,19 +31,24 @@
 <br><div class="other-task">Globals report</div>
 <div class="other-info">
   <table cellspacing="0" cellpadding="0" width="100%">
-    <tr><td>Extensions:</td><td>@block(`-` as cnt) of {{count(Globals::$used_ext)}}</td></tr>
+    <tr><td><b>Extensions</b>:</td><td>@block(`-` as cnt) of {{count(Globals::$used_ext)-1}}</td></tr>
     @loop(Globals::$used_ext as $key => $ary)
       @continue(!$ary[0] && !$ary[1] && !$ary[2])
       @php $name = 'apache2handler' == $key ? 'apache2h..' : $key ~php
       <tr><td {{!$key ? '' : ' noborder'}}>
         <u onclick="$('#idnt-{{$key}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$name ?: 'user'}}</u>:
-      </td><td{{!$key ? '' : ' noborder'}}>{{$func($ary)}}</td></tr>
+      </td><td{{!$key ? '' : ' noborder'}}>{{$func($ary, $key)}}</td></tr>
     ~loop
-    <tr><td noborder>Total:</td><td noborder>{{$total()}}</td></tr>
+    <tr><td noborder><b>Total</b>:</td><td noborder>{{$total()}}</td></tr>
   </table>
 </div>
-#.usage.umenu ----------------------------------------------------------------------------------------------------------
-#use(`<h4>CODE USAGE REPORT</h4>` as header)
+#.umenu.header
+<h4>CODE USAGE REPORT
+<a class="@active($show_unused)" style="font-weight:normal"
+    @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show unused extensions</a>
+</h4>
+#.usage.header ----------------------------------------------------------------------------------------------------------
+#use(.header)
 #use(.umenu as menu)
 @use(.m_glob)
 #.top
@@ -75,8 +80,8 @@
               <b>(@if(!$_2)class@elseif(1 == $_2)function@else@eat()constant~if)</b>
             ~if
           </td>
-          <td width="67%">{{$np[1]}}
-            @if($np[0])+ {{$np[0]}} usage in XX files~if
+          <td width="67%"><span>{{$np[0][0] . '^' . $np[0][1]}}</span>
+            @if($np[1])+ {{$np[1]}} usage@if($np[2]) in {{$np[2]}} files~if~if
           </td>
         </tr>
         ~loop
@@ -88,7 +93,7 @@
       ~if
     </table>
   ~loop
-  @if(1)@use(`{{$j}}` as cnt)~if
+  @if(1)@use(`{{$j-1}}` as cnt)~if
 </div>
 #.usage  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
 
@@ -144,11 +149,11 @@
 @inc(.top)
 <div style="margin:0 10px 10px 10px">
 <fieldset id="gr-modules"><legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>
-    @loop($extns as $one)
-        <span style="{{isset(Globals::$used_ext[$one]) ? 'background-color:#fdd' : ''}}">{{$one}}</span>
+    @loop($loaded as $one)
+        <span style="{{in_array($one, $used) ? 'background-color:#fdd' : ''}}">{{$one}}</span>
     ~loop
     <hr>
-    Used {{count(Globals::$used_ext)}} of {{count($extns)}}
+    Used {{count($used)-1}} of {{count($loaded)}}
 </fieldset>
 @loop($defs as $key => $ary)
   <h2 id="idnt-{{$_}}">

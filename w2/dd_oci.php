@@ -1,6 +1,6 @@
 <?php
 
-class dd_oci implements Database_driver
+class dd_oci implements DriverDatabase
 {
     use SQL_COMMON;
 
@@ -17,6 +17,9 @@ class dd_oci implements Database_driver
         list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
         $this->conn = oci_connect($user, $pass, "$host/$dbname");
         $this->pref = $pref;
+    }
+
+    function init($tz = null) {
     }
 
     function info() {

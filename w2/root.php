@@ -4,6 +4,14 @@ class Root
 {
     static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Databases'];
     static $menu2 = [7 => 'Special', 'Log Cron', 'Log Crash', 'Log Error'];
+    static $maxext = [
+        'Core', 'PDO', 'PDO_OCI', 'PDO_ODBC', 'Phar', 'Reflection', 'SPL', 'SimpleXML', 'SourceGuardian', 'Zend OPcache', 'bcmath', 'bz2',
+        'calendar', 'cgi-fcgi', 'ctype', 'curl', 'date', 'dba', 'dom', 'enchant', 'exif', 'fileinfo', 'filter', 'ftp', 'gd', 'gettext', 'gmp',
+        'hash', 'iconv', 'imagick', 'imap', 'interbase', 'intl', 'ionCube Loader', 'json', 'ldap', 'libxml', 'mbstring', 'mysqli', 'mysqlnd',
+        'oci8', 'odbc', 'openssl', 'pcntl', 'pcre', 'pdo_mysql', 'pdo_pgsql', 'pdo_sqlite', 'pgsql', 'posix', 'pspell', 'readline', 'session',
+        'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'standard', 'sysvmsg', 'sysvsem', 'sysvshm', 'tidy', 'tokenizer', 'wddx', 'xml',
+        'xmlreader', 'xmlwriter', 'xsl', 'zip', 'zlib',
+    ];
 
     const js = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js';
 
@@ -133,7 +141,7 @@ class Root
                 $ary = Util::get_classes(get_declared_interfaces(), $ext, -1);
                 $add_ext($ary[1], $ary[2]);
                 $echo($ary[1], 'i');
-                echo tag('Loaded extensions, Dependencies, Constants/Functions/Classes', '', 'h3');
+                echo tag('Loaded extensions, Dependencies, Classes/Functions/Constants', '', 'h3');
                 $echo(array_map(function ($v) {
                     $e = new ReflectionExtension($v);
                     if ($d = $e->getDependencies()) {
@@ -143,10 +151,14 @@ class Root
                         });
                         $v .= ('Phar' == $v ? ' <br>' : ' ') . implode(' ', $d);
                     }
-                    return tag(count($e->getConstants())
+                    return tag(count($e->getClassNames())
                         . '/' . count($e->getFunctions())
-                        . '/' . count($e->getClassNames()) . '&nbsp;') . " $v ";
+                        . '/' . count($e->getConstants()) . '&nbsp;') . " $v ";
                 }, $ext), 'e');
+                echo tag('Not loaded extensions', '', 'h3');
+                $echo(array_map(function ($v) {
+                    return tag('?') . " $v ";
+                }, array_diff(self::$maxext, $ext)), 'e');
                 $top .= $priv;
                 break;
             case 'License': $fn = '/LICENSE';

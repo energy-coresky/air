@@ -37,7 +37,7 @@ final class SQL
     function __construct($in, $func = false) {
         $this->_dd = SQL::$dd;
         $tpl = array_shift($in);
-        $is_dd = $tpl instanceof Database_driver;
+        $is_dd = $tpl instanceof DriverDatabase;
         if ($is_dd || $tpl instanceof MVC_BASE) {
             $this->_dd = $is_dd ? $tpl : $tpl->dd();
             $is_dd or $this->table = (string)$tpl;
@@ -442,8 +442,9 @@ class Func
 }
 
 //////////////////////////////////////////////////////////////////////////
-interface Database_driver
+interface DriverDatabase
 {
+    function init($tz = null);
     function info();
     function close();
     function escape($s, $quote = true);

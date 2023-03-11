@@ -285,14 +285,14 @@ class Plan
 
     // 2do suppressed: fix for php 8 https://www.php.net/manual/en/language.operators.errorcontrol.php
     static function epush($title, $desc, $context) {
+        $vars = '';
         if ($context) {
-            $desc .= "\n";
+            $vars = "\n";
             foreach ($context as $k => $v)
-                if (is_scalar($v) || is_null($v))
-                    $desc .= "\$$k = " . html(var_export($v, 1)) . ";\n";
+                $vars .= "\$$k = " . Plan::var($v) . ";\n";
         }
         $p =& SKY::$errors;
-        $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", mb_substr($desc, 0, 1000)];
+        $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", $desc . $vars];
     }
 
     static function closure($fun) {

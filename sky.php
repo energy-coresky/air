@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = [];
 
-    const CORE = '0.411 2023-03-09T09:53:54+02:00 energy';
+    const CORE = '0.412 2023-03-11T12:47:40+02:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -344,7 +344,7 @@ class Stop extends Exception {} # Assume as just "stop", NOT crash, NOT error
 class Hacker extends Exception {} # Assume as crash but NOT error on the web-scripts
 
 
-interface Cache_driver
+interface DriverCache
 {
     function info();
     function setup($obj);

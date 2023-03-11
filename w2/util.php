@@ -114,6 +114,40 @@ class Util
         }
     }
 
+    static function request_headers() {
+        if (function_exists('apache_request_headers'))
+            return apache_request_headers();
+        $out = [];
+        $re = '/\AHTTP_/';
+        foreach ($_SERVER as $key => $val) {
+            if (preg_match($re, $key)) {
+                $name = preg_replace($re, '', $key);
+                $rx_matches = explode('_', strtolower($name));
+                if (count($rx_matches) > 0 && strlen($name) > 2) {
+                    foreach($rx_matches as $ak_key => &$ak_val)
+                        $ak_val = ucfirst($ak_val);
+                    $name = implode('-', $rx_matches);
+                }
+                $out[$name] = $val;
+            }
+        }
+        return $out;
+    }
+
+    static function response_headers($flush = true) {
+        if ($flush)
+            flush();
+        if (function_exists('apache_response_headers'))
+            return apache_response_headers();
+        $out = [];
+        $headers = headers_list();
+        foreach ($headers as $header) {
+            $header = explode(":", $header);
+            $out[array_shift($header)] = trim(implode(":", $header));
+        }
+        return $out;
+    }
+
     static function pdaxt($plus = '') {
         global $sky, $user;
 

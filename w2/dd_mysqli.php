@@ -1,6 +1,6 @@
 <?php
 
-class dd_mysqli implements Database_driver
+class dd_mysqli implements DriverDatabase
 {
     use SQL_COMMON;
 
@@ -19,6 +19,12 @@ class dd_mysqli implements Database_driver
         $this->dbname = $dbname;
         mysqli_real_connect($this->conn, $host, $user, $pass, $dbname);
         $this->pref = $pref;
+    }
+
+    function init($tz = null) {
+        if (!mysqli_set_charset($this->conn, 'utf8'))
+            throw new Error('mysqli_set_charset');
+        $this->sqlf('set time_zone=%s', null === $tz ? date('P') : $tz);
     }
 
     function info() {

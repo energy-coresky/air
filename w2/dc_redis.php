@@ -1,6 +1,6 @@
 <?php
 
-class dc_redis implements Cache_driver
+class dc_redis implements DriverCache
 {
     public $type = 'Redis';
 

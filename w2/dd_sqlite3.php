@@ -1,6 +1,6 @@
 <?php
 
-class dd_sqlite3 implements Database_driver
+class dd_sqlite3 implements DriverDatabase
 {
     use SQL_COMMON;
 
@@ -16,6 +16,9 @@ class dd_sqlite3 implements Database_driver
         $this->conn = new SQLite3($filename);
         $this->conn->busyTimeout(30000); # 30 secs
         $this->pref = $pref;
+    }
+
+    function init($tz = null) {
     }
 
     function info() {
