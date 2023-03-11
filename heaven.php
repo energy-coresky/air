@@ -314,8 +314,10 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
         $sky->was_error |= SKY::ERR_DETECT;
         if (null === SKY::$dd)
             $sky->open(is_array($var) ? $var[1] : $var);
-        if (SKY::$debug && SKY::$errors[0]++ > 99)
-            throw new Error("500 Internal SKY error");
+        if (SKY::$debug && SKY::$errors[0]++ > 49) {
+            return;
+            //throw new Error("500 Internal SKY error");
+        }
     }
     if (SKY::$debug || $sky->log_error && $err) {
         if ($err && is_array($var))

@@ -367,12 +367,12 @@ class Globals
             $p1 = $id;
         }
     }
-
-    function c_usage() {
+                            // see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
+    function c_usage() {                     // new Rule\   (use partially, 2do)
         SKY::d('gr_start', 'usage');
         $extns = self::extensions();
         if (isset($_POST['s']))
-            SKY::d('gr_unused', $_POST['s']);
+            SKY::d('show_ext', $_POST['s']);
         //trace($extns);
         self::$used_ext = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
         self::$used_ext += ['' => [[], [], []]];
@@ -380,8 +380,8 @@ class Globals
         $total = [0, 0, 0];
         $used = [];
         return [
-         //   'extns' => $extns,
-            'show_unused' => SKY::d('gr_unused'),
+            'show_ext' => SKY::d('show_ext'),
+            'show_emp' => 0,
             'func' => function ($ary, $key) use (&$total, &$used) {
                 $used[] = $key;
                 $total[0] += ($c0 = count($ary[0]));
@@ -389,10 +389,47 @@ class Globals
                 $total[2] += ($c2 = count($ary[2]));
                 return "$c0/$c1/$c2";
             },
-            'total' => function () use (&$total, &$used) {
-                SKY::i('gr_extns', implode(' ', $used));
+            'total' => function ($ext = false) use (&$total, &$used) {
+                if ($ext)
+                    return count($used) - 1;
+                if (SKY::d('show_ext'))
+                    SKY::i('gr_extns', implode(' ', $used));
                 return "$total[0]/$total[1]/$total[2]";
             },
+            'e_usage' => [
+                'max_i' => -1, // infinite
+                'row_c' => function($ext, $evar = false) use ($total) {
+                    static $p, $i, $ary = [], $defs = 0;
+                    if ($evar) {
+                        $i = 0;
+                        $p = self::$used_ext[$ext];
+                        $ext or $defs = json_decode(Plan::mem_gq('definitions.json'));
+                        return false;
+                    }
+                    $chd = $err = '';
+                    for (; !$ary; $i++)
+                        if ($i > 2) {
+                            return false;
+                        } elseif ($ary = $p[$chd = $i]) {
+                            uksort($ary, 'strcasecmp');
+                        }
+                    $name = key($ary);
+                    $np = array_shift($ary);
+                    if ($defs && !in_array(strtolower($name), $defs[$i - 1]))
+                        $err = 'Definition not found';
+                    return [
+                        'chd' => $chd,
+                        'name' => $name,
+                        'pos' => $np[0][0] . '^' . $np[0][1],
+                        'usage' => $np[1],
+                        'files' => $np[2],
+                        'err' => $err,
+                        'class' => $err ? ($err ? 'bg-y' : 'bg-r') : 'norm', //bg-b
+                        'nap' => '',
+                        //'num' => $num++,
+                    ];
+                },
+            ],
         ];
     }
 
@@ -457,22 +494,29 @@ class Globals
 
         $nap = Plan::mem_rq('report.nap');
         $cnts = [0, 0]; # no-problem, ok
+        $json = [];
 
         return [
             'defs' => $this->definitions,
-            'cnts' => function($i) use (&$cnts) {
+            'cnts' => function($i) use (&$cnts, &$json) {
+                if (!$i)
+                    Plan::mem_p('definitions.json', json_encode($json, JSON_PRETTY_PRINT));
                 return 2 == $i ? array_sum(array_map('count', $this->definitions)) - $cnts[0] - $cnts[1] : $cnts[$i];
             },
             'e_idents' => [
                 'max_i' => -1, // infinite
-                'row_c' => function($in, $evar = false) use ($nap, &$cnts) {
+                'row_c' => function($in, $evar = false) use ($nap, &$cnts, &$json) {
                     static $ary, $gt, $id, $num, $err_msg, $def_prev = '';
                     if ($evar) {
                         $gt = count($ary = $in[0]) > 1;
                         $id = $in[1];
                         if (isset($nap[$id]))
                             $cnts[1]++;
-                        list ($def) = explode('.', $id);
+                        list ($def, $ident) = explode('.', $id);
+                        if (!in_array($def, ['NAMESPACE', 'VAR', 'EVAL'])) {
+                            $z = 'FUNCTION' == $def ? 1 : (in_array($def, ['CONST', 'DEFINE']) ? 2 : 0);
+                            $json[$z][] = strtolower($ident);
+                        }
                         if ($def_prev != $def)
                             $num = 1;
                         $def_prev = $def;

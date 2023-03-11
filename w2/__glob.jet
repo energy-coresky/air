@@ -31,6 +31,7 @@
 <br><div class="other-task">Globals report</div>
 <div class="other-info">
   <table cellspacing="0" cellpadding="0" width="100%">
+    @if($show_ext)
     <tr><td><b>Extensions</b>:</td><td>@block(`-` as cnt) of {{count(Globals::$used_ext)-1}}</td></tr>
     @loop(Globals::$used_ext as $key => $ary)
       @continue(!$ary[0] && !$ary[1] && !$ary[2])
@@ -40,12 +41,27 @@
       </td><td{{!$key ? '' : ' noborder'}}>{{$func($ary, $key)}}</td></tr>
     ~loop
     <tr><td noborder><b>Total</b>:</td><td noborder>{{$total()}}</td></tr>
+    @else
+    <tr><td>Total usage:</td><td>{{1}}</td></tr>
+      <tr><td style="padding-left:10px" noborder>
+          111:
+      </td><td noborder>11</td></tr>
+      <tr><td style="padding-left:10px" noborder>
+          222:
+      </td><td noborder>11</td></tr>
+      <tr><td style="padding-left:10px">
+          333:
+      </td><td>11</td></tr>
+    <tr><td>No problem:</td><td>{{1}}</td></tr>
+    <tr><td>Marked OK:</td><td>{{1}}</td></tr>
+    <tr><td>Unchecked usage:</td><td>{{1}}</td></tr>
+    ~if
   </table>
 </div>
 #.umenu.header
 <h4>CODE USAGE REPORT
-<a class="@active($show_unused)" style="font-weight:normal"
-    @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show unused extensions</a>
+<a class="@active($show_ext)" style="font-weight:normal"
+    @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show extensions</a>
 </h4>
 #.usage.header ----------------------------------------------------------------------------------------------------------
 #use(.header)
@@ -64,42 +80,47 @@
 </div>
 #.top
 <div style="margin:0 10px 10px 10px">
-  @php $j=0 ~php
   @loop(Globals::$used_ext as $key => $ary)
-    @if($ary[0] || $ary[1] || $ary[2] || $show_unused)
+    @continue(!$show_ext && $key || $show_ext && !$key)
+    @if($show_emp || $ary[0] || $ary[1] || $ary[2])
       <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key ?: 'user'}}</h2>
-      @php $j++ ~php
     ~if
     <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
-      @loop($_2 < 3)@php uksort($ary[$_2], 'strcasecmp') ~php
-        @loop($ary[$_2] as $name => $np)
-        <tr>
-          <td width="3%">{{1 + $_3}}</td>
-          <td width="30%">{{$name}}
-            @if(!$_3)
-              <b>(@if(!$_2)class@elseif(1 == $_2)function@else@eat()constant~if)</b>
-            ~if
+      @loop($e_usage($key))
+        <tr class="{{$row->class}}">
+          <td width="3%">{{1 + $_2}}</td>
+          <td width="30%">{{$row->name}}
+            @if(0 === $row->chd)(<b>class</b>)
+            @elseif(1 === $row->chd)(<b>function</b>)
+            @elseif(2 === $row->chd)(<b>constant</b>)~if
           </td>
-          <td width="67%"><span>{{$np[0][0] . '^' . $np[0][1]}}</span>
-            @if($np[1])+ {{$np[1]}} usage@if($np[2]) in {{$np[2]}} files~if~if
+          <td width="38%"><span>{{$row->pos}}</span>
+            @if($row->usage)+ {{$row->usage}} usage@if($row->files) in {{$row->files}} files~if~if
+          </td>
+          <td width="20%">{{$row->err}}</td>
+          <td width="9%" align="right">
+          @if($row->nap){{$row->nap}}
+          @elseif('bg-y'==$row->class)
+            <a @href(sky.g.form('{{$key}}.{{11}}'))>mark OK</a>
+          ~if
           </td>
         </tr>
-        ~loop
+        @empty
+        @if($show_emp)
+        <tr>
+          <td class="bg-g p-20">not used</td>
+        </tr>
+        ~if
       ~loop
-      @if(!$ary[0] && !$ary[1] && !$ary[2] && $show_unused)
-      <tr>
-        <td class="bg-g p-20">not used</td>
-      </tr>
-      ~if
     </table>
   ~loop
-  @if(1)@use(`{{$j-1}}` as cnt)~if
+  @if(1)@use(`{{$total(true)}}` as cnt)~if
 </div>
 #.usage  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
 
 
 #.m_glob ==========================================================================================================
-<a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Select Dirs</a>
+<a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Settings</a>
 <a class="inner-menu" href="_glob?report"@active($sky->_1 == 'report')>Report Definitions</a>
 <a class="inner-menu" href="_glob?usage"@active($sky->_1 == 'usage')>Report Usage</a>
 <a class="inner-menu" href="_glob?saved"@active($sky->_1 == 'saved')>Saved Reports</a>
@@ -165,14 +186,14 @@
       <tr class="{{$row->class}}">
         <td width="3%">{{$row->num}}</td>
         <td width="30%">{{$ident}}</td>
-        <td width="27%">
+        <td width="38%">
           <span>{{$row->pos}}</span>
           @if('NAMESPACE' == $key && Globals::$ns[$ident])
             <span style="color:red">+ {{Globals::$ns[$ident]}} files</span>
           ~if
         </td>
-        <td width="25%">{{$row->desc}}</td>
-        <td width="15%" align="right">
+        <td width="20%">{{$row->desc}}</td>
+        <td width="9%" align="right">
           @if($row->nap){{$row->nap}}
           @elseif('bg-r'==$row->class)
             <a @href(sky.g.form('{{$key}}.{{$ident}}'))>mark OK</a>
@@ -194,7 +215,8 @@ Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$c
 @inc(.jscss)
 <script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
 <tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
-<tr><td>Unchecked definitions:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)</script>
+<tr><td>Unchecked def7s:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)
+</script>
 #.report
 
 #.jscss ==========================================================================================================
