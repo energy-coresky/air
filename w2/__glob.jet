@@ -144,7 +144,7 @@
 <tr><td>Unchecked uses:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)
 </script>
 #.user_code.user_menu
-  <tr><td>Total usage:</td><td>{{array_sum(array_map('count', Globals::$used_ext['']))}}</td></tr>
+  <tr><td>Total uses:</td><td>{{array_sum(array_map('count', Globals::$used_ext['']))}}</td></tr>
     @loop($parts as $i => $part)
     <tr><td style="padding-left:10px" noborder>
         <u onclick="$('#idnt-{{$i}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$part}}</u>:

@@ -453,7 +453,7 @@ class Globals
                         'usage' => $np[1],
                         'files' => $np[2],
                         'err' => $err,
-                        'class' => $err ? ($err ? 'bg-y' : 'bg-r') : 'norm', //bg-b
+                        'class' => $err ? ($err ? 'bg-r' : 'bg-y') : 'norm', //bg-b
                         'nap' => '',
                         //'num' => $num++,
                     ];
