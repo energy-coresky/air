@@ -376,7 +376,8 @@ class Globals
                 $pos = $name = '';
             }
             if ($name && !is_array($id)) { # constants
-                if (!$prev && !$quot && !in_array($p2, $clist) && T_VARIABLE !== $id && '{' !== $id && '&' !== $p2)
+                if (!$prev && !$quot && !in_array($p2, $clist) && T_VARIABLE !== $id && '{' !== $id && '&' !== $p2
+                    && !in_array(strtolower($name), ['true', 'false', 'null', 'bool', 'void', 'string']))
                     $use(2, self::$constants, $name, $ns);
                 T_AS === $id && 'USE' === $pos or $name = '';
             }
@@ -416,9 +417,6 @@ class Globals
                 if (SKY::d('show_ext'))
                     SKY::i('gr_extns', implode(' ', $used));
                 return "$total[0]/$total[1]/$total[2]";
-            },
-            'cnts' => function($i) use (&$cnts) {
-                return $cnts[$i];
             },
             'e_usage' => [
                 'max_i' => -1, // infinite
@@ -461,6 +459,10 @@ class Globals
                     ];
                 },
             ],
+            'cnts' => function($i) use (&$cnts) {
+                return $cnts[$i];
+            },
+            'cdf' => $this->cnt,
         ];
     }
 
@@ -529,11 +531,6 @@ class Globals
 
         return [
             'defs' => $this->definitions,
-            'cnts' => function($i) use (&$cnts, &$json) {
-                if (!$i)
-                    Plan::mem_p('definitions.json', json_encode($json, JSON_PRETTY_PRINT));
-                return 2 == $i ? array_sum(array_map('count', $this->definitions)) - $cnts[0] - $cnts[1] : $cnts[$i];
-            },
             'e_idents' => [
                 'max_i' => -1, // infinite
                 'row_c' => function($in, $evar = false) use ($nap, &$cnts, &$json) {
@@ -574,7 +571,12 @@ class Globals
             ],
             'loaded' => $extns,
             'used' => explode(' ', SKY::i('gr_extns')),
-            'cnt' => $this->cnt,
+            'cnts' => function($i) use (&$cnts, &$json) {
+                if (!$i)
+                    Plan::mem_p('definitions.json', json_encode($json, JSON_PRETTY_PRINT));
+                return 2 == $i ? array_sum(array_map('count', $this->definitions)) - $cnts[0] - $cnts[1] : $cnts[$i];
+            },
+            'cdf' => $this->cnt,
         ];
     }
 

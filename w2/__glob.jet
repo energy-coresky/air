@@ -67,6 +67,7 @@
 </div>
 #.top
 <div style="margin:0 10px 10px 10px">
+  @block(`` as result)
   @loop(Globals::$used_ext as $key => $ary)@continue(!$key)
     @if($show_emp || $ary[0] || $ary[1] || $ary[2])
       <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key}}</h2>
@@ -101,10 +102,13 @@
     </table>
   ~loop
   @if(1)@use(`{{$total(true)}}` as cnt)~if
+  @inc(.total)
+  @if(1)@use(.total as result)~if
 </div>
 #.usage.user_code  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
 @inc(.top)
 <div style="margin:0 10px 10px 10px">
+@block(`` as result)
 @loop($parts as $i => $part)
   <h2 id="idnt-{{$i}}" style="margin-bottom:3px;">{{strtoupper($part)}}</h2>
   <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
@@ -130,6 +134,10 @@
   ~loop
   </table>
 ~loop
+#.total
+<br>Total {{1 + $e_usage->key()}} elements found. Scanned {{$cdf[0]}} files in {{$cdf[1]}} directories
+#.total
+@if(1)@use(.total as result)~if
 </div>
 <script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
 <tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
@@ -200,6 +208,7 @@
     <hr>
     Used {{count($used)-1}} of {{count($loaded)}}
 </fieldset>
+@block(`` as result)
 @loop($defs as $key => $ary)
   <h2 id="idnt-{{$_}}">
   @if('VAR'==$key)VARS ASSIGNING IN THE GLOBAL NAMESPACE@else{{$key}}~if
@@ -233,7 +242,10 @@
   </table>
 ~loop
 <br>
-Total {{1 + $e_idents->key()}} elements found. Scanned {{$cnt[0]}} files in {{$cnt[1]}} directories
+#.result
+Total {{1 + $e_idents->key()}} elements found. Scanned {{$cdf[0]}} files in {{$cdf[1]}} directories
+#.result
+@if(1)@use(.result)~if
 </div>
 #.mark.save.back
 @inc(.jscss)
