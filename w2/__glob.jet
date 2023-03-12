@@ -42,19 +42,7 @@
     ~loop
     <tr><td noborder><b>Total</b>:</td><td noborder>{{$total()}}</td></tr>
     @else
-    <tr><td>Total usage:</td><td>{{1}}</td></tr>
-      <tr><td style="padding-left:10px" noborder>
-          111:
-      </td><td noborder>11</td></tr>
-      <tr><td style="padding-left:10px" noborder>
-          222:
-      </td><td noborder>11</td></tr>
-      <tr><td style="padding-left:10px">
-          333:
-      </td><td>11</td></tr>
-    <tr><td>No problem:</td><td>{{1}}</td></tr>
-    <tr><td>Marked OK:</td><td>{{1}}</td></tr>
-    <tr><td>Unchecked usage:</td><td>{{1}}</td></tr>
+      @inc(.user_menu)
     ~if
   </table>
 </div>
@@ -63,11 +51,10 @@
 <a class="@active($show_ext)" style="font-weight:normal"
     @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show extensions</a>
 </h4>
-#.usage.header ----------------------------------------------------------------------------------------------------------
+#.usage.header.top ----------------------------------------------------------------------------------------------------------
 #use(.header)
 #use(.umenu as menu)
 @use(.m_glob)
-#.top
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
     <div class="fs16">
         App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
@@ -80,10 +67,9 @@
 </div>
 #.top
 <div style="margin:0 10px 10px 10px">
-  @loop(Globals::$used_ext as $key => $ary)
-    @continue(!$show_ext && $key || $show_ext && !$key)
+  @loop(Globals::$used_ext as $key => $ary)@continue(!$key)
     @if($show_emp || $ary[0] || $ary[1] || $ary[2])
-      <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key ?: 'user'}}</h2>
+      <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key}}</h2>
     ~if
     <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
       @loop($e_usage($key))
@@ -116,7 +102,47 @@
   ~loop
   @if(1)@use(`{{$total(true)}}` as cnt)~if
 </div>
-#.usage  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
+#.usage.user_code  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
+@inc(.top)
+<div style="margin:0 10px 10px 10px">
+@loop($parts as $i => $part)
+  <h2 id="idnt-{{$i}}" style="margin-bottom:3px;">{{strtoupper($part)}}</h2>
+  <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
+  @loop($e_usage($i))
+    <tr class="{{$row->class}}">
+      <td width="3%">{{1 + $_2}}</td>
+      <td width="30%">{{$row->name}}</td>
+      <td width="38%"><span>{{$row->pos}}</span>
+        @if($row->usage)+ {{$row->usage}} usage@if($row->files) in {{$row->files}} files~if~if
+      </td>
+      <td width="20%">{{$row->err}}</td>
+      <td width="9%" align="right">
+      @if($row->nap){{$row->nap}}
+      @elseif('bg-y'==$row->class)
+        <a @href(sky.g.form('{{22}}.{{11}}'))>mark OK</a>
+      ~if
+      </td>
+    </tr>
+    @empty
+    <tr>
+      <td class="bg-g p-20">not used</td>
+    </tr>
+  ~loop
+  </table>
+~loop
+</div>
+<script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
+<tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
+<tr><td>Unchecked uses:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)
+</script>
+#.user_code.user_menu
+  <tr><td>Total usage:</td><td>{{array_sum(array_map('count', Globals::$used_ext['']))}}</td></tr>
+    @loop($parts as $i => $part)
+    <tr><td style="padding-left:10px" noborder>
+        <u onclick="$('#idnt-{{$i}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$part}}</u>:
+    </td><td noborder>{{count(Globals::$used_ext[''][$i])}}</td></tr>
+    ~loop
+#.user_menu
 
 
 #.m_glob ==========================================================================================================
@@ -156,17 +182,15 @@
   <table cellspacing="0" cellpadding="0" width="100%">
     <tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
     @loop($defs as $key => $ary)
-      <tr><td style="padding-left:10px"{{'EVAL' == $key ? '' : ' noborder'}}>
+      <tr><td style="padding-left:10px" noborder>
           <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
-      </td><td{{'EVAL' == $key ? '' : ' noborder'}}>{{count($ary)}}</td></tr>
+      </td><td noborder>{{count($ary)}}</td></tr>
     ~loop
   </table>
   </div>
-#.menu.report ----------------------------------------------------------------------------------------------------------
-#use(`<h4>GLOBAL DEFINITIONS REPORT</h4>` as header)
-#use(.menu)
-@use(.m_glob)
-#.mark.save.back
+#.report.menu.mark.save.back ----------------------------------------------------------------------------------------------------------
+@use(`<h4>GLOBAL DEFINITIONS REPORT</h4>` as header)
+@use(.menu)
 @inc(.top)
 <div style="margin:0 10px 10px 10px">
 <fieldset id="gr-modules"><legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>

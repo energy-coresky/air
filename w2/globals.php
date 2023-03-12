@@ -64,7 +64,7 @@ class Globals
         $curly = $glob_list = $ns_kw = 0;
         $place = 'GLOB';
         $vars = [];
-        $out = $p1 = $p2 = $ns = '';
+        $p1 = $p2 = $ns = '';
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
             $this->pos = "$fn $line";
@@ -254,7 +254,7 @@ class Globals
     }
 
     function usage($fn) {
-        $assign = function ($x, &$ary, $name, $ns = '') {
+        $use = function ($x, &$ary, $name, $ns = '', $y = 0) {
             if ($abs = '\\' === $name[0]) {
                 $name = substr($name, 1);
             } elseif (strpos($name, '\\') && $ns) {
@@ -268,7 +268,7 @@ class Globals
             } elseif (!$abs && '' === $extn) {
                 $name = $ns . $name;
             }
-            $p =& self::$used_ext[$extn][$x];
+            $p =& self::$used_ext[$extn][$extn || !$y ? $x : $y];
             if (isset($p[$name])) {
                 $p[$name][1]++;
                 if ($this->pos[0] != $p[$name][0][0])
@@ -278,12 +278,12 @@ class Globals
                 $p[$name] = [$this->pos, 0, 0];
             }
         };
-        $this->cnt[0]++;
+        $this->cnt[$curly = 0]++;
         $php = file_get_contents($fn);
         $line = 1;
         $this->use = [[], [], []]; # cls fun const
-        $out = $p1 = $p2 = $p3 = $ns = $name = $pos = '';
-        $clist = [T_OBJECT_OPERATOR, T_FUNCTION, T_DOUBLE_COLON, T_NEW];
+        $p1 = $p2 = $p3 = $ns = $name = $pos = $quot = '';
+        $clist = [T_OBJECT_OPERATOR, T_FUNCTION, T_DOUBLE_COLON, T_NEW, T_INSTANCEOF];
         $slist = ['self', 'parent'];
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
@@ -294,16 +294,13 @@ class Globals
                 switch ($id) { // 2do extends & implements kw.. const ??
                     case T_WHITESPACE: case T_COMMENT:
                         continue 2;
+                    case T_CURLY_OPEN:
+                        ++$curly;
+                        break;
                     case T_NAMESPACE:
-                        $pos = 'ns';
                         $ns = '';
-                        break;
-                    case T_NEW:
-                        $pos = 'new';
-                        $name = '';
-                        break;
-                    case T_USE:
-                        $pos = 'use';
+                    case T_USE: case T_NEW: case T_IMPLEMENTS: case T_CLASS: case T_INTERFACE: case T_TRAIT:
+                        $pos = substr(token_name($id), 2, 3);
                         $name = '';
                         $usn = 0;
                         break;
@@ -312,78 +309,98 @@ class Globals
                         break;
                     case T_CONST:
                         $usn = 2;
+                        $pos = 'CON';
                         break;
-                    case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
-                        if ('ns' == $pos) {
-                            $ns .= $str;
-                        } elseif ('\\' === $str) {
-                            $name .= '' === $name && is_array($p1) ? "$p1[1]\\" : '\\';
-                        } elseif ($name || 'use' == $pos || 'new' == $pos) {
-                            $name .= $str;
-                        }
+                    case T_STRING: case T_NS_SEPARATOR:  //case T_NAME_QUALIFIED:
+                        'NAM' == $pos ? ($ns .= $str) : ($name .= $str);
                         $id = [$id, $str];
                         break;
                     case T_INLINE_HTML:
                         break;
                     case T_DOUBLE_COLON: # ::
                         if (is_array($p1) && T_STRING === $p1[0] && !in_array($p1[1], $slist))
-                            $assign(0, self::$cls2ext, $name ?: $p1[1], $ns);
+                            $use(0, self::$cls2ext, $name ?: $p1[1], $ns);
                         $name = '';
                         break;
                 }
             }
-
+            $prev = $pos;
             switch ($id) {
                 case '(': # use function
-                    if ('use' === $pos) {
+                    if ('USE' === $pos) {
                         $pos = '';
-                    } elseif ('new' != $pos && is_array($p1) && T_STRING === $p1[0] && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) {
-                        $assign(1, self::$functions, $p1[1], $name ? substr($name, 1, -strlen($p1[1])) : $ns);
+                    } elseif ('NEW' != $pos && is_array($p1) && T_STRING === $p1[0] && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) {
+                        $use(1, self::$functions, $p1[1], $name ? substr($name, 1, -strlen($p1[1])) : $ns);
                         $name = '';
                     }
                     break;
                 case '{':
-                    if ('ns' == $pos) {
-                        $pos = '';
+                    ++$curly;
+                case ',':
+                    if ('NAM' == $pos) {
                         '' === $ns or $ns .= '\\';
+                    } elseif ('IMP' == $pos) {
+                        $use(0, self::$cls2ext, $name, $ns, 3); # interfaces
+                        $name = '';
+                    } elseif ('USE' == $pos && $curly) {
+                        $use(0, self::$cls2ext, $name, $ns, 4); # traits
+                        $name = '';
                     }
+                    if (',' !== $id || !in_array($pos, ['IMP', 'USE']))
+                        $pos = '';
+                    break;
+                case '}':
+                    --$curly;
                     break;
                 case ';':
-                    if ('ns' == $pos) {
+                    if ('NAM' == $pos) {
                         $pos = '';
                         $ns .= '\\';
-                    } elseif ('use' === $pos) {
-                        $this->use[$usn][$p1[1]] = T_AS === $p2 ? substr($name, 0, -strlen($p1[1])) : $name;
+                    } elseif ('USE' === $pos) {
+                        if ($curly) {
+                            $use(0, self::$cls2ext, $name, $ns, 4); # traits
+                        } else {
+                            $this->use[$usn][$p1[1]] = T_AS === $p2 ? substr($name, 0, -strlen($p1[1])) : $name;
+                        }
                         $pos = $name = '';
                     }
                     break;
+                case '"':
+                    $quot = !$quot;
+                    break;
             }
 
-            if ('new' == $pos && T_NEW !== $id && !is_array($id)) {
+            if ('NEW' == $pos && T_NEW !== $id && !is_array($id)) {
                 if (!in_array($id, [T_VARIABLE, T_STATIC]) && $name && !in_array($name, $slist))
-                    $assign(0, self::$cls2ext, $name, $ns);
+                    $use(0, self::$cls2ext, $name, $ns);
                 $pos = $name = '';
             }
-            if ($name && T_AS !== $id && !is_array($id)) # reset const for ::
-                $name = '';
+            if ($name && !is_array($id)) { # constants
+                if (!$prev && !$quot && !in_array($p2, $clist) && T_VARIABLE !== $id && '{' !== $id && '&' !== $p2)
+                    $use(2, self::$constants, $name, $ns);
+                T_AS === $id && 'USE' === $pos or $name = '';
+            }
             $p3 = $p2;
             $p2 = $p1;
             $p1 = $id;
         }
     }
                             // see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
-    function c_usage() {                     // new Rule\   (use partially, 2do)
+    function c_usage() {
         SKY::d('gr_start', 'usage');
         $extns = self::extensions();
         if (isset($_POST['s']))
             SKY::d('show_ext', $_POST['s']);
+        SKY::d('show_ext') or MVC::body('_glob.user_code');
         //trace($extns);
         self::$used_ext = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
-        self::$used_ext += ['' => [[], [], []]];
+        self::$used_ext += ['' => [[], [], [], [], []]]; # classes, funcs, consts, interfaces, traits
         $this->walk_files([$this, 'usage']);
-        $total = [0, 0, 0];
+        $total = $cnts = [0, 0, 0]; # no-problem, ok, unchecked
         $used = [];
+
         return [
+            'parts' => [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'],
             'show_ext' => SKY::d('show_ext'),
             'show_emp' => 0,
             'func' => function ($ary, $key) use (&$total, &$used) {
@@ -400,27 +417,37 @@ class Globals
                     SKY::i('gr_extns', implode(' ', $used));
                 return "$total[0]/$total[1]/$total[2]";
             },
+            'cnts' => function($i) use (&$cnts) {
+                return $cnts[$i];
+            },
             'e_usage' => [
                 'max_i' => -1, // infinite
-                'row_c' => function($ext, $evar = false) use ($total) {
+                'row_c' => function($ext, $evar = false) use (&$cnts) {
                     static $p, $i, $ary = [], $defs = 0;
                     if ($evar) {
-                        $i = 0;
+                        is_int($i = $ext) ? ($ext = '') : ($i = 0);
                         $p = self::$used_ext[$ext];
-                        $ext or $defs = json_decode(Plan::mem_gq('definitions.json'));
+                        '' !== $ext or 0 !== $defs or $defs = json_decode(Plan::mem_gq('definitions.json') ?: '[]');
+                        if (0 !== $defs)
+                            $ary = $p[$i] and uksort($ary, 'strcasecmp');
                         return false;
                     }
+                    $user = 0 !== $defs;
                     $chd = $err = '';
                     for (; !$ary; $i++)
-                        if ($i > 2) {
+                        if ($i > 2 || $user) {
                             return false;
                         } elseif ($ary = $p[$chd = $i]) {
                             uksort($ary, 'strcasecmp');
                         }
                     $name = key($ary);
                     $np = array_shift($ary);
-                    if ($defs && !in_array(strtolower($name), $defs[$i - 1]))
+                    if ($user && (!$defs || !in_array(strtolower($name), $defs[$i > 2 ? 0 : $i]))) {
                         $err = 'Definition not found';
+                        $cnts[2]++;
+                    } else {
+                        $cnts[0]++;
+                    }
                     return [
                         'chd' => $chd,
                         'name' => $name,
