@@ -16,7 +16,7 @@ class Globals
         'CLASS' => [],
         'EVAL' => [],
     ];
-    static $ns = [];
+    static $also_ns = [];
     static $used_ext = [];
     static $cls2ext = [];
 
@@ -142,11 +142,11 @@ class Globals
                     $glob_list = false;
                     if ($ns_kw) {
                         $ns_kw = false;
-                        if (!isset(self::$ns[$ns])) {
+                        if (!isset(self::$also_ns[$ns])) {
                             $this->push('NAMESPACE', $ns);
-                            self::$ns[$ns] = 0;
+                            self::$also_ns[$ns] = 0;
                         } else {
-                            self::$ns[$ns]++;
+                            self::$also_ns[$ns]++;
                         }
                         $ns .= '\\';
                     }
@@ -254,20 +254,16 @@ class Globals
     }
 
     function usage($fn) {
-        $use = function ($x, &$ary, $name, $ns = '', $y = 0) {
+        $use = function ($x, &$ary, &$name, $y = 0) {
             if ($abs = '\\' === $name[0]) {
                 $name = substr($name, 1);
-            } elseif (strpos($name, '\\') && $ns) {
+            } elseif (strpos($name, '\\') && $this->ns) {
                 list ($pfx, $name) = explode('\\', $name, 2);
             }
-            $extn = $ary[$name] ?? '';
-            if (isset($this->use[$x][$pfx ?? $name])) {
+            if ($ok = !$abs && isset($this->use[$x][$pfx ?? $name]))
                 $name = isset($pfx) ? $this->use[$x][$pfx] . "\\$name" : $this->use[$x][$name];
-                if (strpos($name, '\\'))
-                    $extn = '';
-            } elseif (!$abs && '' === $extn) {
-                $name = $ns . $name;
-            }
+            $extn = $ary[2 == $x ? $name : strtolower($name)] ?? '';
+            $abs or $ok or '' !== $extn or $name = $this->ns . $name;
             $p =& self::$used_ext[$extn][$extn || !$y ? $x : $y];
             if (isset($p[$name])) {
                 $p[$name][1]++;
@@ -277,29 +273,45 @@ class Globals
             } else {
                 $p[$name] = [$this->pos, 0, 0];
             }
+            $name = '';
         };
         $this->cnt[$curly = 0]++;
         $php = file_get_contents($fn);
-        $line = 1;
+        $line = $ok = 1;
         $this->use = [[], [], []]; # cls fun const
-        $p1 = $p2 = $p3 = $ns = $name = $pos = $quot = '';
-        $clist = [T_OBJECT_OPERATOR, T_FUNCTION, T_DOUBLE_COLON, T_NEW, T_INSTANCEOF];
-        $slist = ['self', 'parent'];
+        $this->ns = $p1 = $name = $pos = $quot = '';
+        $clist = [T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW, T_CONST];
+        $slist = ['self', 'parent', 'static'];
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
             $this->pos = [$fn, $line];
             if (is_array($token)) {
                 list($id, $str) = $token;
                 $line += substr_count($str, "\n");
-                switch ($id) { // 2do extends & implements kw.. const ??
+                switch ($id) {
+                    case T_STRING: case T_NS_SEPARATOR:  //case T_NAME_QUALIFIED:
+                        if (T_AS === $p1 && $name) {
+                            $this->use[$usn][$str] = $name;
+                            $name = '';
+                        } else {
+                            'NAM' == $pos ? ($this->ns .= $str) : ($name .= $str);
+                        }
                     case T_WHITESPACE: case T_COMMENT:
                         continue 2;
+                    case T_VARIABLE: case T_STATIC:
+                        $pos = '';
+                        break;
                     case T_CURLY_OPEN:
                         ++$curly;
                         break;
                     case T_NAMESPACE:
-                        $ns = '';
-                    case T_USE: case T_NEW: case T_IMPLEMENTS: case T_CLASS: case T_INTERFACE: case T_TRAIT:
+                        $this->ns = '';
+                    case T_IMPLEMENTS:
+                        if ('EXT' === $pos)
+                            $use(0, self::$cls2ext, $name);
+                    case T_CLASS: case T_INTERFACE: case T_TRAIT:
+                    case T_EXTENDS: case T_INSTANCEOF:
+                    case T_USE: case T_NEW:
                         $pos = substr(token_name($id), 2, 3);
                         $name = '';
                         $usn = 0;
@@ -309,80 +321,78 @@ class Globals
                         break;
                     case T_CONST:
                         $usn = 2;
-                        $pos = 'CON';
                         break;
-                    case T_STRING: case T_NS_SEPARATOR:  //case T_NAME_QUALIFIED:
-                        'NAM' == $pos ? ($ns .= $str) : ($name .= $str);
-                        $id = [$id, $str];
-                        break;
-                    case T_INLINE_HTML:
-                        break;
-                    case T_DOUBLE_COLON: # ::
-                        if (is_array($p1) && T_STRING === $p1[0] && !in_array($p1[1], $slist))
-                            $use(0, self::$cls2ext, $name ?: $p1[1], $ns);
+                    case T_DOUBLE_COLON:
+                        if ($name && !in_array($name, $slist))
+                            $use(0, self::$cls2ext, $name);
                         $name = '';
                         break;
                 }
             }
             $prev = $pos;
-            switch ($id) {
-                case '(': # use function
-                    if ('USE' === $pos) {
+            switch ($id) {//T_INLINE_HTML
+case '&':
+                    continue 2;
+                case '(':
+                    if ('USE' === $pos) { # use in the Closure
                         $pos = '';
-                    } elseif ('NEW' != $pos && is_array($p1) && T_STRING === $p1[0] && !in_array($p2, $clist) && !('&' == $p2 && T_FUNCTION == $p3)) {
-                        $use(1, self::$functions, $p1[1], $name ? substr($name, 1, -strlen($p1[1])) : $ns);
-                        $name = '';
+                    } elseif (!$pos && $name && !in_array($p1, $clist)) {
+                        $use(1, self::$functions, $name);
                     }
-                    break;
-                case '{':
-                    ++$curly;
-                case ',':
-                    if ('NAM' == $pos) {
-                        '' === $ns or $ns .= '\\';
-                    } elseif ('IMP' == $pos) {
-                        $use(0, self::$cls2ext, $name, $ns, 3); # interfaces
-                        $name = '';
-                    } elseif ('USE' == $pos && $curly) {
-                        $use(0, self::$cls2ext, $name, $ns, 4); # traits
-                        $name = '';
-                    }
-                    if (',' !== $id || !in_array($pos, ['IMP', 'USE']))
-                        $pos = '';
                     break;
                 case '}':
                     --$curly;
                     break;
-                case ';':
-                    if ('NAM' == $pos) {
+                case '{':
+                    ++$curly;
+                    if ('EXT' === $pos) {
+                        $use(0, self::$cls2ext, $name); # extends class
+                    } elseif ('IMP' === $pos) {
+                        $use(0, self::$cls2ext, $name, 3); # interfaces
+                    } elseif ('NAM' === $pos && $this->ns) {
+                        $this->ns .= '\\';
+                    }
+                    $pos = '';
+                    break;
+                case ',':
+                    if ('IMP' === $pos) {
+                        $use(0, self::$cls2ext, $name, 3); # interfaces via comma
+                    } elseif ('USE' === $pos && $curly) {
+                        $use(0, self::$cls2ext, $name, 4); # traits via comma
+                    } else {
                         $pos = '';
-                        $ns .= '\\';
-                    } elseif ('USE' === $pos) {
-                        if ($curly) {
-                            $use(0, self::$cls2ext, $name, $ns, 4); # traits
-                        } else {
-                            $this->use[$usn][$p1[1]] = T_AS === $p2 ? substr($name, 0, -strlen($p1[1])) : $name;
-                        }
-                        $pos = $name = '';
                     }
                     break;
                 case '"':
                     $quot = !$quot;
                     break;
+                case ';':
+                    if ('NAM' === $pos) {
+                        $this->ns .= '\\';
+                    } elseif ('USE' === $pos) {
+                        if ($curly) {
+                            $use(0, self::$cls2ext, $name, 4); # traits
+                        } else {
+                            $ary = explode('\\', $name);
+                            $this->use[$usn][end($ary)] = $name;
+                        }
+                    }
+                    $pos = $name = '';
+                    break;
             }
 
-            if ('NEW' == $pos && T_NEW !== $id && !is_array($id)) {
-                if (!in_array($id, [T_VARIABLE, T_STATIC]) && $name && !in_array($name, $slist))
-                    $use(0, self::$cls2ext, $name, $ns);
+            if ($name && (T_AS !== $id || 'USE' !== $pos)) { # constants
+                if ('NEW' === $pos) { # new cls
+                    if (!in_array($id, [T_VARIABLE, ]) && !in_array($name, $slist))
+                        $use(0, self::$cls2ext, $name);
+                } elseif (!$prev && !$quot && !in_array($p1, $clist) && !in_array($id, ['{', T_VARIABLE, T_ELLIPSIS])
+                    && !in_array(strtolower($name), ['true', 'false', 'null', 'bool', 'void', 'string'])) {
+                    $use(2, self::$constants, $name);
+                }
                 $pos = $name = '';
             }
-            if ($name && !is_array($id)) { # constants
-                if (!$prev && !$quot && !in_array($p2, $clist) && T_VARIABLE !== $id && '{' !== $id && '&' !== $p2
-                    && !in_array(strtolower($name), ['true', 'false', 'null', 'bool', 'void', 'string']))
-                    $use(2, self::$constants, $name, $ns);
-                T_AS === $id && 'USE' === $pos or $name = '';
-            }
-            $p3 = $p2;
-            $p2 = $p1;
+         #   $p3 = $p2;
+          #  $p2 = $p1;
             $p1 = $id;
         }
     }
@@ -455,7 +465,6 @@ class Globals
                         'err' => $err,
                         'class' => $err ? ($err ? 'bg-r' : 'bg-y') : 'norm', //bg-b
                         'nap' => '',
-                        //'num' => $num++,
                     ];
                 },
             ],
@@ -475,7 +484,7 @@ class Globals
         foreach ($extns as $n => $extn) {
             $rn = new ReflectionExtension($extn);
             $list = $rn->getClassNames();
-            self::$cls2ext += array_combine($list, array_pad([], count($list), $extn));
+            self::$cls2ext += array_change_key_case(array_combine($list, array_pad([], count($list), $extn)));
             self::$functions += array_change_key_case(array_map(function() use ($extn) {
                 return $extn;
             }, $rn->getFunctions()));

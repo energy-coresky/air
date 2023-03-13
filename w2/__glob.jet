@@ -221,8 +221,8 @@
         <td width="30%">{{$ident}}</td>
         <td width="38%">
           <span>{{$row->pos}}</span>
-          @if('NAMESPACE' == $key && Globals::$ns[$ident])
-            <span style="color:red">+ {{Globals::$ns[$ident]}} files</span>
+          @if('NAMESPACE' == $key && Globals::$also_ns[$ident])
+            <span style="color:red">+ {{Globals::$also_ns[$ident]}} files</span>
           ~if
         </td>
         <td width="20%">{{$row->desc}}</td>
