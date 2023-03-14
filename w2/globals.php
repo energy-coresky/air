@@ -4,7 +4,6 @@ class Globals
 {
     private $exts = ['php'];//, 'jet'
     private $ext;
-    private $cnt = [0, 0];
     private $definitions = [
         'NAMESPACE' => [], 'INTERFACE' => [], 'TRAIT' => [], 'VAR' => [], 'FUNCTION' => [],
         'CONST' => [], 'DEFINE' => [], 'CLASS' => [], 'EVAL' => [],
@@ -21,6 +20,11 @@ class Globals
         'match', 'readonly', 'fn', 'yield', // 'yield from'
     ];
     private $predefined_constants = ['__class__', '__dir__', '__file__', '__function__', '__line__', '__method__', '__namespace__', '__trait__'];
+
+    static $total = [];
+    static $cnt = [0, 0, 0, 0, 0];
+    static $parts = [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'];
+
 
     private static $functions = [];
     private static $constants = [];
@@ -50,7 +54,7 @@ class Globals
     }
 
     function parse($fn, $line_start = 1) {
-        $this->cnt[0]++;
+        self::$cnt[0]++;
         $php = file_get_contents($fn);
         $line = $line_start;
         $curly = $glob_list = $ns_kw = 0;
@@ -267,7 +271,7 @@ class Globals
             }
             $name = '';
         };
-        $this->cnt[$curly = 0]++;
+        self::$cnt[$curly = 0]++;
         $php = file_get_contents($fn);
         $line = $ok = 1;
         $this->use = [[], [], []]; # cls fun const
@@ -387,48 +391,33 @@ case '&':
         }
     }
                             // see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
-    function c_usage() {
+    function c_usage($show_ext = true) {
         SKY::d('gr_start', 'usage');
         $extns = self::extensions();
-        if (isset($_POST['s']))
-            SKY::d('show_ext', $_POST['s']);
-        SKY::d('show_ext') or MVC::body('_glob.user_code');
+        $show_ext or MVC::body('_glob.user_code');
         //trace($extns);
         self::$used_ext = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
         self::$used_ext += ['' => [[], [], [], [], []]]; # classes, funcs, consts, interfaces, traits
         $this->walk_files([$this, 'usage']);
-        $total = $cnts = [0, 0, 0]; # no-problem, ok, unchecked
-        $used = [];
-
         return [
-            'parts' => [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'],
-            'show_ext' => SKY::d('show_ext'),
             'show_emp' => 0,
-            'func' => function ($ary, $key) use (&$total, &$used) {
-                $used[] = $key;
-                $total[0] += ($c0 = count($ary[0]));
-                $total[1] += ($c1 = count($ary[1]));
-                $total[2] += ($c2 = count($ary[2]));
-                return "$c0/$c1/$c2";
-            },
-            'total' => function ($ext = false) use (&$total, &$used) {
+            'total' => function ($ext = false) use (&$total, $show_ext) {
                 if ($ext)
                     return count($used) - 1;
-                if (SKY::d('show_ext'))
+                if ($show_ext)
                     SKY::i('gr_extns', implode(' ', $used));
                 return "$total[0]/$total[1]/$total[2]";
             },
             'e_usage' => [
                 'max_i' => -1, // infinite
-                'row_c' => function($ext, $evar = false) use (&$cnts) {
-                    static $p, $i, $ary = [], $defs = 0;
+                'row_c' => function($ext, $evar = false) {
+                    static $p, $i, $j = 0, $defs = 0, $ary = [];
                     if ($evar) {
                         is_int($i = $ext) ? ($ext = '') : ($i = 0);
                         $p = self::$used_ext[$ext];
                         '' !== $ext or 0 !== $defs or $defs = json_decode(Plan::mem_gq('definitions.json') ?: '[]');
                         if (0 !== $defs)
                             $ary = $p[$i] and uksort($ary, 'strcasecmp');
-                        return false;
                     }
                     $user = 0 !== $defs;
                     $chd = $err = '';
@@ -436,18 +425,27 @@ case '&':
                         if ($i > 2 || $user) {
                             return false;
                         } elseif ($ary = $p[$chd = $i]) {
+                            if ($evar)
+                                $j = $evar->key() + 1;
                             uksort($ary, 'strcasecmp');
                         }
+                    if ($evar) {
+                        Globals::$total[$ext][0] = ($c0 = count($p[0]));
+                        Globals::$total[$ext][1] = ($c1 = count($p[1]));
+                        Globals::$total[$ext][2] = ($c2 = count($p[2]));
+                        Globals::$total[$ext][3] = "$c0/$c1/$c2";
+                        return false;
+                    }
                     $name = key($ary);
                     $np = array_shift($ary);
                     if ($user && (!$defs || !in_array(strtolower($name), $defs[$i > 2 ? 0 : $i]))) {
                         $err = 'Definition not found';
-                        $cnts[2]++;
+                        self::$cnt[3]++;
                     } else {
-                        $cnts[0]++;
+                        self::$cnt[2]++;
                     }
                     return [
-                        'chd' => $chd,
+                        'chd' => $j == $ext->__i ? $i - 1 : $chd,
                         'name' => $name,
                         'pos' => $np[0][0] . '^' . $np[0][1],
                         'usage' => $np[1],
@@ -458,11 +456,18 @@ case '&':
                     ];
                 },
             ],
-            'cnts' => function($i) use (&$cnts) {
-                return $cnts[$i];
-            },
-            'cdf' => $this->cnt,
         ];
+    }
+
+    function c_run() {
+        global $sky;
+        if (!$sky->fly)
+            return [];
+        $m = 'ext' == $sky->_2 ? 'usage' : 'user_code';
+        json([
+            'html' => view("_glob.$m", $this->c_usage('ext' == $sky->_2)),
+            'menu' => tag(view('_glob.menu', []), 'style="position:sticky; top:42px"'),
+        ]);
     }
 
     static function extensions($simple = false) {
@@ -492,7 +497,7 @@ case '&':
         if ($flag = DIR_M != DIR_S && '.' == $this->path)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
         foreach ($dirs as $dir) {
-            $this->cnt[1]++;
+            self::$cnt[1]++;
             foreach (Rare::list_path($dir, 'is_file') as $fn) {
                 $ary = explode('.', $fn);
                 $this->ext = end($ary);
@@ -525,20 +530,19 @@ case '&':
             uksort($definition, 'strcasecmp');
 
         $nap = Plan::mem_rq('report.nap');
-        $cnts = [0, 0]; # no-problem, ok
         $json = [];
 
         return [
             'defs' => $this->definitions,
             'e_idents' => [
                 'max_i' => -1, // infinite
-                'row_c' => function($in, $evar = false) use ($nap, &$cnts, &$json) {
+                'row_c' => function($in, $evar = false) use ($nap, &$json) {
                     static $ary, $gt, $id, $num, $err_msg, $def_prev = '';
                     if ($evar) {
                         $gt = count($ary = $in[0]) > 1;
                         $id = $in[1];
                         if (isset($nap[$id]))
-                            $cnts[1]++;
+                            self::$cnt[3]++;
                         list ($def, $ident) = explode('.', $id);
                         if (!in_array($def, ['NAMESPACE', 'VAR', 'EVAL'])) {
                             $z = 'FUNCTION' == $def ? 1 : (in_array($def, ['CONST', 'DEFINE']) ? 2 : 0);
@@ -558,7 +562,7 @@ case '&':
                          $x = substr($x, 1);
                     $ok = isset($nap[$id]);
                     if (!$gt = $gt || $c[2])
-                        $cnts[0]++;
+                        self::$cnt[2]++;
                     return [
                         'class' => $gt ? ($ok ? 'bg-y' : 'bg-r') : 'norm', //bg-b
                         'pos' => "$c[0]^$c[1]",
@@ -570,20 +574,14 @@ case '&':
             ],
             'loaded' => $extns,
             'used' => explode(' ', SKY::i('gr_extns')),
-            'cnts' => function($i) use (&$cnts, &$json) {
+            'cnts' => function($i) use (&$json) {
                 if (!$i)
                     Plan::mem_p('definitions.json', json_encode($json, JSON_PRETTY_PRINT));
-                return 2 == $i ? array_sum(array_map('count', $this->definitions)) - $cnts[0] - $cnts[1] : $cnts[$i];
+                return 2 == $i
+                    ? array_sum(array_map('count', $this->definitions)) - self::$cnt[2] - self::$cnt[3]
+                    : self::$cnt[$i + 2];
             },
-            'cdf' => $this->cnt,
         ];
-    }
-
-    function c_run() {
-        global $sky;
-        if ($sky->fly)
-            echo 22;
-        return [];
     }
 
     function c_saved() {
