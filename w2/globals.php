@@ -6,19 +6,11 @@ class Globals
     private $ext;
     private $cnt = [0, 0];
     private $definitions = [
-        'NAMESPACE' => [],
-        'INTERFACE' => [],
-        'TRAIT' => [],
-        'VAR' => [],
-        'FUNCTION' => [],
-        'CONST' => [],
-        'DEFINE' => [],
-        'CLASS' => [],
-        'EVAL' => [],
+        'NAMESPACE' => [], 'INTERFACE' => [], 'TRAIT' => [], 'VAR' => [], 'FUNCTION' => [],
+        'CONST' => [], 'DEFINE' => [], 'CLASS' => [], 'EVAL' => [],
     ];
     static $also_ns = [];
     static $used_ext = [];
-    static $cls2ext = [];
 
     private $keywords = [
         '__halt_compiler', 'abstract', 'and', 'array', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const', 'continue',
@@ -32,9 +24,9 @@ class Globals
 
     private static $functions = [];
     private static $constants = [];
+    private static $classes = [];
 
     private $interfaces;
-    private $classes;
     private $traits;
 
     private $all;
@@ -308,7 +300,7 @@ class Globals
                         $this->ns = '';
                     case T_IMPLEMENTS:
                         if ('EXT' === $pos)
-                            $use(0, self::$cls2ext, $name);
+                            $use(0, self::$classes, $name);
                     case T_CLASS: case T_INTERFACE: case T_TRAIT:
                     case T_EXTENDS: case T_INSTANCEOF:
                     case T_USE: case T_NEW:
@@ -324,7 +316,7 @@ class Globals
                         break;
                     case T_DOUBLE_COLON:
                         if ($name && !in_array($name, $slist))
-                            $use(0, self::$cls2ext, $name);
+                            $use(0, self::$classes, $name);
                         $name = '';
                         break;
                 }
@@ -346,9 +338,9 @@ case '&':
                 case '{':
                     ++$curly;
                     if ('EXT' === $pos) {
-                        $use(0, self::$cls2ext, $name); # extends class
+                        $use(0, self::$classes, $name); # extends class
                     } elseif ('IMP' === $pos) {
-                        $use(0, self::$cls2ext, $name, 3); # interfaces
+                        $use(0, self::$classes, $name, 3); # interfaces
                     } elseif ('NAM' === $pos && $this->ns) {
                         $this->ns .= '\\';
                     }
@@ -356,9 +348,9 @@ case '&':
                     break;
                 case ',':
                     if ('IMP' === $pos) {
-                        $use(0, self::$cls2ext, $name, 3); # interfaces via comma
+                        $use(0, self::$classes, $name, 3); # interfaces via comma
                     } elseif ('USE' === $pos && $curly) {
-                        $use(0, self::$cls2ext, $name, 4); # traits via comma
+                        $use(0, self::$classes, $name, 4); # traits via comma
                     } else {
                         $pos = '';
                     }
@@ -371,7 +363,7 @@ case '&':
                         $this->ns .= '\\';
                     } elseif ('USE' === $pos) {
                         if ($curly) {
-                            $use(0, self::$cls2ext, $name, 4); # traits
+                            $use(0, self::$classes, $name, 4); # traits
                         } else {
                             $ary = explode('\\', $name);
                             $this->use[$usn][end($ary)] = $name;
@@ -384,15 +376,13 @@ case '&':
             if ($name && (T_AS !== $id || 'USE' !== $pos)) { # constants
                 if ('NEW' === $pos) { # new cls
                     if (!in_array($id, [T_VARIABLE, ]) && !in_array($name, $slist))
-                        $use(0, self::$cls2ext, $name);
+                        $use(0, self::$classes, $name);
                 } elseif (!$prev && !$quot && !in_array($p1, $clist) && !in_array($id, ['{', T_VARIABLE, T_ELLIPSIS])
                     && !in_array(strtolower($name), ['true', 'false', 'null', 'bool', 'void', 'string'])) {
                     $use(2, self::$constants, $name);
                 }
                 $pos = $name = '';
             }
-         #   $p3 = $p2;
-          #  $p2 = $p1;
             $p1 = $id;
         }
     }
@@ -484,7 +474,7 @@ case '&':
         foreach ($extns as $n => $extn) {
             $rn = new ReflectionExtension($extn);
             $list = $rn->getClassNames();
-            self::$cls2ext += array_change_key_case(array_combine($list, array_pad([], count($list), $extn)));
+            self::$classes += array_change_key_case(array_combine($list, array_pad([], count($list), $extn)));
             self::$functions += array_change_key_case(array_map(function() use ($extn) {
                 return $extn;
             }, $rn->getFunctions()));
@@ -520,11 +510,11 @@ case '&':
         SKY::d('gr_start', 'report');
         $extns = self::extensions();
         $this->interfaces = array_flip(get_declared_interfaces());
-        $this->classes = array_flip(get_declared_classes());
+        $classes = array_flip(get_declared_classes());
         $this->traits = array_flip(get_declared_traits());
         //require __DIR__ . '/internals.php'; collect maximal list? 2do: save it to DB with links to docs
 
-        $all = self::$constants + $this->interfaces + $this->classes + $this->traits;
+        $all = self::$constants + $this->interfaces + $classes + $this->traits;
         $this->all = array_fill_keys(array_keys($all), 0);
         $this->all_lc = array_change_key_case($this->all);
 
@@ -587,6 +577,13 @@ case '&':
             },
             'cdf' => $this->cnt,
         ];
+    }
+
+    function c_run() {
+        global $sky;
+        if ($sky->fly)
+            echo 22;
+        return [];
     }
 
     function c_saved() {

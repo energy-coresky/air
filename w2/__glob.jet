@@ -28,7 +28,7 @@
 #.code
 
 #.umenu ==========================================================================================================
-<br><div class="other-task">Globals report</div>
+<br><div class="other-task">Global report</div>
 <div class="other-info">
   <table cellspacing="0" cellpadding="0" width="100%">
     @if($show_ext)
@@ -156,7 +156,8 @@
 #.m_glob ==========================================================================================================
 <a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Settings</a>
 <a class="inner-menu" href="_glob?report"@active($sky->_1 == 'report')>Report Definitions</a>
-<a class="inner-menu" href="_glob?usage"@active($sky->_1 == 'usage')>Report Usage</a>
+<a class="inner-menu" href="_glob?usage"@active($sky->_1 == 'usage')>Extensions Usage</a>
+<a class="inner-menu" href="_glob?run=user"@active($sky->_1 == 'run')>User Code Usage</a>
 <a class="inner-menu" href="_glob?saved"@active($sky->_1 == 'saved')>Saved Reports</a>
 <a class="inner-menu" href="_glob?lint"@active($sky->_1 == 'lint')>Run All Lints</a>
 <a class="inner-menu" href="_glob?code"@active($sky->_1 == 'code')>Code Analysis</a>
@@ -169,6 +170,8 @@
     </div>
 </div>
 <div style="margin:0 10px 10px 10px">
+  <p>
+  [ ] show error: "definition not used"
   <p>
   @loop($dirs as $one)
     @continue($red = $continue($one))
@@ -185,7 +188,7 @@
 #.dirs.skip
 
 #.menu ==========================================================================================================
-  <br><div class="other-task">Globals report</div>
+  <br><div class="other-task">Global report</div>
   <div class="other-info">
   <table cellspacing="0" cellpadding="0" width="100%">
     <tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
@@ -286,3 +289,38 @@ sky.g.dir = function(el) {
 }
 </script>
 #.jscss
+
+#.head
+<h4>
+@if(0)USER CODE USAGE REPORT
+@elseif(1)PHP EXTENSIONS USAGE REPORT
+@elseGLOBAL DEFINITIONS REPORT~if
+</h4>
+#.run.head
+#use(.head as header)
+@use(.m_glob)
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
+  <div class="fs16">
+    App Version: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
+  </div>
+</div>
+<div class="bg-wx bg-x">
+  <div class="fs16">
+    Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
+  </div>
+</div>
+<div style="margin:0 10px 10px 10px">
+  <h1>Loading... <progress max="100" value="10"></progress></h1>
+</div>
+@inc(.jscss)
+<script>
+sky.g.run = function(m) {
+  ajax('run&{{$sky->_2}}', {}, function(r) {
+    alert(r)
+    $('#master').html(11);
+  });
+}
+sky.g.run()
+</script>
+#.run
+

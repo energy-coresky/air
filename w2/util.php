@@ -176,5 +176,4 @@ class Util
             echo "$plus</span>";
         }
     }
-
 }

@@ -151,6 +151,41 @@ class Console
         system("git push origin master");
     }
 
+    static function test($m1 = 5, $m2 = 100) {
+        echo rand(0, $m2);
+        sleep(rand(1, $m1));
+        echo rand(0, $m2);
+        sleep(rand(1, $m1));
+        echo 'finished';
+    }
+
+    static function thread($param, ?int $id = null) {
+        static $read = [], $m = 0;
+        $ok = function_exists('popen');
+        if (is_string($param))
+            return $read[$id ?? $m++] = $ok ? popen($param, 'r') : null;
+        if (!$ok)
+            return call_user_func($param, "function 'popen' not exists", -1, true);
+        while ($read) {
+            if ($cnt = stream_select($read, $write, $except, null)) {
+                foreach ($read as $i => $x) {
+                    if ('' !== ($str = fread($x, 2096)))
+                        call_user_func($param, $str, $i, false);
+                }
+            } elseif (false === $cnt) {
+                foreach ($read as $x)
+                    pclose($x);
+                return call_user_func($param, "Error stream_select()", -1, true);
+            }
+            foreach ($read as $i => $x) {
+                if (feof($x)) {
+                    pclose($read[$i]);
+                    unset($read[$i]);
+                }
+            }
+        }
+    }
+
     /** Read tmemo cell from $_memory */
     function c_m($id = 8, $unhtml = false) {
         $s = sqlf('+select tmemo from $_memory where id=%d', $id);
