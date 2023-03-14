@@ -8,8 +8,6 @@ class Schedule
     private $amp = ''; # in the crontab you will write: * * * * * php /path-to/cron.php @
     private $task = 0; # run manually in the console without @ for stdout
     private $arg = 0;
-    private $handle = [];
-    private $stdout = [];
     private $script = 'php ';
 
     function __construct($max_exec_minutes = 10, $debug_level = 1, $single_thread = false) {
@@ -115,8 +113,7 @@ class Schedule
                     if ($sec > $this->max_exec_sec)
                         $this->write("Exec time: $sec seconds", "single/$this->task", true);
                 } else {
-                    $this->handle[$this->task] = popen("$this->script $this->amp$this->task 2>&1", 'r');
-                    $this->stdout[$this->task] = '';
+                    Console::thread("$this->script $this->amp$this->task 2>&1", $this->task);
                 }
             }
         } elseif ($this->task == $this->arg) {
@@ -210,26 +207,14 @@ class Schedule
             return;
         }
 
-        while ($this->handle) {
-            $cnt = stream_select($this->handle, $write, $except, null);
-            if (false === $cnt) {
-                $this->write("Error stream_select()", 'ALL', true);
-                foreach ($this->handle as $x)
-                    pclose($x);
-                break;
-            } elseif ($cnt) {
-                foreach ($this->handle as $i => $x)
-                    $this->stdout[$i] .= fread($x, 2096);
-            }
-
-            foreach ($this->handle as $i => $x) {
-                if (feof($x)) {
-                    if ('' !== $this->stdout[$i])
-                        $this->write($this->stdout[$i], $i);
-                    pclose($this->handle[$i]);
-                    unset($this->handle[$i]);
-                }
-            }
-        }
+        Console::thread(function($str, $id, $is_error) {
+            static $stdout = [];
+            if ($is_error)
+                return $this->write($str, 'ALL', true);
+            isset($stdout[$id]) or $stdout[$id] = '';
+            if (false !== $str)
+                return $stdout[$id] .= $str;
+            $this->write($stdout[$id], $id);
+        });
     }
 }

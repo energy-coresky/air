@@ -168,19 +168,18 @@ class Console
             return call_user_func($param, "function 'popen' not exists", -1, true);
         while ($read) {
             if ($cnt = stream_select($read, $write, $except, null)) {
-                foreach ($read as $i => $x) {
-                    if ('' !== ($str = fread($x, 2096)))
-                        call_user_func($param, $str, $i, false);
-                }
+                foreach ($read as $id => $x)
+                    empty($str = fread($x, 2096)) or call_user_func($param, $str, $id, false);
             } elseif (false === $cnt) {
                 foreach ($read as $x)
                     pclose($x);
                 return call_user_func($param, "Error stream_select()", -1, true);
             }
-            foreach ($read as $i => $x) {
+            foreach ($read as $id => $x) {
                 if (feof($x)) {
-                    pclose($read[$i]);
-                    unset($read[$i]);
+                    pclose($read[$id]);
+                    unset($read[$id]);
+                    call_user_func($param, false, $id, false);
                 }
             }
         }
