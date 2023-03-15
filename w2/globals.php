@@ -21,10 +21,8 @@ class Globals
     ];
     private $predefined_constants = ['__class__', '__dir__', '__file__', '__function__', '__line__', '__method__', '__namespace__', '__trait__'];
 
-    static $total = [];
+    static $total = [0, 0, 0];
     static $cnt = [0, 0, 0, 0, 0];
-    static $parts = [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'];
-
 
     private static $functions = [];
     private static $constants = [];
@@ -40,7 +38,7 @@ class Globals
 
     static function ware($dir) {
         $glb = new Globals($dir);
-        return array_keys($glb->xdef()['CLASS']);
+        return array_keys($glb->_def()['CLASS']);
     }
 
     function __construct($path = '.') {
@@ -50,10 +48,38 @@ class Globals
 
     function parse_html($fn, $line_start, $str) {
         //2do warm jet-cache
-        //$this->parse($fn, $line_start, $str);
+        //$this->parse_def($fn, $line_start, $str);
     }
 
-    function parse($fn, $line_start = 1) {
+    function c_saved() {
+        return [];
+    }
+
+    function c_lint() {
+        return [];
+    }
+
+    function c_code() {
+        return [];
+    }
+
+    function c_form() {
+        return ['ident' => $_POST['ident']];
+    }
+
+    function c_mark() {
+        $nap = Plan::mem_rq('report.nap');
+        $nap[$_POST['ident']] = $_POST['desc'];
+        Plan::mem_p('report.nap', Plan::auto($nap));
+        return $this->_def();
+    }
+
+    function c_save() {
+        Plan::mem_p("report_" . substr(NOW, 0, 10) . '.html', $_POST['html']);
+        return $this->_def();
+    }
+
+    function parse_def($fn, $line_start = 1) {
         self::$cnt[0]++;
         $php = file_get_contents($fn);
         $line = $line_start;
@@ -206,50 +232,7 @@ class Globals
         return '';
     }
 
-    function exclude_dirs($dir = false) {
-        static $dirs;
-        if (null === $dirs) {
-            $tmemo = sqlf('+select tmemo from $_memory where id=11');
-            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=11');
-            $dirs = isset($mem['gr_dirs']) ? explode(' ', $mem['gr_dirs']) : [];
-        }
-        if ($dir) {
-            ($offset = array_search($dir, $dirs)) !== false ? array_splice($dirs, $offset, 1) : ($dirs[] = $dir);
-            SKY::i('gr_dirs', implode(' ', $dirs));
-        }
-        trace($dirs);
-        return $dirs;
-    }
-
-    function c_dirs() {
-        $dirs = Rare::walk_dirs('.');
-        if (DIR_M != DIR_S)
-            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
-        SKY::d('gr_start', 'dirs');
-        return [
-            'dirs' => $dirs,
-            'continue' => function ($dir) {
-                static $red = false, $dirs;
-                is_array($dirs) or $dirs = $this->exclude_dirs();
-                if (in_array($dir, $dirs)) {
-                    $red = $dir;
-                    return 0;
-                }
-                return $red && $red == substr($dir, 0, strlen($red));
-            },
-        ];
-    }
-
-    function c_skip() {
-        $this->exclude_dirs($_POST['dir']);
-        return $this->c_dirs();
-    }
-
-    function c_back() {
-        return $this->xdef();
-    }
-
-    function usage($fn) {
+    function parse_use($fn) {
         $use = function ($x, &$ary, &$name, $y = 0) {
             if ($abs = '\\' === $name[0]) {
                 $name = substr($name, 1);
@@ -390,73 +373,48 @@ case '&':
             $p1 = $id;
         }
     }
-                            // see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
-    function xuse($show_ext = true) {
-        SKY::d('gr_start', 'usage');
-        $extns = self::extensions();
-        $show_ext or MVC::body('_glob.user_code');
-        //trace($extns);
-        self::$used_ext = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
-        self::$used_ext += ['' => [[], [], [], [], []]]; # classes, funcs, consts, interfaces, traits
-        $this->walk_files([$this, 'usage']);
+
+    function exclude_dirs($dir = false) {
+        static $dirs;
+        if (null === $dirs) {
+            $tmemo = sqlf('+select tmemo from $_memory where id=11');
+            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=11');
+            $dirs = isset($mem['gr_dirs']) ? explode(' ', $mem['gr_dirs']) : [];
+        }
+        if ($dir) {
+            ($offset = array_search($dir, $dirs)) !== false ? array_splice($dirs, $offset, 1) : ($dirs[] = $dir);
+            SKY::i('gr_dirs', implode(' ', $dirs));
+        }
+        trace($dirs);
+        return $dirs;
+    }
+
+    function c_dirs() {
+        $dirs = Rare::walk_dirs('.');
+        if (DIR_M != DIR_S)
+            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
+        SKY::d('gr_start', 'dirs');
         return [
-            'show_emp' => 0,
-            'total' => function ($ext = false) use (&$total, $show_ext) {
-                if ($ext)
-                    return count($used) - 1;
-                if ($show_ext)
-                    SKY::i('gr_extns', implode(' ', $used));
-                return "$total[0]/$total[1]/$total[2]";
+            'dirs' => $dirs,
+            'continue' => function ($dir) {
+                static $red = false, $dirs;
+                is_array($dirs) or $dirs = $this->exclude_dirs();
+                if (in_array($dir, $dirs)) {
+                    $red = $dir;
+                    return 0;
+                }
+                return $red && $red == substr($dir, 0, strlen($red));
             },
-            'e_usage' => [
-                'max_i' => -1, // infinite
-                'row_c' => function($ext, $evar = false) {
-                    static $p, $i, $j = 0, $defs = 0, $ary = [];
-                    if ($evar) {
-                        is_int($i = $ext) ? ($ext = '') : ($i = 0);
-                        $p = self::$used_ext[$ext];
-                        '' !== $ext or 0 !== $defs or $defs = json_decode(Plan::mem_gq('definitions.json') ?: '[]');
-                        if (0 !== $defs)
-                            $ary = $p[$i] and uksort($ary, 'strcasecmp');
-                    }
-                    $user = 0 !== $defs;
-                    $chd = $err = '';
-                    for (; !$ary; $i++)
-                        if ($i > 2 || $user) {
-                            return false;
-                        } elseif ($ary = $p[$chd = $i]) {
-                            if ($evar)
-                                $j = $evar->key() + 1;
-                            uksort($ary, 'strcasecmp');
-                        }
-                    if ($evar) {
-                        Globals::$total[$ext][0] = ($c0 = count($p[0]));
-                        Globals::$total[$ext][1] = ($c1 = count($p[1]));
-                        Globals::$total[$ext][2] = ($c2 = count($p[2]));
-                        Globals::$total[$ext][3] = "$c0/$c1/$c2";
-                        return false;
-                    }
-                    $name = key($ary);
-                    $np = array_shift($ary);
-                    if ($user && (!$defs || !in_array(strtolower($name), $defs[$i > 2 ? 0 : $i]))) {
-                        $err = 'Definition not found';
-                        self::$cnt[3]++;
-                    } else {
-                        self::$cnt[2]++;
-                    }
-                    return [
-                        'chd' => $j == $ext->__i ? $i - 1 : $chd,
-                        'name' => $name,
-                        'pos' => $np[0][0] . '^' . $np[0][1],
-                        'usage' => $np[1],
-                        'files' => $np[2],
-                        'err' => $err,
-                        'class' => $err ? ($err ? 'bg-r' : 'bg-y') : 'norm', //bg-b
-                        'nap' => '',
-                    ];
-                },
-            ],
         ];
+    }
+
+    function c_skip() {
+        $this->exclude_dirs($_POST['dir']);
+        return $this->c_dirs();
+    }
+
+    function c_back() {
+        return $this->_def();
     }
 
     static function extensions($simple = false) {
@@ -500,8 +458,79 @@ case '&':
         }
     }
 
-    function xdef() {
-        SKY::d('gr_start', 'report');
+    function _use($show_ext = true) {// see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
+        global $sky;
+        $sky->k_parts = [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'];
+        $extns = self::extensions();
+        self::$used_ext = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
+        self::$used_ext += ['' => [[], [], [], [], []]]; # classes, funcs, consts, interfaces, traits
+        $this->walk_files([$this, 'parse_use']);
+        $json = [];
+        return [
+            'show_emp' => 0,
+            'e_usage' => [
+                'max_i' => -1, // infinite
+                'row_c' => function($ext, $evar = false) {
+                    static $p, $i, $j = 0, $defs = 0, $ary = [];
+                    if ($evar) {
+                        is_int($i = $ext) ? ($ext = '') : ($i = 0);
+                        $p = self::$used_ext[$ext];
+                        '' !== $ext or 0 !== $defs or $defs = json_decode(Plan::mem_gq('definitions.json') ?: '[]');
+                        if (0 !== $defs)
+                            $ary = $p[$i] and uksort($ary, 'strcasecmp');
+                    }
+                    $user = 0 !== $defs;
+                    $chd = $err = '';
+                    for (; !$ary; $i++)
+                        if ($i > 2 || $user) {
+                            return false;
+                        } elseif ($ary = $p[$chd = $i]) {
+                            if ($evar)
+                                $j = $evar->key() + 1;
+                            uksort($ary, 'strcasecmp');
+                        }
+                    if ($evar) {
+                        self::$total[0] += ($c0 = count($p[0]));
+                        self::$total[1] += ($c1 = count($p[1]));
+                        self::$total[2] += ($c2 = count($p[2]));
+                        self::$total[$ext] = "$c0/$c1/$c2";
+                        return false;
+                    }
+                    $name = key($ary);
+                    $np = array_shift($ary);
+                    if ($user && (!$defs || !in_array(strtolower($name), $defs[$i > 2 ? 0 : $i]))) {
+                        $err = 'Definition not found';
+                        self::$cnt[3]++;
+                    } else {
+                        self::$cnt[2]++;
+                    }
+                    return [
+                        'chd' => $j == $ext->__i ? $i - 1 : $chd,
+                        'name' => $name,
+                        'pos' => $np[0][0] . '^' . $np[0][1],
+                        'usage' => $np[1],
+                        'files' => $np[2],
+                        'err' => $err,
+                        'class' => $err ? ($err ? 'bg-r' : 'bg-y') : 'norm', //bg-b
+                        'nap' => '',
+                    ];
+                },
+            ],
+            'after' => function($e, &$cnt) use (&$json, $show_ext, $sky) {
+                $cnt = self::$cnt;
+                if ($show_ext) {
+                    SKY::i('gr_extns', implode(' ', array_keys($sky->k_tot = self::$total)));
+                } else {
+                    //Plan::mem_p('usage.json', json_encode($json, JSON_PRETTY_PRINT));
+                    self::$cnt[4] = array_sum(array_map('count', self::$used_ext['']));
+                    self::$cnt[5] = self::$cnt[4] - $cnt[2] - $cnt[3];
+                }
+                return 1 + $e->key();
+            },
+        ];
+    }
+
+    function _def() {
         $extns = self::extensions();
         $this->interfaces = array_flip(get_declared_interfaces());
         $classes = array_flip(get_declared_classes());
@@ -512,7 +541,7 @@ case '&':
         $this->all = array_fill_keys(array_keys($all), 0);
         $this->all_lc = array_change_key_case($this->all);
 
-        $this->walk_files([$this, 'parse']);
+        $this->walk_files([$this, 'parse_def']);
         if ('.' != $this->path)
             return $this->definitions;
         foreach ($this->definitions as &$definition)
@@ -522,6 +551,8 @@ case '&':
         $json = [];
 
         return [
+            'ext_loaded' => $extns,
+            'ext_used' => explode(' ', SKY::i('gr_extns')),
             'defs' => $this->definitions,
             'e_idents' => [
                 'max_i' => -1, // infinite
@@ -561,54 +592,26 @@ case '&':
                     ];
                 },
             ],
-            'loaded' => $extns,
-            'used' => explode(' ', SKY::i('gr_extns')),
-            'cnts' => function($i) use (&$json) {
-                if (!$i)
-                    Plan::mem_p('definitions.json', json_encode($json, JSON_PRETTY_PRINT));
-                return 2 == $i
-                    ? array_sum(array_map('count', $this->definitions)) - self::$cnt[2] - self::$cnt[3]
-                    : self::$cnt[$i + 2];
+            'after' => function($e, &$cnt) use (&$json) {
+                Plan::mem_p('definitions.json', json_encode($json, JSON_PRETTY_PRINT));
+                self::$cnt[4] = array_sum(array_map('count', $this->definitions));
+                $cnt = self::$cnt;
+                self::$cnt[5] = $cnt[4] - $cnt[2] - $cnt[3];
+                return 1 + $e->key();
             },
         ];
-    }
-
-    function c_saved() {
-        return [];
-    }
-
-    function c_lint() {
-        return [];
-    }
-
-    function c_code() {
-        return [];
-    }
-
-    function c_form() {
-        return ['ident' => $_POST['ident']];
-    }
-
-    function c_mark() {
-        $nap = Plan::mem_rq('report.nap');
-        $nap[$_POST['ident']] = $_POST['desc'];
-        Plan::mem_p('report.nap', Plan::auto($nap));
-        return $this->xdef();
-    }
-
-    function c_save() {
-        Plan::mem_p("report_" . substr(NOW, 0, 10) . '.html', $_POST['html']);
-        return $this->xdef();
     }
 
     function c_run() {
         global $sky;
         if (!$sky->fly)
             return [];
-        $vars = 'def' == $sky->_2 ? $this->xdef() : $this->xuse('ext' == $sky->_2);
+        SKY::d('gr_start', "run=$sky->_2");
+        $html = view("_glob.$sky->_2", 'def' == $sky->_2 ? $this->_def() : $this->_use('ext' == $sky->_2));
+        $menu = ['defs' => $this->definitions, 'cnt' => self::$cnt];
         json([
-            'html' => view("_glob.$sky->_2", $vars),
-            'menu' => tag(view('_glob.xmenu', ['defs' => $this->definitions]), 'style="position:sticky; top:42px"'),
+            'html' => $html,
+            'menu' => tag(view('_glob.xmenu', $menu), 'style="position:sticky; top:42px"'),
         ]);
     }
 }

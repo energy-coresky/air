@@ -1,40 +1,5 @@
 #.jet core template
 
-
-<br>
-#.xmenu ==========================================================================================================#$total()
-<div class="other-task">Global report</div>
-<div class="other-info">
-<table cellspacing="0" cellpadding="0" width="100%">
-@if('ext' == $sky->_2)
-<tr><td><b>Extensions</b>:</td><td>{{count(Globals::$total)}} of {{count(Globals::$used_ext)-1}}</td></tr>
-@loop(Globals::$used_ext as $key => $ary)
-  @continue(!$ary[0] && !$ary[1] && !$ary[2] || !$key)
-  @php $name = 'apache2handler' == $key ? 'apache2h..' : $key ~php
-  <tr><td {{!$key ? '' : ' noborder'}}>
-    <u onclick="$('#idnt-{{$key}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$name ?: 'user'}}</u>:
-  </td><td{{!$key ? '' : ' noborder'}}>{{Globals::$total[$key][3]}}</td></tr>
-~loop
-<tr><td noborder><b>Total</b>:</td><td noborder>{{11111}}</td></tr>
-@elseif('user' == $sky->_2)
-<tr><td>Total uses:</td><td>{{array_sum(array_map('count', Globals::$used_ext['']))}}</td></tr>
-@loop(Globals::$parts as $i => $part)
-  <tr><td style="padding-left:10px" noborder>
-    <u onclick="$('#idnt-{{$i}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$part}}</u>:
-  </td><td noborder>{{count(Globals::$used_ext[''][$i])}}</td></tr>
-~loop
-@else
-<tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
-@loop($defs as $key => $ary)
-  <tr><td style="padding-left:10px" noborder>
-    <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
-  </td><td noborder>{{count($ary)}}</td></tr>
-~loop
-~if
-</table>
-</div>
-#.xmenu
-
 #.form ==========================================================================================================
 <div style="margin:0 10px 10px 10px">
   <h2>Mark `{{$ident}}`</h2>
@@ -62,47 +27,86 @@
 2. find places for functions usage and more..<br>
 #.code
 
-#.ext ----------------------------------------------------------------------------------------------------------
-  @block(`` as result)
-  @loop(Globals::$used_ext as $key => $ary)@continue(!$key)
-    @if($show_emp || $ary[0] || $ary[1] || $ary[2])
-      <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key}}</h2>
+
+
+#.xmenu ==========================================================================================================
+<div class="other-task">Global report</div>
+<div class="other-info">
+<table cellspacing="0" cellpadding="0" width="100%">
+@if('ext' == $sky->_2)
+<tr><td><b>Extensions</b>:</td><td>{{count($k_tot)}} of {{count(Globals::$used_ext)-1}}</td></tr>
+@loop(Globals::$used_ext as $key => $ary)
+  @continue(!$ary[0] && !$ary[1] && !$ary[2] || !$key)
+  @php $name = 'apache2handler' == $key ? 'apache2h..' : $key ~php
+  <tr><td {{!$key ? '' : ' noborder'}}>
+    <u onclick="$('#idnt-{{$key}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$name ?: 'user'}}</u>:
+  </td><td{{!$key ? '' : ' noborder'}}>{{$k_tot[$key]}}</td></tr>
+~loop
+<tr><td><b>Total</b>:</td><td>{{$k_tot[0] . '/' . $k_tot[1] . '/' . $k_tot[2]}}</td></tr>
+<tr><td colspan="2" noborder align="right">classes/functions/consts</td></tr>
+@elseif('user' == $sky->_2)
+<tr><td>Total uses:</td><td>{{$cnt[4]}}</td></tr>
+@loop($k_parts as $i => $part)
+  <tr><td style="padding-left:10px" noborder>
+    <u onclick="$('#idnt-{{$i}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$part}}</u>:
+  </td><td noborder>{{count(Globals::$used_ext[''][$i])}}</td></tr>
+~loop
+<tr><td>No problem:</td><td>{{$cnt[2]}}</td></tr>
+<tr><td>Marked OK:</td><td>{{$cnt[3]}}</td></tr>
+<tr><td>Unchecked uses:</td><td class="bg-{{$cnt[5] ? 'r' : 'g'}}">{{$cnt[5]}}</td></tr>
+@else<!-- def -->
+<tr><td>Total definitions:</td><td>{{$cnt[4]}}</td></tr>
+@loop($defs as $key => $ary)
+  <tr><td style="padding-left:10px" noborder>
+    <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
+  </td><td noborder>{{count($ary)}}</td></tr>
+~loop
+<tr><td>No problem:</td><td>{{$cnt[2]}}</td></tr>
+<tr><td>Marked OK:</td><td>{{$cnt[3]}}</td></tr>
+<tr><td>Unchecked def7s:</td><td class="bg-{{$cnt[5] ? 'r' : 'g'}}">{{$cnt[5]}}</td></tr>
+~if
+</table>
+</div>
+#.xmenu
+
+#.ext //////////////////////////////////////////////////////////////////////////////////////////////////////////
+<br><span class="res-total"></span>
+@loop(Globals::$used_ext as $key => $ary)@continue(!$key)
+  @if($show_emp || $ary[0] || $ary[1] || $ary[2])
+    <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key}}</h2>
+  ~if
+  <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
+  @loop($e_usage($key))
+    <tr class="{{$row->class}}">
+      <td width="3%">{{1 + $_2}}</td>
+      <td width="35%">{{$row->name}}
+        @if(0 === $row->chd)(<b>class</b>)
+        @elseif(1 === $row->chd)(<b>function</b>)
+        @elseif(2 === $row->chd)(<b>constant</b>)~if
+      </td>
+      <td width="62%"><span>{{$row->pos}}</span>
+        @if($row->usage)+ {{$row->usage}} usage@if($row->files) in {{$row->files}} files~if~if
+      </td>
+    </tr>
+    @empty
+    @if($show_emp)
+    <tr>
+      <td class="bg-g p-20">not used</td>
+    </tr>
     ~if
-    <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
-      @loop($e_usage($key))
-        <tr class="{{$row->class}}">
-          <td width="3%">{{1 + $_2}}</td>
-          <td width="30%">{{$row->name}}
-            @if(0 === $row->chd)(<b>class</b>)
-            @elseif(1 === $row->chd)(<b>function</b>)
-            @elseif(2 === $row->chd)(<b>constant</b>)~if
-          </td>
-          <td width="38%"><span>{{$row->pos}}</span>
-            @if($row->usage)+ {{$row->usage}} usage@if($row->files) in {{$row->files}} files~if~if
-          </td>
-          <td width="20%"></td>
-          <td width="9%" align="right">
-          @if($row->nap){{$row->nap}}
-          @elseif('bg-y'==$row->class)
-            <a @href(sky.g.form('{{$key}}.{{11}}'))>mark OK</a>
-          ~if
-          </td>
-        </tr>
-        @empty
-        @if($show_emp)
-        <tr>
-          <td class="bg-g p-20">not used</td>
-        </tr>
-        ~if
-      ~loop
-    </table>
   ~loop
-  @if(1)@use(`{{$total(true)}}` as cnt)~if
-  @inc(.total)
-  @if(1)@use(.total as result)~if
-#.ext.user  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
-@block(`` as result)
-@loop(Globals::$parts as $i => $part)
+  </table>
+~loop
+#.total
+<br><span class="res-total"></span>
+<script>(function() {
+  $('.res-total').html('Total {{$after($e_usage, $cnt)}} elements found. Scanned {{$cnt[0]}} files in {{$cnt[1]}} directories')
+})()</script>
+#.ext.total
+
+#.user //////////////////////////////////////////////////////////////////////////////////////////////////////////
+<br><span class="res-total"></span>
+@loop($k_parts as $i => $part)
   <h2 id="idnt-{{$i}}" style="margin-bottom:3px;">{{strtoupper($part)}}</h2>
   <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
   @loop($e_usage($i))
@@ -127,55 +131,21 @@
   ~loop
   </table>
 ~loop
-#.total
-<br>Total {{1 + $e_usage->key()}} elements found. Scanned {{Globals::$cnt[0]}} files in {{Globals::$cnt[1]}} directories
-#.total
-@if(1)@use(.total as result)~if
+@inc(.total)
 #.user
-<script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
-<tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
-<tr><td>Unchecked uses:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)
-</script>
 
 
-#.dirs.skip ==========================================================================================================
-#use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
-@use(.m_glob)
-<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
-    <div class="fs16">
-        Presets:
-    </div>
-</div>
-<div style="margin:0 10px 10px 10px">
-  <p>
-  [ ] show error: "definition not used"
-  <p>
-  @loop($dirs as $one)
-    @continue($red = $continue($one))
-    <div class="md">
-      @if('.' == $one)
-        <span class="bg-g">--root-project-directory--</span> {{DIR}}
-      @else
-        <a @href(sky.g.dir(this))@if(0 === $red) style="color:red;text-decoration:line-through"~if>{!$one!}</a>
-      ~if
-    </div>
-  ~loop
-@inc(.jscss)
-</div>
-#.dirs.skip
-
-#.def.mark.save.back ----------------------------------------------------------------------------------------------------------
+#.def.mark.save.back //////////////////////////////////////////////////////////////////////////////////////////////////////////
 <fieldset id="gr-modules"><legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>
-    @loop($loaded as $one)
-        <span style="{{in_array($one, $used) ? 'background-color:#fdd' : ''}}">{{$one}}</span>
+    @loop($ext_loaded as $one)
+        <span style="{{in_array($one, $ext_used) ? 'background-color:#ccc' : ''}}">{{$one}}</span>
     ~loop
-    <hr>
-    Used {{count($used)-1}} of {{count($loaded)}}
+    <hr>Used {{count($ext_used)-1}} of {{count($ext_loaded)}} loaded extensions
 </fieldset>
-@block(`` as result)
+<span class="res-total"></span>
 @loop($defs as $key => $ary)
-  <h2 id="idnt-{{$_}}">
-  @if('VAR'==$key)VARS ASSIGNING IN THE GLOBAL NAMESPACE@else{{$key}}~if
+  <h2 id="idnt-{{$_}}" style="margin-bottom:3px;">
+    @if('VAR'==$key)VARS ASSIGNING IN THE GLOBAL NAMESPACE@else{{$key}}~if
   </h2>
   <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
     @loop($ary as $ident => $list)
@@ -205,18 +175,11 @@
     ~loop
   </table>
 ~loop
-<br>
-#.result
-Total {{1 + $e_idents->key()}} elements found. Scanned {{Globals::$cnt[0]}} files in {{Globals::$cnt[1]}} directories
-#.result
-@if(1)@use(.result)~if
-#.mark.save.back
-#.def
-
-<script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
-<tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
-<tr><td>Unchecked def7s:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)
-</script>
+<br><span class="res-total"></span>
+<script>(function() {
+  $('.res-total').html('Total {{$after($e_idents, $cnt)}} elements found. Scanned {{$cnt[0]}} files in {{$cnt[1]}} directories')
+})()</script>
+#.def.mark.save.back <a class="inner-menu" @href(sky.g.save())>Save Report</a>
 
 
 #.jscss ==========================================================================================================
@@ -303,3 +266,33 @@ sky.g.run()
     Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
   </div>
 </div>
+
+<script>$('#v-menu table:eq(0)').append(``)</script>
+<script>$('#v-menu table:eq(0)').append(``)</script>
+
+
+#.dirs.skip ==========================================================================================================
+#use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
+@use(.m_glob)
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
+    <div class="fs16">
+        Presets:
+    </div>
+</div>
+<div style="margin:0 10px 10px 10px">
+  <p>
+  [ ] show error: "definition not used"
+  <p>
+  @loop($dirs as $one)
+    @continue($red = $continue($one))
+    <div class="md">
+      @if('.' == $one)
+        <span class="bg-g">--root-project-directory--</span> {{DIR}}
+      @else
+        <a @href(sky.g.dir(this))@if(0 === $red) style="color:red;text-decoration:line-through"~if>{!$one!}</a>
+      ~if
+    </div>
+  ~loop
+@inc(.jscss)
+</div>
+#.dirs.skip
