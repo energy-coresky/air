@@ -40,7 +40,7 @@ class Globals
 
     static function ware($dir) {
         $glb = new Globals($dir);
-        return array_keys($glb->c_report()['CLASS']);
+        return array_keys($glb->xdef()['CLASS']);
     }
 
     function __construct($path = '.') {
@@ -246,7 +246,7 @@ class Globals
     }
 
     function c_back() {
-        return $this->c_report();
+        return $this->xdef();
     }
 
     function usage($fn) {
@@ -391,7 +391,7 @@ case '&':
         }
     }
                             // see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
-    function c_usage($show_ext = true) {
+    function xuse($show_ext = true) {
         SKY::d('gr_start', 'usage');
         $extns = self::extensions();
         $show_ext or MVC::body('_glob.user_code');
@@ -459,17 +459,6 @@ case '&':
         ];
     }
 
-    function c_run() {
-        global $sky;
-        if (!$sky->fly)
-            return [];
-        $m = 'ext' == $sky->_2 ? 'usage' : 'user_code';
-        json([
-            'html' => view("_glob.$m", $this->c_usage('ext' == $sky->_2)),
-            'menu' => tag(view('_glob.menu', []), 'style="position:sticky; top:42px"'),
-        ]);
-    }
-
     static function extensions($simple = false) {
         $extns = get_loaded_extensions();
         natcasesort($extns);
@@ -511,7 +500,7 @@ case '&':
         }
     }
 
-    function c_report() {
+    function xdef() {
         SKY::d('gr_start', 'report');
         $extns = self::extensions();
         $this->interfaces = array_flip(get_declared_interfaces());
@@ -604,11 +593,22 @@ case '&':
         $nap = Plan::mem_rq('report.nap');
         $nap[$_POST['ident']] = $_POST['desc'];
         Plan::mem_p('report.nap', Plan::auto($nap));
-        return $this->c_report();
+        return $this->xdef();
     }
 
     function c_save() {
         Plan::mem_p("report_" . substr(NOW, 0, 10) . '.html', $_POST['html']);
-        return $this->c_report();
+        return $this->xdef();
+    }
+
+    function c_run() {
+        global $sky;
+        if (!$sky->fly)
+            return [];
+        $vars = 'def' == $sky->_2 ? $this->xdef() : $this->xuse('ext' == $sky->_2);
+        json([
+            'html' => view("_glob.$sky->_2", $vars),
+            'menu' => tag(view('_glob.xmenu', ['defs' => $this->definitions]), 'style="position:sticky; top:42px"'),
+        ]);
     }
 }

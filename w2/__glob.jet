@@ -2,11 +2,11 @@
 
 
 <br>
-#.menu ==========================================================================================================#$total()
+#.xmenu ==========================================================================================================#$total()
 <div class="other-task">Global report</div>
 <div class="other-info">
 <table cellspacing="0" cellpadding="0" width="100%">
-#if('ext' == $sky->_2)
+@if('ext' == $sky->_2)
 <tr><td><b>Extensions</b>:</td><td>{{count(Globals::$total)}} of {{count(Globals::$used_ext)-1}}</td></tr>
 @loop(Globals::$used_ext as $key => $ary)
   @continue(!$ary[0] && !$ary[1] && !$ary[2] || !$key)
@@ -16,29 +16,24 @@
   </td><td{{!$key ? '' : ' noborder'}}>{{Globals::$total[$key][3]}}</td></tr>
 ~loop
 <tr><td noborder><b>Total</b>:</td><td noborder>{{11111}}</td></tr>
-#elseif('user' == $sky->_2)
-  <tr><td>Total uses:</td><td>{{array_sum(array_map('count', Globals::$used_ext['']))}}</td></tr>
-  @loop(Globals::$parts as $i => $part)
+@elseif('user' == $sky->_2)
+<tr><td>Total uses:</td><td>{{array_sum(array_map('count', Globals::$used_ext['']))}}</td></tr>
+@loop(Globals::$parts as $i => $part)
   <tr><td style="padding-left:10px" noborder>
-      <u onclick="$('#idnt-{{$i}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$part}}</u>:
+    <u onclick="$('#idnt-{{$i}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$part}}</u>:
   </td><td noborder>{{count(Globals::$used_ext[''][$i])}}</td></tr>
-  ~loop
-#else
-<br><div class="other-task">Global report</div>
-<div class="other-info">
-<table cellspacing="0" cellpadding="0" width="100%">
-  <tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
-  @loop($defs as $key => $ary)
-    <tr><td style="padding-left:10px" noborder>
-        <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
-    </td><td noborder>{{count($ary)}}</td></tr>
-  ~loop
+~loop
+@else
+<tr><td>Total definitions:</td><td>{{array_sum(array_map('count', $defs))}}</td></tr>
+@loop($defs as $key => $ary)
+  <tr><td style="padding-left:10px" noborder>
+    <u onclick="$('#idnt-{{$_}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{ucfirst(strtolower($key))}}{{'CLASS' == $key ? 'es' : 's'}}</u>:
+  </td><td noborder>{{count($ary)}}</td></tr>
+~loop
+~if
 </table>
 </div>
-#end
-</table>
-</div>
-#.menu
+#.xmenu
 
 #.form ==========================================================================================================
 <div style="margin:0 10px 10px 10px">
@@ -67,7 +62,7 @@
 2. find places for functions usage and more..<br>
 #.code
 
-#.usage ----------------------------------------------------------------------------------------------------------
+#.ext ----------------------------------------------------------------------------------------------------------
   @block(`` as result)
   @loop(Globals::$used_ext as $key => $ary)@continue(!$key)
     @if($show_emp || $ary[0] || $ary[1] || $ary[2])
@@ -105,7 +100,7 @@
   @if(1)@use(`{{$total(true)}}` as cnt)~if
   @inc(.total)
   @if(1)@use(.total as result)~if
-#.usage.user_code  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
+#.ext.user  <a class="inner-menu" @href(sky.g.save())>Save Report</a>
 @block(`` as result)
 @loop(Globals::$parts as $i => $part)
   <h2 id="idnt-{{$i}}" style="margin-bottom:3px;">{{strtoupper($part)}}</h2>
@@ -136,7 +131,7 @@
 <br>Total {{1 + $e_usage->key()}} elements found. Scanned {{Globals::$cnt[0]}} files in {{Globals::$cnt[1]}} directories
 #.total
 @if(1)@use(.total as result)~if
-#.user_code
+#.user
 <script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
 <tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
 <tr><td>Unchecked uses:</td><td class="bg-{{$cnts(2) ? 'r' : 'g'}}">{{$cnts(2)}}</td></tr>`)
@@ -169,7 +164,7 @@
 </div>
 #.dirs.skip
 
-#.report.mark.save.back ----------------------------------------------------------------------------------------------------------
+#.def.mark.save.back ----------------------------------------------------------------------------------------------------------
 <fieldset id="gr-modules"><legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>
     @loop($loaded as $one)
         <span style="{{in_array($one, $used) ? 'background-color:#fdd' : ''}}">{{$one}}</span>
@@ -216,7 +211,7 @@ Total {{1 + $e_idents->key()}} elements found. Scanned {{Globals::$cnt[0]}} file
 #.result
 @if(1)@use(.result)~if
 #.mark.save.back
-#.report
+#.def
 
 <script>$('#v-menu table:eq(0)').append(`<tr><td>No problem:</td><td>{{$cnts(0)}}</td></tr>
 <tr><td>Marked OK:</td><td>{{$cnts(1)}}</td></tr>
@@ -274,19 +269,20 @@ sky.g.dir = function(el) {
 <div style="padding:0 10px 10px 10px; {{$sky->_2 == 'ext' ? 'width:calc(100vw - 357px)' : ''}}">
   <h1>Loading... <progress max="100" value="10"></progress></h1>
 </div>
-@if($sky->_2 == 'ext')<div id="r-menu" style="background:#eee;width:170px;"></div>~if
+@if($sky->_2 == 'ext')<div id="r-menu" style="background:#eee;width:170px;"></div>
+@else@use(`<br><div id="l-menu"></div>` as menu)
+~if
 </div>
 @inc(.jscss)
 <script>
 sky.g.run = function(m) {
   var url;
   ajax(url = 'run&{{$sky->_2}}', {}, function(r) {
-    if (url == 'run&user') {
-      $('#dev-glob div:eq(0)').next().find('div:eq(0)').html(r.html);
-    } else if (url == 'run&ext') {
+    if (url == 'run&ext') {
       $('#r-menu').html(r.menu).prev().html(r.html);
     } else {
-      
+      $('#dev-glob div:eq(0)').next().find('div:eq(0)').html(r.html);
+      $('#l-menu').html(r.menu)
     }
   });
 }
@@ -294,8 +290,7 @@ sky.g.run()
 </script>
 #.run.m_glob ----------------------------------------------------------------------------------------------------------
 <a class="inner-menu" href="_glob?dirs"@active($sky->_1 == 'dirs')>Settings</a>
-<a class="inner-menu" href="_glob?report"@active($sky->_1 == 'report')>Report Definitions</a>
-<a class="inner-menu" href="_glob?usage"@active($sky->_1 == 'usage')>Extensions Usage</a>
+<a class="inner-menu" href="_glob?run=def"@active($sky->_2 == 'def')>Report Definitions</a>
 <a class="inner-menu" href="_glob?run=user"@active($sky->_2 == 'user')>User Code Usage</a>
 <a class="inner-menu" href="_glob?run=ext"@active($sky->_2 == 'ext')>Extensions Usage</a>
 <a class="inner-menu" href="_glob?saved"@active($sky->_1 == 'saved')>Saved Reports</a>
