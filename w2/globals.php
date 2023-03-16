@@ -24,18 +24,22 @@ class Globals extends Usage
 
     public $also_ns = [];
 
-    function c_run() {
+    function c_run($name = '') {
         global $sky;
+        $this->name = $name;
         if (!CLI && !$sky->fly)
             return [];
         SKY::d('gr_start', "run=$this->_2");
-        $html = view("_glob.$this->_2", 'def' == $this->_2 ? $this->_def() : $this->_use());
-        if (CLI) {
-            echo "Unchecked: " . parent::$cnt[5];
-        } else {
-            $menu = tag(view('_glob.xmenu', ['defs' => $this->definitions, 'cnt' => parent::$cnt]), 'style="position:sticky; top:42px"');
-            json(['html' => $html, 'menu' => $menu]);
-        }
+        $marker = $name ? 'name' : $this->_2;
+        $html = view("_glob.$marker", 'def' == $this->_2 ? $this->_def() : $this->_use());
+        if (CLI)
+            return print("Unchecked: " . parent::$cnt[5]);
+        if ($name)
+            return json(['html' => $html, 'menu' => '']);
+        json(['html' => $html, 'menu' => view('_glob.xmenu', [
+            'defs' => $this->definitions,
+            'cnt' => parent::$cnt,
+        ])]);
     }
 
     static function ware($dir) {
@@ -46,6 +50,12 @@ class Globals extends Usage
     function parse_html($fn, $line_start, $str) {
         //2do warm jet-cache
         //$this->parse_def($fn, $line_start, $str);
+    }
+
+    function c_progress() {
+        SKY::$debug = 0;
+        list ($val, $max) = sqlf('-select imemo, cmemo from $_memory where id=11');
+        json(['max' => $max, 'val' => $val]);
     }
 
     function c_saved() {

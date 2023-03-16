@@ -149,7 +149,7 @@ class standard_c extends Controller
 
     function j_glob() {
         MVC::body('_glob.' . substr($this->_c, 2));
-        return call_user_func([new Globals, $this->_c], $this->_a);
+        return call_user_func([new Globals, $this->_c], $this->_3 ?: $this->_4);
     }
 
     function j_inst() {

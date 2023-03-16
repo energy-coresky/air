@@ -478,7 +478,9 @@ function json($in, $return = false, $off_layout = true) {
         trace('json error: ' . $err, true, 1);
     if (DEV && !$return)
         Util::vars(['$$' => $in], MVC::instance(-1)->no);
-    return $return ? $out : print($out);
+    if ($return)
+        return $out;
+    echo $out;
 }
 
 function unjson($in, $assoc = false) {

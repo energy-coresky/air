@@ -315,12 +315,14 @@ sky.d.reflect = function(el, type) {
 };
 
 sky.d.files_html = ['', '', ''];
-sky.d.files = function() {
+sky.d.files = function(callback) {
     $('#v-body pre span, #v-body td span').each(function() {
         if ($(this).attr('style'))
             return;
         $(this).click(function() {
             var filine = $(this).html();
+            if (callback && !filine.match(/\^\d+$/))
+                return callback(filine)
             ajax('', {name:filine, c:$(this).next().hasClass('error')}, function(r) {
                 sky.d.files_html = [$('#v-body').html(), $('#top-head').html(), sky.key[27]];
                 $('#v-body').html(r);
@@ -329,7 +331,7 @@ sky.d.files = function() {
                 sky.key[27] = function() {
                     $('#v-body').html(sky.d.files_html[0]);
                     $('#top-head').html(sky.d.files_html[1]);
-                    sky.d.files();
+                    sky.d.files(callback);
                     sky.key[27] = sky.d.files_html[2];
                 };
             }, '_file');

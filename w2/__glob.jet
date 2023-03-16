@@ -79,7 +79,7 @@
   @loop($e_usage($key))
     <tr class="{{$row->class}}">
       <td width="3%">{{1 + $_2}}</td>
-      <td width="35%">{{$row->name}}
+      <td width="35%"><span>{{$row->name}}</span>
         @if(0 === $row->chd)(<b>class</b>)
         @elseif(1 === $row->chd)(<b>function</b>)
         @elseif(2 === $row->chd)(<b>constant</b>)~if
@@ -112,7 +112,7 @@
   @loop($e_usage($i))
     <tr class="{{$row->class}}">
       <td width="3%">{{1 + $_2}}</td>
-      <td width="30%">{{$row->name}}</td>
+      <td width="30%"><span>{{$row->name}}</span></td>
       <td width="38%"><span>{{$row->pos}}</span>
         @if($row->usage)+ {{$row->usage}} usage@if($row->files) in {{$row->files}} files~if~if
       </td>
@@ -133,6 +133,17 @@
 ~loop
 @inc(.total)
 #.user
+
+#.name
+<table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
+@loop($k_gr->list as $pos)
+  <tr>
+    <td width="3%">{{1 + $_}}</td>
+    <td width="97%"><span>{{$pos}}</span></td>
+  </tr>
+~loop
+</table>
+#.name
 
 
 #.def.mark.save.back //////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -181,8 +192,6 @@
 })()</script>
 #.def.mark.save.back <a class="inner-menu" @href(sky.g.save())>Save Report</a>
 
-
-
 #.header
 <h4>
 @if('user' == $k_gr->_2)USER CODE USAGE REPORT
@@ -199,10 +208,10 @@
 </div>
 <div style="@if($k_gr->_2 == 'ext')display:inline-flex;~if width:100%">
 <div style="padding:0 10px 10px 10px; {{$k_gr->_2 == 'ext' ? 'width:calc(100vw - 357px)' : ''}}">
-  <h1>Loading... <progress max="100" value="10"></progress></h1>
+  <h1>Loading... <progress></progress></h1>
 </div>
-@if($k_gr->_2 == 'ext')<div id="r-menu" style="background:#eee;width:170px;"></div>
-@else@use(`<br><div id="l-menu"></div>` as menu)
+@if($k_gr->_2 == 'ext' && !$k_gr->name)<div id="r-menu" style="background:#eee;width:170px;"></div>
+@elseif(!$k_gr->name)@use(`<br><div id="l-menu"></div>` as menu)
 ~if
 </div>
 @inc(.jscss)
@@ -264,29 +273,48 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
 </style>
 <script>
 sky.g.save = function() {
-    //$('#box-in a, #box-in button').remove();
-    ajax('save', {html:$('#dev-glob').html()}, 'dev-glob');
+  //$('#box-in a, #box-in button').remove();
+  ajax('save', {html:$('#dev-glob').html()}, 'dev-glob');
 }
 sky.g.form = function(s) {
-    dev('form', {ident:s});
+  dev('form', {ident:s});
 }
 sky.g.mark = function(el, s) {
-    dev('mark', {ident:s, desc:$(el).prev().val()});
+  dev('mark', {ident:s, desc:$(el).prev().val()});
 }
 sky.g.dir = function(el) {
-    dev('skip', {dir:$(el).text()});
+  dev('skip', {dir:$(el).text()});
 }
 sky.g.run = function(m) {
-  var url;
-  ajax(url = 'run&{{$k_gr->_2}}', {}, function(r) {
-    if (url == 'run&ext') {
-      $('#r-menu').html(r.menu).prev().html(r.html);
+  var finish = 0;
+  $('progress').prop('max', 1).val(0)
+  ajax('run&{{$sky->_2}}={{$sky->_4}}', {}, function(r) {
+    finish = 1;
+    var menu = `<div style="position:sticky; top:42px">${r.menu}</div>`;
+    if ('{{$sky->_4}}') {
+      $('#dev-glob div:eq(0)').next().find('div:eq(0)').html(r.html);
+    } else if ('{{$sky->_2}}' == 'ext') {
+      $('#r-menu').html(menu).prev().html(r.html);
     } else {
       $('#dev-glob div:eq(0)').next().find('div:eq(0)').html(r.html);
-      $('#l-menu').html(r.menu)
+      $('#l-menu').html(menu)
     }
-    sky.d.files();
+    sky.d.files(function (r) {
+        location.href += '&name=' + encodeURIComponent(r);
+    });
   });
+  sky.a.start = null;
+  var i = 0, progr = function() {
+    setTimeout(function () {
+      finish || ajax('progress', function(r) {
+        if (!i && r.val < r.max)
+          i++;
+        $('progress').prop('max', i ? r.max : 1).val(i ? r.val : 0)
+        progr();
+      });
+    }, 50);
+  };
+  //progr();
 }
 </script>
 #.settings.skip.jscss

@@ -214,10 +214,10 @@ function ajax(j_, postfields, func, c_) {
     sky.post(sky.home + '?AJAX=' + ctrl0 + '&' + ctrl1 + '=' + j_, postfields || '', function(r) {
         var error_func = sky.a.error(); // get the current and restore default error handler
         func = func || sky.a.body;
-        if (sky.a.x_el)
-            sky.a.x_el.html(mem_x);
         if (sky.a.finish)
             sky.a.finish(to);
+        if (sky.a.x_el)
+            sky.a.x_el.html(mem_x);
         if ('undefined' !== typeof r.catch_error) {
             if (r.err_no > 99) { // r.soft => r.code !!
                 return error_func ? error_func(r) : sky.err('Error ' + r.err_no + ' (error handler not set)');

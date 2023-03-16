@@ -10,10 +10,12 @@ class Usage
     protected $json = [];
 
     static $extns = [];
-    static $cnt = [0, 0, 0, 0, 0, 0, 'tot' => [0, 0, 0]];
+    static $cnt = [0, 0, 0, 0, 0, 0, 'tot' => [0, 0, 0], 8 => 0];
 
     public $_2;
     public $parts = [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'];
+    public $name = '';
+    public $list = [];
 
     function __construct($path = '.') {
         global $sky, $argv;
@@ -35,7 +37,10 @@ class Usage
             $extn = $ary[2 == $x ? $name : strtolower($name)] ?? '';
             $abs or $ok or '' !== $extn or $name = $this->ns . $name;
             $p =& self::$extns[$extn][$extn || !$y ? $x : $y];
-            if (isset($p[$name])) {
+            if ($this->name) {
+                if ($this->name == $name)
+                    $this->list[] = $this->pos[0] . '^' . $this->pos[1];
+            } elseif (isset($p[$name])) {
                 $p[$name][1]++;
                 if ($this->pos[0] != $p[$name][0][0])
                     $p[$name][2]++;
@@ -206,15 +211,24 @@ case '&':
         $dirs = Rare::walk_dirs($this->path, $this->exclude_dirs());
         if ($flag = DIR_M != DIR_S && '.' == $this->path)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
+        self::$cnt[1] = count($dirs);
+        $ts = microtime(true);
+        $imemo = 0;
         foreach ($dirs as $dir) {
-            self::$cnt[1]++;
             foreach (Rare::list_path($dir, 'is_file') as $fn) {
                 $ary = explode('.', $fn);
                 $file_ext = end($ary);
                 if (in_array($file_ext, ['php']))
                     call_user_func($proc, $fn);
             }
+            self::$cnt[8]++;
+            if (microtime(true) - $ts > 0.1) {
+                sqlf('update $_memory set imemo=%d, cmemo=%d where id=11', $imemo = self::$cnt[8], self::$cnt[1]);
+                $ts = microtime(true);
+            }
         }
+        if ($imemo != self::$cnt[8])
+            sqlf('update $_memory set imemo=%d, cmemo=%d where id=11', self::$cnt[8], self::$cnt[1]);
         if ($flag) {
             call_user_func($proc, DIR_S . '/heaven.php');
             call_user_func($proc, DIR_S . '/sky.php');
