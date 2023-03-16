@@ -151,6 +151,10 @@ class Console
         system("git push origin master");
     }
 
+    static function tail_x($exit, $stdout = '') {
+        //
+    }
+
     static function test($m1 = 5, $m2 = 100) {
         echo rand(0, $m2);
         sleep(rand(1, $m1));
@@ -193,7 +197,12 @@ class Console
 
     /** Check globals */
     function c_g() {
-        (new Globals)->dirs();
+        global $sky, $argv;
+        $sky->memory();
+        $ary = explode('~', $sky->n_www);
+        define('WWW', DEV ? $ary[0] . '/' : $ary[1] . '/');
+        DEV::init();
+        (new Globals)->c_run();
     }
 
     /** Show controllers */

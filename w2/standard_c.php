@@ -42,7 +42,7 @@ class standard_c extends Controller
                     '_gate' => 'Open SkyGate',
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Open SkyProject',
-                    '_glob?' . ('dirs') => 'Global Reports',//$sky->d_gr_start ?: 
+                    '_glob?' . ('settings') => 'Global Reports',//$sky->d_gr_start ?: 
                     '_vend?list' => 'Browse All Vendors',
                 ],
                 'wares' => $this->dev->wares_menu(),

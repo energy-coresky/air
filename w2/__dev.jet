@@ -217,7 +217,7 @@ $(function() {
         <div class="fl"><span style="color:red;margin:0 10px;">See also</span>
         <a href="{{PATH}}_dev?main=10">@inc(__lng.rar) Log Error</a>
         <a href="{{PATH}}_gate">@inc(__lng.rar) SkyGate</a>
-        <a href="{{PATH}}_glob?report">@inc(__lng.rar) Globals Report</a>
+        <a href="{{PATH}}_glob?settings">@inc(__lng.rar) Globals Report</a>
         </div>
         <div style="display:inline-block; line-height:27px !important; padding:0 10px; background:
             @if($sky->d_dev)#cfc">{{SKY::version()['app'][3]}}@else#ccf">TOOLS.DEV.SKY.~if

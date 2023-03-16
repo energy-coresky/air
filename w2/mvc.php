@@ -29,7 +29,7 @@ function view($_in, $_return = false, &$_vars = null) {
     if ($mvc->no)
         return $mvc->return ? $mvc->ob : null;
     if ($sky->fly || !$layout)
-        $sky->tail_x(0, $mvc->ob); # tail_x ended with "exit"
+        method_exists($sky, 'tail_x') ? $sky->tail_x(0, $mvc->ob) : Console::tail_x(0, $mvc->ob);
 }
 
 //////////////////////////////////////////////////////////////////////////
