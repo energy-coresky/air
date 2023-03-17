@@ -139,7 +139,11 @@
 @loop($k_gr->list as $pos)
   <tr>
     <td width="3%">{{1 + $_}}</td>
-    <td width="97%"><span>{{$pos}}</span></td>
+    <td width="97%"><span>{{$pos[0] . '^' . $pos[1]}}</span>
+    @if($_ < 20)<div>
+      {!Display::php(file_get_contents($pos[0]), [$pos[1], false, false])!}
+    </div>~if
+    </td>
   </tr>
 ~loop
 </table>
@@ -163,7 +167,7 @@
       @loop($e_idents([$list, "$key.$ident"]))
       <tr class="{{$row->class}}">
         <td width="3%">{{$row->num}}</td>
-        <td width="30%">{{$ident}}</td>
+        <td width="30%">@if(!$_)<span>{{$ident}}</span>@else{{$ident}}~if</td>
         <td width="38%">
           <span>{{$row->pos}}</span>
           @if('NAMESPACE' == $key && $k_gr->also_ns[$ident])
@@ -193,24 +197,24 @@
 #.def.mark.save.back <a class="inner-menu" @href(sky.g.save())>Save Report</a>
 
 #.header
-<h4>
-@if('user' == $k_gr->_2)USER CODE USAGE REPORT
+<h4>@if($k_gr->name)SINGLE NAME USAGE DETAILS
+@elseif('user' == $k_gr->_2)USER CODE USAGE REPORT
 @elseif('ext' == $k_gr->_2)PHP EXTENSIONS USAGE REPORT
-@elseGLOBAL DEFINITIONS REPORT~if
-</h4>
+@elseGLOBAL DEFINITIONS REPORT~if</h4>
 #.run.header
 #use(.header)
 @use(.m_glob)
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">
   <div class="fs16">
-    App: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}
+    @if($k_gr->name)Name [<span id="used-x-times"></span>]: {{$k_gr->name}}
+    @elseApp: {{SKY::version()['app'][3]}}, compiled at {{date(DATE_DT, SKY::version()['app'][0])}}~if
   </div>
 </div>
-<div style="@if($k_gr->_2 == 'ext')display:inline-flex;~if width:100%">
-<div style="padding:0 10px 10px 10px; {{$k_gr->_2 == 'ext' ? 'width:calc(100vw - 357px)' : ''}}">
+<div style="@if($c3)display:inline-flex;~if width:100%">
+<div style="padding:0 10px 10px 10px; {{$c3 ? 'width:calc(100vw - 357px)' : ''}}">
   <h1>Loading... <progress></progress></h1>
 </div>
-@if($k_gr->_2 == 'ext' && !$k_gr->name)<div id="r-menu" style="background:#eee;width:170px;"></div>
+@if($c3)<div id="r-menu" style="background:#eee;width:170px;"></div>
 @elseif(!$k_gr->name)@use(`<br><div id="l-menu"></div>` as menu)
 ~if
 </div>
@@ -288,11 +292,12 @@ sky.g.dir = function(el) {
 sky.g.run = function(m) {
   var finish = 0;
   $('progress').prop('max', 1).val(0)
-  ajax('run&{{$sky->_2}}={{$sky->_4}}', {}, function(r) {
+  ajax('run&{{$sky->_2}}={{urlencode($sky->_4)}}', {}, function(r) {
     finish = 1;
     var menu = `<div style="position:sticky; top:42px">${r.menu}</div>`;
     if ('{{$sky->_4}}') {
       $('#dev-glob div:eq(0)').next().find('div:eq(0)').html(r.html);
+      $('#used-x-times').html(r.menu)
     } else if ('{{$sky->_2}}' == 'ext') {
       $('#r-menu').html(menu).prev().html(r.html);
     } else {
@@ -314,7 +319,7 @@ sky.g.run = function(m) {
       });
     }, 50);
   };
-  //progr();
+  progr();
 }
 </script>
 #.settings.skip.jscss

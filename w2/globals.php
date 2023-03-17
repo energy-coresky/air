@@ -28,14 +28,14 @@ class Globals extends Usage
         global $sky;
         $this->name = $name;
         if (!CLI && !$sky->fly)
-            return [];
+            return ['c3' => $this->_2 == 'ext' && !$name];
         SKY::d('gr_start', "run=$this->_2");
         $marker = $name ? 'name' : $this->_2;
         $html = view("_glob.$marker", 'def' == $this->_2 ? $this->_def() : $this->_use());
         if (CLI)
             return print("Unchecked: " . parent::$cnt[5]);
         if ($name)
-            return json(['html' => $html, 'menu' => '']);
+            return json(['html' => $html, 'menu' => count($this->list)]);
         json(['html' => $html, 'menu' => view('_glob.xmenu', [
             'defs' => $this->definitions,
             'cnt' => parent::$cnt,
@@ -116,7 +116,7 @@ class Globals extends Usage
 
     function push($key, $ident) {
         $assign = function (&$place, $ident, $mess = '') {
-            $place[$ident][] = "$this->pos $mess";
+            $place[$ident][] = $this->pos[0] . ' ' . $this->pos[1] . " $mess";
         };
 
         $place =& $this->definitions[$key];
@@ -171,7 +171,7 @@ class Globals extends Usage
         $p1 = $p2 = $ns = '';
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
-            $this->pos = "$fn $line";
+            $this->pos = [$fn, $line];//"$fn $line";
             $line_start = $line;
             if (is_array($token)) {
                 list($id, $str) = $token;
@@ -184,7 +184,7 @@ class Globals extends Usage
                         break;
                     case T_EVAL:
                         static $n = 1;
-                        $this->push('EVAL', $n++ . ".$this->pos");
+                        $this->push('EVAL', $n++ . "." . $this->pos[0] . ' ' . $this->pos[1]);
                         break;
                     case T_GLOBAL:
                         $glob_list = true;
@@ -246,7 +246,9 @@ class Globals extends Usage
                     $glob_list = false;
                     if ($ns_kw) {
                         $ns_kw = false;
-                        if (!isset($this->also_ns[$ns])) {
+                        if ($this->name == $ns) {
+                            $this->list[] = $this->pos;
+                        } elseif (!isset($this->also_ns[$ns])) {
                             $this->push('NAMESPACE', $ns);
                             $this->also_ns[$ns] = 0;
                         } else {

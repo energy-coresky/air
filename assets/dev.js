@@ -235,7 +235,8 @@ sky.d.init = function(from) {
             $(this).css({color:'red', backgroundColor:'pink'});
         });
 
-    sky.d.files();
+    if ('run' != sky.a._1)
+        sky.d.files();
 
     for (var a = []; m = str.match(/(TOP|SUB|BLK)\-VIEW: (\d+) (\S+) (\S+)(.*)/s); str = m[5]) {
         a.push({type:m[1], no:m[2], hnd:m[3], tpl:'^' == m[4] ? ('BLK' == m[1] ? 'injected-to-parent' : 'not-used') : m[4]});

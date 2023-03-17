@@ -39,7 +39,7 @@ class Usage
             $p =& self::$extns[$extn][$extn || !$y ? $x : $y];
             if ($this->name) {
                 if ($this->name == $name)
-                    $this->list[] = $this->pos[0] . '^' . $this->pos[1];
+                    $this->list[] = $this->pos;
             } elseif (isset($p[$name])) {
                 $p[$name][1]++;
                 if ($this->pos[0] != $p[$name][0][0])

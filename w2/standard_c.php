@@ -98,7 +98,7 @@ class standard_c extends Controller
         SKY::$debug = 0;
         list($file, $line) = explode('^', $_POST['name']);
         $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
-        echo Display::php($txt, str_pad('', $line - 1, '=') . ('true' == $_POST['c'] ? '-' : '+'));
+        echo Display::php($txt, [$line, 'true' == $_POST['c'], true]);
         throw new Stop;
     }
 
@@ -149,7 +149,7 @@ class standard_c extends Controller
 
     function j_glob() {
         MVC::body('_glob.' . substr($this->_c, 2));
-        return call_user_func([new Globals, $this->_c], $this->_3 ?: $this->_4);
+        return call_user_func([new Globals, $this->_c], $this->_4 ?: $this->_3);
     }
 
     function j_inst() {
