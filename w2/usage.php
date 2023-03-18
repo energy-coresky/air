@@ -16,6 +16,7 @@ class Usage
     public $parts = [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'];
     public $name = '';
     public $list = [];
+    public $act = null;
 
     function __construct($path = '.') {
         global $sky, $argv;
@@ -192,16 +193,18 @@ case '&':
         return $extns;
     }
 
-    function exclude_dirs($dir = false) {
+    function exclude_dirs($dir = false, $act = false) {
         static $dirs;
         if (null === $dirs) {
             $tmemo = sqlf('+select tmemo from $_memory where id=11');
-            $mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=11');
-            $dirs = isset($mem['gr_dirs']) ? explode(' ', $mem['gr_dirs']) : [];
+            SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=11');
+            false === $act or SKY::i('gr_act', $act);
+            null !== $this->act or $this->act = SKY::i('gr_act');
+            $dirs = explode(' ', SKY::i('gr_dirs' . $this->act));
         }
         if ($dir) {
             ($offset = array_search($dir, $dirs)) !== false ? array_splice($dirs, $offset, 1) : ($dirs[] = $dir);
-            SKY::i('gr_dirs', implode(' ', $dirs));
+            SKY::i('gr_dirs' . $this->act, implode(' ', $dirs));
         }
         trace($dirs);
         return $dirs;

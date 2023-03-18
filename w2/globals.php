@@ -42,6 +42,30 @@ class Globals extends Usage
         ])]);
     }
 
+    function c_settings() {
+        $dirs = Rare::walk_dirs('.');
+        $exc = $this->exclude_dirs();
+        if (realpath(DIR_M) != realpath(DIR_S))
+            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
+        SKY::d('gr_start', 'dirs');
+        return [
+            'dirs' => $dirs,
+            'continue' => function ($dir) use ($exc) {
+                static $red = false;
+                if (in_array($dir, $exc)) {
+                    $red = $dir;
+                    return 0;
+                }
+                return $red && $red == substr($dir, 0, strlen($red));
+            },
+        ];
+    }
+
+    function c_seta() {
+        $this->exclude_dirs($_POST['dir'] ?? false, $_POST['act'] ?? false);
+        return $this->c_settings();
+    }
+
     static function ware($dir) {
         $glb = new Globals($dir);
         return array_keys($glb->_def()['CLASS']);
@@ -84,30 +108,6 @@ class Globals extends Usage
     function c_save() {
         Plan::mem_p("report_" . substr(NOW, 0, 10) . '.html', $_POST['html']);
         return $this->_def();
-    }
-
-    function c_settings() {
-        $dirs = Rare::walk_dirs('.');
-        if (DIR_M != DIR_S)
-            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
-        SKY::d('gr_start', 'dirs');
-        return [
-            'dirs' => $dirs,
-            'continue' => function ($dir) {
-                static $red = false, $dirs;
-                is_array($dirs) or $dirs = $this->exclude_dirs();
-                if (in_array($dir, $dirs)) {
-                    $red = $dir;
-                    return 0;
-                }
-                return $red && $red == substr($dir, 0, strlen($red));
-            },
-        ];
-    }
-
-    function c_skip() {
-        $this->exclude_dirs($_POST['dir']);
-        return $this->c_settings();
     }
 
     function c_back() {

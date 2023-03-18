@@ -232,18 +232,26 @@
 
 Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
 
-#.settings.skip ==========================================================================================================
+#.settings.seta ==========================================================================================================
 #use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
 @use(.m_glob)
-<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;">
-    <div class="fs16">
-        Presets:
-    </div>
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca; position:sticky; top:0px">
+  <div class="fs16" style="width:280px;">Settings</div>
+  <div class="fs16">Dir's presets:</div>
+  <div id="dirs-pre" style="margin-left:20px;">
+  @loop($_ < 3)
+    <a @href(sky.g.act({{$_}}))@active($_ == (int)$k_gr->act)>{{$_ ? "dirs$_" : 'main'}}</a>
+  ~loop
+  </div>
 </div>
-<div style="margin:0 10px 10px 10px">
+<div style="margin:10px; display:flex;">
+  <div style="width:280px; height:100px; position:sticky; top:52px">
+  <label>
+  <input type="checkbox"> Show errors: "definition not used"
+  </label>
   <p>
-  [ ] show error: "definition not used"
-  <p>
+  </div>
+  <div style="width:calc(100vw - 561px);">
   @loop($dirs as $one)
     @continue($red = $continue($one))
     <div class="md">
@@ -254,26 +262,37 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
       ~if
     </div>
   ~loop
+  </div>
 </div>
 #.jscss ----------------------------------------------------------------------------------------------------------
 <style>
 #gr-modules {
-    margin-top:8px;
-    padding-bottom:3px;
+  margin-top:8px;
+  padding-bottom:3px;
 }
 #gr-modules span {
-    display: inline-block;
-    background:#dfd; /* #e0e7ff */
-    margin:0 5px 5px 0;
-    padding:2px 5px;
-    border-radius: 5px;
+  display: inline-block;
+  background:#dfd; /* #e0e7ff */
+  margin:0 5px 5px 0;
+  padding:2px 5px;
+  border-radius: 5px;
 }
 #v-menu u, .other-info u {
-    cursor:pointer;
+  cursor:pointer;
 }
 #v-menu u:hover, .other-info u:hover {
-    color: magenta;
+  color: magenta;
 }
+#dirs-pre a {
+  display: inline-block;
+  padding: 0 10px;
+  line-height: 27px;
+}
+#dirs-pre a:hover {
+  background:#818cf8;
+  color:#fff;
+}
+
 </style>
 <script>
 sky.g.save = function() {
@@ -287,7 +306,10 @@ sky.g.mark = function(el, s) {
   dev('mark', {ident:s, desc:$(el).prev().val()});
 }
 sky.g.dir = function(el) {
-  dev('skip', {dir:$(el).text()});
+  dev('seta', {dir:$(el).text()});
+}
+sky.g.act = function(n) {
+  dev('seta', {act:n ? n : ''});
 }
 sky.g.run = function(m) {
   var finish = 0;
@@ -322,5 +344,5 @@ sky.g.run = function(m) {
   progr();
 }
 </script>
-#.settings.skip.jscss
+#.settings.seta.jscss
 
