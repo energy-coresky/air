@@ -108,7 +108,7 @@ class Vendor
                 'repo' => $repo = $std->results[0]->repository ?? '',
                 'row' => $name ? $this->c_detail($name, $repo) : '',
             ]),
-            'raw' => tag(print_r($std,1), '', 'pre'),
+            'raw' => pre(print_r($std,1), ''),
         ]);
     }
 

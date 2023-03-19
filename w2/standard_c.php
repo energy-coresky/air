@@ -161,7 +161,7 @@ class standard_c extends Controller
             $this->_c = self::atime(); # open last access time controller
         $ary = !$this->_4 ? [] : [
             'y_tx' => $this->d_dev ? 1 : 2, # sample: ?_gate=company&func=j_edit&ajax
-            'trace_x' => tag(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"', 'pre'),
+            'trace_x' => pre(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"'),
         ];
         return [
             'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',

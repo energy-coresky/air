@@ -330,7 +330,7 @@ class SKY implements PARADISE
             SKY::$dd->sqlf('update $_memory set tmemo=%s where id=1', $top);
         }
         if (Plan::$z_error)
-            Plan::cache_a(['main', 'dev_z_err'], tag($top, 'class="trace"', 'pre'));
+            Plan::cache_a(['main', 'dev_z_err'], pre($top, 'class="trace"'));
         return $top;
     }
 }

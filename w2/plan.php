@@ -475,7 +475,7 @@ class Plan
                     $out .= "\n  -&gt;$k = " . self::var($v);
                 }
             }
-            return $obj ? "$out\n}" : tag("$out\n}", '', 'pre');
+            return $obj ? "$out\n}" : pre("$out\n}", '');
         }
     }
 }

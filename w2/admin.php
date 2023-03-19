@@ -60,7 +60,7 @@ class Admin
             }
             echo '</table>';
         } else {
-            echo tag($out, 'id="pre-out"', 'pre');
+            echo pre($out, 'id="pre-out"');
         }
     }
 

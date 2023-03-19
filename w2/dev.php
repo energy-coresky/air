@@ -140,7 +140,7 @@ class DEV
         return [
             'list_views' => $list,
             'list_menu' => $menu,
-            'trace_x' => tag($trc, 'class="trace"', 'pre'),
+            'trace_x' => pre($trc, 'class="trace"'),
             'nv' => $nv,
             'y_tx' => $x,
             'header' => ('main' == $ware ? '' : '<span style="font-size:14px"><b>' . strtoupper($ware) . ":</b></span> ") . $header,
