@@ -85,7 +85,7 @@ class Globals extends Usage
     function c_progress() {
         SKY::$debug = 0;
         list ($val, $max) = sqlf('-select imemo, cmemo from $_memory where id=11');
-        json(['max' => $max, 'val' => $val]);
+        json(['max' => (int)$max, 'val' => (int)$val]);
     }
 
     function c_saved() {
