@@ -177,17 +177,17 @@ case '&':
         if ($simple)
             return $extns;
         $const = get_defined_constants(true);
-        foreach ($extns as $n => $extn) {
-            $rn = new ReflectionExtension($extn);
+        foreach ($extns as $one) {
+            $rn = new ReflectionExtension($one);
             $list = $rn->getClassNames();
-            self::$classes += array_change_key_case(array_combine($list, array_pad([], count($list), $extn)));
-            self::$functions += array_change_key_case(array_map(function() use ($extn) {
-                return $extn;
+            self::$classes += array_change_key_case(array_combine($list, array_pad([], count($list), $one)));
+            self::$functions += array_change_key_case(array_map(function() use ($one) {
+                return $one;
             }, $rn->getFunctions()));
-            if (isset($const[$extn])) {
-                self::$constants += array_map(function() use ($extn) {
-                    return $extn;
-                }, $const[$extn]);
+            if (isset($const[$one])) {
+                self::$constants += array_map(function() use ($one) {
+                    return $one;
+                }, $const[$one]);
             }
         }
         return $extns;
@@ -206,14 +206,30 @@ case '&':
             ($offset = array_search($dir, $dirs)) !== false ? array_splice($dirs, $offset, 1) : ($dirs[] = $dir);
             SKY::i('gr_dirs' . $this->act, implode(' ', $dirs));
         }
-        trace($dirs);
+        //trace($dirs);
         return $dirs;
     }
 
+    function dirs($is_proc, &$dirs, &$exclude = null) {
+        $exclude = $this->exclude_dirs();
+        $ary = $is_proc ? $exclude : [];
+        $len = strlen($root = realpath(DIR));
+        $c1 = count($dirs = Rare::walk_dirs($this->path, $ary));
+        if ($r1 = substr(realpath(DIR_S), 0, $len) != $root)
+            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S, $ary));
+        $c2 = count($dirs);
+        $sw = SKY::d('second_wares');
+        $d2 = [];
+        foreach (SKY::$plans as $plan => $cfg) {
+            if (substr(realpath($cfg['app']['path']), 0, $len) != $root)
+                $d2 = array_merge($d2, Rare::walk_dirs("$sw/$plan", $ary));
+        }
+        $dirs = array_merge($dirs, $d2);
+        return [$c1 - 1, !$r1, $c2 - 1, !$d2];
+    }
+
     function walk_files($proc) {
-        $dirs = Rare::walk_dirs($this->path, $this->exclude_dirs());
-        if ($flag = DIR_M != DIR_S && '.' == $this->path)
-            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
+        $this->dirs(true, $dirs);
         self::$cnt[1] = count($dirs);
         $ts = microtime(true);
         $imemo = 0;
@@ -232,10 +248,6 @@ case '&':
         }
         if ($imemo != self::$cnt[8])
             sqlf('update $_memory set imemo=%d, cmemo=%d where id=11', self::$cnt[8], self::$cnt[1]);
-        if ($flag) {
-            call_user_func($proc, DIR_S . '/heaven.php');
-            call_user_func($proc, DIR_S . '/sky.php');
-        }
     }
 
     function _use() {// see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
@@ -246,7 +258,7 @@ case '&':
         $nap = Plan::mem_rq('report.nap');
 
         return [
-            'show_emp' => 0,
+            'show_emp' => SKY::i('gr_snu'),
             'e_usage' => [
                 'max_i' => -1, // infinite
                 'row_c' => function($ext, $evar = false) use ($nap) {

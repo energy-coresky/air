@@ -232,7 +232,7 @@
 
 Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
 
-#.settings.seta ==========================================================================================================
+#.settings.setup ==========================================================================================================
 #use(`<h4>SELECT DIRECTORIES FOR PHP FILES</h4>` as header)
 @use(.m_glob)
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca; position:sticky; top:0px">
@@ -246,14 +246,18 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
 </div>
 <div style="margin:10px; display:flex;">
   <div style="width:280px; height:100px; position:sticky; top:52px">
-  <label>
-  <input type="checkbox"> Show errors: "definition not used"
-  </label>
-  <p>
+    <label><input type="checkbox"@checked(SKY::i('gr_dnu')) onchange="ajax('chk&dnu=' + this.checked)">
+      Show errors: "definition not used"
+    </label><br>
+    <label><input type="checkbox"@checked(SKY::i('gr_snu')) onchange="ajax('chk&snu=' + this.checked)">
+      Show not used extensions
+    </label><br>
   </div>
   <div style="width:calc(100vw - 561px);">
-  @loop($dirs as $one)
-    @continue($red = $continue($one))
+  <div class="md"><u>the application:</u></div>
+  @loop($dirs as $i => $one)
+    @if($red = $continue($one))@inc(.if)~if
+    @continue($red)
     <div class="md">
       @if('.' == $one)
         <span class="bg-g">--root-project-directory--</span> {{DIR}}
@@ -261,6 +265,14 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
         <a @href(sky.g.dir(this))@if(0 === $red) style="color:red;text-decoration:line-through"~if>{!$one!}</a>
       ~if
     </div>
+#.if
+    @if($i == $ary[0])
+      <div class="md"><u>the framework:@if($ary[1]) embeded to app~if</u></div>
+    ~if
+    @if($i == $ary[2])
+      <div class="md"><u>second wares:@if($ary[3]) embeded or not set~if</u></div>
+    ~if
+#.if
   ~loop
   </div>
 </div>
@@ -292,7 +304,6 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
   background:#818cf8;
   color:#fff;
 }
-
 </style>
 <script>
 sky.g.save = function() {
@@ -306,10 +317,10 @@ sky.g.mark = function(el, s) {
   dev('mark', {ident:s, desc:$(el).prev().val()});
 }
 sky.g.dir = function(el) {
-  dev('seta', {dir:$(el).text()});
+  dev('setup', {dir:$(el).text()});
 }
 sky.g.act = function(n) {
-  dev('seta', {act:n ? n : ''});
+  dev('setup', {act:n ? n : ''});
 }
 sky.g.run = function(m) {
   var finish = 0;
@@ -344,5 +355,5 @@ sky.g.run = function(m) {
   progr();
 }
 </script>
-#.settings.seta.jscss
+#.settings.setup.jscss
 

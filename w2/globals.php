@@ -30,6 +30,8 @@ class Globals extends Usage
         if (!CLI && !$sky->fly)
             return ['c3' => $this->_2 == 'ext' && !$name];
         SKY::d('gr_start', "run=$this->_2");
+        if (CLI)
+            $this->act = '';
         $marker = $name ? 'name' : $this->_2;
         $html = view("_glob.$marker", 'def' == $this->_2 ? $this->_def() : $this->_use());
         if (CLI)
@@ -43,16 +45,13 @@ class Globals extends Usage
     }
 
     function c_settings() {
-        $dirs = Rare::walk_dirs('.');
-        $exc = $this->exclude_dirs();
-        if (realpath(DIR_M) != realpath(DIR_S))
-            $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S . '/w2'));
-        SKY::d('gr_start', 'dirs');
+        SKY::d('gr_start', 'settings');
         return [
+            'ary' => $this->dirs(false, $dirs, $exclude),
             'dirs' => $dirs,
-            'continue' => function ($dir) use ($exc) {
+            'continue' => function ($dir) use ($exclude) {
                 static $red = false;
-                if (in_array($dir, $exc)) {
+                if (in_array($dir, $exclude)) {
                     $red = $dir;
                     return 0;
                 }
@@ -61,7 +60,13 @@ class Globals extends Usage
         ];
     }
 
-    function c_seta() {
+    function c_chk() {
+        $this->exclude_dirs();
+        SKY::i('gr_' . $this->_2, 'true' == $_GET[$this->_2] ? 1 : 0);
+        return true;
+    }
+
+    function c_setup() {
         $this->exclude_dirs($_POST['dir'] ?? false, $_POST['act'] ?? false);
         return $this->c_settings();
     }
