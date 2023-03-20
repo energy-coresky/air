@@ -251,7 +251,10 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
     </label><br>
     <label><input type="checkbox"@checked(SKY::i('gr_snu')) onchange="ajax('chk&snu=' + this.checked)">
       Show not used extensions
-    </label><br>
+    </label><br><br>
+    Add files to parser:<br>
+    <textarea rows="5" style="width:95%">{{SKY::i('gr_files')}}</textarea>
+    <button onclick="sky.g.files(this)">Save</button>
   </div>
   <div style="width:calc(100vw - 561px);">
   <div class="md"><u>the application:</u></div>
@@ -321,6 +324,9 @@ sky.g.dir = function(el) {
 }
 sky.g.act = function(n) {
   dev('setup', {act:n ? n : ''});
+}
+sky.g.files = function(el) {
+  ajax('files', {s:$(el).prev().val()});
 }
 sky.g.run = function(m) {
   var finish = 0;

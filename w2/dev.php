@@ -168,7 +168,7 @@ class DEV
         $wares = (array)Plan::_rq('wares.php');
         $dir = trim($_POST['s'], " \t\r\n/");
         if ('un' != ($mode = $_POST['mode'])) { # Install
-            list ($type, $dir) = explode('.', $dir);
+            list ($type, $dir) = explode('.', $dir, 2);
             if (!is_file("$dir/conf.php")) {
                 print("File `$dir/conf.php` not found");
                 return 801;
@@ -190,7 +190,7 @@ class DEV
             $name = basename($dir);
             $cls = [];
             if ('prod' == $type && 1 == $mode) {
-                $classes = Globals::ware($dir);
+                $classes = Globals::def($dir);
                 foreach ($classes as $one)
                     $wares[$name]['class'][] = $one;
                 return [

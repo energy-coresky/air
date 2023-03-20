@@ -25,6 +25,11 @@ class Globals extends Usage
 
     public $also_ns = [];
 
+    static function def($dir, $sect = 'CLASS') {
+        $glb = new Globals($dir);
+        return array_keys($glb->_def()[$sect]);
+    }
+
     function c_run($name = '') {
         global $sky;
         $this->name = $name;
@@ -67,14 +72,15 @@ class Globals extends Usage
         return true;
     }
 
+    function c_files() {
+        $this->exclude_dirs();
+        SKY::i('gr_files', preg_replace("/\s+/s", ' ', $_POST['s']));
+        return true;
+    }
+
     function c_setup() {
         $this->exclude_dirs($_POST['dir'] ?? false, $_POST['act'] ?? false);
         return $this->c_settings();
-    }
-
-    static function ware($dir) {
-        $glb = new Globals($dir);
-        return array_keys($glb->_def()['CLASS']);
     }
 
     function parse_html($fn, $line_start, $str) {

@@ -215,6 +215,8 @@ case '&':
         $ary = $is_proc ? $exclude : [];
         $len = strlen($root = realpath(DIR));
         $c1 = count($dirs = Rare::walk_dirs($this->path, $ary));
+        if ('.' != $this->path)
+            return;
         if ($r1 = substr(realpath(DIR_S), 0, $len) != $root)
             $dirs = array_merge($dirs, Rare::walk_dirs(DIR_S, $ary));
         $c2 = count($dirs);
@@ -248,6 +250,10 @@ case '&':
         }
         if ($imemo != self::$cnt[8])
             sqlf('update $_memory set imemo=%d, cmemo=%d where id=11', self::$cnt[8], self::$cnt[1]);
+        if ('.' != $this->path || !($files = SKY::i('gr_files')))
+            return;
+        foreach (explode(' ', $files) as $fn)
+            is_file($fn) && call_user_func($proc, $fn);
     }
 
     function _use() {// see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
