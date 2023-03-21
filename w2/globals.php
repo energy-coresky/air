@@ -83,6 +83,30 @@ class Globals extends Usage
         return $this->c_settings();
     }
 
+    function c_nmand($extns) {
+        if ($x = !$extns) {
+            $extns = parent::extensions();
+            $this->exclude_dirs();
+            $s = $_POST['s'];
+        }
+        $nmand = explode(' ', SKY::i('gr_nmand'));
+        if ($x) {
+            ($offset = array_search($s, $nmand)) !== false ? array_splice($nmand, $offset, 1) : ($nmand[] = $s);
+            SKY::i('gr_nmand', implode(' ', $nmand));
+        }
+        return [
+            'extns' => $extns,
+            'cnt_used' => count($used = explode(' ', SKY::i('gr_extns'))),
+            'class' => function($ext) use (&$used, &$nmand) {
+                if (in_array($ext, Root::$core))
+                    return 'gr-core';
+                if (in_array($ext, $nmand))
+                    return 'gr-nmand';
+                return in_array($ext, $used) ? 'gr-used' : '';
+            },
+        ];
+    }
+
     function parse_html($fn, $line_start, $str) {
         //2do warm jet-cache
         //$this->parse_def($fn, $line_start, $str);
@@ -300,9 +324,7 @@ class Globals extends Usage
 
         $nap = Plan::mem_rq('report.nap');
 
-        return [
-            'extns' => $extns,
-            'ext_used' => explode(' ', SKY::i('gr_extns')),
+        return $this->c_nmand($extns) + [
             'defs' => $this->definitions,
             'e_idents' => [
                 'max_i' => -1, // infinite

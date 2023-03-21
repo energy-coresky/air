@@ -151,11 +151,14 @@
 
 
 #.def.mark.save.back //////////////////////////////////////////////////////////////////////////////////////////////////////////
-<fieldset id="gr-modules"><legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>
+<fieldset id="gr-modules">
+#.nmand
+  <legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>
   @loop($extns as $one)
-    <span style="{{in_array($one, $ext_used) ? 'background-color:#ccc' : ''}}">{{$one}}</span>
+    <span class="{{$class($one)}}">{{$one}}</span>
   ~loop
-  <hr>Used {{count($ext_used)}} of {{count($extns)}} loaded extensions. See <a href="_dev?main=1&id=4">here</a>
+  <hr>Used {{$cnt_used}} of {{count($extns)}} loaded extensions. See <a href="_dev?main=1&id=4">here</a>
+#.nmand
 </fieldset>
 <span class="res-total"></span>
 @loop($defs as $key => $ary)
@@ -255,6 +258,8 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
     Add files to parser:<br>
     <textarea rows="5" style="width:95%">{{SKY::i('gr_files')}}</textarea>
     <button onclick="sky.g.files(this)">Save</button>
+    <br><br>
+    Not mandatory extensions:
   </div>
   <div style="width:calc(100vw - 561px);">
   <div class="md"><u>the application:</u></div>
@@ -292,7 +297,7 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
   padding:2px 5px;
   border-radius: 5px;
 }
-#v-menu u, .other-info u {
+#v-menu u, .other-info u, .gr-nmand, .gr-used {
   cursor:pointer;
 }
 #v-menu u:hover, .other-info u:hover {
@@ -306,6 +311,15 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
 #dirs-pre a:hover {
   background:#818cf8;
   color:#fff;
+}
+.gr-nmand {
+  background:#ddf !important;
+}
+.gr-used {
+  background:#ccc !important;
+}
+.gr-core {
+  background:#fdd !important;
 }
 </style>
 <script>
@@ -341,7 +355,10 @@ sky.g.run = function(m) {
       $('#r-menu').html(menu).prev().html(r.html);
     } else {
       $('#dev-glob div:eq(0)').next().find('div:eq(0)').html(r.html);
-      $('#l-menu').html(menu)
+      $('#l-menu').html(menu);
+      $('.gr-nmand, .gr-used').click(function() {
+        ajax('nmand', {s:$(this).text()}, 'gr-modules');
+      });
     }
     sky.d.files(function (r) {
         location.href += '&name=' + encodeURIComponent(r);

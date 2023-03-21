@@ -4,13 +4,17 @@ class Root
 {
     static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Databases'];
     static $menu2 = [7 => 'Special', 'Log Cron', 'Log Crash', 'Log Error'];
+    static $core = [ # is core: hash json ?
+        'Core', 'date', 'hash', 'json', 'pcre', 'Reflection', 'SPL', 'standard',
+    ];
     static $maxext = [
-        'Core', 'PDO', 'PDO_OCI', 'PDO_ODBC', 'Phar', 'Reflection', 'SPL', 'SimpleXML', 'SourceGuardian', 'Zend OPcache', 'bcmath', 'bz2',
-        'calendar', 'cgi-fcgi', 'ctype', 'curl', 'date', 'dba', 'dom', 'enchant', 'exif', 'fileinfo', 'filter', 'ftp', 'gd', 'gettext', 'gmp',
-        'hash', 'iconv', 'imagick', 'imap', 'interbase', 'intl', 'ionCube Loader', 'json', 'ldap', 'libxml', 'mbstring', 'mysqli', 'mysqlnd',
-        'oci8', 'odbc', 'openssl', 'pcntl', 'pcre', 'pdo_mysql', 'pdo_pgsql', 'pdo_sqlite', 'pgsql', 'posix', 'pspell', 'readline', 'session',
-        'shmop', 'snmp', 'soap', 'sockets', 'sodium', 'sqlite3', 'standard', 'sysvmsg', 'sysvsem', 'sysvshm', 'tidy', 'tokenizer', 'wddx', 'xml',
-        'xmlreader', 'xmlwriter', 'xsl', 'zip', 'zlib',
+        'apache2handler', 'bcmath', 'bz2', 'calendar', 'cgi-fcgi', 'COM*', 'Core', 'ctype', 'curl', 'date', 'dba', 'dom', 'enchant',
+        'exif', 'FFI*', 'fileinfo', 'filter', 'ftp', 'gd', 'gettext', 'gmp', 'hash', 'HRTime*', 'iconv', 'imagick', 'imap', 'interbase',
+        'intl', 'ionCube Loader', 'json', 'ldap', 'libxml', 'mbstring', 'mhash*', 'mysqli', 'mysqlnd', 'oci8', 'odbc', 'openssl', 'pcntl*',
+        'pcre', 'PDO', 'PDO_CUBRID', 'PDO_DBLIB', 'PDO_FIREBIRD', 'PDO_IBM', 'PDO_INFORMIX', 'pdo_mysql', 'PDO_OCI', 'PDO_ODBC', 'pdo_pgsql',
+        'pdo_sqlite', 'PDO_SQLSRV', 'pgsql', 'Phar', 'phpdbg*', 'posix*', 'pspell', 'readline', 'Reflection', 'session', 'shmop',
+        'SimpleXML', 'snmp', 'soap', 'sockets', 'sodium', 'SourceGuardian', 'SPL', 'sqlite3', 'standard', 'sysvmsg*', 'sysvsem*', 'sysvshm*',
+        'tidy', 'tokenizer', 'wddx', 'xml', 'xmlreader', 'xmlwriter', 'xsl', 'Zend OPcache', 'zip', 'zlib',
     ];
 
     const js = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js';
@@ -35,7 +39,7 @@ class Root
         $tpl = '<span ' . $ml . '><u>Extension</u></span> &nbsp; <form>%s<select name="t" id="sm-select">%s</select></form>';
         $priv = tag('<input ' . ($sky->d_pp ? 'checked ' : '') . $ml . ' type="checkbox" onchange="sky.d.pp(this)"> show private & protected', '', 'label');
         $ext = get_loaded_extensions();
-        sort($ext);
+        natcasesort($ext);
         $echo = function ($ary, $t = 'c') {
             'e' == $t or sort($ary);
             $val = array_map(function ($v) use ($t) {
