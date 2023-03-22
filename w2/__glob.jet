@@ -72,8 +72,8 @@
 #.ext //////////////////////////////////////////////////////////////////////////////////////////////////////////
 <br><span class="res-total"></span>
 @loop(Globals::$extns as $key => $ary)@continue(!$key)
-  @if($show_emp || $ary[0] || $ary[1] || $ary[2])
-    <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{{$key}}</h2>
+  @if(($used = $ary[0] || $ary[1] || $ary[2]) || $show_emp)
+    <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{!$key . $sup($key, $used)!}</h2>
   ~if
   <table width="100%" cellspacing="0" cellpadding="2" class="clist_data">
   @loop($e_usage($key))
@@ -155,9 +155,10 @@
 #.nmand
   <legend>Extensions in current PHP Version: {{PHP_VERSION}}</legend>
   @loop($extns as $one)
-    <span class="{{$class($one)}}">{{$one}}</span>
+    <span class="{{$class($one, $mand)}}">{{$one}}</span>
   ~loop
-  <hr>Used {{$cnt_used}} of {{count($extns)}} loaded extensions. See <a href="_dev?main=1&id=4">here</a>
+  <hr>Used {{$cnt_used}}/{{$mand}} of {{count($extns)}} loaded extensions. See <a href="_dev?main=1&id=4">full list</a>.
+  Gray color - required (checked) extensions.
 #.nmand
 </fieldset>
 <span class="res-total"></span>
@@ -254,12 +255,18 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
     </label><br>
     <label><input type="checkbox"@checked(SKY::i('gr_snu')) onchange="ajax('chk&snu=' + this.checked)">
       Show not used extensions
-    </label><br><br>
-    Add files to parser:<br>
+    </label><br>
+    <label><input type="checkbox"@checked(SKY::i('gr_sdw')) onchange="ajax('chk&sdw=' + this.checked)">
+      Show DEV-Wares dirs
+    </label><br>
+    <br>Add files to parser:<br>
     <textarea rows="5" style="width:95%">{{SKY::i('gr_files')}}</textarea>
     <button onclick="sky.g.files(this)">Save</button>
-    <br><br>
-    Not mandatory extensions:
+    <br>
+    <fieldset id="gr-modules">
+      <legend>Checked extensions [{{count($used)}}]:</legend>
+      @loop($used as $one)<span class="gr-used">{{$one}}</span>~loop
+    </fieldset>
   </div>
   <div style="width:calc(100vw - 561px);">
   <div class="md"><u>the application:</u></div>
@@ -343,7 +350,14 @@ sky.g.files = function(el) {
   ajax('files', {s:$(el).prev().val()});
 }
 sky.g.run = function(m) {
-  var finish = 0;
+  var finish = 0, nmand = function() {
+    $('.gr-nmand, .gr-used').click(function() {
+      ajax('nmand', {s:$(this).text()}, function(r) {
+        $('#gr-modules').html(r);
+        nmand();
+      });
+    });
+  };
   $('progress').prop('max', 1).val(0)
   ajax('run&{{$sky->_2}}={{urlencode($sky->_4)}}', {}, function(r) {
     finish = 1;
@@ -356,9 +370,7 @@ sky.g.run = function(m) {
     } else {
       $('#dev-glob div:eq(0)').next().find('div:eq(0)').html(r.html);
       $('#l-menu').html(menu);
-      $('.gr-nmand, .gr-used').click(function() {
-        ajax('nmand', {s:$(this).text()}, 'gr-modules');
-      });
+      nmand();
     }
     sky.d.files(function (r) {
         location.href += '&name=' + encodeURIComponent(r);

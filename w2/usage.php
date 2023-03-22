@@ -329,6 +329,16 @@ case '&':
                 }
                 return 1 + $e->key();
             },
+            'sup' => function($ext, $used) {
+                static $nmand;
+                if (in_array($ext, Root::$core))
+                    return tag('core', 'style="color:red"', 'sup');
+                if (null === $nmand)
+                    $nmand = explode(' ', SKY::i('gr_nmand'));
+                if (in_array($ext, $nmand))
+                    return tag('not mandatory', 'style="color:magenta"', 'sup');
+                return $used ? tag('used', 'style="color:#777"', 'sup') : '';
+            },
         ];
     }
 }

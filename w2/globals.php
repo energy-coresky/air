@@ -63,6 +63,7 @@ class Globals extends Usage
                 }
                 return $red && $red == substr($dir, 0, strlen($red));
             },
+            'used' => array_diff(explode(' ', SKY::i('gr_extns')), explode(' ', SKY::i('gr_nmand')), Root::$core),
         ];
     }
 
@@ -97,12 +98,16 @@ class Globals extends Usage
         return [
             'extns' => $extns,
             'cnt_used' => count($used = explode(' ', SKY::i('gr_extns'))),
-            'class' => function($ext) use (&$used, &$nmand) {
+            'class' => function($ext, &$cnt) use (&$used, &$nmand) {
+                isset($cnt) or $cnt = 0;
                 if (in_array($ext, Root::$core))
                     return 'gr-core';
                 if (in_array($ext, $nmand))
                     return 'gr-nmand';
-                return in_array($ext, $used) ? 'gr-used' : '';
+                if (!in_array($ext, $used))
+                    return '';
+                $cnt++;
+                return 'gr-used';
             },
         ];
     }

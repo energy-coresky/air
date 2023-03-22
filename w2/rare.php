@@ -7,7 +7,7 @@ class Rare
     static public $u_svn_skips = ['.git', '.svn'];
 
     static function list_path($dir, $func = '', $skip = [], $up = false) {
-        if ('/' === $dir)
+        if ('/' === $dir) // ????
             $dir = '.';
         if (!is_dir($dir))
             return [];
@@ -29,9 +29,9 @@ class Rare
     }
 
     static function walk_dirs($dir, $skip = []) {
-        if ('/' === $dir)
+        if ('/' === $dir) // ????
             $dir = '.';
-        if (!file_exists($dir))
+        if (!file_exists($dir) || in_array($dir, $skip))
             return [];
         $list = [$dir];
         foreach (self::list_path($dir, 'is_dir', $skip) as $path)
