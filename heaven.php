@@ -50,7 +50,7 @@ class HEAVEN extends SKY
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
         header('Content-Type: text/html; charset=UTF-8');
 
-        if (EXTRA && INPUT_GET == $this->method) {
+        if (EXTRA && 1 == $this->method) { # INPUT_GET
             $fn = "var/extra/" . DOMAIN . urlencode(URI) . '.html';
             if (is_file($fn) && ($fh = @fopen($fn, 'r'))) {
                 for(; ob_get_level(); ob_end_clean());

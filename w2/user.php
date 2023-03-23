@@ -129,7 +129,7 @@ class USER
                 $this->u_uri_admin = $sky->lref;
 
         } else {
-            if (INPUT_POST == $sky->method)
+            if (0 == $sky->method) # INPUT_POST
                 $sky->error_no = 12;
             $ary = [
                 'sky'   => $this->cookize(),
@@ -210,7 +210,7 @@ class USER
 
     function guard_csrf($skip = []) {
         global $sky;
-        if (INPUT_POST != $sky->method || in_array($sky->_0, $skip) || $sky->error_no)
+        if (0 != $sky->method || in_array($sky->_0, $skip) || $sky->error_no) # INPUT_POST
             return;
         $csrf = $_POST['_csrf'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? false;
         unset($_POST['_csrf']);

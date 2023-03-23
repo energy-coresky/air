@@ -157,8 +157,9 @@ class Install
         global $sky;
         if ('copy' == $sky->_2) {
             $this->memo();
-            $this->mem['modules'] = $sky->i_gr_extns;
-            SKY::i('modules', $sky->i_gr_extns);
+            $m = array_diff(explode(' ', $sky->i_gr_extns), explode(' ', $sky->i_gr_nmand), Root::$core);
+            $this->mem['modules'] = $m = implode(' ', $m);
+            SKY::i('modules', $m);
         }
         if (!isset($_POST['step'])) return [
             'modules' => Globals::extensions(true),

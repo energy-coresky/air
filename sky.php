@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = [];
 
-    const CORE = '0.413 2023-03-16T08:59:18+02:00 energy';
+    const CORE = '0.414 2023-03-23T19:41:32+02:00 energy';
 
     function __construct() {
         global $argv, $sky;

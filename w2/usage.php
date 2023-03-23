@@ -223,8 +223,9 @@ case '&':
         $sw = SKY::d('second_wares');
         $d2 = [];
         foreach (SKY::$plans as $plan => $cfg) {
-            if (substr(realpath($cfg['app']['path']), 0, $len) != $root)
-                $d2 = array_merge($d2, Rare::walk_dirs("$sw/$plan", $ary));
+            if (substr(realpath($cfg['app']['path']), 0, $len) == $root
+                || !SKY::i('gr_sdw') && in_array($cfg['app']['type'], ['dev', 'pr-dev'])) continue;
+            $d2 = array_merge($d2, Rare::walk_dirs("$sw/$plan", $ary));
         }
         $dirs = array_merge($dirs, $d2);
         return [$c1 - 1, !$r1, $c2 - 1, !$d2];

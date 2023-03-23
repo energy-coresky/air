@@ -34,12 +34,12 @@
 <div class="other-info">
 <table cellspacing="0" cellpadding="0" width="100%">
 @if('ext' == $k_gr->_2)
-<tr><td><b>Extensions</b>:</td><td>{{count($cnt['ext'])}} of {{count(Globals::$extns)-1}}</td></tr>
+<tr><td><b>Extensions</b>:</td><td>{{$mand . '/' . count($cnt['ext'])}} of {{count(Globals::$extns)-1}}</td></tr>
 @loop(Globals::$extns as $key => $ary)
   @continue(!$ary[0] && !$ary[1] && !$ary[2] || !$key)
   @php $name = 'apache2handler' == $key ? 'apache2h..' : $key ~php
   <tr><td {{!$key ? '' : ' noborder'}}>
-    <u onclick="$('#idnt-{{$key}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$name ?: 'user'}}</u>:
+    <u class="{!$color($key)!}" onclick="$('#idnt-{{$key}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$name}}</u>:
   </td><td{{!$key ? '' : ' noborder'}}>{{$cnt['ext'][$key]}}</td></tr>
 ~loop
 <tr><td><b>Total</b>:</td><td>{{implode('/', $cnt['tot'])}}</td></tr>
@@ -157,7 +157,7 @@
   @loop($extns as $one)
     <span class="{{$class($one, $mand)}}">{{$one}}</span>
   ~loop
-  <hr>Used {{$cnt_used}}/{{$mand}} of {{count($extns)}} loaded extensions. See <a href="_dev?main=1&id=4">full list</a>.
+  <hr>Used {{$mand}}/{{$cnt_used}} of {{count($extns)}} loaded extensions. See <a href="_dev?main=1&id=4">full list</a>.
   Gray color - required (checked) extensions.
 #.nmand
 </fieldset>
@@ -282,10 +282,10 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
     </div>
 #.if
     @if($i == $ary[0])
-      <div class="md"><u>the framework:@if($ary[1]) embeded to app~if</u></div>
+      <div class="md"><u>the framework:@if($ary[1]) embeded to root dir~if</u></div>
     ~if
     @if($i == $ary[2])
-      <div class="md"><u>second wares:@if($ary[3]) embeded or not set~if</u></div>
+      <div class="md"><u>second wares:@if($ary[3]) embeded to root dir or skipped~if</u></div>
     ~if
 #.if
   ~loop
@@ -320,13 +320,19 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
   color:#fff;
 }
 .gr-nmand {
-  background:#ddf !important;
+  background:#fdf !important;
 }
 .gr-used {
   background:#ccc !important;
 }
 .gr-core {
   background:#fdd !important;
+}
+.col0 {
+  color:#000;
+}
+.col9 {
+  color:#aaa;
 }
 </style>
 <script>

@@ -47,6 +47,10 @@ class Globals extends Usage
         json(['html' => $html, 'menu' => view('_glob.xmenu', [
             'defs' => $this->definitions,
             'cnt' => parent::$cnt,
+            'mand' => count($mand = array_diff(explode(' ', SKY::i('gr_extns')), explode(' ', SKY::i('gr_nmand')), Root::$core)),
+            'color' => function ($ext) use (&$mand) {
+                return in_array($ext, $mand) ? 'col0' : 'col9';
+            },
         ])]);
     }
 
