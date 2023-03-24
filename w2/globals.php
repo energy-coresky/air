@@ -16,7 +16,6 @@ class Globals extends Usage
         'match', 'readonly', 'fn', 'yield', // 'yield from'
     ];
     private $predefined_const = ['__DIR__', '__FILE__', '__LINE__', '__FUNCTION__', '__CLASS__', '__METHOD__', '__NAMESPACE__', '__TRAIT__'];
-    //private $special_const = ['STDIN', 'STDOUT', 'STDERR', '__COMPILER_HALT_OFFSET__'];
 
     private $all;
     private $all_lc;

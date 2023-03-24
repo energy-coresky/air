@@ -422,8 +422,8 @@ class eVar implements Iterator
     function all() {
         return iterator_to_array($this, false);
     }
-    #[\ReturnTypeWillChange]
-    function rewind() {
+
+    function rewind(): void {
         if (!$this->e)
             $this->state = 2;
         if ($this->state)
@@ -439,15 +439,17 @@ class eVar implements Iterator
                 $sql->mode |= 2 + SQL::NO_PARSE; # already parsed or query builder used
                 $sql = sql($sql); # perform query exec with error's detection
             }
-            if (!($sql instanceof SQL))
-                return $this->state++;
+            if (!($sql instanceof SQL)) {
+                $this->state++;
+				return;
+			}
             $this->dd = $sql->_dd;
         }
         $this->max_i = $this->e['max_i'] ?? 500; # -1 is infinite
         $this->next();
     }
-    #[\ReturnTypeWillChange]
-    function valid() {
+
+    function valid(): bool {
         if ($this->state > 1)
             return false;
         if ($this->row)
@@ -465,8 +467,8 @@ class eVar implements Iterator
     function key() {
         return $this->i;
     }
-    #[\ReturnTypeWillChange]
-    function next() {
+
+    function next(): void {
         global $sky;
         $exit = function ($fail) {
             $this->row = false;
@@ -477,8 +479,10 @@ class eVar implements Iterator
                 throw new Error("eVar cycle error");
         };
         do {
-            if ($this->i++ >= $this->max_i && -1 != $this->max_i)
-                return $exit(!isset($this->e['max_i']));
+            if ($this->i++ >= $this->max_i && -1 != $this->max_i) {
+                $exit(!isset($this->e['max_i']));
+				return;
+			}
             if ($this->dd)
                 $this->row = $this->dd->one($this->e['query']->stmt, 'O');
             $x = false;
@@ -487,8 +491,10 @@ class eVar implements Iterator
                 $this->row->__i = $this->i;
                 $x = call_user_func_array($this->e['row_c'], [&$this->row]);
                 $sky->in_row_c = false;
-                if (false === $x)
-                    return $exit(false);
+                if (false === $x) {
+                    $exit(false);
+					return;
+				}
             }
         } while (true === $x);
         if (!$this->dd)

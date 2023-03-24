@@ -5,6 +5,7 @@ class Usage
     protected static $functions = [];
     protected static $constants = [];
     protected static $classes = [];
+    protected static $special_const = ['STDIN', 'STDOUT', 'STDERR', '__COMPILER_HALT_OFFSET__'];
 
     protected $path;
     protected $json = [];
@@ -185,6 +186,8 @@ case '&':
                 return $one;
             }, $rn->getFunctions()));
             if (isset($const[$one])) {
+                if ('Core' === $one)
+                    $const[$one] += array_flip(self::$special_const);
                 self::$constants += array_map(function() use ($one) {
                     return $one;
                 }, $const[$one]);
