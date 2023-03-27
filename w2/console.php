@@ -143,12 +143,20 @@ class Console
         }
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
+        if (self::$d[0]) {
+            SQL::$dd_h = 'Console::dd_h';
+            global $sky;
+            $sky->open();
+            common_c::make_h(true);
+        }
         echo "\n>git add *\n";
         system('git add *');
         echo "\n>git commit -a -m \"$c\"\n";
         system("git commit -a -m \"$c\"");
         echo "\n>git push origin master\n";
         system("git push origin master");
+        if (self::$d[0])
+            common_c::make_h(false);
     }
 
     static function tail_x($exit, $stdout = '') {

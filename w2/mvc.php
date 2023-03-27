@@ -203,6 +203,10 @@ trait HOOK_C
         return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";
     }
 
+    static function make_h($forward = true) {
+        Install::make($forward);
+    }
+
     static function langs_h() {
     }
 

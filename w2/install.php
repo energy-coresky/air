@@ -316,4 +316,8 @@ class Install
             'exf' => $saved[1],
         ];
     }
+
+    static function make($forward = true) {
+        
+    }
 }
