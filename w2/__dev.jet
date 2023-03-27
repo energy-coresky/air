@@ -278,7 +278,7 @@ $(function() {
     </div>
     <div style="width:25%">
         <span></span>
-        <span id="app-rb">{{SKY::version()['app'][3]}}</span>
+        <span id="app-rb"@if(!$sky->d_dev) style="color:brown"~if>{{SKY::version()['app'][3]}}</span>
     </div>
     <div id="tpl-list-copy" style="display:none">@inc(.bottom)</div>
 </div>

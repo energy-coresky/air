@@ -267,6 +267,11 @@ Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}
       <legend>Checked extensions [{{count($used)}}]:</legend>
       @loop($used as $one)<span class="gr-used">{{$one}}</span>~loop
     </fieldset>
+    <div class="other-info" style="margin-right:15px">
+      Dir's presets:<br>
+      `main` - use for main check<br>
+      `dir1, dir2` - for tests<br>
+    </div>
   </div>
   <div style="width:calc(100vw - 561px);">
   <div class="md"><u>the application:</u></div>
