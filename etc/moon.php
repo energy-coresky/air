@@ -783,7 +783,7 @@ dd { text-align: left; margin-left: 35%; }
         <div id="log"></div>
     </div>
 </div>
-<div id="foo">Moon is the installer for all <a href="http://coresky.net/">SKY</a> applications</div>
+<div id="foo">Moon is the installer for all <a href="https://coresky.net/">SKY</a> applications</div>
 
 <div>
 <dl><dt>Database host:</dt><dd><input name="host" value="localhost" size="12">

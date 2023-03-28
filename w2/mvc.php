@@ -203,7 +203,7 @@ trait HOOK_C
         return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";
     }
 
-    static function make_h($forward = true) {
+    static function make_h($forward) {
         Install::make($forward);
     }
 
@@ -460,6 +460,7 @@ class MVC extends MVC_BASE
     }
 
     static function sub($action, $param = null, $no_handle = false) {
+        MVC::$stack or new MVC; # for Console
         $mvc = new MVC;
         ob_start();
         if (is_string($action)) {

@@ -203,6 +203,11 @@ class Console
         echo !$unhtml ? $s : (1 == $unhtml ? unhtml($s) : unhtml(unhtml($s)));
     }
 
+    /** Test first run */
+    function c_fr() {
+        common_c::make_h(true);
+    }
+
     /** Check globals */
     function c_g() {
         global $sky, $argv;

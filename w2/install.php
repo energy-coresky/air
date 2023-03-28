@@ -317,7 +317,35 @@ class Install
         ];
     }
 
-    static function make($forward = true) {
-        
+    static function make($forward = true, Array $plus = []) {
+        global $sky;
+        static $index;
+
+        if (defined('WWW')) {
+            $fn = WWW . 'index.php';
+        } else {
+            $sky->memory();
+            $ary = explode('~', $sky->n_www);
+            $fn = $ary[DEV ? 0 : 1] . '/index.php';
+        }
+        if (!$forward)
+            return file_put_contents($fn, $index);
+        $sky->memory(11, 'i');
+        $tpl = "\n\tfunction (\$ok) {\n%s\t},";
+        $other = '';
+        foreach ($plus as $name) {
+            $rm = new ReflectionMethod($name);
+            $start = $rm->getStartLine();
+            $code = array_slice(file($rm->getFileName()), $start, $rm->getEndLine() - $start - 1);
+            $other .= sprintf($tpl, implode('', $code));
+        }
+        $file = view('_inst.first_run', [
+            'vphp' => $sky->i_vphp ?: '5.0',
+            'vph2' => $sky->i_vphp2 ?: '9.0',
+            'exts' => $sky->i_modules ?: 'ctype intl mbstring tokenizer',
+            'tests' => $other,
+        ]);
+        $index = file_get_contents($fn);
+        file_put_contents($fn, strtr($file, ['<.' => '<?', '.>' => '?>']) . $index);
     }
 }
