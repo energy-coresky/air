@@ -81,8 +81,8 @@ class Root
                     'HTTP server version' => $_SERVER['SERVER_SOFTWARE'],
                     'Visitors online:' => $sky->s_online,
                     'PHP NOW:' => NOW . ' (' . PHP_TZ . '), ' . gmdate(DATE_DT) . ' (GMT)',
-                    'SQL NOW:' => ($t = sql('+select $now')) . ' ' . (NOW == $t ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
-                    'Server localtime' => $ltime . ' ' . ($sky->date(NOW) . ' ' == $ltime ? sprintf(span_g, 'equal') : sprintf(span_r, 'not equal')),
+                    'SQL NOW:' => ($t = sql('+select $now')) . ' ' . (NOW == $t ? L::g('equal') : L::r('not equal')),
+                    'Server localtime' => $ltime . ' ' . ($sky->date(NOW) . ' ' == $ltime ? L::g('equal') : L::r('not equal')),
                     'Cron layer last tick:' => (new Schedule)->n_cron_dt,
                     'Backup settings:' => sql('+select dt from $_memory where id=7'),
                     'Timestamp NOW:' => time(),
@@ -91,7 +91,7 @@ class Root
                     'Table `visitors`, rows:' => sql('+select count(1) from $_visitors'),
                     'Table `users`, rows:' => sql('+select count(1) from $_users'),
                     'E-Mail days count:' => $sky->s_email_cnt,
-                    'func `shell_exec`:' => function_exists('shell_exec') ? sprintf(span_g, 'exists') : sprintf(span_r, 'not exists'),
+                    'func `shell_exec`:' => function_exists('shell_exec') ? L::g('exists') : L::r('not exists'),
                 ], false);
                 break;
 
@@ -357,10 +357,10 @@ class Root
             case 0:
             case 1:
                 $ok = '<img src="_img?ok2" />';
-                foreach ($out as $path => $j) if ('_' == $path[0]) $out[$path] = sprintf(span_r, 'Dir must NOT exist on production!'); else {
+                foreach ($out as $path => $j) if ('_' == $path[0]) $out[$path] = L::r('Dir must NOT exist on production!'); else {
                     if (is_file($fn = "$path/$file")) {
                         $fs = filesize($fn);
-                        $out[$path] = "$ok - " . ($fs == $size ? "$fs bytes" : sprintf(span_r, "$fs bytes"));
+                        $out[$path] = "$ok - " . ($fs == $size ? "$fs bytes" : L::r("$fs bytes"));
                     } else {
                         $out[$path] = tag(sprintf(TPL_CHECKBOX . ' ', $path, '') . "$file file not exists", '', 'label');
                     }
@@ -410,9 +410,9 @@ class Root
         }
         if (!$sky->_6) {
             $DSN = SKY::$databases[$db]['dsn'] ?? ($db ? '' : (SKY::$databases['dsn'] ?? ''))
-                or $DSN = sprintf(span_g, 'DSN erased at that point');
+                or $DSN = L::g('DSN erased at that point');
             if (!DEV)
-                $DSN = sprintf(span_r, 'Production');
+                $DSN = L::r('Production');
             try {
                 $dd = SQL::open($db = 'main' == $db ? '' : $db);
             } catch (Throwable $e) {
@@ -423,7 +423,7 @@ class Root
                 Admin::out([
                     'Server' => 'Version: ' . $info['version'] . ', Charset: ' . $info['charset'],
                     'Driver, DSN' => "$dd->name, $DSN",
-                    'Table\'s prefix' => $dd->pref ?: sprintf(span_g, 'no prefix'),
+                    'Table\'s prefix' => $dd->pref ?: L::g('no prefix'),
                     'Tables count' => count($info['tables']),
                     'Migrations days' => count($list),
                     'Last exec migration' => '',

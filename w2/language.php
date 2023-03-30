@@ -470,8 +470,8 @@ class Language
                 $html = function (&$ary, &$v) {
                     $s = key($ary);
                     $v = array_shift($ary);
-                    $v[0][1] and $v[0][0] .= sprintf(span_r, ' + ' . $v[0][1]);
-                    $v[1][1] and $v[1][0] .= sprintf(span_r, ' + ' . $v[1][1]);
+                    $v[0][1] and $v[0][0] .= L::r(' + ' . $v[0][1]);
+                    $v[1][1] and $v[1][0] .= L::r(' + ' . $v[1][1]);
                     $v[0][0] or $v[0][0] = '-';
                     $v[1][0] or $v[1][0] = '-';
                     return $s;

@@ -184,7 +184,7 @@ class Schedule
             echo "$date [$task] $str\n";
         } elseif ($is_error) {
             $time = sprintf("$date %01.3fs - cron task #$task:", microtime(true) - START_TS);
-            sqlf($tpl, sprintf(span_b, "<b>$time</b>\n"), html("$str\n\n"), 4);
+            sqlf($tpl, L::z("<b>$time</b>\n"), html("$str\n\n"), 4);
         } else {
             sqlf($tpl, "$date [$task] ", html("$str\n"), 6);
         }

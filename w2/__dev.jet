@@ -7,7 +7,7 @@
     <h1>Error-no {{$sky->error_no}}, Exit {{$exit ?? 0}}</h1>
     <pre>{!$tracing ?? ''!}</pre>
     <h1>Stdout</h1>
-    <pre>{!isset($stdout) ? html($stdout) : sprintf(span_m, 'Var $stdout not set') !}</pre>
+    <pre>{!isset($stdout) ? html($stdout) : L::m('Var $stdout not set') !}</pre>
 #end
 #._ magic marker used !
 

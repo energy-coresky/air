@@ -43,8 +43,7 @@ composer create-project coresky/hole
 # or try latest dev: composer create-project coresky/hole hole "dev-master"
 cd hole
 # then run PHP's embedded web-server:
-php vendor/energy/air/sky s
-# php vendor/bin/sky s -- added to bin in dev
+php vendor/bin/sky s
 ```
 Or with moon:
 

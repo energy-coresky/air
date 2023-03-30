@@ -1,12 +1,12 @@
-.fr {
-    float: right;
-}
-.fl {
-    float: left;
-}
-.clear {
-    clear: both;
-}
+.fr { float:right }
+.fl { float:left }
+.clear { clear:both }
+r { color:red }
+g { color:#2b3 }
+z { color:blue }
+m { color:#93c }
+y { color:#b88 }
+
 .red_label {
     background-color: red !important;
     color: white !important;

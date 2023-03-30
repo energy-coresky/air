@@ -104,7 +104,7 @@ class Console
                     break;
             }
         }
-        chdir($public ?: $dir_run());
+        chdir($public && is_dir($public) ? $public : $dir_run());
         if (!file_exists($fn = '../s.php')) {
             echo "File `$fn` written\n\n";
             file_put_contents($fn, "<?php\n\n"

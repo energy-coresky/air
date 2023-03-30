@@ -5,6 +5,7 @@ class Install
     private $mem = false;
     private $fn = false;
     const DONE = 'Done.';
+    static $return = false;
 
     static function run($page) {
         $page or $page = 'database';
@@ -60,6 +61,11 @@ class Install
                     $bin = implode('', $s);
                 }
                 $bin = preg_replace("/(DIR_S')[^;]+;/", '$1, \'main\');', $bin);
+                $size = strlen($bin);
+            } elseif (WWW . 'index.php' == $fn) {
+                self::$return = true;
+                if ($_ = common_c::make_h(true))
+                    $bin = $_;
                 $size = strlen($bin);
             } else {
                 $size = filesize($fn);
@@ -214,7 +220,7 @@ class Install
             if ($dirs) {
                 list(, $exf) = $this->get_files();
                 if (isset($exf[$fn = $files[$cf++]]) || $this->skip_file($fn)) {
-                    $msg = "$n. " . sprintf(span_r, $fn) . ' (skipped)';
+                    $msg = "$n. " . L::r($fn) . ' (skipped)';
                 } else {
                     $this->write_sky($fn);
                     $msg = "$n. $fn";
@@ -331,7 +337,7 @@ class Install
         if (!$forward)
             return file_put_contents($fn, $index);
         $sky->memory(11, 'i');
-        $tpl = "\n\tfunction (\$ok) {\n%s\t},";
+        $tpl = "\n    function (\$ok) {\n%s    },";
         $other = '';
         foreach ($plus as $name) {
             $rm = new ReflectionMethod($name);
@@ -346,6 +352,7 @@ class Install
             'tests' => $other,
         ]);
         $index = file_get_contents($fn);
-        file_put_contents($fn, strtr($file, ['<.' => '<?', '.>' => '?>']) . $index);
+        $file = strtr($file, ['<.' => '<?', '.>' => '?>']) . $index;
+        return self::$return ? $file : file_put_contents($fn, $file);
     }
 }

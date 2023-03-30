@@ -154,7 +154,7 @@ class HEAVEN extends SKY
             } elseif (DEV && SKY::$debug && SKY::$errors[0]) {
                 $ary = ['err_no' => 1];
                 $msg = $exit ? '' : Plan::check_other();
-                $out = '' === $stdout ? sprintf(span_m, 'EMPTY STRING') : html(mb_substr($stdout, 0, 500));
+                $out = '' === $stdout ? L::m('EMPTY STRING') : html(mb_substr($stdout, 0, 500));
                 $msg .= "<h1>Stdout, depth=$depth</h1><pre>$out</pre>";
             }
             if ($ary) {
@@ -336,7 +336,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
             list ($file, $line) = array_values($db[$line]);
             if (is_array($line)) { # file-line don't supported
                 list ($file, $line) = array_values($db[$depth - 2]);
-                $fln = sprintf(span_r, "<span>$file^$line</span>");
+                $fln = L::r("<span>$file^$line</span>");
             }
         }
         isset($fln) or $fln = "<span>$file^$line</span>";
@@ -347,7 +347,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
                 echo "\n$file^$line\n$var\n\n";//2do striptags
             if ($sky->log_error) { # collect error log
                 $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
-                $sky->error_prod .= sprintf(span_r, '<b>' . NOW . ' - ' . $type . '</b>');
+                $sky->error_prod .= L::r('<b>' . NOW . ' - ' . $type . '</b>');
                 if (!SKY::$cli)
                     $sky->error_prod .= ' ' . $sky->methods[$sky->method] . ' uri: ' . html(URI);
                 $sky->error_prod .= "\n$mgs\n\n";

@@ -182,6 +182,16 @@ sky.g.files = function(fn, dir) {
 #.first_run //////////////////////////////////////////////////////////////////////////////
 <.php # Auto generated "First-Run" file by Coresky framework
 
+function index(&$unlink = null) {
+    $fp = fopen(__FILE__, 'r');
+    fseek($fp, __COMPILER_HALT_OFFSET__);
+    $code = stream_get_contents($fp);
+    fclose($fp);
+    if ($unlink)
+        $unlink = ~@unlink(__FILE__);
+    return ltrim($code);
+}
+
 $ary = {!var_export(explode(' ', $exts), true)!};
 $tests = [
     function () {
@@ -206,16 +216,6 @@ $tests = [
     },{!$tests!}
 
 ];
-
-$index = function(&$unlink = null) {
-    $fp = fopen(__FILE__, 'r');
-    fseek($fp, __COMPILER_HALT_OFFSET__);
-    $code = stream_get_contents($fp);
-    fclose($fp);
-    if ($unlink)
-        $unlink = ~@unlink(__FILE__);
-    return ltrim($code);
-};
 $path = preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']);
 $uri = $_SERVER['REQUEST_URI'];
 $ok = 1;
@@ -229,7 +229,7 @@ foreach ($tests as $fun) {
 }
 $anw = $_GET && 'anw' == key($_GET) ? $_GET['anw'] : false;
 if ($ok || $anw) {
-    file_put_contents(__FILE__, $index());
+    file_put_contents(__FILE__, index());
     header("Location: " . ($anw ?: $uri));
     exit;
 }

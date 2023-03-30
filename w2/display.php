@@ -93,7 +93,7 @@ class Display
 
     static function bash($text) {
         return pre(preg_replace_callback("@(#.*)@m", function ($m) {
-            return sprintf(span_y, $m[1]);
+            return L::y($m[1]);
         }, $text), 'style="background:#e0e7ff; padding:5px"');
     }
 

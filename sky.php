@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = [];
 
-    const CORE = '0.444 2023-03-28T17:25:56+03:00 energy';
+    const CORE = '0.445 2023-03-30T19:13:11+03:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -260,11 +260,6 @@ class SKY implements PARADISE
         define('zebra', 'return @$i++ % 2 ? \'bgcolor="#eee"\' : "";');
         define('DATE_DT', 'Y-m-d H:i:s');
         define('I_YEAR', 365 * 24 * 3600);
-        define('span_r', '<span style="color:red">%s</span>');
-        define('span_g', '<span style="color:#2b3">%s</span>');
-        define('span_b', '<span style="color:blue">%s</span>');
-        define('span_m', '<span style="color:#93c">%s</span>');
-        define('span_y', '<span style="color:#b88">%s</span>');
         define('RE_LOGIN', '/^[a-z][a-z_\d]{1,19}$/i');
         define('RE_PASSW', '/^\S{3,15}$/');
         define('RE_EMAIL', '/^([\w\-]+\.)*[\w\-]+@([\w\-]+\.)+[a-z]{2,7}$/i');

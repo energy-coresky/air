@@ -308,23 +308,23 @@ class Plan
         switch ($type = gettype($var)) {
             case 'unknown type':
             case 'resource':
-                return sprintf(span_m, $type); // for php8 - get_debug_type($var) class@anonymous stdClass
+                return L::m($type); // for php8 - get_debug_type($var) class@anonymous stdClass
             case 'object':
                 $cls = get_class($var);
                 if ($quote) {
                     $p =& self::$var_path;
                     self::$see_also[$cls] = [$p[':' == $p[1][0] ? 3 : 0] . $p[1] . implode('', $p[2]) => $var];
-                    return sprintf(span_m, "Object $cls");
+                    return L::m("Object $cls");
                 }
                 $s = self::object($var, 'c', 2);
                 if ("{\n  \n}" == $s)
-                    return sprintf(span_y, "Object $cls") . ' - ' . sprintf(span_m, 'no properties');
+                    return L::y("Object $cls") . ' - ' . L::m('no properties');
                 return tag($s, 'c="' . $cls . '"', 'o');
             case 'array':
                 $var = self::array($var, $add);
                 if ($quote)
                     return $var;
-                return strlen($var) < 50 ? sprintf(span_y, 'Array ') . $var : "<r>$var</r>";
+                return strlen($var) < 50 ? L::y('Array ') . $var : "<r>$var</r>";
             case 'string':
                 if ($gt = mb_strlen($var) > 50) // 100
                     $var = mb_substr($var, 0, 50);
@@ -338,7 +338,7 @@ class Plan
                         $var = '"' . strtr($var, $ary) . ($gt ? '' : '"');
                     }
                 }
-                return $gt ? html($var) . sprintf(span_g, '&nbsp;cutted..') : html($var);
+                return $gt ? html($var) . L::g('&nbsp;cutted..') : html($var);
             default: # boolean integer double NULL
                 return var_export($var, true);
         }
@@ -361,7 +361,7 @@ class Plan
                 $i = $k < 0 ? 0 : 1 + $k;
             }
             if (($len += strlen($v)) > 220) {
-                $ary[] = sprintf(span_g, 'cutted..');
+                $ary[] = L::g('cutted..');
                 break;
             }
         }
@@ -384,7 +384,7 @@ class Plan
                 if ($var || !$p->isOptional())
                     return $one;
                 return "$one = " . ($func->isInternal() && PHP_VERSION_ID < 80000
-                    ? sprintf(span_r, 'err')
+                    ? L::r('err')
                     : ($p->isDefaultValueConstant() ? $p->getDefaultValueConstantName() : self::var($p->getDefaultValue())));
             }, $func->getParameters());
         };
@@ -430,7 +430,15 @@ class Plan
                     if ($m &= ~ReflectionProperty::IS_STATIC & ~ReflectionProperty::IS_PUBLIC)
                         $mods = ' (' . implode(' ', Reflection::getModifierNames($m)) . ')';
                     self::$var_path[1] = $arrow . $one;
-                    $val = $skip ? sprintf(span_g, 'see below..') : self::var(@$p->getValue($obj), '  ');
+                    if ($skip) {
+                        $val = L::g('see below..');
+                    } else try {
+                        $val = @$p->getValue($obj);
+                        $val = self::var($val, '  ');
+                    } catch (Throwable $e) {
+                        //$val = sprintf(span_m, $e->getMessage());
+                        $val = L::m($e->getMessage());
+                    }
                     $one = "$arrow$one$mods = $val";
                     if ($pp)
                         $p->setAccessible(false);
@@ -477,6 +485,12 @@ class Plan
             }
             return $obj ? "$out\n}" : pre("$out\n}", '');
         }
+    }
+}
+
+class L {
+    static function __callStatic($func, $arg) {
+        return "<$func>$arg[0]</$func>"; # colors: RGZMY, tags:abipqsu
     }
 }
 

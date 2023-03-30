@@ -35,7 +35,7 @@ sky.d.draw = {
             str += '<span style="color:#f77">TEMPLATE</span> ' + view.tpl + '<br>';
             j = 0;
             if (!vars) {
-                str += '<span style="color:red">empty-response</span>';
+                str += '<r>empty-response</r>';
             } else Object.keys(vars).forEach(function (name) {
             //} else for (let [name, _var] of vars) { vars is not iterable
                 if ('@' === name) { // BLKs vars
@@ -43,7 +43,7 @@ sky.d.draw = {
                     blkc[view.no] = 0;
                 } else {
                     let s = '', dollar = -1 == name.indexOf('::') ? '$' : '', v = vars[name],
-                        red_plus = '<span style="color:#f00">+</span>';
+                        red_plus = '<r>+</r>';
                     if (false === see_more && !dollar) {
                         see_more = j > 10 ? true : 0;
                         if (see_more)
@@ -51,19 +51,19 @@ sky.d.draw = {
                                 + (Object.keys(vars).length - j - 2) + ')..</a><div style="display:none">'
                     }
                     if ('$' == name.charAt(0)) {
-                        s += '<span style="color:#93c">' + ('$$' == name ? 'JSON' : 'STDOUT') + '</span>';
+                        s += '<m>' + ('$$' == name ? 'JSON' : 'STDOUT') + '</m>';
                     } else {
                         s += ('sky$' == name ? j + red_plus : ++j + '.') + ' <b>' + dollar
                         s += ('sky$' == name ? 'sky' : name) + '</b>'
                     }
                     if ('' === v) {
-                        v = '<span style="color:#93c">empty string</span>';
+                        v = '<m>empty string</m>';
                     } else if ('number' == typeof v) {
-                        v = '<span style="color:red">' + v + '</span>';
+                        v = '<r>' + v + '</r>';
                     } else if (null === v || 'boolean' == typeof v) {
-                        v = '<span style="color:#93c">' + v + '</span>';
+                        v = '<m>' + v + '</m>';
                     } else if ('<' == v.charAt(0) && (cls = v.match(/<(r|o c="([^"]+)")>/i))) {
-                        v = '<span style="color:#b88">' + ('r' == cls[1] ? 'Array' : 'Object ' + cls[2]) + '</span>'
+                        v = '<y>' + ('r' == cls[1] ? 'Array' : 'Object ' + cls[2]) + '</y>'
                             + ' <a href="javascript:;" onclick="sky.toggle(this)">&gt;&gt;&gt;</a>'
                             + v.replace('<' + cls[1] + '>', '<pre style="display:none">').replace('</' + v.charAt(1) + '>', '</pre>');
                     }
@@ -80,7 +80,7 @@ sky.d.draw = {
         var m, n, i = 0, s = '';
         for (; m = str.match(/>\nSQL: (.+?)\n\n<(.*)/sm); str = m[2]) {
             //s && (s += '<br>');
-            m[1] = m[1].replace(/(select|update|insert|join|from|where|group|order)/gi, '<span style="color:#93c">$1</span>');
+            m[1] = m[1].replace(/(select|update|insert|join|from|where|group|order)/gi, '<m>$1</m>');
             m[1] = m[1].replace(/^([\d\.]+ sec)/m, '<span style="color:red;border-bottom:1px solid blue">$1</span>');
             s += '<span style="color:#f77">#' + ++i + '</span> ' + m[1] + '<hr>';
         }
@@ -97,7 +97,7 @@ sky.d.draw = {
             let s = data.classes[i], inc = base.includes(s), n;
             if (data.cnt.includes(n = parseInt(i)))
                 str += '<hr>';
-            str += (1 + n) + '.&nbsp;' + (inc ? s : `<span style="color:#93c">${s}</span>`) + '<br>';
+            str += (1 + n) + '.&nbsp;' + (inc ? s : `<m>${s}</m>`) + '<br>';
         }
         return str + '<hr>';
     },

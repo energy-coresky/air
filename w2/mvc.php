@@ -153,21 +153,17 @@ class Controller extends MVC_BASE
 {
     # for overload if needed
     function head_y($action) {
-        return $this->is_common() ? null : MVC::$cc->head_y($action);
+        return $this === MVC::$cc ? null : MVC::$cc->head_y($action);
     }
 
     # for overload if needed
     function error_y($action) {
-        return $this->is_common() ? null : MVC::$cc->error_y($action);
+        return $this === MVC::$cc ? null : MVC::$cc->error_y($action);
     }
 
     # for overload if needed
     function tail_y() {
-        return $this->is_common() ? null : MVC::$cc->tail_y();
-    }
-
-    function is_common() {
-        return get_class($this) == get_class(MVC::$cc);
+        return $this === MVC::$cc ? null : MVC::$cc->tail_y();
     }
 
     function __call($name, $args) {
@@ -204,7 +200,7 @@ trait HOOK_C
     }
 
     static function make_h($forward) {
-        Install::make($forward);
+        return Install::make($forward);
     }
 
     static function langs_h() {
@@ -297,6 +293,7 @@ trait HOOK_D
 
     function j_init($tz, $scr) {
         global $sky, $user;
+
         $sky->open();
         $user = common_c::user_h();
         if (isset($_POST['unload'])) {
@@ -570,6 +567,7 @@ class MVC extends MVC_BASE
             $this->hnd = "$class::$action()";
             $class .= $gate ? '_R' : '';
             MVC::$mc = new $class;
+            trace("$class::head_y(\$action)", 'CALL');
             $this->set(MVC::$mc->head_y($action), true); # call head_y
             if ($gate)
                 $param = call_user_func([$gate, $action]); # call gate

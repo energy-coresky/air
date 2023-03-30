@@ -50,7 +50,7 @@ class Util
             if ($is_obj || 'array' == $type) {
                 if ($new = !isset($cache[$type .= $k]) || $cache[$type] != $v)
                     $cache[$type] = $v;
-                $out[$k] = $new ? $v : sprintf(span_y, $is_obj ? "Object $cls" : 'Array') . ' - ' . sprintf(span_m, 'see prev. View');
+                $out[$k] = $new ? $v : L::y($is_obj ? "Object $cls" : 'Array') . ' - ' . L::m('see prev. View');
             } else {
                 $out[$k] = $v;
             }
@@ -159,7 +159,7 @@ class Util
             if (DEV || 1 == $user->pid) {
                 if (!$sky->is_mobile) {
                     if ($sky->has_public)
-                        echo DEV ? a('P', PROTO . '://' . _PUBLIC) : sprintf(span_r, 'P');
+                        echo DEV ? a('P', PROTO . '://' . _PUBLIC) : L::r('P');
                     if (DEV) {
                         echo '_venus' == $sky->d_last_page
                             ? a('V', PATH . '_venus?ware=' . rawurlencode(URI))
