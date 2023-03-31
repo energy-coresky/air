@@ -103,7 +103,7 @@ class HEAVEN extends SKY
                 }
             }
         }
-        common_c::rewrite_h($cnt, $this->surl);
+        MVC::$cc->rewrite_h($cnt, $this->surl);
         $mvc->top(); # 16/14 classes at that point on DEV/Prod
     }
 

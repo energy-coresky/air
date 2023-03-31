@@ -32,9 +32,20 @@ Extract files from ab.zip.
 Put to the last folder this two files: **ab.sky** and **moon.php**.
 Open in browser similar like `http://my-apache.local/ab/web/moon.php`, then follow the instructions.
 
-### Just PHP & console required
+..or use console and PHP's embedded web-server:
 
-For HOLE.SKY only: will work embedded into PHP's SQLite3 database and PHP's web-server:
+```bash
+MariaDB> create database ab;
+# from any dir:
+mkdir -p ab/public
+cd ab/public
+php moon.php ab.sky root:@localhost/ab:ab_
+# dsn syntax: user:password@databasehost:3306/databasename:tblprefix_
+```
+
+### Just PHP required
+
+Will work embedded into PHP's SQLite3 database and PHP's web-server:
 
 With composer:
 

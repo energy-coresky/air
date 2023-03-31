@@ -175,32 +175,32 @@ class Controller extends MVC_BASE
 
 trait HOOK_C
 {
-    static function rewrite_h($cnt, &$surl) {
+    function rewrite_h($cnt, &$surl) {
+        return $this->re_write($cnt, $surl);
+    }
+
+    function re_write($cnt, &$surl) {
         if (1 == $cnt && 'robots.txt' == $surl[0] && !$_GET)
-            return array_unshift($surl, '_etc');
-        return self::re_dev($cnt, $surl);
+            return array_unshift($surl, 'etc');
+        return $this->re_dev($cnt, $surl);
     }
 
-    static function re_dev($cnt, &$surl) {
+    function re_dev($cnt, &$surl) {
         if (DEV && $cnt && 'm' == $surl[0])
-            return $surl[0] = '_etc';
+            return $surl[0] = 'etc';
     }
 
-    static function re_verse_ext($cnt, &$surl, $ext = 'html') {
+    function re_verse_ext($cnt, &$surl, $ext = 'html') {
         if (0 == $cnt || '_' == $surl[0][0])
             return false;
         $a = explode('.', $s =& $surl[$cnt - 1]);
         return $s = 2 != count($a) || $ext != $a[1] ? "$s.$ext" : $s = $a[0];
     }
 
-    static function head_h() {
+    function head_h() {
         global $user;
         $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
         return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";
-    }
-
-    static function make_h($forward) {
-        return Install::make($forward);
     }
 
     static function langs_h() {
@@ -212,6 +212,10 @@ trait HOOK_C
 
     static function dd_h($dd, $name = '') {
         $dd->init();
+    }
+
+    static function make_h($forward) {
+        return Install::make($forward);
     }
 }
 
@@ -441,7 +445,7 @@ class MVC extends MVC_BASE
         echo js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->_static[1]);
         echo css($sky->_static[2] + [-1 => '~/m/sky.css']);
         if (!$sky->eview && 'crash' != $sky->_0)
-            echo js(common_c::head_h());
+            echo js(MVC::$cc->head_h());
         echo '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->_head;
     }
 

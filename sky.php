@@ -34,7 +34,7 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = [];
 
-    const CORE = '0.445 2023-03-30T19:13:11+03:00 energy';
+    const CORE = '0.45 2023-03-31T10:16:16+03:00 energy';
 
     function __construct() {
         global $argv, $sky;
@@ -436,8 +436,8 @@ class eVar implements Iterator
             }
             if (!($sql instanceof SQL)) {
                 $this->state++;
-				return;
-			}
+                return;
+            }
             $this->dd = $sql->_dd;
         }
         $this->max_i = $this->e['max_i'] ?? 500; # -1 is infinite
@@ -476,8 +476,8 @@ class eVar implements Iterator
         do {
             if ($this->i++ >= $this->max_i && -1 != $this->max_i) {
                 $exit(!isset($this->e['max_i']));
-				return;
-			}
+                return;
+            }
             if ($this->dd)
                 $this->row = $this->dd->one($this->e['query']->stmt, 'O');
             $x = false;
@@ -488,8 +488,8 @@ class eVar implements Iterator
                 $sky->in_row_c = false;
                 if (false === $x) {
                     $exit(false);
-					return;
-				}
+                    return;
+                }
             }
         } while (true === $x);
         if (!$this->dd)
