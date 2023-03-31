@@ -150,8 +150,8 @@ class Root
                     $e = new ReflectionExtension($v);
                     if ($d = $e->getDependencies()) {
                         array_walk($d, function (&$v, $k) {
-                            $set = ['Conflicts' => span_r, 'Required' => span_g, 'Optional' => span_b];
-                            $v = sprintf($set[$v], $k);
+                            $set = ['Conflicts' => 'r', 'Required' => 'g', 'Optional' => 'z'];
+                            $v = call_user_func("L::$set[$v]", $k);
                         });
                         $v .= ('Phar' == $v ? ' <br>' : ' ') . implode(' ', $d);
                     }
