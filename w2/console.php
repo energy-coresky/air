@@ -203,7 +203,7 @@ class Console
         echo !$unhtml ? $s : (1 == $unhtml ? unhtml($s) : unhtml(unhtml($s)));
     }
 
-    /** Test first run */
+    /** Write "first run" into index.php */
     function c_fr() {
         common_c::make_h(true);
     }

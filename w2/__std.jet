@@ -65,6 +65,47 @@ echo $redirect;
 #end
 #.crash
 
+#.index
+<{{'?'}}php
+
+define('WWW', basename(__DIR__) . '/');
+define('DIR', dirname(__DIR__));
+chdir(DIR);
+require 'main/conf.php';
+new HEAVEN;
+#.index
+
+#.htaccess
+AddDefaultCharset utf-8
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php         [L,QSA]
+</IfModule>
+#.htaccess
+
+#.iis web.config
+<configuration>
+  <system.webServer>
+    <rewrite>
+      <rules>
+        <rule name="Rule 1" stopProcessing="true">
+          <match url="^" ignoreCase="false" />
+          <conditions>
+            <add input="{REQUEST_FILENAME}" matchType="IsDirectory" ignoreCase="false" negate="true" />
+            <add input="{REQUEST_FILENAME}" matchType="IsFile" ignoreCase="false" negate="true" />
+          </conditions>
+          <action type="Rewrite" url="index.php" />
+        </rule>
+      </rules>
+    </rewrite>
+  </system.webServer>
+</configuration>
+#.iis
+
 #.test_crash
 1@php
     throw new Error('Crash "headers sent"');
@@ -92,10 +133,10 @@ DATABASES ({{count($databases)}})
 ==============================================================================================
 |||||||||||||||||||||||||||||||||||||||||||| GATE ||||||||||||||||||||||||||||||||||||||||||||
 ==============================================================================================
-
-#.m_gate //////////////////////////////////////////////////////////////////////////////
+#.m_gate
 @loop($list as $one => $ex)
-    <a href="{{PATH}}?_gate={!$one!}" class="inner-menu" style="background:{! $ex?(1==$ex?'':'#cfc'):'#fcc' !}"@active($one==$y_1)>
+    <a href="{!PATH . "?$sky->_0=$one"!}" class="inner-menu" style="background:{! $ex?(1==$ex?'':'#cfc'):'#fcc' !}"
+        @active($one==$y_1)>
         {!'*' == $one ? 'default_c' : "c_$one"!}.php @if(!in_array($ex,['0','1']))({{$ex}})~if
     </a>
 ~loop
@@ -109,6 +150,7 @@ DATABASES ({{count($databases)}})
 ~if
 <a class="@active($cshow)" style="font-weight:normal"
     @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
+<a style="font-weight:normal" href="_map">Show map</a>
 </h4>
 #.header.gate.delete ------------------------------------------------------------------------------
 #use(.header)
@@ -126,9 +168,7 @@ DATABASES ({{count($databases)}})
         <input type="hidden" name="args" value="{{$row->pars}}"/>
         @if($cshow)
             <div class="func-code" style="overflow:auto;padding: 7px;">{!$row->code!}</div>
-            <div class="the-url" style="overflow:auto">
-                {{PROTO}}://{!$row->url!}
-            </div>
+            <div class="the-url" style="overflow:auto">{!$row->url!}</div>
         @else
             <div class="function">@inc(.edit)</div>
         ~if
@@ -143,13 +183,8 @@ DATABASES ({{count($databases)}})
 
 #.edit.save //////////////////////////////////////////////////////////////////////////////
 <table width="100%"><tr>
-    <td width="33%" valign="top">
-        {!$row->c1!}
-    </td>
-    <td width="33%" valign="top" id="column-2">
-        <u>End-point address</u>:<br><br>
-        {!$row->c2!}
-    </td>
+    <td width="33%" valign="top">{!$row->c1!}</td>
+    <td width="33%" valign="top" id="column-2"><u>End-point address</u>:<br><br>{!$row->c2!}</td>
     <td width="33%" valign="top">
         @if(!$row->code)
         <div class="fr" style="text-align:right">
@@ -178,9 +213,7 @@ DATABASES ({{count($databases)}})
             <input type="button" value="cancel" onclick="sky.g.cancel(this)"/>
         </td>
     </tr></table>
-    <div id="the-url" style="overflow:auto">
-        {{PROTO}}://{!$row->url!}
-    </div>
+    <div id="the-url" style="overflow:auto">{!$row->url!}</div>
 @elseif($row->error)
     <table width="100%">
         <tr><td style="background:pink; padding:5px 10px; text-align:center; color:#f00;">{{$row->error}}</td></tr>
@@ -206,8 +239,7 @@ DATABASES ({{count($databases)}})
 
 #.c23_view //////////////////////////////////////////////////////////////////////////////
 <div class="c23-view" style="background:{!$isaddr?'#efe':'#fee'!}">
-    <div class="fr" style="color:red">{!$ns!}</div>
-    {{$data}}
+    <div class="fr" style="color:red">{!$ns!}</div>{{$data}}
 </div>
 #.c23_view
 
@@ -300,7 +332,145 @@ div.function { margin-top:-9px; }
     background: #ffc;
     padding: 2px 5px;
 }
+#map td {
+    padding: 0 5px;
+}
+#code {
+    width:330px;
+    height:93px;
+    background:#fff;
+    overflow:auto;
+}
 </style>
 #.jscss
 
 
+#.mheader //////////////////////////////////////////////////////////////////////////////
+<h4>CORESKY REWRITES MAP
+    <a style="font-weight:normal" href="_gate">Show gates</a>
+</h4>
+#.map.mheader ------------------------------------------------------------------------------
+#use(.mheader as header)@php $h1 = $func = ''; $n=7; ~php
+@use(.m_gate)
+<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px; height:94px;padding:0">
+  <div style="width:220px; height:93px;">
+    Total controllers/actions: @block(`` as total)
+  </div>
+  <div style="width:110px; height:93px; background:#fff">
+    <div style="position:absolute; padding:0 27px; border-bottom:1px solid #4338ca; background:#e0e7ff; font-weight:bold">
+        Library</div>
+    <select size="6" style="outline:none; width:110px;height:93px; font-size:12px; border:none; margin-top:0px">
+      <option style="margin-bottom:3px"></option>{!$opt!}
+    </select>{!$rws!}
+  </div>
+  <div id="code">
+    222
+  </div>
+  <div style="width:; height:93px;">
+    17px X 17px
+    <div id="sample"></div>
+  </div>
+</div>
+<div style="position:absolute; left:390px; background:#ccc; height:17px;width:calc(100vw - 415px); border-left:1px solid #4338ca;
+    display:flex">
+  @loop($_ <= $n)
+  <div style="border-right:1px solid #4338ca; width:17px; text-align:center">R{{$_}}</div>
+  ~loop
+  <div style="border-right:1px solid #4338ca; width:;">..URI in Core </div>
+</div>
+<div id="map" style="margin-top:0px;">
+  <table width="100%" cellspacing="0" cellpadding="0">
+  @loop($list as $one => $ex)
+    <tr>
+      <td colspan="{{3+$n}}" style="background:#ccc">{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</td>
+    </tr>
+    @loop($e_func($one))
+    <tr>
+      <td width="220">{{1 + $_2}}. -&gt;{{$row->func}}()</td>
+      @loop($_3 <= $n)<td style="border-right:1px solid #ccc;@if(!$_3)border-left:1px solid #ccc;~if" width="{{$_3 ? 17 : 18}}"></td>~loop
+      <td>{!$row->url!} {{$ex}}</td>
+    </tr>
+    ~loop
+    <tr style="height:10px">
+      <td style="width:220px"></td>
+      @loop($_2 <= $n)<td style="width:17px;border-right:1px solid #ccc;"></td>~loop
+      <td></td>
+    </tr>
+  ~loop
+  </table>
+  @if($total = "$_/" . (1 + $e_func->key()))@use(`{{$total}}` as total)~if
+</div>
+<script>
+(function() {
+    var rws = JSON.parse($.trim($('#rws').text()));
+    $('option').click(function() {
+        let ary = rws[this.value]
+        $('#code').html(ary[1])
+        $('#sample').html(ary[0])
+    });
+})();
+</script>
+@inc(.jscss)
+#.map
+
+#.rewrites name is_dev
+Dev-standard 1
+/m/sky.js /etc/sky.js
+if (DEV && $cnt && 'm' == $surl[0])
+    return $surl[0] = 'etc';
+~
+Main-page 0
+/ /main
+$main = '' === URI;
+if ($main || 'main' === URI)
+    return $surl = $main ? ['main'] : [];
+~
+Robots.txt 0
+/robots.txt /etc/robots.txt
+if ('robots.txt' == URI)
+    return array_unshift($surl, 'etc');
+~
+Rewrite-1 0
+test test
+//
+~
+Rewrite-2 0
+test test
+//
+~
+Rewrite-3 0
+test test
+//
+~
+Url-html 0
+/a/b/c/page.html /a/b/c/page
+$ext = 'html';
+if ($cnt && '_' != $surl[0][0]) {
+    $a = explode('.', $p =& $surl[$cnt - 1]);
+    2 != count($a) || $ext != $a[1] ? ($p = "$s.$ext") : ($p = $a[0]);
+}
+~
+Url-lang 0
+/en/ctrl/action >> /ctrl/action
+# set language from surl
+if ($cnt && in_array($surl[0], $sky->langs))
+    $lg = array_shift($surl);
+SKY::lang($lg ?? DEFAULT_LG);
+~
+Pagination 0
+/ctrl/page-1/act /ctrl/act
+// 2do
+~
+Reversion 0
+/one-part/action /ctrl/action
+$rw = [ # reverse surl-part
+    'one-part' => 'ctrl',
+    'sec-surl' => 'reverted',
+];
+if ($cnt) {
+    $rw += array_flip($rw);
+    $p =& $surl[0];
+    if (isset($rw[$p]))
+        $p = $rw[$p];
+}
+#.rewrites

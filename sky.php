@@ -1,15 +1,13 @@
 <?php
 
-interface PARADISE
-{
-}
+interface PARADISE {}
 
-//////////////////////////////////////////////////////////////////////////
 class SKY implements PARADISE
 {
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
+    const CORE = '0.471 2023-04-03T19:50:05+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -34,14 +32,13 @@ class SKY implements PARADISE
     protected $ghost = false;
     protected $except = [];
 
-    const CORE = '0.45 2023-03-31T10:16:16+03:00 energy';
-
     function __construct() {
         global $argv, $sky;
         $sky = $this;
 
         ob_get_level() && ob_end_clean();
-        $this->constants();
+        require DIR_S . '/w2/core.php';
+        require DIR_S . '/w2/plan.php';
         SKY::$debug = DEBUG;
         ini_set('error_reporting', $this->log_error = -1);
         if (SKY::$cli = CLI)
@@ -49,8 +46,7 @@ class SKY implements PARADISE
         date_default_timezone_set(PHP_TZ);
         mb_internal_encoding(ENC);
         define('NOW', date(DATE_DT));
-        //srand((double)microtime() * 1e6);
-        srand(microtime(true) * 1e6);
+        srand(microtime(true) * 1e6);//srand((double)microtime() * 1e6);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
             $amp = '';
@@ -83,7 +79,6 @@ class SKY implements PARADISE
             trace($title, !$noterror, $e->getLine(), $e->getFile(), $e->getTraceAsString());
         });
 
-        require DIR_S . '/w2/plan.php';
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
         DEV && !CLI ? DEV::init() : Plan::open('cache');
@@ -113,7 +108,6 @@ class SKY implements PARADISE
                 return '';
             list($dt, $imemo, $tmemo) = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
             SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id, 0, $dd);
-//trace($this, 'Object $sky');
         }
         return SKY::$mem[$char][3];
     }
@@ -242,9 +236,8 @@ class SKY implements PARADISE
     }
 
     static function version() : array {
-        global $sky;
-        $core = explode(' ', SKY::CORE);    # timestamp, CS-ver, APP-ver, APP-name
-        $app = explode(' ', $sky->s_version) + [time(), $core[0], '0.0001', 'APP'];
+        $core = explode(' ', SKY::CORE);      # timestamp, CS-ver,   APP-ver,  APP-name
+        $app = explode(' ', self::s('version')) + [time(), $core[0], '0.0001', 'APP'];
         $len = strlen(substr($app[2], 1 + strpos($app[2], '.')));
         $app[4] = "$app[3].SKY.";
         $app[3] = ($len < 3 ? '' : ($len < 4 ? 'βῆτα.' : 'ἄλφα.')) . "$app[2].$app[3].SKY.";
@@ -252,22 +245,6 @@ class SKY implements PARADISE
             'core' => $core,
             'app' => $app,
         ];
-    }
-
-    function constants() {
-        define('ENC', 'UTF-8');
-        define('CLI', 'cli' == PHP_SAPI);
-        define('zebra', 'return @$i++ % 2 ? \'bgcolor="#eee"\' : "";');
-        define('DATE_DT', 'Y-m-d H:i:s');
-        define('I_YEAR', 365 * 24 * 3600);
-        define('RE_LOGIN', '/^[a-z][a-z_\d]{1,19}$/i');
-        define('RE_PASSW', '/^\S{3,15}$/');
-        define('RE_EMAIL', '/^([\w\-]+\.)*[\w\-]+@([\w\-]+\.)+[a-z]{2,7}$/i');
-        define('RE_PHONE', '/^\+?\d{10,12}$/');
-        define('TPL_FORM',   '<dl><dt>%s</dt><dd>%s</dd></dl>');
-        define('TPL_CHECKBOX', '<input type="checkbox" name="id[]" value="%s"%s />');
-        define('TPL_HIDDEN', '<input type="hidden" name="%s" value="%s" />');
-        define('TPL_META',   '<meta name="%s" content="%s" />');
     }
 
     function tail_ghost() {
@@ -330,248 +307,289 @@ class SKY implements PARADISE
     }
 }
 
-
 //////////////////////////////////////////////////////////////////////////
-if (!class_exists('Error', false)) {
-    class Error extends Exception {} # Assume as crash and error, `throw new Error` should never works!
-}
-class Stop extends Exception {} # Assume as just "stop", NOT crash, NOT error
-class Hacker extends Exception {} # Assume as crash but NOT error on the web-scripts
-
-
-interface DriverCache
+class HEAVEN extends SKY
 {
-    function info();
-    function setup($obj);
-    //function close();
-    function test($name);
-    function get($name);
-    function run($name);
-    function mtime($name);
-    function put($name, $data, $is_append = false);
-    function glob($mask = '*');
-    function drop($name);
-    function drop_all($mask = '*');
-}
+    const J_FLY = 1;
+    const Z_FLY = 2;
 
-//////////////////////////////////////////////////////////////////////////
-trait SQL_COMMON
-{
-    protected $table; # for overload in models if needed
-
-    function __call($name, $args) {
-        if (!in_array($name, ['sql', 'sqlf', 'qp', 'table']))
-            throw new Error('Method ' . get_class($this) . "::$name(..) not exists");
-        $mode = $args && is_int($args[0]) ? array_shift($args) : 0;
-        return call_user_func_array($name, [-2 => $this, -1 => 1 + $mode] + $args);
-    }
-
-    function __toString() {
-        return $this->table;
-    }
-
-    function onduty($table) {
-        $this->table = $table;
-    }
-}
-
-//////////////////////////////////////////////////////////////////////////
-class eVar implements Iterator
-{
-    private $state = 0;
-    private $i = -1;
-    private $max_i;
-    private $row;
-    private $e;
-    private $dd = false;
-
-    function __construct(Array $e) {
-        $this->e = $e;
-    }
-
-    function __call($name, $args) {
-        return isset($this->e[$name]) ? call_user_func_array($this->e[$name], $args) : null;
-    }
-
-    function __invoke($in) {
-        call_user_func($this->e['row_c'], $in, $this);
-        $this->state = 0;
-        return $this;
-    }
+    public $fly = 0;
+    public $surl_orig = '';
+    public $surl = [];
+    public $jump = false; # INPUT_POST=0 INPUT_GET=1 0..8
+    public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
+    public $method;
+    public $auth = false;
+    public $profiles = ['Anonymous', 'Root'];
+    public $admins = 1; # root only has admin access or list pids in array
+    public $has_public = true; # web-site or CRM
+    public $page_p = 'p';
+    public $show_pdaxt = false;
 
     function __get($name) {
-        return $this->e[$name] ?? null;
-    }
-
-    function __set($name, $value) {
-        $this->e[$name] = $value;
-    }
-
-    function one() {
-        if ($this->state > 1)
-            return false;
-        $this->state ? $this->next() : $this->rewind();
-        return $this->valid() ? $this->row : false;
-    }
-
-    function all() {
-        return iterator_to_array($this, false);
-    }
-
-    function rewind(): void {
-        if (!$this->e)
-            $this->state = 2;
-        if ($this->state)
-            return;
-        $this->row = new stdClass;
-        $this->state++;
-        if (isset($this->e['query'])) {
-            isset($this->e['max_i']) or $this->e['max_i'] = -1;
-            $sql =& $this->e['query'];
-            if (is_string($sql)) {
-                $sql = sql(2, $sql);
-            } elseif (true === $sql->stmt) {     # mean instanceof SQL
-                $sql->mode |= 2 + SQL::NO_PARSE; # already parsed or query builder used
-                $sql = sql($sql); # perform query exec with error's detection
-            }
-            if (!($sql instanceof SQL)) {
-                $this->state++;
-                return;
-            }
-            $this->dd = $sql->_dd;
+        if ('_' == $name[0] && 2 == strlen($name) && is_num($name[1])) {
+            $v = (int)$name[1];
+            if ('' === URI)
+                return $v ? '' : 'main';
+            $cnt = count($this->surl);
+            if ($v < $cnt && $this->is_front)
+                return $this->surl[$v];
+            !$this->is_front or $v -= $cnt;
+            if (($i = floor($v / 2)) >= count($_GET))
+                return '';
+            $key = key($v < 2 ? $_GET : array_slice($_GET, $i, 1, true));
+            return $v % 2 ? $_GET[$key] : $key;
         }
-        $this->max_i = $this->e['max_i'] ?? 500; # -1 is infinite
-        $this->next();
+        return parent::__get($name);
     }
 
-    function valid(): bool {
-        if ($this->state > 1)
-            return false;
-        if ($this->row)
-            return true;
-        $this->state++;
-        if (isset($this->e['after_c']))
-            call_user_func($this->e['after_c'], $this->i);
-        return false;
-    }
-    #[\ReturnTypeWillChange]
-    function current() {
-        return $this->row;
-    }
-    #[\ReturnTypeWillChange]
-    function key() {
-        return $this->i;
-    }
-
-    function next(): void {
+    function __construct() {
         global $sky;
-        $exit = function ($fail) {
-            $this->row = false;
-            $this->i--;
-            if ($this->dd)
-                $this->dd->free($this->e['query']->stmt);
-            if ($fail)
-                throw new Error("eVar cycle error");
-        };
-        do {
-            if ($this->i++ >= $this->max_i && -1 != $this->max_i) {
-                $exit(!isset($this->e['max_i']));
-                return;
+        $sky = $this;
+
+        $this->method = array_search($_SERVER['REQUEST_METHOD'], $this->methods);
+        false !== $this->method or exit('request method');
+        define('PROTO', isset($_SERVER['HTTPS']) ? 'https' : 'http');
+        define('DOMAIN', $_SERVER['SERVER_NAME']);
+        define('PORT', 80 == $_SERVER['SERVER_PORT'] ? '' : ':' . $_SERVER['SERVER_PORT']);
+        define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
+        define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
+        define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
+        header('Content-Type: text/html; charset=UTF-8');
+
+        if (EXTRA && 1 == $this->method) { # INPUT_GET
+            $fn = "var/extra/" . DOMAIN . urlencode(URI) . '.html';
+            if (is_file($fn) && ($fh = @fopen($fn, 'r'))) {
+                for (; ob_get_level(); ob_end_clean());
+                fpassthru($fh);
+                fclose($fh);
+                exit;
             }
-            if ($this->dd)
-                $this->row = $this->dd->one($this->e['query']->stmt, 'O');
-            $x = false;
-            if (isset($this->e['row_c']) && $this->row) {
-                $sky->in_row_c = true;
-                $this->row->__i = $this->i;
-                $x = call_user_func_array($this->e['row_c'], [&$this->row]);
-                $sky->in_row_c = false;
-                if (false === $x) {
-                    $exit(false);
-                    return;
+        }
+
+        parent::__construct(); # 9/7 classes at that point on DEV/Prod
+
+        $this->ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
+        # use fetch with a_.. actions
+        $this->is_front = true;
+        $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
+        $this->orientation = 0;
+        if (isset($_SERVER['HTTP_X_ORIENTATION'])) {
+            in_array($wo = (int)$_SERVER['HTTP_X_ORIENTATION'], [0, 1, 2]) or $wo = 0;
+            $this->orientation = $wo;
+        }
+
+        $referer = $_SERVER['HTTP_REFERER'] ?? '';
+        $this->lref = preg_match('~^' . PROTO . '://' . preg_quote(DOMAIN . PORT . PATH) . '(.*)$~', $referer, $m) ? $m[1] : false;
+        $this->eref = !$m ? $referer : false;
+
+        if (SKY::$debug)
+            $this->gpc = Plan::gpc(); # original input
+
+        require DIR_S . '/w2/mvc.php';
+        Plan::app_r('mvc/common_c.php');
+        MVC::$cc = new common_c;
+        $mvc = new MVC;
+        $cnt = 0;
+        if ('' !== URI) { # not main page
+            $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
+            if (false !== strpos($this->surl_orig, '//')) {
+                SKY::$debug && $this->open();
+                throw new Hacker('403 Twice slash');
+            }
+            $cnt = count($this->surl);
+            if (1 == $cnt && '' === $this->surl[0]) {
+                $this->surl = [];
+                $cnt = 0;
+                if ($this->fly && 'AJAX' === key($_GET)) {// && INPUT_POST == $this->method
+                    $mvc->return = $this->fly = HEAVEN::J_FLY;
+                    if ('adm' === $_GET['AJAX'])
+                        $this->surl = ['adm'];//$cnt = 1; !
+                    array_shift($_GET);
                 }
             }
-        } while (true === $x);
-        if (!$this->dd)
-            $this->row = $x ? (object)$x : false;
+        }
+        MVC::$cc->rewrite_h($cnt, $this->surl);
+        $mvc->top(); # 16/14 classes at that point on DEV/Prod
     }
-}
 
-function sql(...$in) {
-    $sql = $in[0] instanceof SQL ? $in[0] : new SQL($in, 'parseT');
-    return $sql->exec();
-}
-
-function qp(...$in) { # Query Part, Query Parse
-    $in or $in = [''];
-    return new SQL($in, 'parseT');
-}
-
-function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL injection!
-    $sql = new SQL($in, 'parseF');
-    return $sql->exec();
-}
-
-function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
-    $str = htmlspecialchars((string)$str, $mode, ENC);
-    return $hide_percent ? str_replace('%', '&#37;', $str) : $str;
-}
-
-function unhtml($str, $mode = ENT_QUOTES) {
-    return html_entity_decode($str, $mode, ENC);
-}
-
-function escape($in, $reverse = false) {
-    $ary = ["\\" => "\\\\", "\r" => "\\r", "\n" => "\\n", "\t" => "\\t"];
-    return strtr($in, $reverse ? array_flip($ary) : $ary);
-}
-
-function strand($n = 23) {
-    $str = 'abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679'; # length == 53
-    if ($n != 7) $str .= 'o0Ol1iIB8'; # skip for passwords (9 chars)
-    for ($ret = '', $i = 0; $i < $n; $i++, $ret .= $str[rand(0, 7 == $n ? 52 : 61)]);
-    return $ret;
-}
-
-function unl($str) {
-    return str_replace(["\r\n", "\r"], "\n", $str);
-}
-
-function strcut($str, $n = 100) { #300
-    $text = mb_substr($str, 0, $n);
-    return mb_strlen($str) > $n
-        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', 0) - mb_strlen($text)), '.,?!') . '&nbsp;...'
-        : $text;
-}
-
-function array_explode($str, $via1 = ' ', $via2 = "\n") {
-    $ary = explode($via2, $str);
-    $out = [];
-    array_walk($ary, function($item) use (&$out, $via1) {
-        list ($k, $v) = explode($via1, $item, 2);
-        $out[$k] = $v;
-    });
-    return $out;
-}
-
-function array_join($ary, $via1 = ' ', $via2 = "\n") {
-    return implode($via2, array_map(function($k, $v) use ($via1) {
-        return $via1 instanceof Closure ? $via1($k, $v) : $k . $via1 . $v;
-    }, array_keys($ary), $ary));
-}
-
-function array_match($re, $ary, $re_key = false) {
-    if (!is_array($ary))
-        return false;
-    foreach ($ary as $k => $v) {
-        if (!preg_match($re, $v) || !($re_key ? preg_match($re_key, $k) : is_num($k)))
-            return false;
+    function domain(&$match_lg = null) {
+        if (!preg_match("/^([a-z]{2}\.)?(m\.)?(.*)$/", DOMAIN, $m))
+            throw new Error('User domain match');
+        $match_lg = in_array($m[1] = substr($m[1], 0, 2), $this->langs);
+        $this->is_mobile = (bool)$m[2];
+        return ['.' . $m[3]] + $m;
     }
-    return true;
-}
 
-function is_num($v, $zero = false, $lt = true) {
-    if (is_int($v) && ($lt || $v > 0))
-        return true;
-    return '0' === $v || ctype_digit($v) && ('0' !== $v[0] || $zero);
+    static function tail_t() {
+        global $sky;
+        # let ghost's SQLs will in the tracing
+        $sky->ghost or $sky->tail_ghost();
+
+        if (SKY::$debug) { # render tracing in the layout
+            $z_err = DEV ? Plan::z_err($sky->fly) : '';
+            echo tag('<h1>Tracing</h1>' . tag($sky->tracing('', false), 'class="trace"', 'pre'), 'id="trace-t" style="display:none"');
+            echo tag($z_err, 'id="trace-x" x="' . ($z_err ? 1 : 0) . '" style="display:none"');
+            if (DEV && (SKY::$errors[0] || $z_err))
+                echo js('sky.err_t = 1');
+        }
+        $sky->tailed = true;
+    }
+
+    function tail_x($exit, $stdout = '') {
+        # let ghost's SQLs will in the tracing
+        $this->ghost or $this->tail_ghost();
+        # grab OB if unexpected break done
+        for ($depth = 0, $x = ''; ob_get_level(); $depth++, $x .= ob_get_clean());
+        $stdout = $x . $stdout;
+
+        if ($hs = headers_sent())
+            $this->fly = HEAVEN::Z_FLY;
+        $msg = DEV ? Plan::z_err($this->fly, $this->was_error & SKY::ERR_SHOW) : '';//ERR_DETECT
+
+        if (HEAVEN::J_FLY == $this->fly) {
+            http_response_code(200);
+            $ary = false;
+            if ($msg) {
+                $ary = ['err_no' => 1];
+            } elseif ($this->ca_path) {
+                $ary = ['err_no' => 1] + $this->ca_path;
+            } elseif ($this->error_no > 99) {
+                $ary = ['err_no' => $this->error_no, 'exit' => $exit];
+                $msg = $exit ? view("_std._$this->error_no", $ary + ['stdout' => $stdout]) : $stdout;
+            } elseif (DEV && SKY::$debug && SKY::$errors[0]) {
+                $ary = ['err_no' => 1];
+                $msg = $exit ? '' : Plan::check_other();
+                $out = '' === $stdout ? L::m('EMPTY STRING') : html(mb_substr($stdout, 0, 500));
+                $msg .= "<h1>Stdout, depth=$depth</h1><pre>$out</pre>";
+            }
+            if ($ary) {
+                if (!$stdout = json($ary + ['catch_error' => $msg], true))
+                    $stdout = json_encode(['err_no' => $this->error_no, 'exit' => $exit, 'catch_error' => '<h1>See X-tracing</h1>']);
+            }
+        } elseif ($exit && !$hs) {
+            http_response_code($exit);
+        }
+#        if (DEV)
+ #           $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
+        if (SKY::$debug) {
+            trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars');
+            $this->tracing("Exit with $exit.$this->error_no\n"); # write X-tracing
+        }
+        echo $stdout; # send to browser
+
+        if ($exit)
+            SQL::close(); # end of script
+        $this->tailed = true;
+        exit;
+    }
+
+    function shutdown($web = false) {
+        global $user;
+        $toggle = false; # always on PROD
+        if (!$this->tailed) {
+            if (isset($user))
+                $user->flag(USER::NOT_TAILED, 1);
+            if (DEV && !$this->fly)
+                SKY::d('tracing_toggle', $toggle = 1 - (int)$this->d_tracing_toggle);
+                # PHP bug: SKY::d('tracing_toggle') always return NULL from here
+        }
+
+        parent::shutdown(function ($err, $func) use ($user, $toggle) {
+            $is_x = DEV ? !Plan::z_err($this->fly, $this->was_error & SKY::ERR_SHOW, $this->fly || $this->tailed) : true; //ERR_DETECT
+
+            if ($this->tailed) {
+                if (SKY::$debug && is_string($this->tailed))
+                    $this->tracing($this->tailed);
+            } else {
+                $title = $h1 = $this->except['title'] ?? ($err ?: 'die');
+                if (!$exit = $func($err)) { # for exit, die. sky->open =OK after error
+                    trace([$h1 = 'Unexpected Exit', $h1], true, 3);
+                    $this->error_no = 12;
+                    $exit = $this->s_error_403 ? 403 : 404; # exit err code
+                }
+                # save to Crash log
+                if (($dd = SKY::$dd) && $this->s_log_crash) {
+                    $str = NOW . "[$this->error_no] $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . $title . ', ';
+                    $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
+                    sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=5', "$str\n");
+                }
+
+                $hs = headers_sent();
+                if (!$hs && 12 == $this->error_no && $this->s_empty_die) # tracing not saved!
+                    return http_response_code($exit); # no response
+
+                if ($this->fly)
+                    $this->tail_x($exit); # exit at the end
+                # else crash for $sky->fly == 0
+
+                $http_code = $exit > 99 ? $exit : 404; # http code
+                $redirect = '';
+                $this->_refresh = false;
+
+                if ($hs) { # try redirect
+                    $redirect = '--></script></style>';
+                    $to = PATH . ($this->eview ? '_crash?' : 'crash?') . $http_code;
+                    if (DEV) {
+                        $redirect .= tag('Headers sent, redirect to: ' . a($to, $to) . ". Wait $this->d_crash_to sec", '', 'h1');
+                        $this->_refresh = "$this->d_crash_to!$to";
+                    } else {
+                        $redirect .= js("document.location.href='$to'");
+                        $this->_refresh = "0!$to";
+                    }
+                } else {
+                    http_response_code($http_code);# 503 -Service Unavailable
+                    if (Plan::mem_t('error.html')) {
+                        if ($is_x && SKY::$debug)
+                            $this->tracing("Fatal exit with $exit.$this->error_no\n");
+                        Plan::mem_r('error.html');
+                        SQL::close();
+                        exit;
+                    }
+                }
+
+                for ($stdout = $tracing = ''; ob_get_level(); $stdout .= html(ob_get_clean()));
+                if (SKY::$debug) {
+                    if ('__dev.layout' == MVC::$layout)
+                        $toggle = true; # for dev-tools
+                    if (!$is_x) {
+                        $toggle = true; # Z-err on DEV only
+                        $tracing .= "<h1>See Z-error first</h1>" . js('sky.err_t = 1');
+                        $this->_refresh = false;
+                        if ($hs)
+                            $redirect = '--></script></style>'; # cancel redirect
+                    } // SKY::$errors ??
+                    $tracing .= "<h1>$h1</h1>" . pre($this->tracing("Fatal exit with $exit.$this->error_no\n", $is_x));
+                    $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
+                }
+                $this->_static = false; # skip app css and js files
+                $vars = MVC::jet('__std.crash');
+                $vars += [
+                    'redirect' => $redirect,
+                    'no' => $http_code,
+                    'tracing' => $toggle ? $tracing : '',
+                ];
+                view(false, Plan::$parsed_fn, $vars);
+            }
+        });
+        SQL::close();
+    }
+
+    function tracing($top = '', $is_x = true) {
+        if (SKY::$debug) {
+            trace(implode(', ', array_keys(SKY::$mem)), 'CHARS of Ghost');
+            if ($this->trans_coll)
+                Language::translate($this->trans_coll);
+            $rewritten = implode('/', $this->surl) . ($_GET ? '?' . urldecode(http_build_query($_GET)) : '');
+            $uri = $this->methods[$this->method] . ' ' . URI . " --> $rewritten\n\$sky->lref: $this->lref";
+            $this->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "\n\$sky->fly: $this->fly\n\n" . $this->tracing;
+
+            if (SKY::$debug > 1) {
+                $top .= 'Request headers:'  . html(substr(print_r(Util::request_headers(), true), 7, -2));
+                $top .= 'Response headers:' . html(substr(print_r(Util::response_headers(), true), 7, -2));
+            }
+        }
+        return parent::tracing($top, $is_x);
+    }
 }

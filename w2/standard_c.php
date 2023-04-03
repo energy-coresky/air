@@ -39,7 +39,7 @@ class standard_c extends Controller
                 'ware_dir' => '',
                 'tasks' => [
                     '_dev?main=0' => 'Main',
-                    '_gate' => 'Open SkyGate',
+                    '_map' == $this->_0 ? '_map' : '_gate' => 'Open SkyGate',
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Open SkyProject',
                     '_glob?' . ($sky->d_gr_start ?: 'settings') => 'Global Reports',
@@ -48,6 +48,11 @@ class standard_c extends Controller
                 'wares' => $this->dev->wares_menu(),
                 'ware1' => substr(parse_url($sky->d_ware1, PHP_URL_PATH), 1),
                 'ware2' => substr(parse_url($sky->d_ware2, PHP_URL_PATH), 1),
+                'act' => function ($uri) {
+         #           if ('_gate' == $uri && '_map' == $this->_0)
+             #           return true;
+                    return $this->_0 == explode('?', $uri)[0] && !in_array($this->_1, ['view', 'ware']);
+                },
             ];
         }
     }
@@ -196,6 +201,52 @@ class standard_c extends Controller
         return self::ary_c23();
     }
 
+    ///////////////////////////////////// THE MAP /////////////////////////////////////
+    function j_map($x = 'j') {
+        'c_' != $this->_c or $this->_c = self::atime();
+        Gate::$cshow = true;
+        $map = Plan::mem_rq('map.php')
+            or $map = [
+                ['Main',''
+                ],
+            ];
+        $rws = explode("\n~\n", unl(view('_std.rewrites', [])));
+        $keys = [];
+        array_walk($rws, function (&$v) use (&$keys) {
+            list ($name, $samp, $v) = explode("\n", $v, 3);
+            $v = [$samp, highlight_string("<?php\n\n$v", true)];
+            $keys[] = $name;
+        });
+        $rws = str_replace('&lt;?php<br \/><br \/>', '', json_encode($rws));
+        // &lt;?php&lt;br \/&gt;&lt;br \/&gt;
+        return [
+            'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
+            'list' => Gate::controllers(true) + self::ctrl(),
+            'opt' => option(-2, array_reverse($keys, true)),
+            'rws' => tag(html($rws), 'id="rws" style="display:none"'),
+            
+            'e_func' => [
+                'row_c' => function ($in, $evar = false) {
+                    static $ary;
+                    if ($evar) {
+                        $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
+                        usort($ary, function ($a, $b) {
+                            if (in_array($a->func[0], ['e', 'd']))
+                                return -1;
+                            if (in_array($b->func[0], ['e', 'd']))
+                                return 1;
+                            return strcmp($a->func, $b->func);
+                        });
+                        return false;
+                    }
+                    return $ary ? array_shift($ary) : false;
+                },
+            ],
+        ];
+    }
+
+
+
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
     static function ary_c23($is_addr = 1, $v = []) {
         $v += ['', '', '', '', 0];
@@ -300,6 +351,8 @@ class standard_c extends Controller
                 $is_j = in_array($name, ['empty_j', 'default_j']) || 'j_' == substr($name, 0, 2);
                 $ary = isset($ary[$name]) ? $ary[$name] : [];
                 list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
+                if ($is_j)
+                    $meth = [0];
                 $vars = [
                     'func' => $name,
                     'delete' => $delete,
@@ -307,6 +360,7 @@ class standard_c extends Controller
                     'code' => $edit || Gate::$cshow ? $gate->view_code($ary, $class, $name) : false,
                     'error' => $delete ? 'Function not found' : '',
                     'url' => $gate->url,
+                    'meth' => $meth,
                 ];
                 if (Gate::$cshow)
                     return $vars;
@@ -332,8 +386,6 @@ class standard_c extends Controller
             Gate::OBJ_PFS => 'Return postfields as object',
         ];
         $out = '';
-        if ($is_j)
-            $meth = [0];
         $skip = !$edit || $is_j;
         foreach ($sky->methods as $k => $v) {
             $ok = in_array($k, $meth);

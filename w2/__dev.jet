@@ -232,8 +232,8 @@ $(function() {
 #if('_trace'!=:0)
     <div class="other-task" style="position:sticky; top:0px">Tool box</div>
     @loop($y_tasks as $uri => $name)
-        <a href="{{$uri}}"@active($sky->_0 == explode('?', $uri)[0] && !in_array($sky->_1, ['view', 'ware']))>{{$name}}</a>
-        @if('_gate' == $uri)@block(`` as m_gate)
+        <a href="{{$uri}}"@active($y_act($uri))>{{$name}}</a>
+        @if('_gate' == $uri || '_map' == $uri)@block(`` as m_gate)
         @elseif('_lang?list' == $uri)@block(`` as m_lang)
         @elseif('_inst' == $uri)@block(`` as m_inst)
         @elseif('_glob' == explode('?', $uri)[0])@block(`` as m_glob)

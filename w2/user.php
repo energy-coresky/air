@@ -188,7 +188,7 @@ class USER
                 if (++$i > 99)
                     throw new Error(1);
         trace("name, PATH, srv = $sky->s_c_name, " . PATH . ", $this->cookie_srv", 'SET-COOKIE');
-        if (!setcookie($sky->s_c_name, $cookie, ceil(START_TS + I_YEAR * 3), PATH, $this->cookie_srv, false))
+        if (!setcookie($sky->s_c_name, $cookie, ceil(START_TS + 31536000 * 3), PATH, $this->cookie_srv, false))
             throw new Error(2);
         return $cookie;
     }

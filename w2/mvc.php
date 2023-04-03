@@ -393,8 +393,7 @@ class MVC extends MVC_BASE
         if ($ok && DEV) {
             list ($mtime, $files) = Plan::jet_mf($fn); # to get max speed (avoid mtime checking)
             foreach ($files as $one) {
-                $ok &= Plan::view_('m', "$one.jet") < $mtime; # check for file mtime
-                if (!$ok)
+                if (!$ok = Plan::view_('m', "$one.jet") < $mtime)
                     break; # recompilation required
             }
         }
