@@ -148,6 +148,46 @@ class Util
         return $out;
     }
 
+    static function tracing(&$top) {
+        global $sky;
+        trace(implode(', ', array_keys(SKY::$mem)), 'CHARS of Ghost');
+        if ($sky->trans_coll)
+            Language::translate($sky->trans_coll);
+        $rewritten = implode('/', $sky->surl) . ($_GET ? '?' . urldecode(http_build_query($_GET)) : '');
+        $uri = $sky->methods[$sky->method] . ' /' . URI . " --> /$rewritten\n\$sky->lref: ";
+        $ref = false === $sky->lref ? L::m('false') . ' $sky->eref: ' . html($sky->eref) : '/' . html($sky->lref);
+        $sky->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "$ref\n\$sky->fly: $sky->fly\n\n" . $sky->tracing;
+
+        if (SKY::$debug > 1) {
+            $top .= 'Request headers:'  . html(substr(print_r(self::request_headers(), true), 7, -2));
+            $top .= 'Response headers:' . html(substr(print_r(self::response_headers(), true), 7, -2));
+        }
+    }
+
+    static function gpc() {
+        return "\$_GET: " . Plan::var($_GET) .
+            "\n\$_POST: " . Plan::var($_POST) .
+            "\n\$_FILES: " . Plan::var($_FILES) .
+            "\n\$_COOKIE: " . Plan::var($_COOKIE) . "\n";
+    }
+
+    static function closure($fun) {
+        $fun = new ReflectionFunction($fun);
+        $file = file($fun->getFileName());
+        $line = trim($file[$fun->getStartLine()]);
+        return 'Plan::' == substr($line, 0, 6) ? $line : 'Extended Closure';
+    }
+
+    static function catch_error($func) {
+        global $sky;
+        $t = [$sky->was_error, SKY::$debug];
+        SKY::$debug = $sky->was_error = 0;
+        $r = [call_user_func($func), $e = $sky->was_error];
+        list ($sky->was_error, SKY::$debug) = $t;
+        $sky->was_error |= $e;
+        return $r;
+    }
+
     static function pdaxt($plus = '') {
         global $sky, $user;
 

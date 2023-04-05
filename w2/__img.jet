@@ -46,3 +46,65 @@ data:image/gif;base64,R0lGODlhDwAKALMAAAAAzP////////////////////////////////////
 #.ok
 
 <img src="@inc(__img.ok2)"/>
+
+#.rewrites name is_dev
+Dev-standard 1
+/m/sky.js /etc/sky.js
+# don't used on Prod!
+if ($cnt && 'm' == $surl[0])
+    return $surl[0] = 'etc';
+~
+Main-page 0
+/ /main
+# change for "Url-lang"!
+$main = '' === URI;
+if ($main || 'main' === URI)
+    return $surl = $main ? ['main'] : [];
+~
+Robots.txt 0
+/robots.txt /etc/robots.txt
+if ('robots.txt' == URI)
+    return array_unshift($surl, 'etc');
+~
+Rewrite-1 0
+test test
+//
+~
+Rewrite-0 0
+test test
+//
+~
+Url-html 0
+/a/b/c/page.html /a/b/c/page
+$ext = 'html';
+if ($cnt && '_' != $surl[0][0]) {
+    $a = explode('.', $p =& $surl[$cnt - 1]);
+    2 != count($a) || $ext != $a[1] ? ($p = "$s.$ext") : ($p = $a[0]);
+}
+~
+Url-lang 0
+/en/ctrl/action >> /ctrl/action
+# set language from surl
+common_c::langs_h();
+if ($cnt && in_array($surl[0], $sky->langs))
+    $lg = array_shift($surl);
+SKY::lang($lg ?? DEFAULT_LG);
+~
+Pagination 0
+/ctrl/page-1/act /ctrl/act
+// 2do
+~
+Reversion 0
+/one-part/action /ctrl/action
+$rw = [ # reverse surl-part
+    'one-part' => 'ctrl',
+    'sec-surl' => 'reverted',
+];
+if ($cnt) {
+    $rw += array_flip($rw);
+    $p =& $surl[0];
+    if (isset($rw[$p]))
+        $p = $rw[$p];
+}
+#.rewrites
+

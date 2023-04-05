@@ -201,51 +201,6 @@ class standard_c extends Controller
         return self::ary_c23();
     }
 
-    ///////////////////////////////////// THE MAP /////////////////////////////////////
-    function j_map($x = 'j') {
-        'c_' != $this->_c or $this->_c = self::atime();
-        Gate::$cshow = true;
-        $map = Plan::mem_rq('map.php')
-            or $map = [
-                ['Main',''
-                ],
-            ];
-        $rws = explode("\n~\n", unl(view('_std.rewrites', [])));
-        $keys = [];
-        array_walk($rws, function (&$v) use (&$keys) {
-            list ($name, $samp, $v) = explode("\n", $v, 3);
-            $v = [$samp, highlight_string("<?php\n\n$v", true)];
-            $keys[] = $name;
-        });
-        $rws = str_replace('&lt;?php<br \/><br \/>', '', json_encode($rws));
-        // &lt;?php&lt;br \/&gt;&lt;br \/&gt;
-        return [
-            'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
-            'list' => Gate::controllers(true) + self::ctrl(),
-            'opt' => option(-2, array_reverse($keys, true)),
-            'rws' => tag(html($rws), 'id="rws" style="display:none"'),
-            
-            'e_func' => [
-                'row_c' => function ($in, $evar = false) {
-                    static $ary;
-                    if ($evar) {
-                        $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
-                        usort($ary, function ($a, $b) {
-                            if (in_array($a->func[0], ['e', 'd']))
-                                return -1;
-                            if (in_array($b->func[0], ['e', 'd']))
-                                return 1;
-                            return strcmp($a->func, $b->func);
-                        });
-                        return false;
-                    }
-                    return $ary ? array_shift($ary) : false;
-                },
-            ],
-        ];
-    }
-
-
 
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
     static function ary_c23($is_addr = 1, $v = []) {
@@ -285,7 +240,7 @@ class standard_c extends Controller
         $gate = Gate::instance();
         json([
             'code' => $gate->view_code(self::post_data($gate), $class, $func),
-            'url'  => PROTO . '://' . $gate->url,
+            'url'  => $gate->url,
         ]);
     }
 
@@ -443,5 +398,72 @@ class standard_c extends Controller
         return array_filter(SKY::$plans['main']['ctrl'], function ($v) {
             return $v != 'main';
         });
+    }
+
+
+    ///////////////////////////////////// THE MAP /////////////////////////////////////
+    function rewrite($ary) {
+        
+        return $ary + [
+            'e_rw' => [
+                'row_c' => function ($in, $evar = false) {
+                },
+            ],
+            'rshow' => 1,
+        ];
+    }
+
+    function j_map($x = 'j') {
+        Gate::$cshow = true;
+        $lib = explode("\n~\n", unl(view('_img.rewrites', [])));
+        $keys = [];
+        array_walk($lib, function (&$v) use (&$keys) {
+            list ($name, $samp, $v) = explode("\n", $v, 3);
+            list ($name, $is_dev) = explode(" ", $name);
+            $php = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v", true));
+            $keys[] = $name;
+            $v = [$name, $v, $is_dev, $samp, $php];
+        });
+
+        $map = Plan::_rq('rewrite.php') or $map = [$lib[0], $lib[1]];
+        //Plan::_p('rewrite.php', Plan::auto($map));
+        array_walk($map, function (&$v) {
+            //$php = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v", true));
+            //$v = [$name, $v, $is_dev, $samp, $php];
+        });
+
+        $rshow = SKY::d('sg_rshow');
+        if (isset($_POST['s']))
+            SKY::d('sg_rshow', $rshow = $_POST['s']);
+        $vars = [
+            'rshow' => $rshow,
+            'map' => $map,
+            'y_1' => substr($this->_c, 2),
+            'list' => Gate::controllers(true) + self::ctrl(),
+            'opt' => option(-2, array_reverse($keys, true)),
+            'json' => tag(html(json_encode($lib)), 'id="json" style="display:none"'),
+        ];
+        if (!$rshow) {
+            $vars += [
+                'e_func' => [
+                    'row_c' => function ($in, $evar = false) {
+                        static $ary;
+                        if ($evar) {
+                            $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
+                            usort($ary, function ($a, $b) {
+                                if (in_array($a->func[0], ['e', 'd']))
+                                    return -1;
+                                if (in_array($b->func[0], ['e', 'd']))
+                                    return 1;
+                                return strcmp($a->func, $b->func);
+                            });
+                            return false;
+                        }
+                        return $ary ? array_shift($ary) : false;
+                    },
+                ],
+            ];
+        }
+        return $vars;
     }
 }

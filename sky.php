@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.471 2023-04-03T19:50:05+03:00 energy';
+    const CORE = '0.472 2023-04-05T20:52:13+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -171,7 +171,7 @@ class SKY implements PARADISE
     static function &ghost($char, $packed, $tpl = '', $flag = 0, $dd = null) {
         SKY::$mem[$char] = [$flag, $flag & 4 ? null : $packed, $tpl, [], $dd ?? SKY::$dd];
         if (SKY::$debug && $tpl)
-            trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Plan::closure($tpl) : $tpl), 'GHOST', 1);
+            trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Util::closure($tpl) : $tpl), 'GHOST', 1);
         if ($packed) foreach (explode("\n", unl($packed)) as $v) {
             list($k, $v) = explode(' ', $v, 2);
             SKY::$mem[$char][3][$k] = escape($v, true);
@@ -329,8 +329,8 @@ class HEAVEN extends SKY
     function __get($name) {
         if ('_' == $name[0] && 2 == strlen($name) && is_num($name[1])) {
             $v = (int)$name[1];
-            if ('' === URI)
-                return $v ? '' : 'main';
+   #         if ('' === URI)
+   #             return $v ? '' : 'main';
             $cnt = count($this->surl);
             if ($v < $cnt && $this->is_front)
                 return $this->surl[$v];
@@ -370,27 +370,25 @@ class HEAVEN extends SKY
         parent::__construct(); # 9/7 classes at that point on DEV/Prod
 
         $this->ip = $_SERVER['REMOTE_ADDR'] ?? '';
-        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
-        # use fetch with a_.. actions
-        $this->is_front = true;
         $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
         $this->orientation = 0;
         if (isset($_SERVER['HTTP_X_ORIENTATION'])) {
             in_array($wo = (int)$_SERVER['HTTP_X_ORIENTATION'], [0, 1, 2]) or $wo = 0;
             $this->orientation = $wo;
         }
-
         $referer = $_SERVER['HTTP_REFERER'] ?? '';
         $this->lref = preg_match('~^' . PROTO . '://' . preg_quote(DOMAIN . PORT . PATH) . '(.*)$~', $referer, $m) ? $m[1] : false;
         $this->eref = !$m ? $referer : false;
 
         if (SKY::$debug)
-            $this->gpc = Plan::gpc(); # original input
+            $this->gpc = Util::gpc(); # original input
 
         require DIR_S . '/w2/mvc.php';
         Plan::app_r('mvc/common_c.php');
         MVC::$cc = new common_c;
         $mvc = new MVC;
+        $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
+        $this->is_front = true;
         $cnt = 0;
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
@@ -402,11 +400,15 @@ class HEAVEN extends SKY
             if (1 == $cnt && '' === $this->surl[0]) {
                 $this->surl = [];
                 $cnt = 0;
-                if ($this->fly && 'AJAX' === key($_GET)) {// && INPUT_POST == $this->method
-                    $mvc->return = $this->fly = HEAVEN::J_FLY;
-                    if ('adm' === $_GET['AJAX'])
-                        $this->surl = ['adm'];//$cnt = 1; !
-                    array_shift($_GET);
+                if ($this->fly && 0 == $this->method) { // INPUT_POST 2do: delete from gate the checks
+                    if ($jact = $_SERVER['HTTP_X_ACTION_J'] ?? false) {
+                        $mvc->return = $this->fly = HEAVEN::J_FLY;
+                        if ('adm' === $jact) {
+                            $this->surl = ['adm'];
+                            $cnt = 1;// chk __get(..)
+                            //$this->is_front = false; will set in Admin
+                        }
+                    }
                 }
             }
         }
@@ -577,19 +579,8 @@ class HEAVEN extends SKY
     }
 
     function tracing($top = '', $is_x = true) {
-        if (SKY::$debug) {
-            trace(implode(', ', array_keys(SKY::$mem)), 'CHARS of Ghost');
-            if ($this->trans_coll)
-                Language::translate($this->trans_coll);
-            $rewritten = implode('/', $this->surl) . ($_GET ? '?' . urldecode(http_build_query($_GET)) : '');
-            $uri = $this->methods[$this->method] . ' ' . URI . " --> $rewritten\n\$sky->lref: $this->lref";
-            $this->tracing = 'PATH: ' . PATH . html("\nADDR: $uri") . "\n\$sky->fly: $this->fly\n\n" . $this->tracing;
-
-            if (SKY::$debug > 1) {
-                $top .= 'Request headers:'  . html(substr(print_r(Util::request_headers(), true), 7, -2));
-                $top .= 'Response headers:' . html(substr(print_r(Util::response_headers(), true), 7, -2));
-            }
-        }
+        if (SKY::$debug)
+            Util::tracing($top);
         return parent::tracing($top, $is_x);
     }
 }

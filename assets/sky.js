@@ -58,8 +58,14 @@ var sky = {
     toggle: function(el) {
         $(el).html('&gt;&gt;&gt;' == $(el).html() ? '<<<' : '>>>').next().slideToggle();
     },
-    post: function(url, data, func) {
-        return $.post(url, data, func);
+    post: function(url, data, func, jact) {
+        return $.ajax({
+            type: "POST",
+            url: url,
+            data: data,
+            success: func,
+            headers: {'X-Action-J': jact || 'front'}
+        });
     },
     f: { // forms
         h: {},
@@ -211,7 +217,8 @@ function ajax(j_, postfields, func, c_) {
     });
     if (sky.a.start)
         to = sky.a.start(ctrl1, '' + j_);
-    sky.post(sky.home + '?AJAX=' + ctrl0 + '&' + ctrl1 + '=' + j_, postfields || '', function(r) {
+
+    sky.post(sky.home + '?' + ctrl1 + '=' + j_, postfields || '', function(r) {
         var error_func = sky.a.error(); // get the current and restore default error handler
         func = func || sky.a.body;
         if (sky.a.finish)
@@ -230,7 +237,7 @@ function ajax(j_, postfields, func, c_) {
             case 'object':   return func ? func.html(r) : null; // null is object
             default:         return r ? sky.err(r) : null;
         }
-    });
+    }, ctrl0);
 }
 
 (function($) {

@@ -47,7 +47,10 @@ class Plan
     }
 
     static function auto($v, $more = '') {
-        return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn " . var_export($v, true) . ";\n";
+        $array = var_export($v, true);
+        if (!is_string($more))
+            $more = call_user_func_array($more, [&$array]);
+        return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn $array;\n";
     }
 
     static function vendor($class = false) {
@@ -168,8 +171,8 @@ class Plan
                 SKY::$plans = require $fn;
             } else {
                 SKY::$plans = $ctrl = [];
-                $wares = is_file($fn = DIR_M . '/wares.php') ? (require $fn) : [];
-                SKY::$plans['main'] = ['app' => ['path' => DIR_M], 'class' => []] + $plans;
+                $wares = is_file($wf = DIR_M . '/wares.php') ? (require $wf) : [];
+                SKY::$plans['main'] = ['rewrite' => '', 'app' => ['path' => DIR_M], 'class' => []] + $plans;
                 $cfg =& SKY::$plans['main']['class'];
                 foreach ($wares as $key => $val) {
                     $conf = require ($path = $val['path']) . "/conf.php";
@@ -183,12 +186,10 @@ class Plan
                     unset($ptr['require'], $ptr['class'], $ptr['databases'], $ptr['options']);
                     SKY::$plans[$key] = ['app' => ['path' => $path] + $conf['app']] + $conf;
                 }
-
                 $plans = SKY::$plans;
-                $ctrl += Gate::controllers();
-                SKY::$plans['main'] += ['ctrl' => $ctrl];
-                $plans['main'] += ['ctrl' => $ctrl];
-                Plan::cache_p('sky_plan.php', Plan::auto($plans)); # make dir & save file
+                $plans['main'] += ['ctrl' => $ctrl + Gate::controllers()];
+                Plan::cache_p('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite'])); # make dir & save file
+                SKY::$plans = require $fn;
             }
             $cfg =& SKY::$plans['main'][$pn];
             Plan::locale();
@@ -212,6 +213,15 @@ class Plan
         return $cfg;
     }
 
+    static function rewrite(&$in) {
+        $code = "\n";
+        foreach (Plan::_rq('rewrite.php') as $rw)
+            !DEV && $rw[2] or $code .= $rw[1] . "\n";
+        $in = explode("'',", $in, 2);
+        $in = "$in[0]function(\$cnt, &\$surl) {{$code}},$in[1]";
+        return '';
+    }
+
     static function locale($lg = 'en') {
         if ('en' == $lg && setlocale(LC_ALL, 'en_US.utf8', 'en_US.UTF-8'))
             return 1;
@@ -220,13 +230,6 @@ class Plan
 
     static function check_other() {
         return SKY::$dd ? (string)SKY::$dd->check_other() : '';
-    }
-
-    static function gpc() {
-        return "\$_GET: " . Plan::var($_GET) .
-            "\n\$_POST: " . Plan::var($_POST) .
-            "\n\$_FILES: " . Plan::var($_FILES) .
-            "\n\$_COOKIE: " . Plan::var($_COOKIE) . "\n";
     }
 
     static function error_name($no) {
@@ -244,16 +247,6 @@ class Plan
             E_DEPRECATED => 'Deprecated',
         ];
         return $list[$no] ?? "ErrorNo_$no";
-    }
-
-    static function catch_error($func) {
-        global $sky;
-        $t = [$sky->was_error, SKY::$debug];
-        SKY::$debug = $sky->was_error = 0;
-        $r = [call_user_func($func), $e = $sky->was_error];
-        list ($sky->was_error, SKY::$debug) = $t;
-        $sky->was_error |= $e;
-        return $r;
     }
 
     static function z_err($z_fly, $is_error = false, $drop = true) {
@@ -293,13 +286,6 @@ class Plan
         }
         $p =& SKY::$errors;
         $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", $desc . $vars];
-    }
-
-    static function closure($fun) {
-        $fun = new ReflectionFunction($fun);
-        $file = file($fun->getFileName());
-        $line = trim($file[$fun->getStartLine()]);
-        return 'Plan::' == substr($line, 0, 6) ? $line : 'Extended Closure';
     }
 
     static function var($var, $add = '', $quote = true, $var_name = false) { # tune var_export for display in html

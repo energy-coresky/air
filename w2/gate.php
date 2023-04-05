@@ -129,8 +129,8 @@ class Gate
         list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
         if ($this->_j)
             $meth = [0];
-        if (!$meth && 'main' == $cmode[1] && '' === $cmode[2]) # for main page
-            $meth = [1];
+    #    if (!$meth && 'main' == $cmode[1] && '' === $cmode[2]) # for main page
+    #        $meth = [1];
         $this->_e = 'e();';
         if (!SKY::s('gate_404') && (!DEV || $is_view && SKY::d('sg_prod')))
             $this->_e = 'die;';
@@ -241,11 +241,11 @@ class Gate
                         $this->url .= "$ctrl?$act";
                         $skip = 1;
                     } elseif ($key === $p0 && 2 == $i) {
-                        $this->url .= $this->_j ? "?AJAX=$ctrl&$ctrl=" : "?$ctrl=";
+                        $this->url .= $this->_j ? "?$ctrl=" : "?$ctrl="; ///AJAX
                         $skip = 1;
                     } elseif (3 == $i) {
                         $t3 ? ($this->sz_surl = 2) : ($this->sz_ary += 1);
-                        $this->url .= $this->_j ? "?AJAX=$ctrl&$ctrl=$act" : ($t3 ? "$ctrl/$act" : "?$ctrl=$act");
+                        $this->url .= $this->_j ? "?$ctrl=$act" : ($t3 ? "$ctrl/$act" : "?$ctrl=$act"); ///AJAX
                         $b0 = $this->_j || !$t3;
                     } elseif (2 == $i) {
                         $this->sz_surl = 1;
@@ -261,9 +261,9 @@ class Gate
                 $php .= $this->each_row($pos, $v, false, $skip);
             }
         } elseif (1 == $i) {
-            $this->url .= $this->_j ? "?AJAX=" : '';
-        } elseif ('main' !== $p0 || '' !== $p1) {
-            $this->url .= $this->_j ? "?AJAX=$ctrl&$ctrl=" : ($t3 ? $ctrl : "?$ctrl");
+            ;////////$this->url .= $this->_j ? "?AJAX=" : '';
+        } else { //if ('main' !== $p0 || '' !== $p1) {
+            $this->url .= $this->_j ? "?$ctrl=" : ($t3 ? $ctrl : "?$ctrl"); ///AJAX
             if (3 == $i && '' !== $p1)
                 $this->url .= $this->_j ? $act : ($t3 ? "?$act" : "=$act");
             $this->sz_surl = $this->_j || !$t3 ? 0 : 1;

@@ -176,12 +176,16 @@ class Controller extends MVC_BASE
 trait HOOK_C
 {
     function rewrite_h($cnt, &$surl) {
+        #SKY::$plans['main']['rewrite']($cnt, $surl);
         return $this->re_write($cnt, $surl);
     }
 
     function re_write($cnt, &$surl) {
         if (1 == $cnt && 'robots.txt' == $surl[0] && !$_GET)
             return array_unshift($surl, 'etc');
+        $main = '' === URI;
+        if ($main || 'main' === URI)
+            return $surl = $main ? ['main'] : [];
         return $this->re_dev($cnt, $surl);
     }
 

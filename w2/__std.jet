@@ -135,21 +135,20 @@ DATABASES ({{count($databases)}})
 ==============================================================================================
 #.m_gate
 @loop($list as $one => $ex)
-    <a href="{!PATH . "?$sky->_0=$one"!}" class="inner-menu" style="background:{! $ex?(1==$ex?'':'#cfc'):'#fcc' !}"
-        @active($one==$y_1)>
-        {!'*' == $one ? 'default_c' : "c_$one"!}.php @if(!in_array($ex,['0','1']))({{$ex}})~if
-    </a>
+  <a href="{{PATH}}?_gate={!$one!}" class="inner-menu" style="background:{! $ex?(1==$ex?'':'#cfc'):'#fcc' !}"@active($one==$y_1)>
+    {!'*' == $one ? 'default_c' : "c_$one"!}.php @if(!in_array($ex,['0','1']))({{$ex}})~if
+  </a>
 ~loop
 #.m_gate.header ------------------------------------------------------------------------------
 <h4><span style="color:#4338ca">CONTROLLER</span>:
 @if($list[$y_1])
-    <span style="color:#000">{{strtoupper($h1)}}.PHP</span>
+  <span style="color:#000">{{strtoupper($h1)}}.PHP</span>
 @else
-    <span style="color:red">{{strtoupper($h1)}}.PHP</span> (not exists)
-    <a style="font-weight:normal" @href(ajax('{{$y_1}}',{},'v-body','_delete'))>Delete</a>
+  <span style="color:red">{{strtoupper($h1)}}.PHP</span> (not exists)
+  <a style="font-weight:normal" @href(ajax('{{$y_1}}',{},'v-body','_delete'))>Delete</a>
 ~if
 <a class="@active($cshow)" style="font-weight:normal"
-    @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
+  @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
 <a style="font-weight:normal" href="_map">Show map</a>
 </h4>
 #.header.gate.delete ------------------------------------------------------------------------------
@@ -341,33 +340,61 @@ div.function { margin-top:-9px; }
     background:#fff;
     overflow:auto;
 }
+select {outline:none; border:none; width:110px;height:93px; font-size:12px;}
 </style>
 #.jscss
 
+#.rewrite
+<div id="map" style="margin-top:30px;">
+  <table width="100%" cellspacing="0" cellpadding="0">
+    @loop($map as $one)
+    <tr>
+      <td style="width:330px">R{{$_}} <input value="{{$one[3]}}"><br>
+        <label><input type="checkbox"{{$one[2] and 'checked'}}> DEV only</label><br>
+      </td>
+      <td style="width:35%">{!$one[4]!}</td>
+      <td style="">
+        <input type="button" value="edit">
+        <input type="button" value="delete">
+      </td>
+    </tr>
+    ~loop
+  </table>
+</div>
+#.rewrite
 
-#.mheader //////////////////////////////////////////////////////////////////////////////
+#.r_gate
+@loop($map as $one)
+  <a href="{{PATH}}?_map={!$_!}" class="inner-menu" style="background:"@active($_ == $y_1)>
+    R{{"$_ $one[0]"}}
+  </a>
+~loop
+#.rheader.r_gate //////////////////////////////////////////////////////////////////////////////
 <h4>CORESKY REWRITES MAP
-    <a style="font-weight:normal" href="_gate">Show gates</a>
+  <a class="@active($rshow)" style="font-weight:normal"
+    @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
+  <a style="font-weight:normal" href="_gate">Show gates</a>
 </h4>
-#.map.mheader ------------------------------------------------------------------------------
-#use(.mheader as header)@php $h1 = $func = ''; $n=7; ~php
-@use(.m_gate)
+#.map.rheader ------------------------------------------------------------------------------
+#use(.rheader as header)@php $h1 = $func = ''; $n=7; ~php
+@use(.r_gate as m_gate)
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px; height:94px;padding:0">
   <div style="width:220px; height:93px;">
     Total controllers/actions: @block(`` as total)
   </div>
-  <div style="width:110px; height:93px; background:#fff">
+  <div style="width:110px; height:93px; background:#fff; border-left:1px solid #4338ca;">
     <div style="position:absolute; padding:0 27px; border-bottom:1px solid #4338ca; background:#e0e7ff; font-weight:bold">
-        Library</div>
-    <select size="6" style="outline:none; width:110px;height:93px; font-size:12px; border:none; margin-top:0px">
+      Library</div>
+    <select size="6">
       <option style="margin-bottom:3px"></option>{!$opt!}
-    </select>{!$rws!}
+    </select>{!$json!}
   </div>
   <div id="code">
     222
   </div>
   <div style="width:; height:93px;">
     17px X 17px
+    <div><input id="is-dev" type="checkbox" disabled> DEV only</div>
     <div id="sample"></div>
   </div>
 </div>
@@ -378,6 +405,8 @@ div.function { margin-top:-9px; }
   ~loop
   <div style="border-right:1px solid #4338ca; width:;">..URI in Core </div>
 </div>
+@if($rshow)@inc(.rewrite)
+@else
 <div id="map" style="margin-top:0px;">
   <table width="100%" cellspacing="0" cellpadding="0">
   @loop($list as $one => $ex)
@@ -400,77 +429,22 @@ div.function { margin-top:-9px; }
   </table>
   @if($total = "$_/" . (1 + $e_func->key()))@use(`{{$total}}` as total)~if
 </div>
+~if
 <script>
 (function() {
-    var rws = JSON.parse($.trim($('#rws').text()));
+    var json = JSON.parse($.trim($('#json').text()));
     $('option').click(function() {
-        let ary = rws[this.value]
-        $('#code').html(ary[1])
-        $('#sample').html(ary[0])
+        let ary = json[this.value]
+        $('#code').html(ary[4])
+        $('#sample').html(ary[3])
+        $('#is-dev').attr('checked', 1 == ary[2])
+        
     });
 })();
 </script>
 @inc(.jscss)
 #.map
 
-#.rewrites name is_dev
-Dev-standard 1
-/m/sky.js /etc/sky.js
-if (DEV && $cnt && 'm' == $surl[0])
-    return $surl[0] = 'etc';
-~
-Main-page 0
-/ /main
-$main = '' === URI;
-if ($main || 'main' === URI)
-    return $surl = $main ? ['main'] : [];
-~
-Robots.txt 0
-/robots.txt /etc/robots.txt
-if ('robots.txt' == URI)
-    return array_unshift($surl, 'etc');
-~
-Rewrite-1 0
-test test
-//
-~
-Rewrite-2 0
-test test
-//
-~
-Rewrite-3 0
-test test
-//
-~
-Url-html 0
-/a/b/c/page.html /a/b/c/page
-$ext = 'html';
-if ($cnt && '_' != $surl[0][0]) {
-    $a = explode('.', $p =& $surl[$cnt - 1]);
-    2 != count($a) || $ext != $a[1] ? ($p = "$s.$ext") : ($p = $a[0]);
-}
-~
-Url-lang 0
-/en/ctrl/action >> /ctrl/action
-# set language from surl
-if ($cnt && in_array($surl[0], $sky->langs))
-    $lg = array_shift($surl);
-SKY::lang($lg ?? DEFAULT_LG);
-~
-Pagination 0
-/ctrl/page-1/act /ctrl/act
-// 2do
-~
-Reversion 0
-/one-part/action /ctrl/action
-$rw = [ # reverse surl-part
-    'one-part' => 'ctrl',
-    'sec-surl' => 'reverted',
-];
-if ($cnt) {
-    $rw += array_flip($rw);
-    $p =& $surl[0];
-    if (isset($rw[$p]))
-        $p = $rw[$p];
-}
-#.rewrites
+
+
+
