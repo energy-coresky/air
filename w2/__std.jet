@@ -334,28 +334,34 @@ div.function { margin-top:-9px; }
 #map td {
     padding: 0 5px;
 }
-#code {
-    width:330px;
-    height:93px;
-    background:#fff;
-    overflow:auto;
+#lib {
+    position:absolute; padding:0 27px; border-bottom:1px solid #4338ca; background:#ccc; font-weight:bold
 }
 select {outline:none; border:none; width:110px;height:93px; font-size:12px;}
+#rewrite td {padding:3px 2px}
+textarea { width:100%; height:100%; outline:none; white-space:pre; font-size:11px;
+    border:none; border-right:1px solid #4338ca; background:#ffc;
+}
+dl {margin:0; }
 </style>
 #.jscss
 
 #.rewrite
-<div id="map" style="margin-top:30px;">
+<div id="rewrite" style="margin-top:30px;">
   <table width="100%" cellspacing="0" cellpadding="0">
     @loop($map as $one)
-    <tr>
-      <td style="width:330px">R{{$_}} <input value="{{$one[3]}}"><br>
-        <label><input type="checkbox"{{$one[2] and 'checked'}}> DEV only</label><br>
+    <tr@if($_ == $y_1) style="background:#e0e7ff"~if>
+      <td style="width:80px">
+        R{{$_}}@if($one[2])<br><span style="color:red"><b>DEV only</b></span>~if
       </td>
-      <td style="width:35%">{!$one[4]!}</td>
-      <td style="">
-        <input type="button" value="edit">
-        <input type="button" value="delete">
+      <td style="width:30px; padding:3px 0">
+        @if($_)<input type="button" value="▲" onclick="dev('{{$_}}', {m:{{$_ - 1}}})">~if
+        @if($_ < count($map) - 1)<input type="button" value="▼" onclick="dev('{{$_}}', {m:{{$_ + 1}}})">~if
+      </td>
+      <td style="width:70%">{!$one[4]!}</td>
+      <td>
+        <input value="add after R{{$_}}" type="button" class="add" onclick="dev('{{$y_1}}', {f:sky.g.lib, a:{{$_}}})">
+        @if($_ == $y_1)<input type="button" value="delete" onclick="dev('{{$y_1}}', {d:-1})">~if
       </td>
     </tr>
     ~loop
@@ -376,53 +382,57 @@ select {outline:none; border:none; width:110px;height:93px; font-size:12px;}
   <a style="font-weight:normal" href="_gate">Show gates</a>
 </h4>
 #.map.rheader ------------------------------------------------------------------------------
-#use(.rheader as header)@php $h1 = $func = ''; $n=7; ~php
+#use(.rheader as header)@php $h1 = $func = ''; $n=count($map); ~php
 @use(.r_gate as m_gate)
 <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px; height:94px;padding:0">
-  <div style="width:220px; height:93px;">
-    Total controllers/actions: @block(`` as total)
-  </div>
-  <div style="width:110px; height:93px; background:#fff; border-left:1px solid #4338ca;">
-    <div style="position:absolute; padding:0 27px; border-bottom:1px solid #4338ca; background:#e0e7ff; font-weight:bold">
-      Library</div>
+  <div style="width:110px; height:93px; background:#fff">
+    <div id="lib">Library</div>
     <select size="6">
       <option style="margin-bottom:3px"></option>{!$opt!}
     </select>{!$json!}
   </div>
   <div id="code">
-    222
+    @if($rshow)
+      <textarea style="">{{$map[$y_1][1]}}</textarea>
+    @else
+      {!$map[$y_1][4]!}
+    ~if
   </div>
-  <div style="width:; height:93px;">
-    17px X 17px
-    <div><input id="is-dev" type="checkbox" disabled> DEV only</div>
-    <div id="sample"></div>
+  <div style="height:93px; padding:5px 10px">
+    @if($rshow){!$form!}@else
+      Total controllers/actions: @block(`` as total)
+      <br>17px X 17px
+    ~if
   </div>
 </div>
+@if(!$rshow)
 <div style="position:absolute; left:390px; background:#ccc; height:17px;width:calc(100vw - 415px); border-left:1px solid #4338ca;
     display:flex">
-  @loop($_ <= $n)
-  <div style="border-right:1px solid #4338ca; width:17px; text-align:center">R{{$_}}</div>
+  @loop($_ < $n)
+    <div style="border-right:1px solid #4338ca; width:17px; text-align:center">R{{$_}}</div>
   ~loop
   <div style="border-right:1px solid #4338ca; width:;">..URI in Core </div>
 </div>
-@if($rshow)@inc(.rewrite)
+~if
+@if($rshow)
+  @inc(.rewrite)
 @else
 <div id="map" style="margin-top:0px;">
   <table width="100%" cellspacing="0" cellpadding="0">
   @loop($list as $one => $ex)
     <tr>
-      <td colspan="{{3+$n}}" style="background:#ccc">{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</td>
+      <td colspan="{{2+$n}}" style="background:#ccc">{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</td>
     </tr>
     @loop($e_func($one))
     <tr>
       <td width="220">{{1 + $_2}}. -&gt;{{$row->func}}()</td>
-      @loop($_3 <= $n)<td style="border-right:1px solid #ccc;@if(!$_3)border-left:1px solid #ccc;~if" width="{{$_3 ? 17 : 18}}"></td>~loop
+      @loop($_3 < $n)<td style="border-right:1px solid #ccc;@if(!$_3)border-left:1px solid #ccc;~if" width="{{$_3 ? 17 : 18}}"></td>~loop
       <td>{!$row->url!} {{$ex}}</td>
     </tr>
     ~loop
     <tr style="height:10px">
       <td style="width:220px"></td>
-      @loop($_2 <= $n)<td style="width:17px;border-right:1px solid #ccc;"></td>~loop
+      @loop($_2 < $n)<td style="width:17px;border-right:1px solid #ccc;"></td>~loop
       <td></td>
     </tr>
   ~loop
@@ -432,19 +442,48 @@ select {outline:none; border:none; width:110px;height:93px; font-size:12px;}
 ~if
 <script>
 (function() {
-    var json = JSON.parse($.trim($('#json').text()));
+    sky.g.lib = -1;
+    var html, json = JSON.parse($.trim($('#json').text()));
     $('option').click(function() {
-        let ary = json[this.value]
-        $('#code').html(ary[4])
-        $('#sample').html(ary[3])
-        $('#is-dev').attr('checked', 1 == ary[2])
-        
+        var set, i = this.value, el = $('#code{{$rshow ? ' textarea' : ''}}')
+        if (set = sky.g.lib != i) {
+            @if($rshow)$('.add').show();~if
+            if (-1 == sky.g.lib)
+                html = el.html();
+            let ary = json[sky.g.lib = i];
+            el.html(ary[{{$rshow ? 1 : 4}}]);
+            $('#sample').html(ary[3]);
+            $('#is-dev').attr('checked', 1 == ary[2]);
+        } else {
+            @if($rshow)$('.add').hide();~if
+            this.selected = false;
+            sky.g.lib = -1;
+            el.html(html);
+        }
+        $('#lib').css({background: set ? '#e0e7ff' : '#ccc'})
     });
 })();
-</script>
+</script><style>
+#code {
+    width:450px;
+    height:93px;
+    background:#fff;
+    overflow:{{$rshow ? 'none' : 'auto'}};
+}
+#code code {
+    display:block;
+    width:max-content;
+}
+.add { display:none }
+</style>
 @inc(.jscss)
 #.map
 
 
+    <div><input id="is-dev" type="checkbox"> DEV only</div>
+    <div id="sample"></div>
 
+        @if($rshow)
+            $('#code').css({overflow: set ? 'auto' : 'none'})
+        ~if
 

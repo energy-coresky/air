@@ -402,46 +402,50 @@ class standard_c extends Controller
 
 
     ///////////////////////////////////// THE MAP /////////////////////////////////////
-    function rewrite($ary) {
-        
-        return $ary + [
-            'e_rw' => [
-                'row_c' => function ($in, $evar = false) {
-                },
-            ],
-            'rshow' => 1,
-        ];
-    }
-
     function j_map($x = 'j') {
+        $y_1 = (int)$this->_1;
         Gate::$cshow = true;
-        $lib = explode("\n~\n", unl(view('_img.rewrites', [])));
-        $keys = [];
-        array_walk($lib, function (&$v) use (&$keys) {
-            list ($name, $samp, $v) = explode("\n", $v, 3);
-            list ($name, $is_dev) = explode(" ", $name);
-            $php = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v", true));
-            $keys[] = $name;
-            $v = [$name, $v, $is_dev, $samp, $php];
-        });
-
-        $map = Plan::_rq('rewrite.php') or $map = [$lib[0], $lib[1]];
-        //Plan::_p('rewrite.php', Plan::auto($map));
-        array_walk($map, function (&$v) {
-            //$php = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v", true));
-            //$v = [$name, $v, $is_dev, $samp, $php];
-        });
-
+        Util::rewrite($lib, $map, $keys);
         $rshow = SKY::d('sg_rshow');
-        if (isset($_POST['s']))
+        if (isset($_POST['s'])) { # rshow
             SKY::d('sg_rshow', $rshow = $_POST['s']);
+        } elseif (isset($_POST['php'])) { # save
+            $map[$y_1] = [$_POST['n'], $_POST['php'], $_POST['x'], $_POST['u']];
+            Plan::_p('rewrite.php', Plan::auto($map));
+        } elseif (isset($_POST['d'])) { # delete
+            array_splice($map, $y_1, 1);
+            $y_1 < count($map) or $y_1--;
+            Plan::_p('rewrite.php', Plan::auto($map));
+        } elseif (isset($_POST['m'])) { # move
+            $ary = array_splice($map, $y_1, 1);
+            $y_1 = $_POST['m'];
+            array_splice($map, $y_1, 0, $ary);
+            Plan::_p('rewrite.php', Plan::auto($map));
+        } elseif (isset($_POST['a'])) { # insert from lib
+            $y_1 = 1 + $_POST['a'];
+            array_splice($map, $y_1, 0, [$lib[$_POST['f']]]);
+            Plan::_p('rewrite.php', Plan::auto($map));
+        }
+        $data = array_combine(['n', '_0', 'x', 'u'], $map[$y_1]);
+        array_walk($lib, $highlight = function (&$v) {
+            $v[4] = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v[1]", true));
+        });
+        array_walk($map, $highlight);
+
         $vars = [
             'rshow' => $rshow,
             'map' => $map,
-            'y_1' => substr($this->_c, 2),
+            'y_1' => $y_1,
             'list' => Gate::controllers(true) + self::ctrl(),
             'opt' => option(-2, array_reverse($keys, true)),
             'json' => tag(html(json_encode($lib)), 'id="json" style="display:none"'),
+            'form' => Form::A($data, [
+                'php' => '',
+                'n' => ['Name', '', 'size="25"'],
+                'x' => ['DEV only', 'chk'],
+                'u' => ['Sample', '', 'size="25"'],
+                ["Save R$y_1", 'button', "onclick=\"$('input[name=php]').val($('textarea').val()); this.form.submit()\""],
+            ]),
         ];
         if (!$rshow) {
             $vars += [

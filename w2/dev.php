@@ -178,7 +178,7 @@ class DEV
             if ('' == $required[0])
                 array_shift($required);
             foreach ($required as $class) {
-                if (!Plan::has_class($class)) {
+                if (!Plan::has($class)) {
                     if ($isv = is_dir('vendor'))
                         Plan::vendor();
                     if (!class_exists($class, $isv)) {
@@ -409,7 +409,7 @@ class DEV
                 Form::X([], '<hr>'),
                 ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
                 'static' => ['', '', 'size="50"'],
-                'etc'  => ['Turn ON tracing for standard_c::a_etc()', 'chk'],
+                'etc'  => ['Turn ON tracing for default_c::a_etc()', 'chk'],
                 'red_label' => ['Red label', 'radio', ['Off', 'On']],
                 'jet_cache' => ['Jet cache', 'radio', ['Off', 'On']],
                 ['Save', 'submit'],

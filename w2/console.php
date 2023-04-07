@@ -197,6 +197,14 @@ class Console
         }
     }
 
+    /** Write standard rewrite.php */
+    function c_rewrite() {
+        Util::rewrite($lib, $map, $keys);
+        $map = array_slice($lib, 0, 5);
+        Plan::_p('rewrite.php', Plan::auto($map));
+        $this->c_drop();
+    }
+
     /** Read tmemo cell from $_memory */
     function c_m($id = 8, $unhtml = false) {
         $s = sqlf('+select tmemo from $_memory where id=%d', $id);

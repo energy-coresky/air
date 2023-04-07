@@ -47,12 +47,11 @@ data:image/gif;base64,R0lGODlhDwAKALMAAAAAzP////////////////////////////////////
 
 <img src="@inc(__img.ok2)"/>
 
-#.rewrites name is_dev
-Dev-standard 1
-/m/sky.js /etc/sky.js
-# don't used on Prod!
-if ($cnt && 'm' == $surl[0])
-    return $surl[0] = 'etc';
+#.rewrites ================= name is_dev
+Standard 0
+/a /a
+global $sky;
+$_0 = $cnt ? $surl[0] : '';
 ~
 Main-page 0
 / /main
@@ -66,20 +65,43 @@ Robots.txt 0
 if ('robots.txt' == URI)
     return array_unshift($surl, 'etc');
 ~
-Rewrite-1 0
-test test
-//
+Dev-ends 1
+/a /a
+# end for dev-tools
+if ($sky->_0 && '_' == $sky->_0[0])
+    return;
 ~
-Rewrite-0 0
-test test
-//
+Assets 1
+/m/sky.js /etc/sky.js
+if ('m' == $_0)
+    return $surl[0] = 'etc';
+~
+Assets-2 1
+/w/upload/upload.js /etc/upload.js/upload
+if ('w' == $_0 && 3 == $cnt) {
+    array_shift($surl);
+    $surl[2] = $surl[0];
+    return $surl[0] = 'etc';
+}
+~
+Swap-1-2 0
+/a/b/c /a/c/b
+if ($cnt > 2) {
+    $tmp = $surl[1];
+    $surl[1] = $surl[2];
+    $surl[2] = $tmp;
+}
+~
+Pagination 0
+/ctrl/page-1/act /ctrl/act
+// 2do
 ~
 Url-html 0
 /a/b/c/page.html /a/b/c/page
 $ext = 'html';
-if ($cnt && '_' != $surl[0][0]) {
+if ($cnt) {
     $a = explode('.', $p =& $surl[$cnt - 1]);
-    2 != count($a) || $ext != $a[1] ? ($p = "$s.$ext") : ($p = $a[0]);
+    2 != count($a) || $ext != $a[1] ? ($p .= ".$ext") : ($p = $a[0]);
 }
 ~
 Url-lang 0
@@ -90,16 +112,9 @@ if ($cnt && in_array($surl[0], $sky->langs))
     $lg = array_shift($surl);
 SKY::lang($lg ?? DEFAULT_LG);
 ~
-Pagination 0
-/ctrl/page-1/act /ctrl/act
-// 2do
-~
 Reversion 0
 /one-part/action /ctrl/action
-$rw = [ # reverse surl-part
-    'one-part' => 'ctrl',
-    'sec-surl' => 'reverted',
-];
+$rw = ['one-part' => 'ctrl',];
 if ($cnt) {
     $rw += array_flip($rw);
     $p =& $surl[0];
@@ -107,4 +122,3 @@ if ($cnt) {
         $p = $rw[$p];
 }
 #.rewrites
-

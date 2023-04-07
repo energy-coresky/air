@@ -175,33 +175,11 @@ class Controller extends MVC_BASE
 
 trait HOOK_C
 {
-    function rewrite_h($cnt, &$surl) {
-        #SKY::$plans['main']['rewrite']($cnt, $surl);
-        return $this->re_write($cnt, $surl);
+    static function rewrite_h($cnt, &$surl) {
+        SKY::$plans['main']['rewrite']($cnt, $surl);
     }
 
-    function re_write($cnt, &$surl) {
-        if (1 == $cnt && 'robots.txt' == $surl[0] && !$_GET)
-            return array_unshift($surl, 'etc');
-        $main = '' === URI;
-        if ($main || 'main' === URI)
-            return $surl = $main ? ['main'] : [];
-        return $this->re_dev($cnt, $surl);
-    }
-
-    function re_dev($cnt, &$surl) {
-        if (DEV && $cnt && 'm' == $surl[0])
-            return $surl[0] = 'etc';
-    }
-
-    function re_verse_ext($cnt, &$surl, $ext = 'html') {
-        if (0 == $cnt || '_' == $surl[0][0])
-            return false;
-        $a = explode('.', $s =& $surl[$cnt - 1]);
-        return $s = 2 != count($a) || $ext != $a[1] ? "$s.$ext" : $s = $a[0];
-    }
-
-    function head_h() {
+    static function head_h() {
         global $user;
         $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
         return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";
@@ -262,18 +240,15 @@ trait HOOK_D
         throw new Error('Crash pretty');
     }
 
-    function a_etc($fn = '') {
+    function a_etc($fn, $ware) {
         global $sky;
         $ext = '';
-        $fn or $fn = $sky->_1;
-
         if ($pos = strrpos($fn, '.'))
             $ext = substr($fn, $pos + 1);
         if (DEV && in_array($ext, ['js', 'css'])) {
             if (SKY::d('etc'))
                 $sky->open(); # save tracing on DEV only now
-            is_file($file = DIR_S . "/assets/$fn")
-                or $file = Plan::_t([$this->d_last_ware, "assets/$fn"]);
+            $file = $ware && Plan::has($ware, false) ? Plan::_t([$ware, "assets/$fn"]) : DIR_S . "/assets/$fn";
         } else {//2do: use Plans (to get var) to save optionally user log on Prod
             $file = WWW . "m/etc/$fn";
         }
@@ -294,9 +269,10 @@ trait HOOK_D
             readfile($file);
             throw new Stop;
         }
+        $sky->open();
         $sky->log('etc', "404 $fn");
         http_response_code($sky->error_no = 404);
-        return true;
+        throw new Hacker('etc');//return true;
     }
 
     function j_init($tz, $scr) {
@@ -332,7 +308,7 @@ class MVC extends MVC_BASE
     static $vars;
     static $_y = []; # layout vars
     static $layout = '';
-    static $mc; # main controller
+    static $mc; # master controller
     static $cc; # common controller
     static $ctrl;
     static $tpl = '_std';
@@ -448,7 +424,7 @@ class MVC extends MVC_BASE
         echo js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->_static[1]);
         echo css($sky->_static[2] + [-1 => '~/m/sky.css']);
         if (!$sky->eview && 'crash' != $sky->_0)
-            echo js(MVC::$cc->head_h());
+            echo js(common_c::head_h());
         echo '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->_head;
     }
 

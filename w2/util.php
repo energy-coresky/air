@@ -114,6 +114,18 @@ class Util
         }
     }
 
+    static function rewrite(&$lib, &$map, &$keys) {
+        $lib = explode("\n~\n", unl(view('_img.rewrites', [])));
+        $keys = [];
+        array_walk($lib, function (&$v) use (&$keys) {
+            list ($name, $samp, $v) = explode("\n", $v, 3);
+            list ($name, $is_dev) = explode(" ", $name);
+            $keys[] = $name;
+            $v = [$name, $v, $is_dev, $samp];
+        });
+        $map = Plan::_rq('rewrite.php') or $map = array_slice($lib, 0, 5);
+    }
+
     static function request_headers() {
         if (function_exists('apache_request_headers'))
             return apache_request_headers();

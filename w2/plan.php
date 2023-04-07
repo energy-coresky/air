@@ -14,7 +14,7 @@ class Plan
         'jet' => ['path' => 'var/jet'],
         'gate' => ['path' => 'var/gate'],
         'mem' => ['path' => 'var/mem'],
-        'sql' => ['path' => 'var/sql'], #2do
+        //'sql' => ['path' => 'var/sql'], #2do
     ];
 
     static $wares = ['main'];
@@ -42,8 +42,9 @@ class Plan
         return $prev;
     }
 
-    static function has_class($class) {
-        return isset(SKY::$plans['main']['class'][$class]);
+    static function has($in, $class = true) {
+        //if (is_array($in))
+        return $class ? isset(SKY::$plans['main']['class'][$in]) : isset(SKY::$plans[$in]);
     }
 
     static function auto($v, $more = '') {

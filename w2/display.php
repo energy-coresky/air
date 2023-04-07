@@ -107,7 +107,7 @@ class Display
                 return 'jet' == $m[1] ? self::jet(unhtml($m[2]), '-', true) : pre(html($m[2]), '');
             }, $text);
         };
-        if (!$exist = Plan::has_class('Parsedown')) {
+        if (!$exist = Plan::has('Parsedown')) {
             if (is_dir('vendor/erusev/parsedown')) {
                 Plan::vendor();
                 $exist = true;
