@@ -289,6 +289,10 @@ sky.g.hide = function(el) {
     el2.remove();
     sky.g.code(el3, sky.g.mem);
 };
+sky.g.rws = function(el) {
+    $('input[name=php]').val($('textarea').val());
+    el.form.submit()
+};
 $(function() {
     if ('{{$func}}') {
         $('#v-body div:eq(0)').prepend(`<h1 class="g-err">Gate error in "{{$h1}}::{{$func}}()"</h1>`);
@@ -342,12 +346,13 @@ select {outline:none; border:none; width:110px;height:93px; font-size:12px;}
 textarea { width:100%; height:100%; outline:none; white-space:pre; font-size:11px;
     border:none; border-right:1px solid #4338ca; background:#ffc;
 }
+input[type=text] {border:1px solid #4338ca; outline:none;}
 dl {margin:0; }
 </style>
 #.jscss
 
 #.rewrite
-<div id="rewrite" style="margin-top:30px;">
+<div id="rewrite">
   <table width="100%" cellspacing="0" cellpadding="0">
     @loop($map as $one)
     <tr@if($_ == $y_1) style="background:#e0e7ff"~if>
@@ -384,8 +389,8 @@ dl {margin:0; }
 #.map.rheader ------------------------------------------------------------------------------
 #use(.rheader as header)@php $h1 = $func = ''; $n=count($map); ~php
 @use(.r_gate as m_gate)
-<div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px; height:94px;padding:0">
-  <div style="width:110px; height:93px; background:#fff">
+<div class="bg-wx" style="border-bottom:1px solid #4338ca;position:sticky; top:0px; height:94px;padding:0; background:#fff">
+  <div style="width:110px; height:93px;">
     <div id="lib">Library</div>
     <select size="6">
       <option style="margin-bottom:3px"></option>{!$opt!}
@@ -398,41 +403,45 @@ dl {margin:0; }
       {!$map[$y_1][4]!}
     ~if
   </div>
-  <div style="height:93px; padding:5px 10px">
+  <div style="height:93px; padding:5px 10px;@unless($rshow)border-left:1px solid #4338ca;~unless">
     @if($rshow){!$form!}@else
       Total controllers/actions: @block(`` as total)
       <br>17px X 17px
     ~if
   </div>
 </div>
-@if(!$rshow)
-<div style="position:absolute; left:390px; background:#ccc; height:17px;width:calc(100vw - 415px); border-left:1px solid #4338ca;
-    display:flex">
-  @loop($_ < $n)
-    <div style="border-right:1px solid #4338ca; width:17px; text-align:center">R{{$_}}</div>
-  ~loop
-  <div style="border-right:1px solid #4338ca; width:;">..URI in Core </div>
-</div>
-~if
 @if($rshow)
   @inc(.rewrite)
 @else
-<div id="map" style="margin-top:0px;">
+<div id="map">
   <table width="100%" cellspacing="0" cellpadding="0">
+  <tr style="position:sticky;top:94px" id="tbl-head">
+    <td></td>
+    <td width="35%">URI Input</td>
+    @loop($_ < $n)
+      <td style="border-right:1px solid #ccc; padding:0; width:{{$_ ? 17 : 18}}px;
+        @if(!$_)border-left:1px solid #ccc;~if@if($_ <= $y_1)background:#e0e7ff~if">R{{$_}}</td>
+    ~loop
+    <td width="35%">URI in Core</td>
+  </tr>
   @loop($list as $one => $ex)
     <tr>
-      <td colspan="{{2+$n}}" style="background:#ccc">{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</td>
+      <td colspan="{{3+$n}}" style="background:#ccc">{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</td>
     </tr>
     @loop($e_func($one))
     <tr>
-      <td width="220">{{1 + $_2}}. -&gt;{{$row->func}}()</td>
-      @loop($_3 < $n)<td style="border-right:1px solid #ccc;@if(!$_3)border-left:1px solid #ccc;~if" width="{{$_3 ? 17 : 18}}"></td>~loop
+      <td style="border-right:1px solid #ccc;">{{1 + $_2}}. -&gt;{{$row->func}}()</td>
+      <td>--</td>
+      @loop($_3 < $n)
+        <td width="{{$_3 ? 17 : 18}}" style="border-right:1px solid #ccc;
+          @if(!$_3)border-left:1px solid #ccc;~if@if($_3 <= $y_1)background:#e0e7ff~if"></td>
+      ~loop
       <td>{!$row->url!} {{$ex}}</td>
     </tr>
     ~loop
     <tr style="height:10px">
-      <td style="width:220px"></td>
-      @loop($_2 < $n)<td style="width:17px;border-right:1px solid #ccc;"></td>~loop
+      <td></td><td></td>
+      @loop($_2 < $n)<td style="width:17px;border-right:1px solid #ccc;@if($_2 <= $y_1)background:#e0e7ff~if"></td>~loop
       <td></td>
     </tr>
   ~loop
@@ -461,6 +470,8 @@ dl {margin:0; }
             el.html(html);
         }
         $('#lib').css({background: set ? '#e0e7ff' : '#ccc'})
+        @if($rshow)$('textarea').css({background: set ? '#e0e7ff' : '#ffc'})
+        @else$('#code').css({background: set ? '#e0e7ff' : '#fff'})~if
     });
 })();
 </script><style>
@@ -475,15 +486,7 @@ dl {margin:0; }
     width:max-content;
 }
 .add { display:none }
+#tbl-head td {background:#ccc; height:17px; border-bottom:1px solid #fff;}
 </style>
 @inc(.jscss)
 #.map
-
-
-    <div><input id="is-dev" type="checkbox"> DEV only</div>
-    <div id="sample"></div>
-
-        @if($rshow)
-            $('#code').css({overflow: set ? 'auto' : 'none'})
-        ~if
-

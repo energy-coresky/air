@@ -444,7 +444,7 @@ class standard_c extends Controller
                 'n' => ['Name', '', 'size="25"'],
                 'x' => ['DEV only', 'chk'],
                 'u' => ['Sample', '', 'size="25"'],
-                ["Save R$y_1", 'button', "onclick=\"$('input[name=php]').val($('textarea').val()); this.form.submit()\""],
+                ["Save R$y_1", 'button', 'onclick="sky.g.rws(this)" style="margin-top:5px"'],
             ]),
         ];
         if (!$rshow) {
