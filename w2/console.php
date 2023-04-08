@@ -199,21 +199,20 @@ class Console
 
     /** Write standard rewrite.php */
     function c_rewrite() {
-        Util::rewrite($lib, $map, $keys);
-        $map = array_slice($lib, 0, 5);
+        Rewrite::lib($map);
         Plan::_p('rewrite.php', Plan::auto($map));
         $this->c_drop();
+    }
+
+    /** Write "first run" into index.php */
+    function c_fr() {
+        common_c::make_h(true);
     }
 
     /** Read tmemo cell from $_memory */
     function c_m($id = 8, $unhtml = false) {
         $s = sqlf('+select tmemo from $_memory where id=%d', $id);
         echo !$unhtml ? $s : (1 == $unhtml ? unhtml($s) : unhtml(unhtml($s)));
-    }
-
-    /** Write "first run" into index.php */
-    function c_fr() {
-        common_c::make_h(true);
     }
 
     /** Check globals */

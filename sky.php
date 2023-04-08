@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.473 2023-04-07T16:53:37+03:00 energy';
+    const CORE = '0.474 2023-04-08T22:07:50+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -410,7 +410,7 @@ class HEAVEN extends SKY
                 }
             }
         }
-        common_c::rewrite_h($cnt, $this->surl);
+        common_c::rewrite_h($cnt, $this->surl, URI, $this);
         $mvc->top(); # 16/14 classes at that point on DEV/Prod
     }
 

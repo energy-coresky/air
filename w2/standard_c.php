@@ -405,32 +405,16 @@ class standard_c extends Controller
     function j_map($x = 'j') {
         $y_1 = (int)$this->_1;
         Gate::$cshow = true;
-        Util::rewrite($lib, $map, $keys);
+        Rewrite::get($lib, $map, $keys);
         $rshow = SKY::d('sg_rshow');
         if (isset($_POST['s'])) { # rshow
             SKY::d('sg_rshow', $rshow = $_POST['s']);
-        } elseif (isset($_POST['php'])) { # save
-            $map[$y_1] = [$_POST['n'], $_POST['php'], $_POST['x'], $_POST['u']];
-            Plan::_p('rewrite.php', Plan::auto($map));
-        } elseif (isset($_POST['d'])) { # delete
-            array_splice($map, $y_1, 1);
-            $y_1 < count($map) or $y_1--;
-            Plan::_p('rewrite.php', Plan::auto($map));
-        } elseif (isset($_POST['m'])) { # move
-            $ary = array_splice($map, $y_1, 1);
-            $y_1 = $_POST['m'];
-            array_splice($map, $y_1, 0, $ary);
-            Plan::_p('rewrite.php', Plan::auto($map));
-        } elseif (isset($_POST['a'])) { # insert from lib
-            $y_1 = 1 + $_POST['a'];
-            array_splice($map, $y_1, 0, [$lib[$_POST['f']]]);
-            Plan::_p('rewrite.php', Plan::auto($map));
+        } elseif ($_POST) {
+            Rewrite::put($y_1);
         }
         $data = array_combine(['n', '_0', 'x', 'u'], $map[$y_1]);
-        array_walk($lib, $highlight = function (&$v) {
-            $v[4] = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v[1]", true));
-        });
-        array_walk($map, $highlight);
+        array_walk($lib, 'Rewrite::highlight');
+        array_walk($map, 'Rewrite::highlight');
 
         $vars = [
             'rshow' => $rshow,
@@ -443,31 +427,29 @@ class standard_c extends Controller
                 'php' => '',
                 'n' => ['Name', '', 'size="25"'],
                 'x' => ['DEV only', 'chk'],
-                'u' => ['Sample', '', 'size="25"'],
+                'u' => ['Test URI', '', 'size="25"'],
                 ["Save R$y_1", 'button', 'onclick="sky.g.rws(this)" style="margin-top:5px"'],
             ]),
         ];
-        if (!$rshow) {
-            $vars += [
-                'e_func' => [
-                    'row_c' => function ($in, $evar = false) {
-                        static $ary;
-                        if ($evar) {
-                            $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
-                            usort($ary, function ($a, $b) {
-                                if (in_array($a->func[0], ['e', 'd']))
-                                    return -1;
-                                if (in_array($b->func[0], ['e', 'd']))
-                                    return 1;
-                                return strcmp($a->func, $b->func);
-                            });
-                            return false;
-                        }
-                        return $ary ? array_shift($ary) : false;
-                    },
-                ],
-            ];
-        }
+        $rshow or $vars += [
+            'e_func' => [
+                'row_c' => function ($in, $evar = false) {
+                    static $ary;
+                    if ($evar) {
+                        $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
+                        usort($ary, function ($a, $b) {
+                            if (in_array($a->func[0], ['e', 'd']))
+                                return -1;
+                            if (in_array($b->func[0], ['e', 'd']))
+                                return 1;
+                            return strcmp($a->func, $b->func);
+                        });
+                        return false;
+                    }
+                    return $ary ? array_shift($ary) : false;
+                },
+            ],
+        ];
         return $vars;
     }
 }

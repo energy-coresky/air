@@ -48,44 +48,37 @@ data:image/gif;base64,R0lGODlhDwAKALMAAAAAzP////////////////////////////////////
 <img src="@inc(__img.ok2)"/>
 
 #.rewrites ================= name is_dev
-Standard 0
-/a /a
-global $sky;
-$_0 = $cnt ? $surl[0] : '';
-~
 Main-page 0
-/ /main
-# change for "Url-lang"!
-$main = '' === URI;
-if ($main || 'main' === URI)
+/
+$main = '' === $uri;
+if ($main || 'main' === $uri)
     return $surl = $main ? ['main'] : [];
 ~
 Robots.txt 0
-/robots.txt /etc/robots.txt
-if ('robots.txt' == URI)
+/robots.txt
+if ('robots.txt' == $uri)
     return array_unshift($surl, 'etc');
 ~
 Dev-ends 1
-/a /a
-# end for dev-tools
-if ($sky->_0 && '_' == $sky->_0[0])
+
+if ('_' == $sky->_0[0])
     return;
 ~
 Assets 1
-/m/sky.js /etc/sky.js
-if ('m' == $_0)
+/m/sky.js
+if ($cnt && 'm' == $surl[0])
     return $surl[0] = 'etc';
 ~
 Assets-2 1
-/w/upload/upload.js /etc/upload.js/upload
-if ('w' == $_0 && 3 == $cnt) {
+/w/upload/upload.js
+if (3 == $cnt && 'w' == $surl[0]) {
     array_shift($surl);
     $surl[2] = $surl[0];
     return $surl[0] = 'etc';
 }
 ~
 Swap-1-2 0
-/a/b/c /a/c/b
+/0/2/1
 if ($cnt > 2) {
     $tmp = $surl[1];
     $surl[1] = $surl[2];
@@ -93,19 +86,19 @@ if ($cnt > 2) {
 }
 ~
 Pagination 0
-/ctrl/page-1/act /ctrl/act
+/c/page-1/a
 // 2do
 ~
 Url-html 0
-/a/b/c/page.html /a/b/c/page
+/c/a/page.html
 $ext = 'html';
 if ($cnt) {
     $a = explode('.', $p =& $surl[$cnt - 1]);
-    2 != count($a) || $ext != $a[1] ? ($p .= ".$ext") : ($p = $a[0]);
+    $p = 2 == count($a) && $ext == $a[1] ? $a[0] : "$p.$ext";
 }
 ~
 Url-lang 0
-/en/ctrl/action >> /ctrl/action
+/en/c/a
 # set language from surl
 common_c::langs_h();
 if ($cnt && in_array($surl[0], $sky->langs))
@@ -113,7 +106,7 @@ if ($cnt && in_array($surl[0], $sky->langs))
 SKY::lang($lg ?? DEFAULT_LG);
 ~
 Reversion 0
-/one-part/action /ctrl/action
+/one-part/a
 $rw = ['one-part' => 'ctrl',];
 if ($cnt) {
     $rw += array_flip($rw);

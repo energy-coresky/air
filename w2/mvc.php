@@ -175,8 +175,8 @@ class Controller extends MVC_BASE
 
 trait HOOK_C
 {
-    static function rewrite_h($cnt, &$surl) {
-        SKY::$plans['main']['rewrite']($cnt, $surl);
+    static function rewrite_h($cnt, &$surl, $uri, $sky) {
+        SKY::$plans['main']['rewrite']($cnt, $surl, $uri, $sky);
     }
 
     static function head_h() {

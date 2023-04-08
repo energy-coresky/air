@@ -219,7 +219,7 @@ class Plan
         foreach (Plan::_rq('rewrite.php') as $rw)
             !DEV && $rw[2] or $code .= $rw[1] . "\n";
         $in = explode("'',", $in, 2);
-        $in = "$in[0]function(\$cnt, &\$surl) {{$code}},$in[1]";
+        $in = "$in[0]function(\$cnt, &\$surl, \$uri, \$sky) {{$code}},$in[1]";
         return '';
     }
 

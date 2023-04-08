@@ -406,7 +406,9 @@ dl {margin:0; }
   <div style="height:93px; padding:5px 10px;@unless($rshow)border-left:1px solid #4338ca;~unless">
     @if($rshow){!$form!}@else
       Total controllers/actions: @block(`` as total)
-      <br>17px X 17px
+      <br><br><b>Test URI:</b>
+      <br><input type="text" value="{{$map[$y_1][3]}}" size="25" name="u">
+      <input type="button" value="test" onclick="">
     ~if
   </div>
 </div>
@@ -461,7 +463,7 @@ dl {margin:0; }
                 html = el.html();
             let ary = json[sky.g.lib = i];
             el.html(ary[{{$rshow ? 1 : 4}}]);
-            $('#sample').html(ary[3]);
+            $('input[name=u]').val(ary[3]);
             $('#is-dev').attr('checked', 1 == ary[2]);
         } else {
             @if($rshow)$('.add').hide();~if
@@ -486,7 +488,7 @@ dl {margin:0; }
     width:max-content;
 }
 .add { display:none }
-#tbl-head td {background:#ccc; height:17px; border-bottom:1px solid #fff;}
+#tbl-head td {background:#ccc; height:21px; border-bottom:1px solid #fff; vertical-align:middle;}
 </style>
 @inc(.jscss)
 #.map
