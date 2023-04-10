@@ -14,6 +14,7 @@ class Gate
 
     //add named limits and permission to sky-gate!!!!!!
     public $url = '';
+    public $var = [];
 
     function __construct() {
         global $sky;
@@ -59,6 +60,7 @@ class Gate
 
     function view_code($ary, $class, $func) {
         $this->url = '';
+        $this->var = [];
         $cmode = $this->contr_mode($class, $func);
         $code = highlight_string("<?\n" . $this->code($ary, $cmode), true);
         $code = substr_replace($code, '', strpos($code, '&lt;?'), 5);
@@ -204,13 +206,18 @@ class Gate
         return tag($in, 'style="background:' . $c . ($ns ? ';border-bottom:2px solid red' : '') . '"', 'span');
     }
 
+    function spa2($in, $c, $ns = 0) {
+        $cnt = count($this->var);
+        $this->var[] = $in;
+        return tag("{{$cnt}}", 'style="font-weight:bold' . ($ns ? ';border-bottom:2px solid red' : '') . '"', 'span');
+    }
+
     function process_addr($addr, $flag, $cmode, &$eq0) {
         list($i, $p0, $p1) = $cmode;
         $this->i = $i;
 
-        $ctrl = $p0 ? $this->span($p0, 2 == $i && !$p1 ? 'red' : 'blue', 2) : '';//green
-        $act = '' === $p1 ? '' : $this->span($p1, 'red', 2);//$this->_j ? 'red' : 'green'
-        //$this->url = SKY::d('sg_prod') || !defined('PATH') ? _PUBLIC . '/' : DOMAIN . PATH;
+        $ctrl = $p0 ? $this->span($p0, 2 == $i && !$p1 ? '#00b' : '#b88', 2) : '';
+        $act = '' === $p1 ? '' : $this->span($p1, '#00b', 2);
         $this->url = '/';
         $this->ends = [];
         $php = $this->ra = $this->ns = '';
@@ -405,6 +412,7 @@ class Gate
         $re = $rb || !$sb && !preg_match("/^\w*$/", $data);
         if ($sb)
             $data = substr($data, 0, -2);
+        $rx = $data;
         $df = substr_count($this->ns, '+');
         list($src, $var) = $this->get_src($is_pfs, $re, $df, $ary, $skip);
         $x = $this->i + ($is_pfs ? 2 + 2 * $this->addr_c : 0);
@@ -498,10 +506,10 @@ class Gate
                 ? ('' === $data ? '' : ($ns ? tag('=', 'style="border-bottom:2px solid red"', 'span') : '='))
                 : ($this->i == $this->start ? '?' : '&');
             $this->url .= $re || $ns && $e7
-                ? $q . $this->span($data, $is_val ? 'pink' : '#0f0', $ns)
+                ? $q . $this->spa2([$rx, $data], $is_val ? 'pink' : '#0f0', $ns)
                 : $q . ($ns ? tag($data, 'style="border-bottom:2px solid red"', 'span') : $data);
         } else {
-            $this->url .= (1 == $this->i ? '' : '/') . ($ns || $re ? $this->span($data, 'silver', $ns) : $data);
+            $this->url .= (1 == $this->i ? '' : '/') . ($ns || $re ? $this->spa2([$rx, $data], 'yellow', $ns) : $data);
         }
         return $out;
     }

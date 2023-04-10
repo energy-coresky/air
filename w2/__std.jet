@@ -351,7 +351,10 @@ dl {margin:0; }
 </style>
 #.jscss
 
-#.rewrite
+#.err
+<h4 style="background-color:pink">Error in PHP syntax</h4>
+#.rewrite.err
+@if($err)@use(.err as header)~if
 <div id="rewrite">
   <table width="100%" cellspacing="0" cellpadding="0">
     @loop($map as $one)
@@ -418,27 +421,32 @@ dl {margin:0; }
 <div id="map">
   <table width="100%" cellspacing="0" cellpadding="0">
   <tr style="position:sticky;top:94px" id="tbl-head">
-    <td></td>
-    <td width="35%">URI Input</td>
+    <td><b>TOP-VIEW Actions</b></td>
+    <td width="35%"><b>External URI</b></td>
     @loop($_ < $n)
       <td style="border-right:1px solid #ccc; padding:0; width:{{$_ ? 17 : 18}}px;
         @if(!$_)border-left:1px solid #ccc;~if@if($_ <= $y_1)background:#e0e7ff~if">R{{$_}}</td>
     ~loop
-    <td width="35%">URI in Core</td>
+    <td width="35%"><b>URI in Core, after rewrite</b></td>
   </tr>
   @loop($list as $one => $ex)
-    <tr>
-      <td colspan="{{3+$n}}" style="background:#ccc">{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</td>
+    <tr style="background:#e0e7ff;">
+      <td colspan="2" style="color:#b88"><b>{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</b>
+        @if(!$ex)err@elseif(1 != $ex)<span style="color:#000">({{$ex}} ware)</span>~if
+      </td>
+      <td colspan="{{1+$n}}" style=""></td>
     </tr>
     @loop($e_func($one))
     <tr>
-      <td style="border-right:1px solid #ccc;">{{1 + $_2}}. -&gt;{{$row->func}}()</td>
-      <td>--</td>
+      <td style="border-right:1px solid #ccc;">
+        {{1 + $_2}}. -&gt;<span style="color:#00b">{!$row->func!}</span>{!$row->pars!}
+      </td>
+      <td>{!true === $row->input ? $row->url : $row->input !}</td>
       @loop($_3 < $n)
         <td width="{{$_3 ? 17 : 18}}" style="border-right:1px solid #ccc;
           @if(!$_3)border-left:1px solid #ccc;~if@if($_3 <= $y_1)background:#e0e7ff~if"></td>
       ~loop
-      <td>{!$row->url!} {{$ex}}</td>
+      <td>@if(true === $row->input)<span style="color:#2b3">the same</span>@else{!$row->url!}~if</td>
     </tr>
     ~loop
     <tr style="height:10px">
@@ -448,7 +456,7 @@ dl {margin:0; }
     </tr>
   ~loop
   </table>
-  @if($total = "$_/" . (1 + $e_func->key()))@use(`{{$total}}` as total)~if
+  @if($total = "$_/$e_func")@use(`{{$total}}` as total)~if
 </div>
 ~if
 <script>

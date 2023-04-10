@@ -464,6 +464,12 @@ class eVar implements Iterator
         $this->e = $e;
     }
 
+    function __toString() {
+        if (isset($this->e['end_c']))
+            call_user_func($this->e['end_c'], $this);
+        return (string)(1 + $this->i);
+    }
+
     function __call($name, $args) {
         return isset($this->e[$name]) ? call_user_func_array($this->e[$name], $args) : null;
     }

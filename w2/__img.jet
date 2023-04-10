@@ -54,28 +54,28 @@ $main = '' === $uri;
 if ($main || 'main' === $uri)
     return $surl = $main ? ['main'] : [];
 ~
-Robots.txt 0
-/robots.txt
-if ('robots.txt' == $uri)
-    return array_unshift($surl, 'etc');
-~
 Dev-ends 1
 
 if ('_' == $sky->_0[0])
     return;
 ~
-Assets 1
+Assets-coresky 1
 /m/sky.js
 if ($cnt && 'm' == $surl[0])
     return $surl[0] = 'etc';
 ~
-Assets-2 1
+Assets-wares 1
 /w/upload/upload.js
 if (3 == $cnt && 'w' == $surl[0]) {
     array_shift($surl);
     $surl[2] = $surl[0];
     return $surl[0] = 'etc';
 }
+~
+Robots.txt 0
+/robots.txt
+if ('robots.txt' == $uri)
+    return array_unshift($surl, 'etc');
 ~
 Swap-1-2 0
 /0/2/1
@@ -102,8 +102,7 @@ Url-lang 0
 # set language from surl
 common_c::langs_h();
 if ($cnt && in_array($surl[0], $sky->langs))
-    $lg = array_shift($surl);
-SKY::lang($lg ?? DEFAULT_LG);
+    common_c::$lg = array_shift($surl);
 ~
 Reversion 0
 /one-part/a

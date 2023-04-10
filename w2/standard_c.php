@@ -315,6 +315,7 @@ class standard_c extends Controller
                     'code' => $edit || Gate::$cshow ? $gate->view_code($ary, $class, $name) : false,
                     'error' => $delete ? 'Function not found' : '',
                     'url' => $gate->url,
+                    'var' => $gate->var,
                     'meth' => $meth,
                 ];
                 if (Gate::$cshow)
@@ -404,19 +405,20 @@ class standard_c extends Controller
     ///////////////////////////////////// THE MAP /////////////////////////////////////
     function j_map($x = 'j') {
         $y_1 = (int)$this->_1;
-        Gate::$cshow = true;
         Rewrite::get($lib, $map, $keys);
         $rshow = SKY::d('sg_rshow');
-        if (isset($_POST['s'])) { # rshow
+        $err = false;
+        if (isset($_POST['s'])) {
             SKY::d('sg_rshow', $rshow = $_POST['s']);
         } elseif ($_POST) {
-            Rewrite::put($y_1);
+            $err = !Rewrite::put($y_1);
         }
         $data = array_combine(['n', '_0', 'x', 'u'], $map[$y_1]);
         array_walk($lib, 'Rewrite::highlight');
         array_walk($map, 'Rewrite::highlight');
 
         $vars = [
+            'err' => $err,
             'rshow' => $rshow,
             'map' => $map,
             'y_1' => $y_1,
@@ -436,17 +438,15 @@ class standard_c extends Controller
                 'row_c' => function ($in, $evar = false) {
                     static $ary;
                     if ($evar) {
+                        Gate::$cshow = true;
                         $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
-                        usort($ary, function ($a, $b) {
-                            if (in_array($a->func[0], ['e', 'd']))
-                                return -1;
-                            if (in_array($b->func[0], ['e', 'd']))
-                                return 1;
-                            return strcmp($a->func, $b->func);
-                        });
+                        Rewrite::input($ary);
                         return false;
                     }
                     return $ary ? array_shift($ary) : false;
+                },
+                'end_c' => function () {
+                    Rewrite::vars(true);
                 },
             ],
         ];
