@@ -401,9 +401,14 @@ class standard_c extends Controller
         });
     }
 
-
     ///////////////////////////////////// THE MAP /////////////////////////////////////
-    function j_map($x = 'j') {
+    function j_test() {
+        Rewrite::vars(false);
+        echo '/' . Rewrite::test($_POST['uri']);
+        Rewrite::vars(true);
+    }
+
+    function j_map() {
         $y_1 = (int)$this->_1;
         Rewrite::get($lib, $map, $keys);
         $rshow = SKY::d('sg_rshow');
@@ -426,11 +431,12 @@ class standard_c extends Controller
             'opt' => option(-2, array_reverse($keys, true)),
             'json' => tag(html(json_encode($lib)), 'id="json" style="display:none"'),
             'form' => Form::A($data, [
+                'mode' => "save $y_1 ",
                 'php' => '',
                 'n' => ['Name', '', 'size="25"'],
                 'x' => ['DEV only', 'chk'],
                 'u' => ['Test URI', '', 'size="25"'],
-                ["Save R$y_1", 'button', 'onclick="sky.g.rws(this)" style="margin-top:5px"'],
+                ["Save R$y_1", 'button', 'onclick="sky.g.rw()" style="margin-top:5px"'],
             ]),
         ];
         $rshow or $vars += [
@@ -440,7 +446,7 @@ class standard_c extends Controller
                     if ($evar) {
                         Gate::$cshow = true;
                         $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
-                        Rewrite::input($ary);
+                        Rewrite::input($ary, $in);
                         return false;
                     }
                     return $ary ? array_shift($ary) : false;

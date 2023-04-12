@@ -208,7 +208,7 @@ class Gate
 
     function spa2($in, $c, $ns = 0) {
         $cnt = count($this->var);
-        $this->var[] = $in;
+        $this->var[] = $in + [2 => $ns];
         return tag("{{$cnt}}", 'style="font-weight:bold' . ($ns ? ';border-bottom:2px solid red' : '') . '"', 'span');
     }
 

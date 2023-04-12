@@ -197,6 +197,11 @@ class Console
         }
     }
 
+    /** Show Coresky version */
+    function c_v() {
+        echo SKY::CORE;
+    }
+
     /** Write standard rewrite.php */
     function c_rewrite() {
         if ($dat = Plan::_gq('rewrite.php')) {
@@ -206,11 +211,6 @@ class Console
         Rewrite::lib($map);
         Plan::_p('rewrite.php', Plan::auto($map));
         $this->c_drop();
-    }
-
-    /** Show Coresky version */
-    function c_v() {
-        echo SKY::CORE;
     }
 
     /** Write "first run" into index.php */

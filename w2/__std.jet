@@ -289,10 +289,6 @@ sky.g.hide = function(el) {
     el2.remove();
     sky.g.code(el3, sky.g.mem);
 };
-sky.g.rws = function(el) {
-    $('input[name=php]').val($('textarea').val());
-    el.form.submit()
-};
 $(function() {
     if ('{{$func}}') {
         $('#v-body div:eq(0)').prepend(`<h1 class="g-err">Gate error in "{{$h1}}::{{$func}}()"</h1>`);
@@ -310,6 +306,17 @@ $(function() {
         }, 500);
     }
 });
+sky.g.rw = function(mode) {
+    if (mode) {
+        $('input[name=mode]').val(mode);
+    } else {
+        $('input[name=php]').val($('textarea').val());
+    }
+    $('#f1').submit();
+};
+sky.g.test = function(s) {
+    ajax('', {uri:s}, 'test-result', '_test');
+};
 </script>
 
 <style>
@@ -351,10 +358,8 @@ dl {margin:0; }
 </style>
 #.jscss
 
-#.err
-<h4 style="background-color:pink">Error in PHP syntax</h4>
-#.rewrite.err
-@if($err)@use(.err as header)~if
+#.rewrite
+@if($err)@use(`<h4 style="background-color:pink">Error in PHP syntax</h4>` as header)~if
 <div id="rewrite">
   <table width="100%" cellspacing="0" cellpadding="0">
     @loop($map as $one)
@@ -363,13 +368,13 @@ dl {margin:0; }
         R{{$_}}@if($one[2])<br><span style="color:red"><b>DEV only</b></span>~if
       </td>
       <td style="width:30px; padding:3px 0">
-        @if($_)<input type="button" value="▲" onclick="dev('{{$_}}', {m:{{$_ - 1}}})">~if
-        @if($_ < count($map) - 1)<input type="button" value="▼" onclick="dev('{{$_}}', {m:{{$_ + 1}}})">~if
+        @if($_)<input type="button" value="▲" onclick="sky.g.rw('move {{$_}} {{$_ - 1}}')">~if
+        @if($_ < count($map) - 1)<input type="button" value="▼" onclick="sky.g.rw('move {{$_}} {{$_ + 1}}')">~if
       </td>
       <td style="width:70%">{!$one[4]!}</td>
       <td>
-        <input value="add after R{{$_}}" type="button" class="add" onclick="dev('{{$y_1}}', {f:sky.g.lib, a:{{$_}}})">
-        @if($_ == $y_1)<input type="button" value="delete" onclick="dev('{{$y_1}}', {d:-1})">~if
+        <input value="add after R{{$_}}" type="button" class="add" onclick="sky.g.rw('add {{$_}} ' + sky.g.lib)">
+        @if($_ == $y_1)<input type="button" value="delete" onclick="sky.g.rw('drop {{$y_1}} ')">~if
       </td>
     </tr>
     ~loop
@@ -386,7 +391,7 @@ dl {margin:0; }
 #.rheader.r_gate //////////////////////////////////////////////////////////////////////////////
 <h4>CORESKY REWRITES MAP
   <a class="@active($rshow)" style="font-weight:normal"
-    @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
+    @href($(this).toggleClass('active'); dev(['_map', '{!$y_1!}'], {s:$(this).hasClass('active')?1:0}))>Show code</a>
   <a style="font-weight:normal" href="_gate">Show gates</a>
 </h4>
 #.map.rheader ------------------------------------------------------------------------------
@@ -411,7 +416,8 @@ dl {margin:0; }
       Total controllers/actions: @block(`` as total)
       <br><br><b>Test URI:</b>
       <br><input type="text" value="{{$map[$y_1][3]}}" size="25" name="u">
-      <input type="button" value="test" onclick="">
+      <input type="button" value="test" onclick="sky.g.test($(this).prev().val())"><br>
+      <span id="test-result"></span>
     ~if
   </div>
 </div>
@@ -441,12 +447,18 @@ dl {margin:0; }
       <td style="border-right:1px solid #ccc;">
         {{1 + $_2}}. -&gt;<span style="color:#00b">{!$row->func!}</span>{!$row->pars!}
       </td>
-      <td>{!true === $row->input ? $row->url : $row->input !}</td>
+      <td>
+        {!true === $row->input ? $row->url : $row->input !}
+        @if($row->trait)<r>{{$row->trait}}</r>~if
+      </td>
       @loop($_3 < $n)
         <td width="{{$_3 ? 17 : 18}}" style="border-right:1px solid #ccc;
           @if(!$_3)border-left:1px solid #ccc;~if@if($_3 <= $y_1)background:#e0e7ff~if"></td>
       ~loop
-      <td>@if(true === $row->input)<span style="color:#2b3">the same</span>@else{!$row->url!}~if</td>
+      <td>
+        @if(true === $row->input)<span style="color:#2b3">the same</span>@else{!$row->url!}~if
+        {!$row->re!}
+      </td>
     </tr>
     ~loop
     <tr style="height:10px">
