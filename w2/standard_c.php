@@ -240,7 +240,7 @@ class standard_c extends Controller
         $gate = Gate::instance();
         json([
             'code' => $gate->view_code(self::post_data($gate), $class, $func),
-            'url'  => $gate->url,
+            'url'  => $gate->uri,
         ]);
     }
 
@@ -314,7 +314,7 @@ class standard_c extends Controller
                     'pars' => $delete ? '' : $pars,
                     'code' => $edit || Gate::$cshow ? $gate->view_code($ary, $class, $name) : false,
                     'error' => $delete ? 'Function not found' : '',
-                    'url' => $gate->url,
+                    'uri' => $gate->uri,
                     'var' => $gate->var,
                     'meth' => $meth,
                 ];
@@ -403,8 +403,9 @@ class standard_c extends Controller
 
     ///////////////////////////////////// THE MAP /////////////////////////////////////
     function j_test() {
-        Rewrite::vars(false);
-        echo '/' . Rewrite::test($_POST['uri']);
+        Rewrite::get($lib, $map, $keys);
+        $code = -1 == $_POST['lib'] ? [] : $lib[$_POST['lib']][1];
+        echo '/' . Rewrite::test($_POST['uri'], $code);
         Rewrite::vars(true);
     }
 
@@ -446,7 +447,7 @@ class standard_c extends Controller
                     if ($evar) {
                         Gate::$cshow = true;
                         $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
-                        Rewrite::input($ary, $in);
+                        Rewrite::external($ary, $in);
                         return false;
                     }
                     return $ary ? array_shift($ary) : false;

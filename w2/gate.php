@@ -13,7 +13,7 @@ class Gate
     static $controller_data = false; # not loaded initialy
 
     //add named limits and permission to sky-gate!!!!!!
-    public $url = '';
+    public $uri = '';
     public $var = [];
 
     function __construct() {
@@ -59,7 +59,7 @@ class Gate
     }
 
     function view_code($ary, $class, $func) {
-        $this->url = '';
+        $this->uri = '';
         $this->var = [];
         $cmode = $this->contr_mode($class, $func);
         $code = highlight_string("<?\n" . $this->code($ary, $cmode), true);
@@ -218,7 +218,7 @@ class Gate
 
         $ctrl = $p0 ? $this->span($p0, 2 == $i && !$p1 ? '#00b' : '#b88', 2) : '';
         $act = '' === $p1 ? '' : $this->span($p1, '#00b', 2);
-        $this->url = '/';
+        $this->uri = '/';
         $this->ends = [];
         $php = $this->ra = $this->ns = '';
         $this->raw_input = $this->sz_surl = $this->sz_ary = 0;
@@ -237,7 +237,7 @@ class Gate
                 if (!$pos) { # first row
                     if ('' === $key) {
                         $this->sz_surl += $i - 1;
-                        $this->url .= ($p0 ? $ctrl : '') . ('' === $p1 || is_bool($p1) ? '' : "/$act");
+                        $this->uri .= ($p0 ? $ctrl : '') . ('' === $p1 || is_bool($p1) ? '' : "/$act");
                         if ($v[3] === $p1) {
                             $skip = 2;
                             $this->i--;
@@ -245,18 +245,18 @@ class Gate
                         }
                     } elseif ($key === $p1) { # $i == 3
                         $this->sz_surl += 1;
-                        $this->url .= "$ctrl?$act";
+                        $this->uri .= "$ctrl?$act";
                         $skip = 1;
                     } elseif ($key === $p0 && 2 == $i) {
-                        $this->url .= $this->_j ? "?$ctrl=" : "?$ctrl="; ///AJAX
+                        $this->uri .= $this->_j ? "?$ctrl=" : "?$ctrl="; ///AJAX
                         $skip = 1;
                     } elseif (3 == $i) {
                         $t3 ? ($this->sz_surl = 2) : ($this->sz_ary += 1);
-                        $this->url .= $this->_j ? "?$ctrl=$act" : ($t3 ? "$ctrl/$act" : "?$ctrl=$act"); ///AJAX
+                        $this->uri .= $this->_j ? "?$ctrl=$act" : ($t3 ? "$ctrl/$act" : "?$ctrl=$act"); ///AJAX
                         $b0 = $this->_j || !$t3;
                     } elseif (2 == $i) {
                         $this->sz_surl = 1;
-                        $this->url .= $ctrl;
+                        $this->uri .= $ctrl;
                     }
                 }
                 if (!$this->start && '' !== $key) {
@@ -268,11 +268,11 @@ class Gate
                 $php .= $this->each_row($pos, $v, false, $skip);
             }
         } elseif (1 == $i) {
-            ;////////$this->url .= $this->_j ? "?AJAX=" : '';
+            ;////////$this->uri .= $this->_j ? "?AJAX=" : '';
         } else { //if ('main' !== $p0 || '' !== $p1) {
-            $this->url .= $this->_j ? "?$ctrl=" : ($t3 ? $ctrl : "?$ctrl"); ///AJAX
+            $this->uri .= $this->_j ? "?$ctrl=" : ($t3 ? $ctrl : "?$ctrl"); ///AJAX
             if (3 == $i && '' !== $p1)
-                $this->url .= $this->_j ? $act : ($t3 ? "?$act" : "=$act");
+                $this->uri .= $this->_j ? $act : ($t3 ? "?$act" : "=$act");
             $this->sz_surl = $this->_j || !$t3 ? 0 : 1;
             $this->sz_ary = $this->_j || !$t3 || 3 == $i && '' !== $p1 ? 1 : 0;
         }
@@ -505,11 +505,11 @@ class Gate
             $q = $is_val
                 ? ('' === $data ? '' : ($ns ? tag('=', 'style="border-bottom:2px solid red"', 'span') : '='))
                 : ($this->i == $this->start ? '?' : '&');
-            $this->url .= $re || $ns && $e7
+            $this->uri .= $re || $ns && $e7
                 ? $q . $this->spa2([$rx, $data], $is_val ? 'pink' : '#0f0', $ns)
                 : $q . ($ns ? tag($data, 'style="border-bottom:2px solid red"', 'span') : $data);
         } else {
-            $this->url .= (1 == $this->i ? '' : '/') . ($ns || $re ? $this->spa2([$rx, $data], 'yellow', $ns) : $data);
+            $this->uri .= (1 == $this->i ? '' : '/') . ($ns || $re ? $this->spa2([$rx, $data], 'yellow', $ns) : $data);
         }
         return $out;
     }

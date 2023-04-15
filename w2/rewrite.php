@@ -73,7 +73,11 @@ class Rewrite
         return Plan::_p('rewrite.php', Plan::auto(self::$map));
     }
 
-    static function test($uri) {
+    static function highlight(&$v) {
+        $v[4] = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v[1]", true));
+    }
+
+    static function test($uri, $code = false) {
         global $sky;
         if ($uri && '/' == $uri[0])
             $uri = substr($uri, 1);
@@ -83,7 +87,12 @@ class Rewrite
         if (isset($ary['path']))
             $sky->surl = explode('/', $ary['path']);
         $cnt = count($sky->surl);
-        SKY::$plans['main']['rewrite']($cnt, $sky->surl, $uri, $sky);
+        if ($code) {
+            $surl =& $sky->surl;
+            eval($code);
+        } else {
+            SKY::$plans['main']['rewrite']($cnt, $sky->surl, $uri, $sky);
+        }
         return implode('/', $sky->surl) . ($_GET ? '?' . urldecode(http_build_query($_GET)) : '');
     }
 
@@ -95,7 +104,22 @@ class Rewrite
         return $uri === $rw;
     }
 
-    static function input(&$ary, $ctrl) {
+    static function chk_tests($act, $ctrl) {
+        $pfx = substr($act, 0, 2);
+        if ('a_' == $pfx || 'j_' == $pfx)
+            $act = substr($act, 2);
+        //trace($act, $ctrl);
+        $ext = [];
+        if ('*' == $ctrl) {
+            foreach (self::$test as $in => $out) {
+                if (preg_match("|^/$act|", $out))
+                    $ext[] = $in;
+            }
+        }
+        return $ext ? implode('<br>', $ext) : false;
+    }
+
+    static function external(&$ary, $ctrl) {
         usort($ary, function ($a, $b) {
             if (in_array($a->func[0], ['e', 'd']))
                 return -1;
@@ -105,16 +129,21 @@ class Rewrite
         });
         $trait = ['crash', 'test_crash', 'etc/{0}/{1}', '?init='];
         foreach ($ary as $row) {
-            $uri = substr(strip_tags($row->url), 1);
+            $uri = substr(strip_tags($row->uri), 1);
             $rw = self::test($uri);
             $row->trait = false;
-            if (self::cmp($uri, $rw)) {
-                $row->input = true;
+            if ($row->ext = self::chk_tests($row->func, $ctrl)) {
+                
             } else {
-                $rw2 = self::test($rw);
-                $row->input = self::cmp($uri, $rw2) ? "/$rw" : '';
-                if ('*' == $ctrl && in_array($uri, $trait)) {
-                    $row->trait = "Do not rewrite URI!";
+                if (self::cmp($uri, $rw)) { # no rewrite
+                    $row->ext = $row->uri;
+                    $row->uri = true;
+                } else { # test reverse uri
+                    $rw2 = self::test($rw);
+                    $row->ext = self::cmp($uri, $rw2) ? "/$rw" : '';
+                    if ('*' == $ctrl && in_array($uri, $trait)) {
+                        $row->trait = "Do not rewrite URI!";
+                    }
                 }
             }
             $row->re = '';
@@ -128,15 +157,11 @@ class Rewrite
                     }
                     $pars["{{$i}}"] = '{' . substr($var, 1) . $ns . '}';
                 }
-                $row->url = strtr($row->url, $pars);
-                true === $row->input or $row->input = strtr($row->input, $pars);
+                $row->ext = strtr($row->ext, $pars);
+                true === $row->uri or $row->uri = strtr($row->uri, $pars);
             }
             $row->pars = tag($row->pars, 'style="font-family:monospace"', 'span');
         }
-    }
-
-    static function highlight(&$v) {
-        $v[4] = str_replace('&lt;?php<br /><br />', '', highlight_string("<?php\n\n$v[1]", true));
     }
 }
 
@@ -154,12 +179,14 @@ if ('_' == $sky->_0[0])
     return;
 ~
 Assets-coresky 1
-/m/sky.js
+/m/{0}
+if ($cnt && 'etc' == $surl[0])
+    return $surl[0] = '-';
 if ($cnt && 'm' == $surl[0])
     return $surl[0] = 'etc';
 ~
 Assets-wares 1
-/w/upload/upload.js
+/w/{1}/{0}
 if (3 == $cnt && 'w' == $surl[0]) {
     array_shift($surl);
     $surl[2] = $surl[0];
@@ -180,8 +207,12 @@ if ($cnt > 2) {
 }
 ~
 Pagination 0
-/c/page-1/a
-// 2do
+/ctrl/page-2/action
+if ($cnt > 2 && preg_match("/^page\-\d+$/", $surl[1])) {
+    common_c::$page = (int)substr($surl[1], 5);
+    array_splice($surl, 1, 1);
+    $cnt--;
+}
 ~
 Url-html 0
 /c/a/page.html
@@ -198,12 +229,11 @@ common_c::langs_h();
 if ($cnt && in_array($surl[0], $sky->langs))
     common_c::$lg = array_shift($surl);
 ~
-Reversion 0
-/one-part/a
-$rw = ['one-part' => 'ctrl',];
+Reverse 0
+/dash-surl/a
+$rw = ['dash-surl' => 'nodash',];
 if ($cnt) {
     $rw += array_flip($rw);
     $p =& $surl[0];
-    if (isset($rw[$p]))
-        $p = $rw[$p];
+    empty($rw[$p]) or $p = $rw[$p];
 }

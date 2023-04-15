@@ -249,7 +249,7 @@ class Console
            $e = new eVar(standard_c::gate($mc = '*' != $k ? "c_$k" : 'default_c'));
            foreach ($e as $row) {
                $max > ($len = strlen($a = "$mc::$row->func$row->pars")) or $max = $len;
-               $ary[$a] = strip_tags($row->url);
+               $ary[$a] = strip_tags($row->uri);
            }
        }
        foreach ($ary as $a => $url)
@@ -272,7 +272,7 @@ class Console
         echo 'result: ' . print_r($r, 1);
     }
 
-    /** Eval PHP code, example: sky eval "SKY::s('statp','1011p');" */
+    /** Eval PHP code, example: sky eval "echo $sky->s_online;" */
     function c_eval($php) {
         global $sky;
         eval($php);

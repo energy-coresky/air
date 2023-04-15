@@ -167,7 +167,7 @@ DATABASES ({{count($databases)}})
         <input type="hidden" name="args" value="{{$row->pars}}"/>
         @if($cshow)
             <div class="func-code" style="overflow:auto;padding: 7px;">{!$row->code!}</div>
-            <div class="the-url" style="overflow:auto">{!$row->url!}</div>
+            <div class="the-url" style="overflow:auto">{!$row->uri!}</div>
         @else
             <div class="function">@inc(.edit)</div>
         ~if
@@ -212,7 +212,7 @@ DATABASES ({{count($databases)}})
             <input type="button" value="cancel" onclick="sky.g.cancel(this)"/>
         </td>
     </tr></table>
-    <div id="the-url" style="overflow:auto">{!$row->url!}</div>
+    <div id="the-url" style="overflow:auto">{!$row->uri!}</div>
 @elseif($row->error)
     <table width="100%">
         <tr><td style="background:pink; padding:5px 10px; text-align:center; color:#f00;">{{$row->error}}</td></tr>
@@ -314,8 +314,13 @@ sky.g.rw = function(mode) {
     }
     $('#f1').submit();
 };
+sky.g.swap = function() {
+    $('input[name=u]').val($('#test-result').text());
+    $('#test-result').text('');
+};
 sky.g.test = function(s) {
-    ajax('', {uri:s}, 'test-result', '_test');
+    let lib = $('#ulr').is(':checked') ? sky.g.lib : -1;
+    ajax('', {uri:s, lib:lib}, 'test-result', '_test');
 };
 </script>
 
@@ -374,7 +379,9 @@ dl {margin:0; }
       <td style="width:70%">{!$one[4]!}</td>
       <td>
         <input value="add after R{{$_}}" type="button" class="add" onclick="sky.g.rw('add {{$_}} ' + sky.g.lib)">
-        @if($_ == $y_1)<input type="button" value="delete" onclick="sky.g.rw('drop {{$y_1}} ')">~if
+        @if($_ == $y_1)<input type="button" value="delete" onclick="sky.g.rw('drop {{$y_1}} ')">
+        @else<br>{{$one[3]}}
+        ~if
       </td>
     </tr>
     ~loop
@@ -414,10 +421,13 @@ dl {margin:0; }
   <div style="height:93px; padding:5px 10px;@unless($rshow)border-left:1px solid #4338ca;~unless">
     @if($rshow){!$form!}@else
       Total controllers/actions: @block(`` as total)
-      <br><br><b>Test URI:</b>
-      <br><input type="text" value="{{$map[$y_1][3]}}" size="25" name="u">
-      <input type="button" value="test" onclick="sky.g.test($(this).prev().val())"><br>
-      <span id="test-result"></span>
+      <div style="margin-top:7px"><b>Test URI:</b>
+        <label style="margin-left:22px"><input id="ulr" type="checkbox" disabled> use a library rewrite</label>
+        <br><input type="text" value="{{$map[$y_1][3]}}" size="25" name="u">
+        <input type="button" value="test" onclick="sky.g.test($(this).prev().val())"><br>
+        <span id="test-result"></span>
+        &nbsp; &nbsp; <a @href(sky.g.swap())>swap</a>
+      </div>
     ~if
   </div>
 </div>
@@ -447,8 +457,7 @@ dl {margin:0; }
       <td style="border-right:1px solid #ccc;">
         {{1 + $_2}}. -&gt;<span style="color:#00b">{!$row->func!}</span>{!$row->pars!}
       </td>
-      <td>
-        {!true === $row->input ? $row->url : $row->input !}
+      <td>{!$row->ext!}
         @if($row->trait)<r>{{$row->trait}}</r>~if
       </td>
       @loop($_3 < $n)
@@ -456,7 +465,7 @@ dl {margin:0; }
           @if(!$_3)border-left:1px solid #ccc;~if@if($_3 <= $y_1)background:#e0e7ff~if"></td>
       ~loop
       <td>
-        @if(true === $row->input)<span style="color:#2b3">the same</span>@else{!$row->url!}~if
+        @if(true === $row->uri)<span style="color:#2b3">the same</span>@else{!$row->uri!}~if
         {!$row->re!}
       </td>
     </tr>
@@ -493,7 +502,9 @@ dl {margin:0; }
         }
         $('#lib').css({background: set ? '#e0e7ff' : '#ccc'})
         @if($rshow)$('textarea').css({background: set ? '#e0e7ff' : '#ffc'})
-        @else$('#code').css({background: set ? '#e0e7ff' : '#fff'})~if
+        @else$('#code').css({background: set ? '#e0e7ff' : '#fff'});
+            $('#ulr').attr('checked', set).attr('disabled', !set)
+        ~if
     });
 })();
 </script><style>

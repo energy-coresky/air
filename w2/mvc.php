@@ -176,6 +176,11 @@ class Controller extends MVC_BASE
 trait HOOK_C
 {
     static $lg;
+    static $page = 1; # for pagination
+    static $ware = false; # for rewritten wares
+
+    static function langs_h() {
+    }
 
     static function rewrite_h($cnt, &$surl, $uri, $sky) {
         SKY::$plans['main']['rewrite']($cnt, $surl, $uri, $sky);
@@ -185,9 +190,6 @@ trait HOOK_C
         global $user;
         $tz = !$user->vid || '' === $user->v_tz ? "''" : (float)('' === $user->u_tz ? $user->v_tz : $user->u_tz);
         return "sky.is_debug=" . (int)SKY::$debug . "; sky.tz=$tz;";
-    }
-
-    static function langs_h() {
     }
 
     static function user_h(&$lg = null) {
@@ -250,6 +252,10 @@ trait HOOK_D
         if (DEV && in_array($ext, ['js', 'css'])) {
             if (SKY::d('etc'))
                 $sky->open(); # save tracing on DEV only now
+            if (count($sky->surl) < 3) // 2do: fix skygate
+                $ware = false;
+            if (!$ware && !in_array($w = substr($fn, 0, $pos), ['sky', 'dev']))
+                $ware = $w;
             $file = $ware && Plan::has($ware, false) ? Plan::_t([$ware, "assets/$fn"]) : DIR_S . "/assets/$fn";
         } else {//2do: use Plans (to get var) to save optionally user log on Prod
             $file = WWW . "m/etc/$fn";
@@ -328,7 +334,7 @@ class MVC extends MVC_BASE
 
     static function mime($mime) {
         global $sky;
-        header("Content-Type: $mime;");
+        header("Content-Type: $mime");
         $sky->fly = HEAVEN::Z_FLY;
     }
 
