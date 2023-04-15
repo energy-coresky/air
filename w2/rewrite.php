@@ -206,6 +206,11 @@ if ($cnt > 2) {
     $surl[2] = $tmp;
 }
 ~
+Additive 0
+
+if ($cnt && 'x' == $surl[0])
+    $surl[0] = 'ctrl';
+~
 Pagination 0
 /ctrl/page-2/action
 if ($cnt > 2 && preg_match("/^page\-\d+$/", $surl[1])) {
@@ -224,10 +229,18 @@ if ($cnt) {
 ~
 Url-lang 0
 /en/c/a
-# set language from surl
+# take language from surl (semantic url)
 common_c::langs_h();
-if ($cnt && in_array($surl[0], $sky->langs))
+if ($cnt && in_array($surl[0], $sky->langs)) {
     common_c::$lg = array_shift($surl);
+    $cnt--;
+}
+~
+Terminator 0
+
+$lst = ['adm', 'api', 'crash', 'test_crash'];
+if ($cnt && in_array($surl[0], $lst))
+    return;
 ~
 Reverse 0
 /dash-surl/a
