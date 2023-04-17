@@ -202,14 +202,28 @@ class Console
         echo SKY::CORE;
     }
 
-    /** Write standard rewrite.php */
+    /** Write default rewrite.php */
     function c_rewrite() {
+        if (!DEV)
+            return print "Cannot use this command on PROD";
         if ($dat = Plan::_gq('rewrite.php')) {
             Plan::mem_p('rewrite.php', $dat);
             echo 'Old file moved to `' . Plan::mem_t('rewrite.php') . "`\n";
         }
         Rewrite::lib($map);
         Plan::_p('rewrite.php', Plan::auto($map));
+        $this->c_drop();
+    }
+
+    /** Write default gate.php */
+    function c_gate() {
+        if (!DEV)
+            return print "Cannot use this command on PROD";
+        if ($dat = Plan::_gq('gate.php')) {
+            Plan::mem_p('gate.php', $dat);
+            echo 'Old file moved to `' . Plan::mem_t('gate.php') . "`\n";
+        }
+        Plan::_p('gate.php', Plan::auto(Gate::default()));
         $this->c_drop();
     }
 

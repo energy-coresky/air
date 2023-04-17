@@ -18,9 +18,16 @@ class Gate
 
     function __construct() {
         global $sky;
-        $sky->memory(); # this also do $sky->open();
+        $sky->memory(); # this run $sky->open() also
         if (defined('WWW'))
             Schedule::setWWW($sky->n_www);
+    }
+
+    static function default() {
+        fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
+        $ary = json_decode(stream_get_contents($fp), true);
+        fclose($fp);
+        return $ary;
     }
 
     static function instance() {
@@ -513,4 +520,29 @@ class Gate
         }
         return $out;
     }
+}
+
+__halt_compiler();
+
+{
+  "default_c": {
+    "j_init": [
+      0,[],[],[
+        ["","tz","","[\\d\\.]+",0],
+        ["","scr","",".*",0]
+      ]
+    ],
+    "a_crash": [
+      1,[1],[],[]
+    ],
+    "a_etc": [
+      1,[1],[
+        ["","","","[a-z\\d_\\.\\-]+",0],
+        ["","","","\\w+",1]
+      ],[]
+    ],
+    "a_test_crash": [
+      1,[1],[],[]
+    ]
+  }
 }

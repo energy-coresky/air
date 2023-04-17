@@ -377,8 +377,7 @@ class Language
                 }
             }
             if (!$pg) {
-                $fp = fopen(__FILE__, 'r');
-                fseek($fp, __COMPILER_HALT_OFFSET__);
+                fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
                 $code .= stream_get_contents($fp);
                 fclose($fp);
             }

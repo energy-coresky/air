@@ -6,8 +6,7 @@ class Rewrite
     static $test = [];
 
     static function lib(&$map, &$list = null) {
-        $fp = fopen(__FILE__, 'r');
-        fseek($fp, __COMPILER_HALT_OFFSET__);
+        fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
         $lib = explode("\n~\n", trim(unl(stream_get_contents($fp))));
         fclose($fp);
         $list = [];
