@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.476 2023-04-17T09:32:01+03:00 energy';
+    const CORE = '0.477 2023-04-19T15:22:15+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -323,20 +323,21 @@ class HEAVEN extends SKY
     public $profiles = ['Anonymous', 'Root'];
     public $admins = 1; # root only has admin access or list pids in array
     public $has_public = true; # web-site or CRM
-    public $page_p = 'p';
+   public $page_p = 'p';
     public $show_pdaxt = false;
+    public $jact = false;
 
     function __get($name) {
         if ('_' == $name[0] && 2 == strlen($name) && is_num($name[1])) {
             $v = (int)$name[1];
             $cnt = count($this->surl);
-            if ($v < $cnt && $this->is_front)
+            if ($v < $cnt)
                 return $this->surl[$v];
-            !$this->is_front or $v -= $cnt;
-            if (($i = floor($v / 2)) >= count($_GET))
+            $w = floor(($v -= $cnt) / 2);
+            if ($w >= count($_GET))
                 return '';
-            $key = key($v < 2 ? $_GET : array_slice($_GET, $i, 1, true));
-            return $v % 2 ? $_GET[$key] : $key;
+            $ary = array_slice($_GET, $w, 1, true);
+            return $v % 2 ? pos($ary) : key($ary);
         }
         return parent::__get($name);
     }
@@ -396,17 +397,11 @@ class HEAVEN extends SKY
             }
             $cnt = count($this->surl);
             if (1 == $cnt && '' === $this->surl[0]) {
-                $this->surl = [];
                 $cnt = 0;
-                if ($this->fly && 0 == $this->method) { // INPUT_POST 2do: delete from gate the checks
-                    if ($jact = $_SERVER['HTTP_X_ACTION_J'] ?? false) {
-                        $mvc->return = $this->fly = HEAVEN::J_FLY;
-                        if ('adm' === $jact) {
-                            $this->surl = ['adm'];
-                            $cnt = 1;// chk __get(..)
-                            //$this->is_front = false; will set in Admin
-                        }
-                    }
+                $this->surl = [];
+                if ($this->fly && 0 == $this->method) { // INPUT_POST 2do: delete the checks from gate
+                    $this->jact = $_SERVER['HTTP_X_ACTION_J'] ?? false;
+                    false === $this->jact or $mvc->return = $this->fly = HEAVEN::J_FLY;
                 }
             }
         }

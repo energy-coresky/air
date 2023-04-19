@@ -4,6 +4,7 @@ class Rewrite
 {
     static $map;
     static $test = [];
+    static $cnt = 0;
 
     static function lib(&$map, &$list = null) {
         fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
@@ -36,11 +37,16 @@ class Rewrite
         $map = Plan::_rq('rewrite.php');
         $lib = self::lib($map, $list, true);
         self::$map =& $map;
-        self::vars(false);//return;
+        self::vars(false);
         foreach ($map as $rw) {
             if ('' === $rw[3])
                 continue;
-            self::$test[$rw[3]] = '/' . self::test($rw[3]);
+            $rw = '/' == $rw[3][0] ? $rw[3] : "/$rw[3]";///////////////???
+
+$rz = [self::test($rw), ''];
+            if (preg_match("|^(\??\w+[\?/=]*)|", $rz[0], $match))
+                $rz[1] = $match[1];
+            self::$test[$rw] = $rz;
         }
         trace(self::$test);
     }
@@ -77,6 +83,7 @@ class Rewrite
     }
 
     static function test($uri, $code = false) {
+        self::$cnt++;
         global $sky;
         if ($uri && '/' == $uri[0])
             $uri = substr($uri, 1);
@@ -103,21 +110,6 @@ class Rewrite
         return $uri === $rw;
     }
 
-    static function chk_tests($act, $ctrl) {
-        $pfx = substr($act, 0, 2);
-        if ('a_' == $pfx || 'j_' == $pfx)
-            $act = substr($act, 2);
-        //trace($act, $ctrl);
-        $ext = [];
-        if ('*' == $ctrl) {
-            foreach (self::$test as $in => $out) {
-                if (preg_match("|^/$act|", $out))
-                    $ext[] = $in;
-            }
-        }
-        return $ext ? implode('<br>', $ext) : false;
-    }
-
     static function external(&$ary, $ctrl) {
         usort($ary, function ($a, $b) {
             if (in_array($a->func[0], ['e', 'd']))
@@ -126,26 +118,51 @@ class Rewrite
                 return 1;
             return strcmp($a->func, $b->func);
         });
-        $trait = ['crash', 'test_crash', 'etc/{0}/{1}', '?init='];
+        $trait = ['crash', 'test_crash', '?init='];
         foreach ($ary as $row) {
+            if ($row->delete)
+                $row->gerr = 'Function not found';
+            if ($row->gerr) {
+                $row->gerr = str_replace('e(); # ', '', $row->gerr);
+                continue;
+            }
             $uri = substr(strip_tags($row->uri), 1);
-            $rw = self::test($uri);
+            $row->ext = [];
             $row->trait = false;
-            if ($row->ext = self::chk_tests($row->func, $ctrl)) {
-                
-            } else {
-                if (self::cmp($uri, $rw)) { # no rewrite
-                    $row->ext = $row->uri;
-                    $row->uri = true;
-                } else { # test reverse uri
-                    $rw2 = self::test($rw);
-                    $row->ext = self::cmp($uri, $rw2) ? "/$rw" : '';
-                    if ('*' == $ctrl && in_array($uri, $trait)) {
-                        $row->trait = "Do not rewrite URI!";
-                    }
+
+            $rw1 = self::test($uri);
+            if (self::cmp($uri, $rw1)) { # no rewrite
+                $row->ext[] = $row->uri;
+                $row->uri = true;
+            } else { # test reverse uri
+                $rw2 = self::test($rw1);
+                if (self::cmp($uri, $rw2))
+                    $row->ext[] = "/$rw1";
+                if ('*' == $ctrl && in_array($uri, $trait))
+                    $row->trait = "Do not rewrite URI!";
+            }
+            if ($row->ext)
+                unset(self::$test[$row->ext[0]]);
+
+            $act = $row->func;
+            if (in_array(substr($act, 0, 2), ['a_', 'j_']))
+                $act = substr($act, 2);
+//trace($act, $ctrl);
+
+            foreach (self::$test as $in => $x) {
+                if ('*' == $ctrl && $x[1] && substr($uri, 0, strlen($x[1])) == $x[1]) {
+                    $row->ext[] = $in;
+                    unset(self::$test[$in]);
+                } elseif ('*' != $ctrl && $x[0] && substr($uri, 0, strlen($x[0])) == $x[0]) {
+                    if (!in_array($in, $row->ext))
+                        $row->ext[] = $in . substr($uri, strlen($x[0]) - 1);
                 }
             }
+
             $row->re = '';
+            if (true === $row->uri && count($row->ext) > 1)
+                $row->uri = $row->ext[0];
+            $row->ext = implode('<br>', $row->ext) ?: '<r>not found</r>';
             if ($row->var) {//'()' != $row->pars
                 $pars = [];
                 foreach (explode(', ', substr($row->pars, 1, -1)) as $i => $var) {
@@ -173,18 +190,18 @@ if ($main || 'main' === $uri)
     return $surl = $main ? ['main'] : [];
 ~
 Dev-ends 1
-
+/_dev
 if ('_' == $sky->_0[0])
     return;
 ~
-Assets-coresky 1
+Assets-dev 1
 /m/{0}
 if ($cnt && 'etc' == $surl[0])
     return $surl[0] = '-';
 if ($cnt && 'm' == $surl[0])
     return $surl[0] = 'etc';
 ~
-Assets-wares 1
+Assets-prod 1
 /w/{1}/{0}
 if (3 == $cnt && 'w' == $surl[0]) {
     array_shift($surl);
@@ -206,7 +223,7 @@ if ($cnt > 2) {
 }
 ~
 Additive 0
-
+/x
 if ($cnt && 'x' == $surl[0])
     $surl[0] = 'ctrl';
 ~
@@ -236,7 +253,7 @@ if ($cnt && in_array($surl[0], $sky->langs)) {
 }
 ~
 Terminator 0
-
+/crash
 $lst = ['adm', 'api', 'crash', 'test_crash'];
 if ($cnt && in_array($surl[0], $lst))
     return;

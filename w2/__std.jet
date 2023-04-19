@@ -213,9 +213,9 @@ DATABASES ({{count($databases)}})
         </td>
     </tr></table>
     <div id="the-url" style="overflow:auto">{!$row->uri!}</div>
-@elseif($row->error)
+@elseif($row->delete)
     <table width="100%">
-        <tr><td style="background:pink; padding:5px 10px; text-align:center; color:#f00;">{{$row->error}}</td></tr>
+        <tr><td style="background:pink; padding:5px 10px; text-align:center; color:#f00;">Function not found</td></tr>
     </table>
 ~if
 #.edit.save
@@ -363,7 +363,7 @@ dl {margin:0; }
 </style>
 #.jscss
 
-#.rewrite
+#.rw_code_list
 @if($err)@use(`<h4 style="background-color:pink">Error in PHP syntax</h4>` as header)~if
 <div id="rewrite">
   <table width="100%" cellspacing="0" cellpadding="0">
@@ -387,7 +387,7 @@ dl {margin:0; }
     ~loop
   </table>
 </div>
-#.rewrite
+#.rw_code_list
 
 #.r_gate
 @loop($map as $one)
@@ -420,7 +420,7 @@ dl {margin:0; }
   </div>
   <div style="height:93px; padding:5px 10px;@unless($rshow)border-left:1px solid #4338ca;~unless">
     @if($rshow){!$form!}@else
-      Total controllers/actions: @block(`` as total)
+      Total controllers/actions/tests: @block(`` as total) Errors: @block(`?` as errors)
       <div style="margin-top:7px"><b>Test URI:</b>
         <label style="margin-left:22px"><input id="ulr" type="checkbox" disabled> use a library rewrite</label>
         <br><input type="text" value="{{$map[$y_1][3]}}" size="25" name="u">
@@ -432,7 +432,7 @@ dl {margin:0; }
   </div>
 </div>
 @if($rshow)
-  @inc(.rewrite)
+  @inc(.rw_code_list)
 @else
 <div id="map">
   <table width="100%" cellspacing="0" cellpadding="0">
@@ -453,21 +453,25 @@ dl {margin:0; }
       <td colspan="{{1+$n}}" style=""></td>
     </tr>
     @loop($e_func($one))
-    <tr>
-      <td style="border-right:1px solid #ccc;">
+    <tr@if($row->gerr) bgcolor="#fdd"@elseif(true !== $row->uri) bgcolor="#ffc"~if>
+      <td style="border-right:1px solid #ccc">
         {{1 + $_2}}. -&gt;<span style="color:#00b">{!$row->func!}</span>{!$row->pars!}
       </td>
-      <td>{!$row->ext!}
-        @if($row->trait)<r>{{$row->trait}}</r>~if
-      </td>
-      @loop($_3 < $n)
-        <td width="{{$_3 ? 17 : 18}}" style="border-right:1px solid #ccc;
-          @if(!$_3)border-left:1px solid #ccc;~if@if($_3 <= $y_1)background:#e0e7ff~if"></td>
-      ~loop
-      <td>
-        @if(true === $row->uri)<span style="color:#2b3">the same</span>@else{!$row->uri!}~if
-        {!$row->re!}
-      </td>
+      @if($row->gerr)
+        <td colspan="{{2+$n}}">{{$row->gerr}}</td>
+      @else
+        <td>{!$row->ext!}
+          @if($row->trait)<r>{{$row->trait}}</r>~if
+        </td>
+        @loop($_3 < $n)
+          <td width="{{$_3 ? 17 : 18}}" style="border-right:1px solid #ccc;
+            @if(!$_3)border-left:1px solid #ccc;~if@if($_3 <= $y_1)background:#e0e7ff~if"></td>
+        ~loop
+        <td>
+          @if(true === $row->uri)<span style="color:#2b3">==</span>@else{!$row->uri!}~if
+          {!$row->re!}
+        </td>
+      ~if
     </tr>
     ~loop
     <tr style="height:10px">
@@ -477,7 +481,7 @@ dl {margin:0; }
     </tr>
   ~loop
   </table>
-  @if($total = "$_/$e_func")@use(`{{$total}}` as total)~if
+  @if($total = "$_/$e_func/" . Rewrite::$cnt)@use(`{{$total}}` as total)~if
 </div>
 ~if
 <script>

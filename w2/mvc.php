@@ -23,11 +23,11 @@ function view($_in, $_return = false, &$_vars = null) {
     }
     trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->no ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 
-    global $sky;
     if ($layout || $mvc->body)
         $mvc->ob = view(false, 0, MVC::jet($mvc, $layout));
     if ($mvc->no)
         return $mvc->return ? $mvc->ob : null;
+    global $sky;
     if ($sky->fly || !$layout)
         method_exists($sky, 'tail_x') ? $sky->tail_x(0, $mvc->ob) : Console::tail_x(0, $mvc->ob);
 }
@@ -542,7 +542,7 @@ class MVC extends MVC_BASE
         global $sky;
 
         ob_start();
-        if (DEV && '_' == $sky->_0[0]) {
+        if (DEV && $sky->_0 && '_' == $sky->_0[0]) {
             $action = ($this->return ? 'j' : 'a') . $sky->_0;
             $this->hnd = "standard_c::$action()";
             $this->body = '_std.' . substr($sky->_0, 1);
@@ -579,6 +579,6 @@ class MVC extends MVC_BASE
         }
         view($this); # visualize
         if (!$sky->tailed)
-            throw new Error('MVC::tail() must used in the layout');
+            throw new Error('HEAVEN::tail_t() must used in the layout');
     }
 }

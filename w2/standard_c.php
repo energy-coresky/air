@@ -313,7 +313,7 @@ class standard_c extends Controller
                     'delete' => $delete,
                     'pars' => $delete ? '' : $pars,
                     'code' => $edit || Gate::$cshow ? $gate->view_code($ary, $class, $name) : false,
-                    'error' => $delete ? 'Function not found' : '',
+                    'gerr' => $gate->gerr,
                     'uri' => $gate->uri,
                     'var' => $gate->var,
                     'meth' => $meth,

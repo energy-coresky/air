@@ -15,6 +15,10 @@ class Gate
     //add named limits and permission to sky-gate!!!!!!
     public $uri = '';
     public $var = [];
+    public $gerr;
+
+    private $_e;
+    private $arg_c = 0;
 
     function __construct() {
         global $sky;
@@ -143,9 +147,9 @@ class Gate
         $this->_e = 'e();';
         if (!SKY::s('gate_404') && (!DEV || $is_view && SKY::d('sg_prod')))
             $this->_e = 'die;';
-        $errors = $s0 = '';
+        $this->gerr = $s0 = '';
         if (!$cnt_meth = count($meth))
-            $errors .= "$this->_e # no HTTP methods defined\n";
+            $this->gerr .= "$this->_e # no HTTP methods defined\n";
         $eq0 = 1 == $cnt_meth
             ? ["$meth[0] == \$this->method"]
             : ['in_array($this->method, [' . implode(', ', $meth) . '])'];
@@ -153,7 +157,7 @@ class Gate
             $eq0[] = '$this->auth';
         $is_post = in_array(0, $meth);
         if ($this->pfs_c = count($pfs))
-            $is_post or $errors .= "$this->_e # no POST HTTP method selected\n";
+            $is_post or $this->gerr .= "$this->_e # no POST HTTP method selected\n";
         $this->opcnt = [0, 0, 0]; # optimize count of surl GET POST
         $this->pfs_ends = $this->eq_a = $this->eq_b = $this->eq_z = [];
         $php = $this->process_addr($addr, $flag, $cmode, $eq0);
@@ -167,7 +171,7 @@ class Gate
             $this->ends = array_merge($this->pfs_ends, $this->ends);
         }
         if ($this->arg_c != count($this->ends))
-            $errors .= "$this->_e # parameters counts doesn't match\n";
+            $this->gerr .= "$this->_e # parameters counts doesn't match\n";
         $cx = ['s', 'g', 'p'];
         $cx2 = ['sky->surl', '_GET', '_POST'];
         $cnt = count($eq0) - 1;
@@ -195,7 +199,7 @@ class Gate
             $php = implode(' = ', $this->eq_b) . " = false;\n$php";
         if ($this->eq_z)
             $php = implode(' = ', $this->eq_z) . " = 0;\n$php";
-        return $s0 . implode(' && ', $eq0) . " or $this->_e\n" . $php . $errors;
+        return $s0 . implode(' && ', $eq0) . " or $this->_e\n" . $php . $this->gerr;
     }
 
     function comp_ary($opcnt, $sz, $s) {
@@ -316,7 +320,8 @@ class Gate
                 1 == $cnt_meth ? ($eq0[] = $exp) : $php = "$exp or $this->_e\n$php";
             }
         } elseif ($this->raw_input) {
-            $php .= "$this->_e # no BODY fields selected\n";
+            $php .= ($gerr = "$this->_e # no BODY fields selected\n");
+            $this->gerr .= $gerr;
         }
         if ($cnt_meth > 1) {
             if ($this->pfs_ends = $this->ends) {
@@ -368,8 +373,11 @@ class Gate
         $pos++;
         $row = [];
         if ('' === $key) { # key is empty string
-            if ($is_pfs ? !$this->raw_input : $this->start)
-                $php .= "$this->_e # required key on $pos " . ($is_pfs ? 'postfield' : 'address') . " block\n";
+            if ($is_pfs ? !$this->raw_input : $this->start) {
+                $gerr = "$this->_e # required key on $pos " . ($is_pfs ? 'postfield' : 'address') . " block\n";
+                $php .= $gerr;
+                $this->gerr .= $gerr;
+            }
         } else {
             $skip or $row[] = $this->bless($kname, $key, $is_pfs, $ns, $qreq, 0);
             $this->i++;

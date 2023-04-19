@@ -275,6 +275,11 @@ class Console
         echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
     }
 
+    /** Search for errors using all possible methods */
+    function c_e() {
+        echo '2do';
+    }
+
     /** Warm all cache */
     function c_warm() {
         echo '2do';
