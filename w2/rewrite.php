@@ -129,7 +129,6 @@ $rz = [self::test($rw), ''];
             $uri = substr(strip_tags($row->uri), 1);
             $row->ext = [];
             $row->trait = false;
-
             $rw1 = self::test($uri);
             if (self::cmp($uri, $rw1)) { # no rewrite
                 $row->ext[] = $row->uri;
@@ -144,18 +143,18 @@ $rz = [self::test($rw), ''];
             if ($row->ext)
                 unset(self::$test[$row->ext[0]]);
 
-            $act = $row->func;
-            if (in_array(substr($act, 0, 2), ['a_', 'j_']))
-                $act = substr($act, 2);
-//trace($act, $ctrl);
-
             foreach (self::$test as $in => $x) {
-                if ('*' == $ctrl && $x[1] && substr($uri, 0, strlen($x[1])) == $x[1]) {
-                    $row->ext[] = $in;
-                    unset(self::$test[$in]);
-                } elseif ('*' != $ctrl && $x[0] && substr($uri, 0, strlen($x[0])) == $x[0]) {
-                    if (!in_array($in, $row->ext))
-                        $row->ext[] = $in . substr($uri, strlen($x[0]) - 1);
+                if ('*' == $ctrl) {
+                    $y = $x[1];
+                    if ($y && substr($uri, 0, strlen($y)) == $y) {
+                        $row->ext[] = $in;
+                        unset(self::$test[$in]);
+                    }
+                } elseif (($y = $x[0]) && substr($uri, 0, strlen($y)) == $y) {
+                    $in .= substr($uri, strlen($y) - 1);
+                    $rw = self::test($in);
+                    if (!in_array($in, $row->ext) && self::cmp($uri, $rw))
+                        $row->ext[] = $in;
                 }
             }
 
@@ -176,7 +175,7 @@ $rz = [self::test($rw), ''];
                 $row->ext = strtr($row->ext, $pars);
                 true === $row->uri or $row->uri = strtr($row->uri, $pars);
             }
-            $row->pars = tag($row->pars, 'style="font-family:monospace"', 'span');
+            //$row->pars = tag($row->pars, 'style="font-family:monospace"', 'span');
         }
     }
 }

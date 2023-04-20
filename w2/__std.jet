@@ -455,7 +455,7 @@ dl {margin:0; }
     @loop($e_func($one))
     <tr@if($row->gerr) bgcolor="#fdd"@elseif(true !== $row->uri) bgcolor="#ffc"~if>
       <td style="border-right:1px solid #ccc">
-        {{1 + $_2}}. -&gt;<span style="color:#00b">{!$row->func!}</span>{!$row->pars!}
+        {{1 + $_2}}. <span style="color:#00b;font-family:monospace">-&gt;{!$row->func . $row->pars!}</span>
       </td>
       @if($row->gerr)
         <td colspan="{{2+$n}}">{{$row->gerr}}</td>

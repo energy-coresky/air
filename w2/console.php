@@ -256,18 +256,33 @@ class Console
 
     /** Show top-view actions (routes) */
     function c_a() {
-       Gate::$cshow = true;
-       $max = 0;
-       $ary = [];
-       foreach (SKY::$plans['main']['ctrl'] as $k => $_) {
-           $e = new eVar(standard_c::gate($mc = '*' != $k ? "c_$k" : 'default_c'));
-           foreach ($e as $row) {
-               $max > ($len = strlen($a = "$mc::$row->func$row->pars")) or $max = $len;
-               $ary[$a] = strip_tags($row->uri);
-           }
-       }
-       foreach ($ary as $a => $url)
-           echo str_pad($a, $max, ' '), ' | ', "$url\n";
+        Gate::$cshow = true;
+        Rewrite::get($lib, $map, $keys);
+        $max = 0;
+        $out = [];
+        foreach (SKY::$plans['main']['ctrl'] as $k => $_) {
+            $ary = (new eVar(standard_c::gate($mc = '*' != $k ? "c_$k" : 'default_c')))->all();
+            Rewrite::external($ary, $k);
+            foreach ($ary as $row) {
+                $max > ($len = strlen($a = "$mc::$row->func$row->pars")) or $max = $len;
+                $out[$a] = $row;//strip_tags($row->ext);
+            }
+        }
+        foreach ($out as $a => $row) {
+            echo str_pad($a, $max, ' '), ' | ';
+            if ($row->gerr) {
+                echo "\033[91mgate error\033[0m\n";
+                continue;
+            }
+            foreach (explode('<br>', $row->ext) as $i => $url) {
+                if ($i)
+                    echo str_pad('', $max, ' '), ' | ';
+                echo strip_tags($url);
+                if ($row->re && !$i)
+                    echo "\033[93m" . strip_tags($row->re) . "\033[0m";
+                echo "\n";
+            }
+        }
     }
 
     /** Drop all cache */

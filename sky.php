@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.477 2023-04-19T15:22:15+03:00 energy';
+    const CORE = '0.478 2023-04-20T09:06:49+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -18,6 +18,7 @@ class SKY implements PARADISE
     public $gpc = '';
     public $langs = [];
     public $shutdown = [];
+    public $surl = [];
 
     static $plans = [];
     static $mem = [];
@@ -113,11 +114,20 @@ class SKY implements PARADISE
     }
 
     function __get($name) {
-        $xx = substr($name, 0, 2);
-        if ('k_' == $xx) {
-            return array_key_exists($name, SKY::$vars) ? SKY::$vars[$name] : '';
-        } elseif ('_' == ($xx[1] ?? '')) {
-            if (!isset(SKY::$mem[$char = $xx[0]]))
+        if ('_' == $name[0] && 2 == strlen($name) && is_num($name[1])) {
+            $v = (int)$name[1];
+            $cnt = count($this->surl);
+            if ($v < $cnt)
+                return $this->surl[$v];
+            $w = floor(($v -= $cnt) / 2);
+            if ($w >= count($_GET))
+                return '';
+            $ary = array_slice($_GET, $w, 1, true);
+            return $v % 2 ? pos($ary) : key($ary);
+        } elseif ('_' === ($name[1] ?? '')) {
+            if ('k' == $name[0])
+                return array_key_exists($name, SKY::$vars) ? SKY::$vars[$name] : '';
+            if (!isset(SKY::$mem[$char = $name[0]]))
                 return '';
             return SKY::$mem[$char][3][substr($name, 2)] ?? '';
         }
@@ -315,7 +325,6 @@ class HEAVEN extends SKY
 
     public $fly = 0;
     public $surl_orig = '';
-    public $surl = [];
     public $jump = false; # INPUT_POST=0 INPUT_GET=1 0..8
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
     public $method;
@@ -326,21 +335,6 @@ class HEAVEN extends SKY
    public $page_p = 'p';
     public $show_pdaxt = false;
     public $jact = false;
-
-    function __get($name) {
-        if ('_' == $name[0] && 2 == strlen($name) && is_num($name[1])) {
-            $v = (int)$name[1];
-            $cnt = count($this->surl);
-            if ($v < $cnt)
-                return $this->surl[$v];
-            $w = floor(($v -= $cnt) / 2);
-            if ($w >= count($_GET))
-                return '';
-            $ary = array_slice($_GET, $w, 1, true);
-            return $v % 2 ? pos($ary) : key($ary);
-        }
-        return parent::__get($name);
-    }
 
     function __construct() {
         global $sky;
@@ -565,7 +559,7 @@ class HEAVEN extends SKY
                     'no' => $http_code,
                     'tracing' => $toggle ? $tracing : '',
                 ];
-                view(false, Plan::$parsed_fn, $vars);
+                view(false, 0, $vars);
             }
         });
         SQL::close();
