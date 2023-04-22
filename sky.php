@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.478 2023-04-20T09:06:49+03:00 energy';
+    const CORE = '0.479 2023-04-22T13:22:15+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -401,14 +401,6 @@ class HEAVEN extends SKY
         }
         common_c::rewrite_h($cnt, $this->surl, URI, $this);
         $mvc->top(); # 16/14 classes at that point on DEV/Prod
-    }
-
-    function domain(&$match_lg = null) {
-        if (!preg_match("/^([a-z]{2}\.)?(m\.)?(.*)$/", DOMAIN, $m))
-            throw new Error('User domain match');
-        $match_lg = in_array($m[1] = substr($m[1], 0, 2), $this->langs);
-        $this->is_mobile = (bool)$m[2];
-        return ['.' . $m[3]] + $m;
     }
 
     static function tail_t() {

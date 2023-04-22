@@ -465,19 +465,19 @@ class eVar implements Iterator
     }
 
     function __toString() {
-        if (isset($this->e['end_c']))
-            call_user_func($this->e['end_c'], $this);
+        if (isset($this->e['str_c']))
+            return (string)call_user_func($this->e['str_c'], $this);
         return (string)(1 + $this->i);
-    }
-
-    function __call($name, $args) {
-        return isset($this->e[$name]) ? call_user_func_array($this->e[$name], $args) : null;
     }
 
     function __invoke($in) {
         call_user_func($this->e['row_c'], $in, $this);
         $this->state = 0;
         return $this;
+    }
+
+    function __call($name, $args) {
+        return isset($this->e[$name]) ? call_user_func_array($this->e[$name], $args) : null;
     }
 
     function __get($name) {

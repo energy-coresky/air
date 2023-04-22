@@ -442,9 +442,9 @@ class standard_c extends Controller
         ];
         $rshow or $vars += [
             'e_func' => [
-                'row_c' => function ($in, $evar = false) {
+                'row_c' => function ($in, $e = false) {
                     static $ary;
-                    if ($evar) {
+                    if ($e) {
                         Gate::$cshow = true;
                         $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
                         Rewrite::external($ary, $in);
@@ -452,8 +452,9 @@ class standard_c extends Controller
                     }
                     return $ary ? array_shift($ary) : false;
                 },
-                'end_c' => function () {
+                'str_c' => function ($e) {
                     Rewrite::vars(true);
+                    return 1 + $e->key();
                 },
             ],
         ];
