@@ -487,27 +487,35 @@ dl {margin:0; }
 <script>
 (function() {
     sky.g.lib = -1;
-    var html, json = JSON.parse($.trim($('#json').text()));
+    var mem, json = JSON.parse($.trim($('#json').text()));
     $('option').click(function() {
-        var set, i = this.value, el = $('#code{{$rshow ? ' textarea' : ''}}')
+        var set, i = this.value, el = $('#code{{$rshow ? ' textarea' : ''}}'),
+            eln = $('input[name=u]')@if($rshow), el2 = $('input[name=n]'), el3 = $('input[name=x]')~if;
         if (set = sky.g.lib != i) {
-            @if($rshow)$('.add').show();~if
             if (-1 == sky.g.lib)
-                html = el.html();
+                mem = [el.html(), eln.val()@if($rshow), el2.val(), el3.val()~if];
             let ary = json[sky.g.lib = i];
             el.html(ary[{{$rshow ? 1 : 4}}]);
-            $('input[name=u]').val(ary[3]);
-            $('#is-dev').attr('checked', 1 == ary[2]);
+            eln.val(ary[3]);
+            @if($rshow)
+                $('.add').show();
+                el2.val(ary[0]);
+                el3.val(ary[2]).next().prop('checked', 1 == ary[2]);
+            ~if
         } else {
-            @if($rshow)$('.add').hide();~if
             this.selected = false;
             sky.g.lib = -1;
-            el.html(html);
+            el.html(mem[0]), eln.val(mem[1]);
+            @if($rshow)
+                $('.add').hide();
+                el2.val(mem[2]);
+                el3.val(mem[3]).next().prop('checked', 1 == mem[3]);
+            ~if
         }
         $('#lib').css({background: set ? '#e0e7ff' : '#ccc'})
         @if($rshow)$('textarea').css({background: set ? '#e0e7ff' : '#ffc'})
         @else$('#code').css({background: set ? '#e0e7ff' : '#fff'});
-            $('#ulr').attr('checked', set).attr('disabled', !set)
+            $('#ulr').prop('checked', set).prop('disabled', !set)
         ~if
     });
 })();

@@ -244,7 +244,7 @@ if ($cnt) {
 ~
 Url-lang 0
 /en/c/a
-# take language from surl (semantic url)
+# take language from semantic url
 common_c::langs_h();
 if ($cnt && in_array($surl[0], $sky->langs)) {
     common_c::$lg = array_shift($surl);
