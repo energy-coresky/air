@@ -28,29 +28,25 @@ class standard_c extends Controller
     }
 
     function tail_y() {
-        global $sky;
-
         if ($this->_y) {
-            if (1 == $sky->method && '_trace' != $sky->_0 && 'view' != $sky->_1)
-                $sky->d_last_page = URI;
-            $sky->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
+            if (1 == $this->method && '_trace' != $this->_0 && 'view' != $this->_1)
+                $this->d_last_page = URI;
+            $this->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
             return $this->_y + [
-                'tx' => '_trace' == $sky->_0 ? $sky->_1 : 0,
+                'tx' => '_trace' == $this->_0 ? $this->_1 : 0,
                 'ware_dir' => '',
                 'tasks' => [
                     '_dev?main=0' => 'Main',
                     '_map' == $this->_0 ? '_map' : '_gate' => 'Open SkyGate',
                     '_lang?list' => 'Open SkyLang',
                     '_inst' => 'Open SkyProject',
-                    '_glob?' . ($sky->d_gr_start ?: 'settings') => 'Global Reports',
+                    '_glob?' . ($this->d_gr_start ?: 'settings') => 'Global Reports',
                     '_vend?list' => 'Browse All Vendors',
                 ],
                 'wares' => $this->dev->wares_menu(),
-                'ware1' => substr(parse_url($sky->d_ware1, PHP_URL_PATH), 1),
-                'ware2' => substr(parse_url($sky->d_ware2, PHP_URL_PATH), 1),
+                'ware1' => substr(parse_url($this->d_ware1, PHP_URL_PATH), 1),
+                'ware2' => substr(parse_url($this->d_ware2, PHP_URL_PATH), 1),
                 'act' => function ($uri) {
-         #           if ('_gate' == $uri && '_map' == $this->_0)
-             #           return true;
                     return $this->_0 == explode('?', $uri)[0] && !in_array($this->_1, ['view', 'ware']);
                 },
             ];
@@ -404,14 +400,15 @@ class standard_c extends Controller
     ///////////////////////////////////// THE MAP /////////////////////////////////////
     function j_test() {
         Rewrite::get($lib, $map, $keys);
-        $code = -1 == $_POST['lib'] ? [] : $lib[$_POST['lib']][1];
+        $code = -1 == $_POST['lib'] ? false : $lib[$_POST['lib']][1];
         echo '/' . Rewrite::test($_POST['uri'], $code);
-        Rewrite::vars(true);
+        Rewrite::vars();
     }
 
     function j_map() {
         $y_1 = (int)$this->_1;
         Rewrite::get($lib, $map, $keys);
+        Rewrite::vars();
         $rshow = SKY::d('sg_rshow');
         $err = false;
         if (isset($_POST['s'])) {
@@ -453,7 +450,7 @@ class standard_c extends Controller
                     return $ary ? array_shift($ary) : false;
                 },
                 'str_c' => function ($e) {
-                    Rewrite::vars(true);
+                    Rewrite::vars();
                     return 1 + $e->key();
                 },
             ],

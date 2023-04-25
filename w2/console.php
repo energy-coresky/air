@@ -270,8 +270,8 @@ class Console
         }
         foreach ($out as $a => $row) {
             echo str_pad($a, $max, ' '), ' | ';
-            if ($row->gerr) {
-                echo "\033[91mgate error\033[0m\n";
+            if ($row->gerr = trim($row->gerr)) {
+                echo "\033[91m$row->gerr\033[0m\n";
                 continue;
             }
             foreach (explode('<br>', $row->ext) as $i => $url) {

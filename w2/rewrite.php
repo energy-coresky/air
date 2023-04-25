@@ -21,7 +21,7 @@ class Rewrite
         return $lib;
     }
 
-    static function vars($restore) {
+    static function vars($restore = true) {
         global $sky;
         static $get, $surl;
         if ($restore) {
@@ -41,9 +41,8 @@ class Rewrite
         foreach ($map as $rw) {
             if ('' === $rw[3])
                 continue;
-            $rw = '/' == $rw[3][0] ? $rw[3] : "/$rw[3]";///////////////???
-
-$rz = [self::test($rw), ''];
+            $rw = '/' == $rw[3][0] ? $rw[3] : "/$rw[3]";
+            $rz = [self::test($rw), ''];
             if (preg_match("|^(\??\w+[\?/=]*)|", $rz[0], $match))
                 $rz[1] = $match[1];
             self::$test[$rw] = $rz;
