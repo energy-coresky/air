@@ -1,6 +1,5 @@
 
 var sky = {
-    version: 0.722,
     id: 0,
     tz: null,
     home: '/',
@@ -64,7 +63,7 @@ var sky = {
             url: url,
             data: data,
             success: func,
-            headers: {'X-Action-J': jact || 'front'}
+            headers: {'X-Action-J': jact || 'main'}
         });
     },
     f: { // forms
@@ -197,8 +196,9 @@ function box(html) {
     sky.show();
 }
 
-function ajax(j_, postfields, func, c_) {
+function ajax(j_, postfields, func, c_, jact) {
     if ('function' == typeof postfields) {
+        jact = c_;
         c_ = func;
         func = postfields;
         postfields = '';
@@ -207,7 +207,7 @@ function ajax(j_, postfields, func, c_) {
         c_ = sky.a._0 = sky.a.div = j_[0];
         j_ = sky.a._1 = 1 == j_.length ? '' : j_[1];
     }
-    var mem_x, to, ctrl0 = c_ || sky.a.div, ctrl1 = c_ || sky.a._0;
+    var mem_x, to, ctrl = c_ || sky.a._0;//, ctrl0 = c_ || sky.a.div
     if (sky.a.x_el) {
         mem_x = sky.a.x_el.html();
         sky.a.x_el.html(sky.a.x_html);
@@ -216,9 +216,9 @@ function ajax(j_, postfields, func, c_) {
         headers: {'X-Orientation': sky.orientation()}
     });
     if (sky.a.start)
-        to = sky.a.start(ctrl1, '' + j_);
+        to = sky.a.start(ctrl, '' + j_);
 
-    sky.post(sky.home + '?' + ctrl1 + '=' + j_, postfields || '', function(r) {
+    sky.post(sky.home + '?' + ctrl + '=' + j_, postfields || '', function(r) {
         var error_func = sky.a.error(); // get the current and restore default error handler
         func = func || sky.a.body;
         if (sky.a.finish)
@@ -237,7 +237,7 @@ function ajax(j_, postfields, func, c_) {
             case 'object':   return func ? func.html(r) : null; // null is object
             default:         return r ? sky.err(r) : null;
         }
-    }, ctrl0);
+    }, jact);
 }
 
 (function($) {

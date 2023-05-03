@@ -97,7 +97,7 @@ class DEV
         $php = '';
         if (2 == $sky->_6) {
             $ctrl = explode('::', $list[$nv][2]);
-            $fn = ($w2 = 'standard_c' == $ctrl[0]) ? "w2/standard_c.php" : "mvc/$ctrl[0].php";
+            $fn = ($w2 = 'dev_c' == $ctrl[0]) ? "w2/dev_c.php" : "mvc/$ctrl[0].php";
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
             $we = 'mvc/common_c.php' != $fn ? $ware : 'main';
@@ -164,7 +164,6 @@ class DEV
     }
 
     function j_attach() {
-        global $sky;
         $wares = (array)Plan::_rq('wares.php');
         $dir = trim($_POST['s'], " \t\r\n/");
         if ('un' != ($mode = $_POST['mode'])) { # Install
@@ -175,6 +174,8 @@ class DEV
             }
             $conf = require "$dir/conf.php";
             $required = explode(' ', $conf['app']['require'] ?? '');
+            $name = basename($dir);
+            $flags = explode(' ', $conf['app']['flags'] ?? '');
             if ('' == $required[0])
                 array_shift($required);
             foreach ($required as $class) {
@@ -187,16 +188,20 @@ class DEV
                     }
                 }
             }
-            $name = basename($dir);
             $cls = [];
             if ('prod' == $type && 1 == $mode) {
                 $classes = Globals::def($dir);
-                foreach ($classes as $one)
-                    $wares[$name]['class'][] = $one;
+                $more = '';
+                if (in_array('Ware', $classes)) {
+                    require "$dir/w3/ware.php";
+                    $more = '<h2>Install options:</h2>' . (new Ware);
+                }
                 return [
+                    'more' => $more,
                     'classes' => $classes,
                     'name' => $name,
                     'dir' => $dir,
+                    'flags' => $flags,
                 ];
             } else if (2 == $mode) {
                 if (!$cls = $_POST['cls'] ?? []) {
@@ -204,7 +209,11 @@ class DEV
                     return 801;
                 }
             }
-            $wares[$name] = ['path' => $dir, 'class' => $cls];
+            $wares[$name] = [
+                'path' => $dir,
+                'class' => $cls,
+                'tune' => $_POST['tune'] ?? '',
+            ];
             if (isset($_POST['dev']))
                 $wares[$name] += ['type' => 'dev'];
         } else {
@@ -363,9 +372,7 @@ class DEV
         if ($n)
             return ['n' => $n];
 
-        global $sky;
-
-        $val = explode(' ', $sky->s_version) + ['', '', '0', 'APP'];
+        $val = explode(' ', SKY::s('version')) + ['', '', '0', 'APP'];
         $val[2] += 0.0001;
         $key = [0, 1, 'ver', 'app'];
         $form1 = [

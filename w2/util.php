@@ -97,15 +97,16 @@ class Util
     static function not_found($class, $name) {
         global $sky;
         switch ($class) {
-            case 'Controller':
+           //case 'Controller':
             case 'default_c_R':
-                if (DEV && Plan::_t([Plan::$gate, "mvc/c_$sky->_0.php"])) {
+                is_string($i0 = $sky->_0) or $i0 = '*';
+                if (DEV && Plan::_t([Plan::$ware, "mvc/c_$i0.php"])) {
                     Plan::cache_d(['main', 'sky_plan.php']);
                     $sky->fly or jump(URI);
                 }
                 $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
-                $msg = preg_match("/^\w+$/", $sky->_0)
-                    ? "Controller `c_$sky->_0.php` or method `default_c::{$x}_$sky->_0()` not exist"
+                $msg = preg_match("/^\w+$/", $i0)
+                    ? "Controller `c_$i0.php` or method `default_c::{$x}_$i0()` not exist"
                     : "Method `default_c::default_$x()` not exist";
                 trace($msg, (bool)DEV);
                 break;
@@ -186,6 +187,33 @@ class Util
         list ($sky->was_error, SKY::$debug) = $t;
         $sky->was_error |= $e;
         return $r;
+    }
+
+    static function controllers($ware = false, $plus = false) {
+        $list = [];
+        if (!$ware) {
+            foreach (SKY::$plans as $ware => &$cfg) {
+                if ('main' == $ware || 'prod' == $cfg['app']['type'])
+                    $list += self::controllers($ware, true);
+            }
+            return $list;
+        }
+        $glob = Plan::_b([$ware, 'mvc/c_*.php']);
+        if ($fn = Plan::_t([$ware, 'mvc/default_c.php']))
+            array_unshift($glob, $fn);
+        $z = 'main' == $ware ? false : $ware;
+        foreach ($glob as $v) {
+            $k = basename($v, '.php');
+            $v = 'default_c' == $k ? '*' : substr($k, 2);
+            $list[$plus ? "$ware.$k" : $v] = $plus ? [1, $k, $z] : $ware;
+        };
+        if ($plus) {
+            foreach (Plan::_rq([$ware, 'gate.php']) as $k => $v) {
+                $v = 'default_c' == $k ? '*' : substr($k, 2);
+                isset($list["$ware.$k"]) or $list["$ware.$k"] = [0, $k, $z]; # deleted
+            }
+        }
+        return $list;
     }
 
     static function pdaxt($plus = '') {

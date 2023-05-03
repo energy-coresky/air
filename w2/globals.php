@@ -24,6 +24,11 @@ class Globals extends Usage
 
     public $also_ns = [];
 
+    static function instance() {
+        static $glb;
+        return $glb ?? ($glb = new self);
+    }
+
     static function def($dir, $sect = 'CLASS') {
         $glb = new Globals($dir);
         return array_keys($glb->_def()[$sect]);
@@ -205,17 +210,19 @@ class Globals extends Usage
         return '';
     }
 
-    function parse_def($fn, $line_start = 1) {
+    function parse_def($fn, $php = false) {
         parent::$cnt[0]++;
-        $php = file_get_contents($fn);
-        $line = $line_start;
+        $mode = $php ? 1 : 0;
+        $php or $php = file_get_contents($fn);
+        $methods = [];
+        $line = $line_start = 1;
         $curly = $glob_list = $ns_kw = 0;
         $place = 'GLOB';
         $vars = [];
         $p1 = $p2 = $ns = '';
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
-            $this->pos = [$fn, $line];//"$fn $line";
+            $this->pos = [$fn, $line];
             $line_start = $line;
             if (is_array($token)) {
                 list($id, $str) = $token;
@@ -242,11 +249,18 @@ class Globals extends Usage
                             $ns .= $str;
                         } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {
                             $this->push($place = substr(token_name($p1), 2), $ns . $str);
+                            if (1 == $mode && 'CLASS' == $place && $str == $fn)
+                                $mode = 2;
                         } elseif ('GLOB' == $place) {
                             if (T_FUNCTION === $p1 && T_USE != $p2 || T_FUNCTION === $p2 && '&' === $p1)
                                 $this->push($place = 'FUNCTION', $ns . $str);
                             if (T_CONST === $p1 && T_USE != $p2)
                                 $this->push('CONST', $ns . $str);
+                        } elseif (2 == $mode && T_FUNCTION === $p1) {
+                            if (in_array(substr($str, 0, 2), ['j_', 'a_']) || in_array(substr($str, -2), ['_j', '_a'])) {
+                                $method = $str;
+                                $mode = 3;
+                            }
                         }
                         $id = [$id, $str];
                         break;
@@ -266,10 +280,20 @@ class Globals extends Usage
                         break;
                 }
             }
-
+            if (4 == $mode)
+                $param .= is_array($id) ? $id[1] : $id;
             switch ($id) {
+                case ')':
+                    if (4 == $mode) {
+                        $mode = 2;
+                        $methods[$method] = $param;
+                    }
+                    break;
                 case '(': # def anonymous function
-                    if ('GLOB' == $place && (T_FUNCTION === $p1 || T_FUNCTION === $p2 && '&' === $p1)) {
+                    if (3 == $mode) {
+                        $mode = 4;
+                        $param = '(';
+                    } elseif ('GLOB' == $place && (T_FUNCTION === $p1 || T_FUNCTION === $p2 && '&' === $p1)) {
                         $place = 'FUNCTION';
                     }
                     break;
@@ -277,6 +301,7 @@ class Globals extends Usage
                     if (!--$curly) {
                         $place = 'GLOB';
                         $vars = [];
+                        $mode = 0;
                     }
                     break;
                 case '{':
@@ -311,6 +336,7 @@ class Globals extends Usage
             $p2 = $p1;
             $p1 = $id;
         }
+        return $methods;
     }
 
     function _def() {

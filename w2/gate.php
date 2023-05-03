@@ -9,16 +9,25 @@ class Gate
     const OBJ_PFS    = 64;
 
     static $cshow = 0;
-    static $ware = 'main';
-    static $controller_data = false; # not loaded initialy
 
     //add named limits and permission to sky-gate!!!!!!
     public $uri = '';
     public $var = [];
     public $gerr;
 
-    private $_e;
     private $arg_c = 0;
+    private $pfs_c;
+    private $opcnt;
+    private $pfs_ends;
+    private $ends;
+    private $i;
+    private $_j;
+    private $_e;
+    private $eq_a;
+    private $eq_b;
+    private $eq_z;
+    private $ra;
+    private $ns;
 
     function __construct() {
         global $sky;
@@ -36,40 +45,10 @@ class Gate
 
     static function instance() {
         static $gate;
-        return $gate ?: ($gate = new Gate);
+        return $gate ?: ($gate = new Gate); // ?: => ??
     }
 
-    static function load_array($class = false) {
-        $sky_gate = (array)Plan::_rq([Plan::$gate, 'gate.php']);
-        return $class ? ($sky_gate[$class] ?? []) : $sky_gate;
-    }
-
-    static function controllers($in = false) {
-        $glob = Plan::_b([Plan::$gate, 'mvc/c_*.php']);
-        if ($fn = Plan::_t('mvc/default_c.php'))
-            array_unshift($glob, $fn);
-        $list = $deleted = [];
-        $val = $in ? 1 : Plan::$ware;
-        foreach ($glob as $v) {
-            $v = basename($v, '.php');
-            $list['default_c' == $v ? '*' : substr($v, 2)] = $val; //2do just Plan::$ware?
-        };
-        foreach (self::load_array() as $k => $v) {
-            $k = 'default_c' == $k ? '*' : substr($k, 2);
-            isset($list[$k]) or $deleted[$k] = 0;
-        }
-        return !$in ? $list : $list + $deleted;
-    }
-
-    static function put_cache($class, $fn_src, $fn_dst) {
-        if (false === self::$controller_data) {
-            $sky_gate = self::load_array();
-            self::$controller_data = $sky_gate[$class] ?? [];
-        }
-        Plan::gate_p($fn_dst, self::instance()->parse($fn_src, $class));
-    }
-
-    function view_code($ary, $class, $func) {
+    function gate_code($ary, $class, $func) {
         $this->uri = '';
         $this->var = [];
         $cmode = $this->contr_mode($class, $func);
@@ -79,31 +58,22 @@ class Gate
     }
 
     function argc($s) {
-        $this->arg_c = 0;
         $s = preg_replace("/\s+/", '', $s);
-        if ('()' == $s || '' === $s)
+        $this->arg_c = 0;
+        if ('' === $s || '()' === $s)
             return;
         $this->arg_c++;
         foreach (token_get_all("<?php $s") as $v)
-            if (is_string($v) && ',' == $v)
-                $this->arg_c++;
+            is_array($v) or ',' != $v or $this->arg_c++;
     }
 
-    function parse($src_fn, $dst_class = false) {
-        Plan::_r([Plan::$gate, $src_fn]);
-        $reflect = new ReflectionClass(basename($src_fn, '.php'));
-        $methods = array_filter(
-            $reflect->getMethods(ReflectionMethod::IS_PUBLIC),
-            function ($v) {
-                return in_array(substr($v->name, 0, 2), ['j_', 'a_'])
-                    || in_array(substr($v->name, -2), ['_j', '_a']);
-            }
-        );
-        $list = [];
-        foreach ($methods as $method) {
-            $list[$method->name] = '(' . implode(', ', array_map(function ($v) {
-                return '$' . $v->name;
-            }, $reflect->getMethod($method->name)->getParameters())) . ')';
+    function parse($ware, $src_fn, $dst_class = false) {
+        $content = Plan::_g([$ware, $src_fn]);
+        $cls = basename($src_fn, '.php');
+        $list = (Globals::instance())->parse_def($cls, $content);
+        if ('main' == $ware && 'default_c' == $cls) {
+            foreach ($this->trait as $k => $v)
+                isset($list[$k]) or $list[$k] = $v;
         }
         if (!$dst_class)
             return $list;
@@ -111,16 +81,15 @@ class Gate
         $gape = DEV ? "trace('GATE: $dst_class, ' . (\$recompile ? 'recompiled' : 'used cached'));\n\n" : '';
         $gape .= "class {$dst_class}_G extends Bolt\n{";
 
+        $ary = Plan::_rq([$ware, 'gate.php'])[$dst_class] ?? [];
         foreach ($list as $name => $pars) {
             $this->argc($pars);
-            isset(self::$controller_data[$name]) or self::$controller_data[$name] = [];
             $cmode = $this->contr_mode($dst_class, $name);
-            $php = $this->code(self::$controller_data[$name], $cmode, false);
+            $php = $this->code($ary[$name] ?? [], $cmode, false);
             $php = "\t\t" . str_replace("\n", "\n\t\t", substr($php, 0, -1)) . "\n";
             $gape .= "\n\tfunction $name() {\n$php\t}\n";
         }
 
-        $content = Plan::_g([Plan::$gate, $src_fn]);
         if (!preg_match("/^<\?(php)?(.*?)class $dst_class extends(.+)$/s", $content, $match))
             throw new Error("File `$src_fn` must start from &lt;?");
         return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_R extends" . $match[3];
@@ -528,6 +497,13 @@ class Gate
         }
         return $out;
     }
+
+    private $trait = [
+        'j_init' => '($tz,$scr)',
+        'a_crash' => '()',
+        'a_etc' => '($fn,$ware)',
+        'a_test_crash' => '()',
+    ];
 }
 
 __halt_compiler();

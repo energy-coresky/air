@@ -134,28 +134,28 @@ DATABASES ({{count($databases)}})
 |||||||||||||||||||||||||||||||||||||||||||| GATE ||||||||||||||||||||||||||||||||||||||||||||
 ==============================================================================================
 #.m_gate
-@loop($list as $one => $ex)
-  <a href="{{PATH}}?_gate={!$one!}" class="inner-menu" style="background:{! $ex?(1==$ex?'':'#cfc'):'#fcc' !}"@active($one==$y_1)>
-    {!'*' == $one ? 'default_c' : "c_$one"!}.php @if(!in_array($ex,['0','1']))({{$ex}})~if
+@loop($ctrl as $one => $x)
+  <a class="inner-menu"@active($one==$wc) href="{{PATH}}?_gate={!$one!}" style="background:{! $x[0] ? ($x[2]?'#cfc':'') : '#fcc' !}">
+    {!$x[1]!}.php @if($x[2])({{$x[2]}})~if
   </a>
 ~loop
 #.m_gate.header ------------------------------------------------------------------------------
 <h4><span style="color:#4338ca">CONTROLLER</span>:
-@if($list[$y_1])
-  <span style="color:#000">{{strtoupper($h1)}}.PHP</span>
+@if($ctrl[$wc][0])
+  <span style="color:#000">{{strtoupper($ctrl[$wc][1])}}.PHP</span>
 @else
-  <span style="color:red">{{strtoupper($h1)}}.PHP</span> (not exists)
-  <a style="font-weight:normal" @href(ajax('{{$y_1}}',{},'v-body','_delete'))>Delete</a>
+  <span style="color:red">{{strtoupper($ctrl[$wc][1])}}.PHP</span> (not exists)
+  <a style="font-weight:normal" @href(ajax('{{$wc}}',{},'v-body','_delete'))>Delete</a>
 ~if
 <a class="@active($cshow)" style="font-weight:normal"
-  @href($(this).toggleClass('active'); dev('{!$y_1!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
+  @href($(this).toggleClass('active'); dev('{!$wc!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
 <a style="font-weight:normal" href="_map">Show map</a>
 </h4>
 #.header.gate.delete ------------------------------------------------------------------------------
 #use(.header)
 @use(.m_gate)
 <div id="gate">
-@if($y_1)
+@if($wc) <!-- delete ??? -->
     <div style="display:none" id="c23-tpl">@view(c23_edit)</div>
     @loop($e_func)
     <fieldset>
@@ -188,9 +188,9 @@ DATABASES ({{count($databases)}})
         @if(!$row->code)
         <div class="fr" style="text-align:right">
             @if($row->delete)
-                <input type="button" class="edit" value="delete" onclick="ajax('{{$y_1}}.{{$row->func}}',{},'v-body','_delete')"/>
+                <input type="button" class="edit" value="delete" onclick="ajax('{{$wc}}.{{$row->func}}',{},'v-body','_delete')"/>
             ~if
-            <input type="button" class="edit" value="edit" onclick="sky.g.edit(this,'{{$y_1}}.{{$row->func}}')"/>
+            <input type="button" class="edit" value="edit" onclick="sky.g.edit(this,'{{$wc}}.{{$row->func}}')"/>
         </div>
         ~if
         <u>Postfields or body</u>:<br><br>
@@ -290,11 +290,12 @@ sky.g.hide = function(el) {
     sky.g.code(el3, sky.g.mem);
 };
 $(function() {
+    #if('_map' != :0)
     if ('{{$func}}') {
-        $('#v-body div:eq(0)').prepend(`<h1 class="g-err">Gate error in "{{$h1}}::{{$func}}()"</h1>`);
+        $('#v-body div:eq(0)').prepend(`<h1 class="g-err">Gate error in "{{$ctrl[$wc][1]}}::{{$func}}()"</h1>`);
             //'<div style="margin:0 10px;">'+
             //window.parent.document.getElementById('trace-x').innerHTML// + '</div>'
-//        $('h1 span.gate-err').html('{{$h1}}::{{$func}}');
+//        $('h1 span.gate-err').html('{{$ctrl[$wc][1]}}::{{$func}}');
         sky.d.files();
         setTimeout(function() {
             var el = false;
@@ -302,9 +303,10 @@ $(function() {
                 if ($(this).text() == '{{$func}}')
                     el = $(this).parent().parent().find('input[type=button]')[0];
             });
-            sky.g.edit(el, '{{$y_1}}.{{$func}}', true);
+            sky.g.edit(el, '{{$wc}}.{{$func}}', true);
         }, 500);
     }
+    #end
 });
 sky.g.rw = function(mode) {
     if (mode) {
@@ -437,36 +439,27 @@ dl {margin:0; }
 <div id="map">
   <table width="100%" cellspacing="0" cellpadding="0">
   <tr style="position:sticky;top:94px" id="tbl-head">
-    <td><b>TOP-VIEW Actions</b></td>
-    <td width="35%"><b>External URI</b></td>
-    @loop($_ < $n)
-      <td style="border-right:1px solid #ccc; padding:0; width:{{$_ ? 17 : 18}}px;
-        @if(!$_)border-left:1px solid #ccc;~if@if($_ <= $y_1)background:#e0e7ff~if">R{{$_}}</td>
-    ~loop
-    <td width="35%"><b>URI in Core, after rewrite</b></td>
+    <td width="24%"><b>TOP-VIEW Actions</b></td>
+    <td width="38%"><b>External URI</b></td>
+    <td width="38%"><b>URI in Core, after rewrite</b></td>
   </tr>
-  @loop($list as $one => $ex)
+  @loop($ctrl as $one => $x)
     <tr style="background:#e0e7ff;">
-      <td colspan="2" style="color:#b88"><b>{{1 + $_}}. {{'*' == $one ? 'default_c' : "c_$one"}}.php</b>
-        @if(!$ex)err@elseif(1 != $ex)<span style="color:#000">({{$ex}} ware)</span>~if
+      <td colspan="3" style="color:#b88"><b>{{1 + $_}}. {{$x[1]}}.php</b>
+        @if(!$x[0])err@elseif($x[2])<span style="color:#000">({{$x[2]}} ware)</span>~if
       </td>
-      <td colspan="{{1+$n}}" style=""></td>
     </tr>
-    @loop($e_func($one))
+    @loop($e_func(explode('.', $one)))
     <tr@if($row->gerr) bgcolor="#fdd"@elseif(true !== $row->uri) bgcolor="#ffc"~if>
       <td style="border-right:1px solid #ccc">
         {{1 + $_2}}. <span style="color:#00b;font-family:monospace">-&gt;{!$row->func . $row->pars!}</span>
       </td>
       @if($row->gerr)
-        <td colspan="{{2+$n}}">{{$row->gerr}}</td>
+        <td colspan="2">{{$row->gerr}}</td>
       @else
-        <td>{!$row->ext!}
+        <td style="border-right:1px solid #ccc">{!$row->ext!}
           @if($row->trait)<r>{{$row->trait}}</r>~if
         </td>
-        @loop($_3 < $n)
-          <td width="{{$_3 ? 17 : 18}}" style="border-right:1px solid #ccc;
-            @if(!$_3)border-left:1px solid #ccc;~if@if($_3 <= $y_1)background:#e0e7ff~if"></td>
-        ~loop
         <td>
           @if(true === $row->uri)<span style="color:#2b3">==</span>@else{!$row->uri!}~if
           {!$row->re!}
@@ -476,7 +469,6 @@ dl {margin:0; }
     ~loop
     <tr style="height:10px">
       <td></td><td></td>
-      @loop($_2 < $n)<td style="width:17px;border-right:1px solid #ccc;@if($_2 <= $y_1)background:#e0e7ff~if"></td>~loop
       <td></td>
     </tr>
   ~loop

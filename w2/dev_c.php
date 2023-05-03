@@ -1,9 +1,10 @@
 <?php
 
-class standard_c extends Controller
+class dev_c extends Controller
 {
     use HOOK_D;
 
+    private $_w = '';
     private $_c = '';
     private $_a = '';
     private $_y = [];
@@ -18,13 +19,11 @@ class standard_c extends Controller
             $this->_y = ['page' => substr($action, 2)];
             MVC::$layout = '__dev.layout';
         }
-        $sky->open();//, 'a_svg'
+        $sky->open();
         if ($sky->d_dev)
             SKY::$debug = 0;
-        $v = explode('.', $this->_1, 2);
-        $this->_c = '*' == $v[0] ? 'default_c' : "c_$v[0]";
-        $this->_a = $v[1] ?? '';
-        return ['y_1' => $v[0]];
+        list ($this->_w, $this->_c, $this->_a) = explode('.', $this->_1, 3) + ['', '', ''];
+        return ['y_1' => $this->_1];
     }
 
     function tail_y() {
@@ -120,7 +119,7 @@ class standard_c extends Controller
 
     function a_svg() {
         MVC::mime('image/svg+xml');
-        echo new SVG(substr($this->_c, 2), $this->_a);
+        echo new SVG($this->_w, $this->_c);
         throw new Stop;
     }
 
@@ -139,18 +138,18 @@ class standard_c extends Controller
     }
 
     function j_lang() {
-        MVC::body('_lng.' . substr($this->_c, 2));
-        return call_user_func([new Language, $this->_c], $this->_a);
+        MVC::body('_lng.' . $this->_w);
+        return call_user_func([new Language, 'c_' . $this->_w], $this->_c);
     }
 
     function j_vend() {
-        MVC::body('_vend.' . substr($this->_c, 2));
-        return call_user_func([new Vendor, $this->_c], $this->_a);
+        MVC::body('_vend.' . $this->_w);
+        return call_user_func([new Vendor, 'c_' . $this->_w], $this->_c);
     }
 
     function j_glob() {
-        MVC::body('_glob.' . substr($this->_c, 2));
-        return call_user_func([new Globals, $this->_c], $this->_4 ?: $this->_3);
+        MVC::body('_glob.' . $this->_w);
+        return call_user_func([new Globals, 'c_' . $this->_w], $this->_4 ?: $this->_3);
     }
 
     function j_inst() {
@@ -158,45 +157,47 @@ class standard_c extends Controller
     }
 
     function j_gate($x = 'j') {
-        if ('c_' == $this->_c && 'c' == $x)
-            $this->_c = self::atime(); # open last access time controller
+        if (!$this->_c && 'c' == $x)
+            $this->_w = self::atime($this->_c); # open last access time controller
         $ary = !$this->_4 ? [] : [
-            'y_tx' => $this->d_dev ? 1 : 2, # sample: ?_gate=company&func=j_edit&ajax
+            'y_tx' => $this->d_dev ? 1 : 2, # sample: ?_gate=main.c_company&func=j_edit&ajax
             'trace_x' => pre(sqlf('+select tmemo from $_memory where id=1'), 'id="trace"'),
         ];
         return [
-            'y_1' => $this->_c ? ('default_c' == $this->_c ? '*' : substr($this->_c, 2)) : '',
-            'h1' => $this->_c,
-            'list' => Gate::controllers(true) + self::ctrl(),
+            'wc' => "$this->_w.$this->_c",
+            'ctrl' => Util::controllers(),
             'cshow' => self::cshow() ? ' checked' : '',
-            'e_func' => $this->_c ? self::gate($this->_c) : false,
+            'e_func' => self::gate($this->_w, $this->_c),
             'func' => $this->_3 ?? '',
         ] + $ary;
     }
 
     function j_delete() {
-        self::save($this->_c, $this->_a);
-        $this->_a or $this->_c = 'c_';
+        self::save($this->_w, $this->_c, $this->_a);
+        $this->_a or $this->_c = '';
         return $this->j_gate();
     }
 
     function j_edit() {
-        return self::gate($this->_c, $this->_a);
+        return self::gate($this->_w, $this->_c, $this->_a);
     }
 
     function j_save() {
-        self::save($this->_c, $this->_a, true);
-        return self::gate($this->_c, $this->_a, false);
+        self::save($this->_w, $this->_c, $this->_a, true);
+        return self::gate($this->_w, $this->_c, $this->_a, false);
     }
 
     function j_code() {
-        self::compile($this->_c, $this->_a);
+        $ary = self::post_data($gate = Gate::instance());
+        json([
+            'code' => $gate->gate_code($ary, $this->_c, $this->_a),
+            'url'  => $gate->uri,
+        ]);
     }
 
     function x_c23_edit() {
         return self::ary_c23();
     }
-
 
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
     static function ary_c23($is_addr = 1, $v = []) {
@@ -212,7 +213,7 @@ class standard_c extends Controller
     }
 
     static function post_data($gate) {
-         isset($_POST['args']) && $gate->argc($_POST['args']);//////////
+        isset($_POST['args']) && $gate->argc($_POST['args']);
         SKY::d('sg_prod', (int)isset($_POST['production']));
         $addr = $pfs = [];
         $to =& $addr;
@@ -232,15 +233,7 @@ class standard_c extends Controller
         return [$flag, $method, $addr, $pfs];
     }
 
-    static function compile($class, $func) {
-        $gate = Gate::instance();
-        json([
-            'code' => $gate->view_code(self::post_data($gate), $class, $func),
-            'url'  => $gate->uri,
-        ]);
-    }
-
-    static function atime() { # search ctrl with last access time
+    static function atime(&$c) { # search ctrl with last access time
         $glob = Plan::_b('mvc/c_*.php');
         if ($fn = Plan::_t('mvc/default_c.php'))
             array_unshift($glob, $fn);
@@ -252,14 +245,11 @@ class standard_c extends Controller
                 $c = basename($fn, '.php');
             }
         }
-        return $c;
+        return 'main';
     }
 
-    static function save($class, $func = false, $ary = false) {
-        $cfg =& SKY::$plans['main']['ctrl'];
-        if ('main' != ($cfg[substr($class, 2)] ?? 'main'))
-            Plan::$gate = $cfg[substr($class, 2)];
-        $sky_gate = Gate::load_array();
+    static function save($ware, $class, $func = false, $ary = false) {
+        $sky_gate = Plan::_rq([$ware, 'gate.php']);
         if (!$func) { # delete controller
             unset($sky_gate[$class]);
         } elseif (!$ary) { # delete action
@@ -267,8 +257,8 @@ class standard_c extends Controller
         } else { # update, add
             $sky_gate[$class][$func] = true === $ary ? self::post_data(Gate::instance()) : $ary;
         }
-        Plan::gate_dq($class . '.php'); # clear cache
-        Plan::_p([Plan::$gate, 'gate.php'], Plan::auto($sky_gate));
+        Plan::gate_dq([$ware, "$class.php"]); # clear cache
+        Plan::_p([$ware, 'gate.php'], Plan::auto($sky_gate));
     }
 
     static function cshow() {
@@ -278,12 +268,10 @@ class standard_c extends Controller
         return Gate::$cshow;
     }
 
-    static function gate($class, $func = null, $is_edit = true) {
-        $cfg =& SKY::$plans['main']['ctrl'];
-        Plan::$gate = $cfg[substr($class, 2)] ?? 'main';
-        $ary = Gate::load_array($class);
+    static function gate($ware, $class, $func = null, $is_edit = true) {
+        $ary = Plan::_rq([$ware, 'gate.php'])[$class] ?? [];
         $gate = Gate::instance();
-        $src = Plan::_t([Plan::$gate, $fn = "mvc/$class.php"]) ? $gate->parse($fn) : [];
+        $src = Plan::_t([$ware, $fn = "mvc/$class.php"]) ? $gate->parse($ware, $fn) : [];
         if ($diff = array_diff_key($ary, $src))
             $src = $diff + $src;
         if ($has_func = is_string($func)) {
@@ -308,7 +296,7 @@ class standard_c extends Controller
                     'func' => $name,
                     'delete' => $delete,
                     'pars' => $delete ? '' : $pars,
-                    'code' => $edit || Gate::$cshow ? $gate->view_code($ary, $class, $name) : false,
+                    'code' => $edit || Gate::$cshow ? $gate->gate_code($ary, $class, $name) : false,
                     'gerr' => $gate->gerr,
                     'uri' => $gate->uri,
                     'var' => $gate->var,
@@ -324,7 +312,12 @@ class standard_c extends Controller
                 ];
             },
         ];
-        return $has_func ? ['row' => (object)($return['row_c']())] : $return;
+        if (!$has_func)
+            return $return;
+        return [
+            'row' => (object)($return['row_c']()),
+            'wc' => "$ware.$class",
+        ];
     }
 
     static function view_c1($flag, $edit, $meth, $is_j) {
@@ -391,12 +384,6 @@ class standard_c extends Controller
         return $out;
     }
 
-    static function ctrl() {
-        return array_filter(SKY::$plans['main']['ctrl'], function ($v) {
-            return $v != 'main';
-        });
-    }
-
     ///////////////////////////////////// THE MAP /////////////////////////////////////
     function j_test() {
         Rewrite::get($lib, $map, $keys);
@@ -425,7 +412,7 @@ class standard_c extends Controller
             'rshow' => $rshow,
             'map' => $map,
             'y_1' => $y_1,
-            'list' => Gate::controllers(true) + self::ctrl(),
+            'ctrl' => Util::controllers(),
             'opt' => option(-2, array_reverse($keys, true)),
             'json' => tag(html(json_encode($lib)), 'id="json" style="display:none"'),
             'form' => Form::A($data, [
@@ -443,8 +430,8 @@ class standard_c extends Controller
                     static $ary;
                     if ($e) {
                         Gate::$cshow = true;
-                        $ary = (new eVar(self::gate('*' != $in ? "c_$in" : 'default_c')))->all();
-                        Rewrite::external($ary, $in);
+                        $ary = (new eVar(self::gate($in[0], $in[1])))->all();
+                        Rewrite::external($ary, $in[1]);
                         return false;
                     }
                     return $ary ? array_shift($ary) : false;

@@ -17,12 +17,9 @@ class Plan
         //'sql' => ['path' => 'var/sql'], #2do
     ];
 
-    static $wares = ['main'];
     static $ware = 'main';
     static $view = 'main';
-    static $gate = 'main';
     static $parsed_fn;
-
     static $z_error = false;
     static $see_also = [];
     static $var_path = ['', '?', [], '']; # var_name, property, array's-path
@@ -181,14 +178,21 @@ class Plan
                         $conf['app']['type'] = 'pr-dev';
                     if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
                         continue;
-                    foreach ($val['class'] as $cls)
-                        'c_' == substr($cls, 0, 2) ? ($ctrl[substr($cls, 2)] = $key) : ($cfg[$cls] = $key);
+                    foreach ($val['class'] as $cls) {
+                        $df = 'default_c' == $cls;
+                        if ($df || 'c_' == substr($cls, 0, 2)) {
+                            $x = $df ? '*' : substr($cls, 2);
+                            $ctrl[$val['tune'] ? "$val[tune]/$x" : $x] = $key;
+                        } else {
+                            $cfg[$cls] = $key;
+                        }
+                    }
                     $ptr =& $conf['app'];
                     unset($ptr['require'], $ptr['class'], $ptr['databases'], $ptr['options']);
                     SKY::$plans[$key] = ['app' => ['path' => $path] + $conf['app']] + $conf;
                 }
                 $plans = SKY::$plans;
-                $plans['main'] += ['ctrl' => $ctrl + Gate::controllers()];
+                $plans['main'] += ['ctrl' => $ctrl + Util::controllers('main')];
                 Plan::cache_p('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite'])); # make dir & save file
                 SKY::$plans = require $fn;
             }

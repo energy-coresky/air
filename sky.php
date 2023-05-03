@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.481 2023-04-25T20:21:35+03:00 energy';
+    const CORE = '0.482 2023-05-03T15:19:16+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -334,7 +334,6 @@ class HEAVEN extends SKY
     public $has_public = true; # web-site or CRM
    public $page_p = 'p';
     public $show_pdaxt = false;
-    public $jact = false;
 
     function __construct() {
         global $sky;
@@ -393,9 +392,9 @@ class HEAVEN extends SKY
             if (1 == $cnt && '' === $this->surl[0]) {
                 $cnt = 0;
                 $this->surl = [];
-                if ($this->fly && 0 == $this->method) { // INPUT_POST 2do: delete the checks from gate
-                    $this->jact = $_SERVER['HTTP_X_ACTION_J'] ?? false;
-                    false === $this->jact or $mvc->return = $this->fly = HEAVEN::J_FLY;
+                if (0 == $this->method && ($jact = $_SERVER['HTTP_X_ACTION_J'] ?? false)) { // INPUT_POST 2do: delete the checks from gate
+                    'main' == $jact or common_c::$tune = $jact;
+                    $mvc->return = $this->fly = HEAVEN::J_FLY;
                 }
             }
         }

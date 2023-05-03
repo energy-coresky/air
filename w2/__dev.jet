@@ -25,9 +25,15 @@
 <input type="hidden" name="s" value="prod.{{$dir}}">
 <input type="hidden" name="mode" value="2">
 <div class="" style="padding:10px;">
-    <h1>Select classes:</h1>
+    {!$more!}
+    @if(in_array('tune', $flags))
+        <h2>Tune address:</h2>
+        <input name="tune" value="{{$name}}"> - empty for no address tuning
+    ~if
+    <h2>Select classes:</h2>
     @loop($classes as $cls)
-        <label><input type="checkbox" name="cls[]" value="{{$cls}}"> {{$cls}}</label><br>
+        @continue(in_array($cls, ['Ware']))
+        <label><input checked type="checkbox" name="cls[]" value="{{$cls}}"> {{$cls}}</label><br>
     ~loop
     <input type="button" onclick="sky.d.attach(0,0, $('#attach-ware').serialize())" value="Install">
     <label><input type="checkbox" name="dev"> install for DEV mode only</label>

@@ -149,7 +149,7 @@ abstract class Model_t extends Model_m
     }
 }
 
-class Controller extends MVC_BASE
+abstract class Controller extends MVC_BASE
 {
     # for overload if needed
     function head_y($action) {
@@ -177,7 +177,7 @@ trait HOOK_C
 {
     static $lg;
     static $page = 1; # for pagination
-    static $ware = false; # for rewritten wares
+    static $tune = false; # for rewritten wares
 
     static function langs_h() {
     }
@@ -501,41 +501,41 @@ class MVC extends MVC_BASE
         }
     }
 
-    private function gate($recalculate) {
-        global $sky;
-
-        if ($recalculate) {
-            SKY::$plans['main']['ctrl'] = Gate::controllers();
-            Plan::cache_d(['main', 'sky_plan.php']);
+    private function gate(&$class, &$action, &$gate) {
+        $ctrl =& SKY::$plans['main']['ctrl'];
+        is_string($i0 = $this->_0) or $i0 = '*';
+        $x = false;
+        if (common_c::$tune) {
+            $set = isset($ctrl[$w0 = common_c::$tune . "/$i0"])
+                or $set = isset($ctrl[$w0 = $x = common_c::$tune . "/*"]); # default_c in ware
+        } else {
+            $set = isset($ctrl[$w0 = $i0]);
         }
-        if ($match = '*' !== $sky->_0 && isset(SKY::$plans['main']['ctrl'][$sky->_0]))
-            Plan::$gate = Plan::$ware = SKY::$plans['main']['ctrl'][$sky->_0];
-
-        $class = $match ? 'c_' . $sky->_0 : 'default_c';
-        $dst = Plan::gate_t($fn_dst = "$class.php");
+        if ($set) {
+            Plan::$ware = $ctrl[$w0];
+            if ($set = '*' !== $i0 && !$x) {
+                $class = 'c_' . (MVC::$tpl = $i0);
+                is_string($i0 = $this->_1) or $i0 = '*';
+            }
+        }
+        if (!$set)
+            $class = (MVC::$tpl = 'default') . '_c';
+        $dst = Plan::gate_t($fn_dst = Plan::$ware . "-$class.php");
         $recompile = false;
         if (!$dst || DEV) {
             if ('main' != Plan::$ware)
                 trace(Plan::$ware, 'WARE');
-            if (!Plan::_t([Plan::$gate, $fn_src = "mvc/$class.php"]))
-                return $recalculate || !$match ? ['Controller', '_', false] : $this->gate(true);
-            if ($recompile = !$dst || Plan::_m([Plan::$gate, $fn_src]) > Plan::gate_m($fn_dst))
-                Gate::put_cache($class, $fn_src, $fn_dst);
+            if (!Plan::_t($fn_src = "mvc/$class.php"))
+                throw new Error("Controller `$class` not found");
+            if ($recompile = !$dst || Plan::_m($fn_src) > Plan::gate_m($fn_dst))
+                Plan::gate_p($fn_dst, Gate::instance()->parse(Plan::$ware, $fn_src, $class));
         }
-        $pfx = $this->return ? 'j_' : 'a_';
-        if ($match) {
-            $action = '' === $sky->_1
-                ? ($this->return ? 'empty_j' : 'empty_a')
-                : (is_string($sky->_1) ? $pfx . $sky->_1 : ($this->return ? 'default_j' : 'default_a'));
-        } else { # default_c
-            $action = $pfx . $sky->_0;
-        }
+        $x = $this->return ? 'j' : 'a';
+        $action = '' === $i0 ? "empty_$x" : $x . '_' . $i0;
         Plan::gate_rr($fn_dst, $recompile);
         $cls_g = $class . '_G';
         if (!method_exists($gate = new $cls_g, $action))
-            $action = $this->return ? 'default_j' : 'default_a';
-        MVC::$tpl = $match ? substr($class, 2) : 'default';
-        return [$class, $action, $gate];
+            $action = "default_$x";
     }
 
     function top() {
@@ -544,24 +544,23 @@ class MVC extends MVC_BASE
         ob_start();
         if (DEV && $sky->_0 && '_' == $sky->_0[0]) {
             $action = ($this->return ? 'j' : 'a') . $sky->_0;
-            $this->hnd = "standard_c::$action()";
+            $this->hnd = "dev_c::$action()";
             $this->body = '_std.' . substr($sky->_0, 1);
-            MVC::$mc = new standard_c;
+            MVC::$mc = new dev_c;
             $this->set(MVC::$mc->head_y($action), true); # call head_y
         } else {
-            list ($class, $action, $gate) = $this->gate(false);
+            $this->gate($class, $action, $gate);
             switch ($action[0]) {
                 case 'd': $this->body = MVC::$tpl . ".default"; break; # default_X
                 case 'e': $this->body = MVC::$tpl . ".empty"; break; # empty_X
                 default:  $this->body = MVC::$tpl . "." . substr($action, 2); break; # a_.. or j_..
             }
             $this->hnd = "$class::$action()";
-            $class .= $gate ? '_R' : '';
+            $class .= '_R';
             MVC::$mc = new $class;
             trace("$class::head_y(\$action)", 'CALL');
             $this->set(MVC::$mc->head_y($action), true); # call head_y
-            if ($gate)
-                $param = call_user_func([$gate, $action]); # call gate
+            $param = call_user_func([$gate, $action]); # call gate
         }
         if (DEV)
             trace($sky->error_no ? 'not-called' : "->$action(..)", 'MASTER ACTION');

@@ -136,14 +136,14 @@ class Rewrite
                 $rw2 = self::test($rw1);
                 if (self::cmp($uri, $rw2))
                     $row->ext[] = "/$rw1";
-                if ('*' == $ctrl && in_array($uri, $trait))
+                if ('default_c' == $ctrl && in_array($uri, $trait))
                     $row->trait = "Do not rewrite URI!";
             }
             if ($row->ext)
                 unset(self::$test[$row->ext[0]]);
 
             foreach (self::$test as $in => $x) {
-                if ('*' == $ctrl) {
+                if ('default_c' == $ctrl) {
                     $y = $x[1];
                     if ($y && substr($uri, 0, strlen($y)) == $y) {
                         $row->ext[] = $in;
@@ -163,7 +163,7 @@ class Rewrite
             $row->ext = implode('<br>', $row->ext) ?: '<r>not found</r>';
             if ($row->var) {//'()' != $row->pars
                 $pars = [];
-                foreach (explode(', ', substr($row->pars, 1, -1)) as $i => $var) {
+                foreach (explode(',', substr($row->pars, 1, -1)) as $i => $var) {////////
                     $ns = "<r>?</r>";
                     if (isset($row->var[$i])) {
                         $row->re .= L::r(' ~ ') . tag($row->var[$i][0], 'style="font-family:monospace;color:"', 'span');
@@ -224,6 +224,13 @@ Additive 0
 /x
 if ($cnt && 'x' == $surl[0])
     $surl[0] = 'ctrl';
+~
+Tune-ware 0
+
+if ($cnt && 'u' == $surl[0]) {
+    common_c::$tune = array_shift($surl);
+    $cnt--;
+}
 ~
 Pagination 0
 /ctrl/page-2/action
