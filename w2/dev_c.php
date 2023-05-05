@@ -22,7 +22,7 @@ class dev_c extends Controller
         $sky->open();
         if ($sky->d_dev)
             SKY::$debug = 0;
-        list ($this->_w, $this->_c, $this->_a) = explode('.', $this->_1, 3) + ['', '', ''];
+        [$this->_w, $this->_c, $this->_a] = explode('.', $this->_1, 3) + ['', '', ''];
         return ['y_1' => $this->_1];
     }
 
@@ -165,7 +165,7 @@ class dev_c extends Controller
         ];
         return [
             'wc' => "$this->_w.$this->_c",
-            'ctrl' => Util::controllers(),
+            'ctrl' => Debug::controllers(),
             'cshow' => self::cshow() ? ' checked' : '',
             'e_func' => self::gate($this->_w, $this->_c),
             'func' => $this->_3 ?? '',
@@ -188,9 +188,9 @@ class dev_c extends Controller
     }
 
     function j_code() {
-        $ary = self::post_data($gate = Gate::instance());
+        $gate = Gate::instance();
         json([
-            'code' => $gate->gate_code($ary, $this->_c, $this->_a),
+            'code' => $gate->highlight(self::post_data(), $this->_c, $this->_a, $_POST['argc']),
             'url'  => $gate->uri,
         ]);
     }
@@ -212,9 +212,7 @@ class dev_c extends Controller
         ];
     }
 
-    static function post_data($gate) {
-        isset($_POST['args']) && $gate->argc($_POST['args']);
-        SKY::d('sg_prod', (int)isset($_POST['production']));
+    static function post_data() {
         $addr = $pfs = [];
         $to =& $addr;
         if (isset($_POST['key'])) {
@@ -226,7 +224,7 @@ class dev_c extends Controller
                 $to[] = [$_POST['kname'][$i], trim($key), $_POST['vname'][$i], $val, (int)$_POST['chk'][$i]];
             }
         }
-        $method = isset($_POST['method']) ? $_POST['method'] : [];
+        $method = $_POST['method'] ?? [];
         foreach($method as &$v)
             $v = (int)$v;
         $flag = isset($_POST['flag']) ? array_sum($_POST['flag']) : 0;
@@ -248,17 +246,17 @@ class dev_c extends Controller
         return 'main';
     }
 
-    static function save($ware, $class, $func = false, $ary = false) {
-        $sky_gate = Plan::_rq([$ware, 'gate.php']);
-        if (!$func) { # delete controller
-            unset($sky_gate[$class]);
-        } elseif (!$ary) { # delete action
-            unset($sky_gate[$class][$func]);
+    static function save($ware, $class, $act = false, $in = false) {
+        $ary = Plan::_rq([$ware, 'gate.php']);
+        if (!$act) { # delete controller
+            unset($ary[$class]);
+        } elseif (!$in) { # delete action
+            unset($ary[$class][$act]);
         } else { # update, add
-            $sky_gate[$class][$func] = true === $ary ? self::post_data(Gate::instance()) : $ary;
+            $ary[$class][$act] = true === $in ? self::post_data() : $in;
         }
-        Plan::gate_dq([$ware, "$class.php"]); # clear cache
-        Plan::_p([$ware, 'gate.php'], Plan::auto($sky_gate));
+        Plan::gate_dq([$ware, "$ware-$class.php"]); # drop cache file
+        Plan::_p([$ware, 'gate.php'], Plan::auto($ary));
     }
 
     static function cshow() {
@@ -268,35 +266,30 @@ class dev_c extends Controller
         return Gate::$cshow;
     }
 
-    static function gate($ware, $class, $func = null, $is_edit = true) {
+    static function gate($ware, $class, $act = null, $is_edit = true) {
         $ary = Plan::_rq([$ware, 'gate.php'])[$class] ?? [];
         $gate = Gate::instance();
         $src = Plan::_t([$ware, $fn = "mvc/$class.php"]) ? $gate->parse($ware, $fn) : [];
         if ($diff = array_diff_key($ary, $src))
-            $src = $diff + $src;
-        if ($has_func = is_string($func)) {
-            $gate->argc(is_array($src[$func]) ? '' : $src[$func]);
-            $src = [$func => $src[$func]];
-        }
-        $edit = $has_func && $is_edit;
+            $src = array_map('is_array', $diff) + $src;
+        if ($has_act = is_string($act))
+            $src = [$act => $src[$act]];
+        $edit = $has_act && $is_edit;
         $return = [
             'row_c' => function($row = false) use (&$src, $ary, $gate, $class, $edit) {
-                if ($row && $row->__i && !next($src) || !$src)
+                if ($row && $row->__i && false === next($src) || !$src)
                     return false;
-                $name = key($src);
-                $delete = is_array($pars = current($src));
-                if (Gate::$cshow && !$delete)
-                    $gate->argc($pars);
+                $args = $src[$name = key($src)];
                 $is_j = in_array($name, ['empty_j', 'default_j']) || 'j_' == substr($name, 0, 2);
-                $ary = isset($ary[$name]) ? $ary[$name] : [];
+                $ary = $ary[$name] ?? [];
                 list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
                 if ($is_j)
                     $meth = [0];
                 $vars = [
                     'func' => $name,
-                    'delete' => $delete,
-                    'pars' => $delete ? '' : $pars,
-                    'code' => $edit || Gate::$cshow ? $gate->gate_code($ary, $class, $name) : false,
+                    'delete' => $delete = true === $args,
+                    'args' => $args,
+                    'code' => $edit || Gate::$cshow ? $gate->highlight($ary, $class, $name, $delete ? 0 : count($args)) : false,
                     'gerr' => $gate->gerr,
                     'uri' => $gate->uri,
                     'var' => $gate->var,
@@ -308,11 +301,10 @@ class dev_c extends Controller
                     'c1' => self::view_c1($flag, $edit, $meth, $is_j),
                     'c2' => self::view_c23($flag, $edit, $addr, 1),
                     'c3' => self::view_c23($flag, $edit, $pfs, 0),
-                    'prod' => SKY::d('sg_prod') ? ' checked' : '',
                 ];
             },
         ];
-        if (!$has_func)
+        if (!$has_act)
             return $return;
         return [
             'row' => (object)($return['row_c']()),
@@ -412,7 +404,7 @@ class dev_c extends Controller
             'rshow' => $rshow,
             'map' => $map,
             'y_1' => $y_1,
-            'ctrl' => Util::controllers(),
+            'ctrl' => Debug::controllers(),
             'opt' => option(-2, array_reverse($keys, true)),
             'json' => tag(html(json_encode($lib)), 'id="json" style="display:none"'),
             'form' => Form::A($data, [

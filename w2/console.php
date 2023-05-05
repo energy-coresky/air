@@ -250,7 +250,7 @@ class Console
 
     /** Show controllers */
     function c_c() {
-        echo "Rescanned:\n  " . array_join(Util::controllers(), function($k, $v) {
+        echo "Rescanned:\n  " . array_join(Debug::controllers(), function($k, $v) {
             return "$k: " . ($v[0] ? '' : 'not ') . 'exist'; # 2do: red
         }, "\n  ");
         echo "\nFrom SKY::\$plans:\n  " . array_join(SKY::$plans['main']['ctrl'], ' => ', "\n  ");
@@ -262,15 +262,17 @@ class Console
         Rewrite::get($lib, $map, $keys);
         $max = 0;
         $out = [];
-        foreach (SKY::$plans['main']['ctrl'] as $k => $ware) {
-            if (strpos($k, '/'))
-                list ($tune, $k) = explode('/', $k);
-            $ctrl = '*' != $k ? "c_$k" : 'default_c';
-            $ary = (new eVar(dev_c::gate($ware, $ctrl)))->all();
-            Rewrite::external($ary, $k);
+        foreach (Debug::controllers() as $x) {
+            if (!$x[0]) {
+                $max > ($len = strlen($a = "$x[1]::")) or $max = $len;
+                $out[$a] = (object)['gerr' => 'Controller not found'];
+                continue;
+            }
+            $ary = (new eVar(dev_c::gate($x[2] ?: 'main', $x[1])))->all();
+            Rewrite::external($ary, $x[1]);
             foreach ($ary as $row) {
-                $max > ($len = strlen($a = "$ctrl::$row->func$row->pars")) or $max = $len;
-                $out[$a] = $row;//strip_tags($row->ext);
+                $max > ($len = strlen($a = "$x[1]::$row->func$row->params")) or $max = $len;
+                $out[$a] = $row;
             }
         }
         foreach ($out as $a => $row) {

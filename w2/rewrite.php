@@ -119,6 +119,7 @@ class Rewrite
         });
         $trait = ['crash', 'test_crash', '?init='];
         foreach ($ary as $row) {
+            $row->params = '(' . implode(', ', $row->args) . ')';
             if ($row->delete)
                 $row->gerr = 'Function not found';
             if ($row->gerr) {
@@ -161,20 +162,19 @@ class Rewrite
             if (true === $row->uri && count($row->ext) > 1)
                 $row->uri = $row->ext[0];
             $row->ext = implode('<br>', $row->ext) ?: '<r>not found</r>';
-            if ($row->var) {//'()' != $row->pars
-                $pars = [];
-                foreach (explode(',', substr($row->pars, 1, -1)) as $i => $var) {////////
+            if ($row->var) {
+                $args = [];
+                foreach ($row->args as $i => $arg) {////////
                     $ns = "<r>?</r>";
                     if (isset($row->var[$i])) {
                         $row->re .= L::r(' ~ ') . tag($row->var[$i][0], 'style="font-family:monospace;color:"', 'span');
                         $row->var[$i][2] or $ns = '';
                     }
-                    $pars["{{$i}}"] = '{' . substr($var, 1) . $ns . '}';
+                    $args["{{$i}}"] = '{' . substr($arg, 1) . $ns . '}';
                 }
-                $row->ext = strtr($row->ext, $pars);
-                true === $row->uri or $row->uri = strtr($row->uri, $pars);
+                $row->ext = strtr($row->ext, $args);
+                true === $row->uri or $row->uri = strtr($row->uri, $args);
             }
-            //$row->pars = tag($row->pars, 'style="font-family:monospace"', 'span');
         }
     }
 }

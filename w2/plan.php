@@ -147,7 +147,7 @@ class Plan
                         return require $fn;
                     if ('main' != $ware && ($fn = Plan::_t(['main', "mvc/$a0.php"])))
                         return require $fn;
-                    return eval("class $a0 extends Model_$a0[0] {}");
+                    return Plan::vendor($a0);
                 } elseif (isset($cfg[$a0])) {
                     return Plan::_r([$cfg[$a0], "w3/$low.php"]);
                 }
@@ -192,7 +192,7 @@ class Plan
                     SKY::$plans[$key] = ['app' => ['path' => $path] + $conf['app']] + $conf;
                 }
                 $plans = SKY::$plans;
-                $plans['main'] += ['ctrl' => $ctrl + Util::controllers('main')];
+                $plans['main'] += ['ctrl' => $ctrl + Debug::controllers('main')];
                 Plan::cache_p('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite'])); # make dir & save file
                 SKY::$plans = require $fn;
             }

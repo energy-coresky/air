@@ -130,7 +130,7 @@ class Root
             case 'Classes':
                 new Admin;
                 new Display;
-                $ary = Util::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
+                $ary = Debug::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
                 -1 != $t or $add_ext($ary[1], $ary[2]);
                 $echo($ary[1]);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 3]), option($t, $ary[0])) . $priv;
@@ -138,11 +138,11 @@ class Root
 
             case 'Other':
                 echo tag('Traits', '', 'h3');
-                $ary = Util::get_classes(get_declared_traits(), $ext, -1);
+                $ary = Debug::get_classes(get_declared_traits(), $ext, -1);
                 $add_ext($ary[1], $ary[2]);
                 $echo($ary[1], 't');
                 echo tag('Interfaces', '', 'h3');
-                $ary = Util::get_classes(get_declared_interfaces(), $ext, -1);
+                $ary = Debug::get_classes(get_declared_interfaces(), $ext, -1);
                 $add_ext($ary[1], $ary[2]);
                 $echo($ary[1], 'i');
                 echo tag('Loaded extensions, Dependencies, Classes/Functions/Constants', '', 'h3');

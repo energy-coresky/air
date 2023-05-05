@@ -214,11 +214,10 @@ class Globals extends Usage
         parent::$cnt[0]++;
         $mode = $php ? 1 : 0;
         $php or $php = file_get_contents($fn);
-        $methods = [];
         $line = $line_start = 1;
         $curly = $glob_list = $ns_kw = 0;
         $place = 'GLOB';
-        $vars = [];
+        $methods = $param = $vars = [];
         $p1 = $p2 = $ns = '';
         foreach (token_get_all(unl($php)) as $token) {
             $id = $token;
@@ -260,6 +259,7 @@ class Globals extends Usage
                             if (in_array(substr($str, 0, 2), ['j_', 'a_']) || in_array(substr($str, -2), ['_j', '_a'])) {
                                 $method = $str;
                                 $mode = 3;
+                                $param = [];
                             }
                         }
                         $id = [$id, $str];
@@ -273,6 +273,8 @@ class Globals extends Usage
                             $vars[] = $str;
                         if ('$GLOBALS' == $str)
                             $this->push('VAR', $str);
+                        if (4 == $mode)
+                            $param[] = $str;
                         $id = [$id, $str];
                         break;
                     case T_INLINE_HTML:
@@ -280,8 +282,6 @@ class Globals extends Usage
                         break;
                 }
             }
-            if (4 == $mode)
-                $param .= is_array($id) ? $id[1] : $id;
             switch ($id) {
                 case ')':
                     if (4 == $mode) {
@@ -292,7 +292,6 @@ class Globals extends Usage
                 case '(': # def anonymous function
                     if (3 == $mode) {
                         $mode = 4;
-                        $param = '(';
                     } elseif ('GLOB' == $place && (T_FUNCTION === $p1 || T_FUNCTION === $p2 && '&' === $p1)) {
                         $place = 'FUNCTION';
                     }

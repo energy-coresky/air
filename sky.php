@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.482 2023-05-03T15:19:16+03:00 energy';
+    const CORE = '0.483 2023-05-05T13:58:41+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -181,7 +181,7 @@ class SKY implements PARADISE
     static function &ghost($char, $packed, $tpl = '', $flag = 0, $dd = null) {
         SKY::$mem[$char] = [$flag, $flag & 4 ? null : $packed, $tpl, [], $dd ?? SKY::$dd];
         if (SKY::$debug && $tpl)
-            trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Util::closure($tpl) : $tpl), 'GHOST', 1);
+            trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Debug::closure($tpl) : $tpl), 'GHOST', 1);
         if ($packed) foreach (explode("\n", unl($packed)) as $v) {
             list($k, $v) = explode(' ', $v, 2);
             SKY::$mem[$char][3][$k] = escape($v, true);
@@ -295,7 +295,7 @@ class SKY implements PARADISE
         $hnd = $this->shutdown ? get_class($this->shutdown[0][0]) : 'Console';
         trace("0 $hnd ^", 'TOP-VIEW', 1);
         if (DEV)
-            Util::vars(['sky' => $this]);
+            Debug::vars(['sky' => $this]);
         if ($this->was_error & SKY::ERR_SHOW || $this->trace_cli)
             $this->tracing("$hnd\n");
         SQL::close();
@@ -303,7 +303,7 @@ class SKY implements PARADISE
     }
 
     function tracing($top = '', $is_x = true) {
-        $data = DEV ? Util::data() : '';
+        $data = DEV ? Debug::data() : '';
         $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
         $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS) . $data;
         if ($is_x && SKY::$dd) {
@@ -373,7 +373,7 @@ class HEAVEN extends SKY
         $this->eref = !$m ? $referer : false;
 
         if (SKY::$debug)
-            $this->gpc = Util::gpc(); # original input
+            $this->gpc = Debug::gpc(); # original input
 
         require DIR_S . '/w2/mvc.php';
         Plan::app_r('mvc/common_c.php');
@@ -558,7 +558,7 @@ class HEAVEN extends SKY
 
     function tracing($top = '', $is_x = true) {
         if (SKY::$debug)
-            Util::tracing($top);
+            Debug::tracing($top);
         return parent::tracing($top, $is_x);
     }
 }

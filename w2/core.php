@@ -267,7 +267,7 @@ function json($in, $return = false, $off_layout = true) {
     if ($err = json_last_error())
         trace('json error: ' . $err, true, 1);
     if (DEV && !$return)
-        Util::vars(['$$' => $in], MVC::instance(-1)->no);
+        Debug::vars(['$$' => $in], MVC::instance(-1)->no);
     if ($return)
         return $out;
     echo $out;

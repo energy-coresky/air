@@ -162,9 +162,9 @@ DATABASES ({{count($databases)}})
         @if($row->delete)
             <legend style="background:pink;color:#000">{{$row->func}}</legend>
         @else
-            <legend><b>{{$row->func}}</b>{{$row->pars}}</legend>
+            <legend><b>{{$row->func}}</b>({{implode(', ', $row->args)}})</legend>
         ~if
-        <input type="hidden" name="args" value="{{$row->pars}}"/>
+        <input type="hidden" name="argc" value="{{true !== $row->args ? count($row->args) : 0}}"/>
         @if($cshow)
             <div class="func-code" style="overflow:auto;padding: 7px;">{!$row->code!}</div>
             <div class="the-url" style="overflow:auto">{!$row->uri!}</div>
@@ -200,11 +200,6 @@ DATABASES ({{count($databases)}})
 @if($row->code)
     <table width="100%"><tr>
         <td width="85%" style="background:#fff;border:none;padding:10px;">
-            <div class="fl" style="position:">
-                <div class="fl" style="position:relative;top:-18px; left:120px; background:#fff;">
-                    <label><input type="checkbox" name="production"{{$row->prod}}>show production code</label>
-                </div>
-            </div>
             <div id="func-code" style="overflow:auto">{!$row->code!}</div>
         </td>
         <td width="15%" valign="top" style="border:none" onmouseenter="sky.g.code(this,'{{$sky->_1}}')">
@@ -404,7 +399,7 @@ dl {margin:0; }
   <a style="font-weight:normal" href="_gate">Show gates</a>
 </h4>
 #.map.rheader ------------------------------------------------------------------------------
-#use(.rheader as header)@php $h1 = $func = ''; $n=count($map); ~php
+#use(.rheader as header)
 @use(.r_gate as m_gate)
 <div class="bg-wx" style="border-bottom:1px solid #4338ca;position:sticky; top:0px; height:94px;padding:0; background:#fff">
   <div style="width:110px; height:93px;">
@@ -452,7 +447,8 @@ dl {margin:0; }
     @loop($e_func(explode('.', $one)))
     <tr@if($row->gerr) bgcolor="#fdd"@elseif(true !== $row->uri) bgcolor="#ffc"~if>
       <td style="border-right:1px solid #ccc">
-        {{1 + $_2}}. <span style="color:#00b;font-family:monospace">-&gt;{!$row->func . $row->pars!}</span>
+        {{1 + $_2}}. <span style="color:#00b">-&gt;{!$row->func!}</span><span
+            style="font-family:monospace">{!$row->params!}</span>
       </td>
       @if($row->gerr)
         <td colspan="2">{{$row->gerr}}</td>

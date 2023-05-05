@@ -1,23 +1,23 @@
 <?php
 
-class Util
+class Debug
 {
     private static $vars = [];
 
     static function data() {
-        if (!isset(Util::$vars[0])) {
+        if (!isset(self::$vars[0])) {
             $top = MVC::instance();
             trace("0 $top->hnd " . MVC::$layout . "^$top->body", 'TOP-VIEW', 1);
-            Util::vars([]);
+            self::vars([]);
         }
-        ksort(Util::$vars);
+        ksort(self::$vars);
         $dev_data = [
             'cnt' => [
-                $cnt = count($a1 = Util::get_classes(get_declared_classes())[1]),
-                $cnt + count($a2 = Util::get_classes(get_declared_interfaces())[1]),
+                $cnt = count($a1 = self::get_classes(get_declared_classes())[1]),
+                $cnt + count($a2 = self::get_classes(get_declared_interfaces())[1]),
             ],
             'classes' => array_merge($a1, $a2, get_declared_traits()),
-            'vars' => Util::$vars,
+            'vars' => self::$vars,
             'errors' => SKY::$errors,
         ];
         return tag(html(json_encode($dev_data)), 'class="dev-data" style="display:none"');
@@ -31,8 +31,8 @@ class Util
             $in += [isset($in['sky']) ? 'sky$' : 'sky' => $sky];
         }
         $out = Plan::$see_also = [];
-        isset(Util::$vars[$no]) or Util::$vars[$no] = [];
-        $p =& Util::$vars[$no];
+        isset(self::$vars[$no]) or self::$vars[$no] = [];
+        $p =& self::$vars[$no];
 
         foreach ($in as $k => $v) {
             if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
@@ -60,9 +60,9 @@ class Util
             if (0 === $is_blk)
                 return $out;
             if ($new = array_diff_key(Plan::$see_also, $collect))
-                $out += Util::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
+                $out += self::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
             if ($new = array_diff_key(Plan::$see_also, $collect))
-                $out += Util::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
+                $out += self::vars(array_combine(array_map('key', $new), array_map('current', $new)), 0, 0);
         }
         uksort($out, function ($a, $b) {
             $a_ = (bool)strpos($a, ':');
@@ -96,23 +96,19 @@ class Util
 
     static function not_found($class, $name) {
         global $sky;
-        switch ($class) {
-           //case 'Controller':
-            case 'default_c_R':
-                is_string($i0 = $sky->_0) or $i0 = '*';
-                if (DEV && Plan::_t([Plan::$ware, "mvc/c_$i0.php"])) {
-                    Plan::cache_d(['main', 'sky_plan.php']);
-                    $sky->fly or jump(URI);
-                }
-                $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
-                $msg = preg_match("/^\w+$/", $i0)
-                    ? "Controller `c_$i0.php` or method `default_c::{$x}_$i0()` not exist"
-                    : "Method `default_c::default_$x()` not exist";
-                trace($msg, (bool)DEV);
-                break;
-            default:
-                trace("Method `{$class}::$name()` not exist", (bool)DEV);
+        $msg = "Method `{$class}::$name()` not exist";
+        if ('default_c_R' == $class) {
+            is_string($i0 = $sky->_0) or $i0 = '*';
+            if (DEV && Plan::_t([Plan::$ware, "mvc/c_$i0.php"])) {
+                Plan::cache_d(['main', 'sky_plan.php']);
+                $sky->fly or jump(URI);
+            }
+            $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
+            $msg = preg_match("/^\w+$/", $i0)
+                ? "Controller `c_$i0.php` or method `default_c::{$x}_$i0()` not exist"
+                : "Method `default_c::default_$x()` not exist";
         }
+        trace($msg, (bool)DEV);
     }
 
     static function request_headers() {

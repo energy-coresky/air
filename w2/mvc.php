@@ -19,7 +19,7 @@ function view($_in, $_return = false, &$_vars = null) {
     if ('' !== $mvc->ob) {
         $mvc->body = '';
         if (DEV && !$layout)
-            Util::vars(['$' => $mvc->ob], $mvc->no);
+            Debug::vars(['$' => $mvc->ob], $mvc->no);
     }
     trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->no ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 
@@ -38,7 +38,7 @@ abstract class MVC_BASE
     function __get($name) {
         static $instances = [];
         if (in_array(substr($name, 0, 2), ['m_', 't_'])) {
-            $obj = isset($instances[$name]) ? $instances[$name] : ($instances[$name] = new $name);
+            $obj = $instances[$name] ?? ($instances[$name] = new $name);
             if ('m' != $name[0]) {
                 SQL::$dd = $obj->dd;
                 SQL::$dd->onduty($obj->table);
@@ -66,13 +66,13 @@ abstract class Bolt {
 }
 
 //////////////////////////////////////////////////////////////////////////
-abstract class Model_m extends MVC_BASE
+class Model_m extends MVC_BASE
 {
     use SQL_COMMON;
     protected $dd;
 
-    function __construct() { # set database driver & onduty table
-        isset($this->table) or $this->table = substr(get_class($this), 2);
+    function __construct($table = false) { # set database driver & onduty table
+        isset($this->table) or $this->table = $table ?: substr(get_class($this), 2);
         $this->dd = $this->head_y();
     }
 
@@ -87,7 +87,7 @@ abstract class Model_m extends MVC_BASE
 }
 
 /** SQL parser methods */
-abstract class Model_t extends Model_m
+class Model_t extends Model_m
 {
     protected $id;
 
@@ -168,7 +168,7 @@ abstract class Controller extends MVC_BASE
 
     function __call($name, $args) {
         if (SKY::$debug)
-            Util::not_found(get_class($this), $name);
+            Debug::not_found(get_class($this), $name);
         return 404;
     }
 }
@@ -528,7 +528,7 @@ class MVC extends MVC_BASE
             if (!Plan::_t($fn_src = "mvc/$class.php"))
                 throw new Error("Controller `$class` not found");
             if ($recompile = !$dst || Plan::_m($fn_src) > Plan::gate_m($fn_dst))
-                Plan::gate_p($fn_dst, Gate::instance()->parse(Plan::$ware, $fn_src, $class));
+                Plan::gate_p($fn_dst, Gate::instance()->parse(Plan::$ware, $fn_src, false));
         }
         $x = $this->return ? 'j' : 'a';
         $action = '' === $i0 ? "empty_$x" : $x . '_' . $i0;

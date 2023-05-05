@@ -62,7 +62,7 @@ class Language
             $this->langs = array_merge([DEFAULT_LG], $this->langs); # default is first
             $this->api = unserialize(SKY::d('lg_api') ?: serialize(['i' => "{$this->langs[1]}.*.0"]));
         }
-        $this->t = MVC::$cc->{"t_$sky->d_lgt"};
+        $this->t = new Model_t($sky->d_lgt);
         $this->page = $sky->d_lng_page ?: '*';
     }
 

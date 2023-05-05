@@ -104,7 +104,7 @@ class Jet
         if ($tail)
             $out .= ' ?>';
         if (DEV && !$this->tailed)
-            $out .= '<?php Util::vars(get_defined_vars(), $sky->no) ?>';
+            $out .= '<?php Debug::vars(get_defined_vars(), $sky->no) ?>';
         if ($return) {
             $out .= '<?php return ' . ($tail ? 'implode("", $_ob);' : 'ob_get_clean();');
         } else {
@@ -150,7 +150,7 @@ class Jet
                 $s .= "; trace(\$sky->no . ' ' . ('_R' == substr(MVC::\$ctrl, -2) ? substr(MVC::\$ctrl, 0, -2) : MVC::\$ctrl) . '::$pf[0]_$name() ^', 'BLK-VIEW')";
             if (!$closure)
                 return ["<?php $s ?>", $jet->parsed];
-            $vars = DEV ? 'Util::vars(get_defined_vars(), $sky->no, true); ' : '';
+            $vars = DEV ? 'Debug::vars(get_defined_vars(), $sky->no, true); ' : '';
             return ["<?php call_user_func(function() use(&\$_vars,\$sky) { $s ?>", $jet->parsed, "<?php $vars}) ?>"];
 
         } elseif ($pf) { # asterisk
@@ -333,7 +333,7 @@ class Jet
                 $p = explode('.', $arg, 2);
                 return (string)(new SVG($p[0], $p[1] ?? false));
             case 'pdaxt':
-                return sprintf('<?php Util::pdaxt(%s) ?>', $arg);
+                return sprintf('<?php Debug::pdaxt(%s) ?>', $arg);
             case 'else':
                 return '<?php else: ?>';
             case 'elseif':
@@ -353,7 +353,7 @@ class Jet
             case 'head':
                 return "<?php MVC::head($arg) ?>";
             case 'tail':
-                $vars = DEV ? ' Util::vars(get_defined_vars(), $sky->no);' : '';
+                $vars = DEV ? ' Debug::vars(get_defined_vars(), $sky->no);' : '';
                 $this->tailed = true;
                 return "<?php$vars HEAVEN::tail_t() ?>";
             case 'continue':

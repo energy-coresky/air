@@ -15,7 +15,6 @@ class Gate
     public $var = [];
     public $gerr;
 
-    private $arg_c = 0;
     private $pfs_c;
     private $opcnt;
     private $pfs_ends;
@@ -45,77 +44,62 @@ class Gate
 
     static function instance() {
         static $gate;
-        return $gate ?: ($gate = new Gate); // ?: => ??
+        return $gate ?? ($gate = new Gate);
     }
 
-    function gate_code($ary, $class, $func) {
+    function highlight($ary, $ctrl, $act, $argc) {
         $this->uri = '';
         $this->var = [];
-        $cmode = $this->contr_mode($class, $func);
-        $code = highlight_string("<?\n" . $this->code($ary, $cmode), true);
+        $cmode = $this->ctrl_mode($ctrl, $act);
+        $code = highlight_string("<?\n" . $this->code($ary, $cmode, $argc), true);
         $code = substr_replace($code, '', strpos($code, '&lt;?'), 5);
         return substr_replace($code, '', strpos($code, '<br />'), 6);
     }
 
-    function argc($s) {
-        $s = preg_replace("/\s+/", '', $s);
-        $this->arg_c = 0;
-        if ('' === $s || '()' === $s)
-            return;
-        $this->arg_c++;
-        foreach (token_get_all("<?php $s") as $v)
-            is_array($v) or ',' != $v or $this->arg_c++;
-    }
-
-    function parse($ware, $src_fn, $dst_class = false) {
-        $content = Plan::_g([$ware, $src_fn]);
-        $cls = basename($src_fn, '.php');
-        $list = (Globals::instance())->parse_def($cls, $content);
-        if ('main' == $ware && 'default_c' == $cls) {
+    function parse($ware, $fn, $act_only = true) {
+        $content = Plan::_g([$ware, $fn]);
+        $ctrl = basename($fn, '.php');
+        $list = (Globals::instance())->parse_def($ctrl, $content);
+        if ('main' == $ware && 'default_c' == $ctrl) {
             foreach ($this->trait as $k => $v)
                 isset($list[$k]) or $list[$k] = $v;
         }
-        if (!$dst_class)
+        if ($act_only)
             return $list;
 
-        $gape = DEV ? "trace('GATE: $dst_class, ' . (\$recompile ? 'recompiled' : 'used cached'));\n\n" : '';
-        $gape .= "class {$dst_class}_G extends Bolt\n{";
+        $bt = DEV ? "trace('GATE: $ctrl, ' . (\$recompile ? 'recompiled' : 'used cached'));\n\n" : '';
+        $bt .= "class {$ctrl}_G extends Bolt\n{";
 
-        $ary = Plan::_rq([$ware, 'gate.php'])[$dst_class] ?? [];
-        foreach ($list as $name => $pars) {
-            $this->argc($pars);
-            $cmode = $this->contr_mode($dst_class, $name);
-            $php = $this->code($ary[$name] ?? [], $cmode, false);
+        $ary = Plan::_rq([$ware, 'gate.php'])[$ctrl] ?? [];
+        foreach ($list as $act => $args) {
+            $cmode = $this->ctrl_mode($ctrl, $act);
+            $php = $this->code($ary[$act] ?? [], $cmode, count($args));
             $php = "\t\t" . str_replace("\n", "\n\t\t", substr($php, 0, -1)) . "\n";
-            $gape .= "\n\tfunction $name() {\n$php\t}\n";
+            $bt .= "\n\tfunction $act() {\n$php\t}\n";
         }
 
-        if (!preg_match("/^<\?(php)?(.*?)class $dst_class extends(.+)$/s", $content, $match))
-            throw new Error("File `$src_fn` must start from &lt;?");
-        return '<?php' . $match[2] . "$gape}\n\nclass {$dst_class}_R extends" . $match[3];
+        if (!preg_match("/^<\?(php)?(.*?)class $ctrl extends(.+)$/s", $content, $match))
+            throw new Error("File `$ware-$fn` must start from &lt;?");
+        return '<?php' . $match[2] . "$bt}\n\nclass {$ctrl}_R extends" . $match[3];
     }
 
-    function contr_mode($class, $func) {
-        $this->_j = in_array($func, ['empty_j', 'default_j']) || 'j_' == substr($func, 0, 2);
-        $default = in_array($func, ['default_a', 'default_j']);
-        if (!$this->_j && !$default && 'a_' != substr($func, 0, 2) && 'empty_a' !== $func)
-            return false; # used in parser
-        if ('default_c' == $class && $default)
+    function ctrl_mode($ctrl, $act) {
+        $this->_j = in_array($act, ['empty_j', 'default_j']) || 'j_' == substr($act, 0, 2);
+        $d = in_array($act, ['default_a', 'default_j']);
+        if (($x = 'default_c' == $ctrl) && $d)
             return [1, false, false];
-        if ('default_c' != $class && !$default)
-            return [3, substr($class, 2), 'e' == $func[0] ? '' : substr($func, 2)];
-        return [2, $default ? substr($class, 2) : substr($func, 2), $default];
+        if ($x || $d)
+            return [2, $d ? substr($ctrl, 2) : ('e' == $act[0] ? '' : substr($act, 2)), $d];
+        return [3, substr($ctrl, 2), 'e' == $act[0] ? '' : substr($act, 2)];
     }
 
-    function code($ary, $cmode, $is_view = true) {
+    function code($ary, $cmode, $argc) {
         list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
         if ($this->_j)
             $meth = [0];
-    #    if (!$meth && 'main' == $cmode[1] && '' === $cmode[2]) # for main page
-    #        $meth = [1];
-        $this->_e = 'e();';
-        if (!SKY::s('gate_404') && (!DEV || $is_view && SKY::d('sg_prod')))
-            $this->_e = 'die;';
+        if (!$meth && 2 == $cmode[0] && '' === $cmode[1]) # for default_c::empty_a()
+            $meth = [1];
+        $this->_e = SKY::s('gate_404') || DEV ? 'e();' : 'die;';
         $this->gerr = $s0 = '';
         if (!$cnt_meth = count($meth))
             $this->gerr .= "$this->_e # no HTTP methods defined\n";
@@ -139,7 +123,7 @@ class Gate
             $php .= ";\n";
             $this->ends = array_merge($this->pfs_ends, $this->ends);
         }
-        if ($this->arg_c != count($this->ends))
+        if ($argc != count($this->ends))
             $this->gerr .= "$this->_e # parameters counts doesn't match\n";
         $cx = ['s', 'g', 'p'];
         $cx2 = ['sky->surl', '_GET', '_POST'];
@@ -260,8 +244,10 @@ class Gate
             $eq0[] = $this->comp_ary($this->opcnt[0], $this->sz_surl - 1, 's');
         if (1 == $this->sz_ary && 3 == $i && !$t3)
             $this->sz_ary = false;
-        if ($this->sz_ary)
+        if ($this->sz_ary) {
+            2 != $i or '' !== $p0 or $this->sz_ary = 0; # for default_c::empty_a()
             $eq0[] = $this->comp_ary($this->opcnt[1], $this->sz_ary - 1, 'g');
+        }
         return $php;
     }
 
@@ -499,10 +485,10 @@ class Gate
     }
 
     private $trait = [
-        'j_init' => '($tz,$scr)',
-        'a_crash' => '()',
-        'a_etc' => '($fn,$ware)',
-        'a_test_crash' => '()',
+        'j_init'       => ['$tz', '$scr'],
+        'a_crash'      => [],
+        'a_etc'        => ['$fn', '$ware'],
+        'a_test_crash' => [],
     ];
 }
 
