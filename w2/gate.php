@@ -94,13 +94,16 @@ class Gate
     }
 
     function code($ary, $cmode, $argc) {
-        list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
+        [$flag, $meth, $addr, $pfs] = $ary + [0, [], [], []];
+        $this->_e = SKY::s('gate_404') || DEV ? 'e();' : 'die;';
+        $this->gerr = $s0 = '';
+        $this->opcnt = [0, 0, 0]; # optimize count of surl GET POST
+        $this->ends = $this->pfs_ends = $this->eq_a = $this->eq_b = $this->eq_z = [];
+
         if ($this->_j)
             $meth = [0];
         if (!$meth && 2 == $cmode[0] && '' === $cmode[1]) # for default_c::empty_a()
             $meth = [1];
-        $this->_e = SKY::s('gate_404') || DEV ? 'e();' : 'die;';
-        $this->gerr = $s0 = '';
         if (!$cnt_meth = count($meth))
             $this->gerr .= "$this->_e # no HTTP methods defined\n";
         $eq0 = 1 == $cnt_meth
@@ -111,11 +114,13 @@ class Gate
         $is_post = in_array(0, $meth);
         if ($this->pfs_c = count($pfs))
             $is_post or $this->gerr .= "$this->_e # no POST HTTP method selected\n";
-        $this->opcnt = [0, 0, 0]; # optimize count of surl GET POST
-        $this->pfs_ends = $this->eq_a = $this->eq_b = $this->eq_z = [];
+
         $php = $this->process_addr($addr, $flag, $cmode, $eq0);
         if ($is_post)
             $php .= $this->process_pfs($pfs, $flag, $cnt_meth, $eq0);
+        if ($argc != count($this->ends))
+            $this->gerr .= "$this->_e # parameters counts doesn't match\n";
+        $php .= $this->gerr;
         if ($this->ends || $this->pfs_ends) {
             $php .= $this->ends ? "return [" . implode(', ', $this->ends) . "]" : 'return $post';
             if ($this->pfs_ends && $this->ends)
@@ -123,8 +128,6 @@ class Gate
             $php .= ";\n";
             $this->ends = array_merge($this->pfs_ends, $this->ends);
         }
-        if ($argc != count($this->ends))
-            $this->gerr .= "$this->_e # parameters counts doesn't match\n";
         $cx = ['s', 'g', 'p'];
         $cx2 = ['sky->surl', '_GET', '_POST'];
         $cnt = count($eq0) - 1;
@@ -138,8 +141,9 @@ class Gate
                     $v = '$cnt_' . $cx[$i] . " > $m[3]";
                     $this->opcnt[$i] = 0;
                     $s0 .= '$cnt_' . $cx[$i] . ' = count($' . $cx2[$i] . ");\n";
-                } elseif ($k < $cnt)
+                } elseif ($k < $cnt) {
                     continue;
+                }
             }
             if ($k == $cnt) { # last step
                 foreach ($this->opcnt as $i => $f)
@@ -152,7 +156,7 @@ class Gate
             $php = implode(' = ', $this->eq_b) . " = false;\n$php";
         if ($this->eq_z)
             $php = implode(' = ', $this->eq_z) . " = 0;\n$php";
-        return $s0 . implode(' && ', $eq0) . " or $this->_e\n" . $php . $this->gerr;
+        return $s0 . implode(' && ', $eq0) . " or $this->_e\n" . $php;
     }
 
     function comp_ary($opcnt, $sz, $s) {
@@ -164,26 +168,12 @@ class Gate
         return $sz ? "count($ary[$s]) > $sz" : $ary[$s];
     }
 
-    function span($in, $c, $ns = 0) {
-        if (2 == $ns)
-            return tag($in, 'style="color:' . $c . '"', 'span');//font-weight:bold;
-        return tag($in, 'style="background:' . $c . ($ns ? ';border-bottom:2px solid red' : '') . '"', 'span');
-    }
-
-    function spa2($in, $c, $ns = 0) {
-        $cnt = count($this->var);
-        $this->var[] = $in + [2 => $ns];
-        return tag("{{$cnt}}", 'style="font-weight:bold' . ($ns ? ';border-bottom:2px solid red' : '') . '"', 'span');
-    }
-
     function process_addr($addr, $flag, $cmode, &$eq0) {
-        list($i, $p0, $p1) = $cmode;
+        [$i, $p0, $p1] = $cmode;
+        $ctrl = $p0 ? tag($p0, 'style="color:' . (2 == $i && !$p1 ? '#00b' : '#b88') . '"', 'span') : '';
+        $act = '' === $p1 ? '' : tag($p1, 'style="color:#00b"', 'span');
         $this->i = $i;
-
-        $ctrl = $p0 ? $this->span($p0, 2 == $i && !$p1 ? '#00b' : '#b88', 2) : '';
-        $act = '' === $p1 ? '' : $this->span($p1, '#00b', 2);
         $this->uri = '/';
-        $this->ends = [];
         $php = $this->ra = $this->ns = '';
         $this->raw_input = $this->sz_surl = $this->sz_ary = 0;
         $t3 = self::HAS_T3 & $flag;
@@ -212,11 +202,11 @@ class Gate
                         $this->uri .= "$ctrl?$act";
                         $skip = 1;
                     } elseif ($key === $p0 && 2 == $i) {
-                        $this->uri .= $this->_j ? "?$ctrl=" : "?$ctrl="; ///AJAX
+                        $this->uri .= "?$ctrl=";
                         $skip = 1;
                     } elseif (3 == $i) {
                         $t3 ? ($this->sz_surl = 2) : ($this->sz_ary += 1);
-                        $this->uri .= $this->_j ? "?$ctrl=$act" : ($t3 ? "$ctrl/$act" : "?$ctrl=$act"); ///AJAX
+                        $this->uri .= $t3 ? "$ctrl/$act" : "?$ctrl=$act";
                         $b0 = $this->_j || !$t3;
                     } elseif (2 == $i) {
                         $this->sz_surl = 1;
@@ -231,9 +221,7 @@ class Gate
                 }
                 $php .= $this->each_row($pos, $v, false, $skip);
             }
-        } elseif (1 == $i) {
-            ;////////$this->uri .= $this->_j ? "?AJAX=" : '';
-        } else { //if ('main' !== $p0 || '' !== $p1) {
+        } elseif ($i > 1) { //if ('main' !== $p0 || '' !== $p1) {
             $this->uri .= $this->_j ? "?$ctrl=" : ($t3 ? $ctrl : "?$ctrl"); ///AJAX
             if (3 == $i && '' !== $p1)
                 $this->uri .= $this->_j ? $act : ($t3 ? "?$act" : "=$act");
@@ -275,8 +263,7 @@ class Gate
                 1 == $cnt_meth ? ($eq0[] = $exp) : $php = "$exp or $this->_e\n$php";
             }
         } elseif ($this->raw_input) {
-            $php .= ($gerr = "$this->_e # no BODY fields selected\n");
-            $this->gerr .= $gerr;
+            $this->gerr .= "$this->_e # no BODY fields selected\n";
         }
         if ($cnt_meth > 1) {
             if ($this->pfs_ends = $this->ends) {
@@ -322,17 +309,14 @@ class Gate
     }
 
     function each_row($pos, $val, $is_pfs, $skip = 0) {
-        list ($kname, $key, $vname, $val, $ns) = $val + ['', '', '', '', 0];
+        [$kname, $key, $vname, $val, $ns] = $val + ['', '', '', '', 0];
         $this->key = $php = '';
         $qreq = $this->raw_input ? false : $ns && $this->q_required($pos);
         $pos++;
         $row = [];
         if ('' === $key) { # key is empty string
-            if ($is_pfs ? !$this->raw_input : $this->start) {
-                $gerr = "$this->_e # required key on $pos " . ($is_pfs ? 'postfield' : 'address') . " block\n";
-                $php .= $gerr;
-                $this->gerr .= $gerr;
-            }
+            if ($is_pfs ? !$this->raw_input : $this->start)
+                $this->gerr .= "$this->_e # required key on $pos " . ($is_pfs ? 'postfield' : 'address') . " block\n";
         } else {
             $skip or $row[] = $this->bless($kname, $key, $is_pfs, $ns, $qreq, 0);
             $this->i++;
@@ -471,15 +455,20 @@ class Gate
             $this->eq_z[] = "\$q$x";
         if ($is_pfs)
             return $out;
+        $span = function ($in, $c, $ns = 0) {
+            $cnt = count($this->var);
+            $this->var[] = $in + [2 => $ns];
+            return tag("{{$cnt}}", 'style="font-weight:bold' . ($ns ? ';border-bottom:2px solid red' : '') . '"', 'span');
+        };
         if ($this->start) {
             $q = $is_val
                 ? ('' === $data ? '' : ($ns ? tag('=', 'style="border-bottom:2px solid red"', 'span') : '='))
                 : ($this->i == $this->start ? '?' : '&');
             $this->uri .= $re || $ns && $e7
-                ? $q . $this->spa2([$rx, $data], $is_val ? 'pink' : '#0f0', $ns)
+                ? $q . $span([$rx, $data], $is_val ? 'pink' : '#0f0', $ns)
                 : $q . ($ns ? tag($data, 'style="border-bottom:2px solid red"', 'span') : $data);
         } else {
-            $this->uri .= (1 == $this->i ? '' : '/') . ($ns || $re ? $this->spa2([$rx, $data], 'yellow', $ns) : $data);
+            $this->uri .= (1 == $this->i ? '' : '/') . ($ns || $re ? $span([$rx, $data], 'yellow', $ns) : $data);
         }
         return $out;
     }

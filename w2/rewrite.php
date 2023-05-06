@@ -111,11 +111,11 @@ class Rewrite
 
     static function external(&$ary, $ctrl) {
         usort($ary, function ($a, $b) {
-            if (in_array($a->func[0], ['e', 'd']))
+            if (in_array($a->act[0], ['e', 'd']))
                 return -1;
-            if (in_array($b->func[0], ['e', 'd']))
+            if (in_array($b->act[0], ['e', 'd']))
                 return 1;
-            return strcmp($a->func, $b->func);
+            return strcmp($a->act, $b->act);
         });
         $trait = ['crash', 'test_crash', '?init='];
         foreach ($ary as $row) {

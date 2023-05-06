@@ -32,9 +32,9 @@ class dev_c extends Controller
                 $this->d_last_page = URI;
             $this->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
             return $this->_y + [
-                'tx' => '_trace' == $this->_0 ? $this->_1 : 0,
-                'ware_dir' => '',
-                'tasks' => [
+                'y_tx' => '_trace' == $this->_0 ? $this->_1 : 0,
+                'y_ware_dir' => '',
+                'y_tasks' => [
                     '_dev?main=0' => 'Main',
                     '_map' == $this->_0 ? '_map' : '_gate' => 'Open SkyGate',
                     '_lang?list' => 'Open SkyLang',
@@ -45,7 +45,7 @@ class dev_c extends Controller
                 'wares' => $this->dev->wares_menu(),
                 'ware1' => substr(parse_url($this->d_ware1, PHP_URL_PATH), 1),
                 'ware2' => substr(parse_url($this->d_ware2, PHP_URL_PATH), 1),
-                'act' => function ($uri) {
+                'y_act' => function ($uri) {
                     return $this->_0 == explode('?', $uri)[0] && !in_array($this->_1, ['view', 'ware']);
                 },
             ];
@@ -65,9 +65,9 @@ class dev_c extends Controller
                 if ("_$name" != $w1)
                     $this->d_ware2 = $tmp;
             }
-            Plan::_r('mvc/' . ($class = $name . '_c') . '.php');
+            Plan::_r('mvc/' . ($ctrl = $name . '_c') . '.php');
             MVC::$cc = MVC::$mc;
-            MVC::$mc = new $class;
+            MVC::$mc = new $ctrl;
             if (!method_exists(MVC::$mc, $action = '' == $this->_1 ? 'empty_' . $x : $x . "_$this->_1"))
                 $action = 'default_' . $x;
             if (method_exists(MVC::$mc, 'head_y'))
@@ -168,7 +168,7 @@ class dev_c extends Controller
             'ctrl' => Debug::controllers(),
             'cshow' => self::cshow() ? ' checked' : '',
             'e_func' => self::gate($this->_w, $this->_c),
-            'func' => $this->_3 ?? '',
+            'act' => $this->_3 ?? '',
         ] + $ary;
     }
 
@@ -246,16 +246,16 @@ class dev_c extends Controller
         return 'main';
     }
 
-    static function save($ware, $class, $act = false, $in = false) {
+    static function save($ware, $ctrl, $act = false, $in = false) {
         $ary = Plan::_rq([$ware, 'gate.php']);
         if (!$act) { # delete controller
-            unset($ary[$class]);
+            unset($ary[$ctrl]);
         } elseif (!$in) { # delete action
-            unset($ary[$class][$act]);
+            unset($ary[$ctrl][$act]);
         } else { # update, add
-            $ary[$class][$act] = true === $in ? self::post_data() : $in;
+            $ary[$ctrl][$act] = true === $in ? self::post_data() : $in;
         }
-        Plan::gate_dq([$ware, "$ware-$class.php"]); # drop cache file
+        Plan::gate_dq([$ware, "$ware-$ctrl.php"]); # drop cache file
         Plan::_p([$ware, 'gate.php'], Plan::auto($ary));
     }
 
@@ -266,30 +266,28 @@ class dev_c extends Controller
         return Gate::$cshow;
     }
 
-    static function gate($ware, $class, $act = null, $is_edit = true) {
-        $ary = Plan::_rq([$ware, 'gate.php'])[$class] ?? [];
+    static function gate($ware, $ctrl, $act = null, $is_edit = true) {
+        $ary = Plan::_rq([$ware, 'gate.php'])[$ctrl] ?? [];
         $gate = Gate::instance();
-        $src = Plan::_t([$ware, $fn = "mvc/$class.php"]) ? $gate->parse($ware, $fn) : [];
+        $src = Plan::_t([$ware, $fn = "mvc/$ctrl.php"]) ? $gate->parse($ware, $fn) : [];
         if ($diff = array_diff_key($ary, $src))
             $src = array_map('is_array', $diff) + $src;
         if ($has_act = is_string($act))
             $src = [$act => $src[$act]];
         $edit = $has_act && $is_edit;
         $return = [
-            'row_c' => function($row = false) use (&$src, $ary, $gate, $class, $edit) {
+            'row_c' => function($row = false) use (&$src, $ary, $gate, $ctrl, $edit) {
                 if ($row && $row->__i && false === next($src) || !$src)
                     return false;
-                $args = $src[$name = key($src)];
-                $is_j = in_array($name, ['empty_j', 'default_j']) || 'j_' == substr($name, 0, 2);
-                $ary = $ary[$name] ?? [];
-                list ($flag, $meth, $addr, $pfs) = $ary + [0, [], [], []];
-                if ($is_j)
-                    $meth = [0];
+                $ary = $ary[$act = key($src)] ?? [];
+                [$flag, $meth, $addr, $pfs] = $ary + [0, [], [], []];
+                if ($is_j = in_array($act, ['empty_j', 'default_j']) || 'j_' == substr($act, 0, 2))
+                    $meth = [0];//2del
                 $vars = [
-                    'func' => $name,
+                    'act' => $act,
+                    'args' => $args = $src[$act],
                     'delete' => $delete = true === $args,
-                    'args' => $args,
-                    'code' => $edit || Gate::$cshow ? $gate->highlight($ary, $class, $name, $delete ? 0 : count($args)) : false,
+                    'code' => $edit || Gate::$cshow ? $gate->highlight($ary, $ctrl, $act, $delete ? 0 : count($args)) : false,
                     'gerr' => $gate->gerr,
                     'uri' => $gate->uri,
                     'var' => $gate->var,
@@ -308,7 +306,7 @@ class dev_c extends Controller
             return $return;
         return [
             'row' => (object)($return['row_c']()),
-            'wc' => "$ware.$class",
+            'wc' => "$ware.$ctrl",
         ];
     }
 

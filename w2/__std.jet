@@ -160,9 +160,9 @@ DATABASES ({{count($databases)}})
     @loop($e_func)
     <fieldset>
         @if($row->delete)
-            <legend style="background:pink;color:#000">{{$row->func}}</legend>
+            <legend style="background:pink;color:#000">{{$row->act}}</legend>
         @else
-            <legend><b>{{$row->func}}</b>({{implode(', ', $row->args)}})</legend>
+            <legend><b>{{$row->act}}</b>({{implode(', ', $row->args)}})</legend>
         ~if
         <input type="hidden" name="argc" value="{{true !== $row->args ? count($row->args) : 0}}"/>
         @if($cshow)
@@ -188,9 +188,9 @@ DATABASES ({{count($databases)}})
         @if(!$row->code)
         <div class="fr" style="text-align:right">
             @if($row->delete)
-                <input type="button" class="edit" value="delete" onclick="ajax('{{$wc}}.{{$row->func}}',{},'v-body','_delete')"/>
+                <input type="button" class="edit" value="delete" onclick="ajax('{{$wc}}.{{$row->act}}',{},'v-body','_delete')"/>
             ~if
-            <input type="button" class="edit" value="edit" onclick="sky.g.edit(this,'{{$wc}}.{{$row->func}}')"/>
+            <input type="button" class="edit" value="edit" onclick="sky.g.edit(this,'{{$wc}}.{{$row->act}}')"/>
         </div>
         ~if
         <u>Postfields or body</u>:<br><br>
@@ -286,19 +286,19 @@ sky.g.hide = function(el) {
 };
 $(function() {
     #if('_map' != :0)
-    if ('{{$func}}') {
-        $('#v-body div:eq(0)').prepend(`<h1 class="g-err">Gate error in "{{$ctrl[$wc][1]}}::{{$func}}()"</h1>`);
+    if ('{{$act}}') {
+        $('#v-body div:eq(0)').prepend(`<h1 class="g-err">Gate error in "{{$ctrl[$wc][1]}}::{{$act}}()"</h1>`);
             //'<div style="margin:0 10px;">'+
             //window.parent.document.getElementById('trace-x').innerHTML// + '</div>'
-//        $('h1 span.gate-err').html('{{$ctrl[$wc][1]}}::{{$func}}');
+//        $('h1 span.gate-err').html('{{$ctrl[$wc][1]}}::{{$act}}');
         sky.d.files();
         setTimeout(function() {
             var el = false;
             $('#gate legend b').each(function() {
-                if ($(this).text() == '{{$func}}')
+                if ($(this).text() == '{{$act}}')
                     el = $(this).parent().parent().find('input[type=button]')[0];
             });
-            sky.g.edit(el, '{{$wc}}.{{$func}}', true);
+            sky.g.edit(el, '{{$wc}}.{{$act}}', true);
         }, 500);
     }
     #end
@@ -447,7 +447,7 @@ dl {margin:0; }
     @loop($e_func(explode('.', $one)))
     <tr@if($row->gerr) bgcolor="#fdd"@elseif(true !== $row->uri) bgcolor="#ffc"~if>
       <td style="border-right:1px solid #ccc">
-        {{1 + $_2}}. <span style="color:#00b">-&gt;{!$row->func!}</span><span
+        {{1 + $_2}}. <span style="color:#00b">-&gt;{!$row->act!}</span><span
             style="font-family:monospace">{!$row->params!}</span>
       </td>
       @if($row->gerr)

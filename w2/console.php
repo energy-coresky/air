@@ -271,7 +271,7 @@ class Console
             $ary = (new eVar(dev_c::gate($x[2] ?: 'main', $x[1])))->all();
             Rewrite::external($ary, $x[1]);
             foreach ($ary as $row) {
-                $max > ($len = strlen($a = "$x[1]::$row->func$row->params")) or $max = $len;
+                $max > ($len = strlen($a = "$x[1]::$row->act$row->params")) or $max = $len;
                 $out[$a] = $row;
             }
         }
