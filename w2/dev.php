@@ -1,5 +1,5 @@
 <?php
-#[\AllowDynamicProperties]
+
 class DEV
 {
     const repository = 'https://coresky.net/api';
@@ -314,7 +314,6 @@ class DEV
         }
         $inet = $inet['wares'];
         $wares = $this->wares(true);
-        //echo '<pre>';print_r($inet);echo '</pre>';
         return [
             'bg_ware' => '#e0e7fe',
             'e_inet' => [
@@ -366,7 +365,6 @@ class DEV
     }
 
     function c_main($n) {
-        $this->_y = ['page' => 'dev'];
         if ('INFO_' == substr($n, 0, 5) && phpinfo(constant($n)))
             throw new Stop;
         if ($n)

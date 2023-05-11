@@ -77,7 +77,7 @@ class Display
                 if (in_array($i, $yellow) || '' === $marker) {
                     $v = '<div class="code" style="background:#ffd;">' . "$v</div>";
                 } elseif (array_intersect($mname, $blue)) {
-                    $v = '<div class="code" style="background:#eff;">' . "$v</div>";//e0e7ff
+                    $v = '<div class="code" style="background:#eff;">' . "$v</div>";
                 }
             }
         }
