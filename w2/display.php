@@ -1,14 +1,13 @@
 <?php
-#[\AllowDynamicProperties]
+
 class Display
 {
-    static $me = false;
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
+
     private $back;
     private $disp;
-    private $lenb;
     private $lnum;
     private $cut;
 
@@ -134,41 +133,40 @@ class Display
     }
 
     static function php($str, $bc = '', $no_lines = false) {
-        self::$me or self::$me = new self;
-        $me = self::$me;
+        static $d;
+        null !== $d or $d = new self;
         if ($str === -1)
             return '';
-        $me->cut = [-9, -9];
+        $d->cut = [-9, -9];
         if (is_array($bc)) {
-            $bc[2] or $me->cut = [$bc[0] - 8, $bc[0] + 8];
+            $bc[2] or $d->cut = [$bc[0] - 8, $bc[0] + 8];
             $bc = str_pad('', $bc[0] - 1, '=') . ($bc[1] ? '-' : '+');
         }
-        $me->lnum = '';
-        $me->lenb = strlen($me->back = $bc);
-        $me->disp = 0;
+        $len = strlen($d->back = $bc);
+        $d->lnum = '';
+        $d->disp = 0;
         if ($tag = preg_match("/^\s*[\$]\w+/sm", $str) || $no_lines)
             $str = "<?php $str";
         $str = str_replace(["\r", "\n", '<code>','</code>'], '', highlight_string($str, true));
         if ($tag)
             $str = preg_replace("|^(<span [^>]+>)<span [^>]+>&lt;\?php&nbsp;|", "$1", $str);
         $lines = explode('<br />', preg_replace("|^(<span [^>]+>)<br />|", "$1", $str));
-   //trace(count($lines),'111');
-        array_walk($lines, [$me, 'add_line_no']);
+        array_walk($lines, [$d, 'add_line_no'], $len);
         if ($no_lines)
             return '<pre style="margin:0">' . implode('', $lines) . '</pre>';
-        $table = self::lay_l . $me->lnum . self::lay_m . '<pre style="margin:0">' . implode('', $lines) . '</pre>' . self::lay_r;
+        $table = self::lay_l . $d->lnum . self::lay_m . '<pre style="margin:0">' . implode('', $lines) . '</pre>' . self::lay_r;
         return sprintf('<div class="php">%s</div>', str_replace('%', '&#37;', $table));
     }
 
-    private function add_line_no(&$val, $key) {
+    private function add_line_no(&$val, $key, $len) {
         $val = strtr($val, ['=TOP-TITLE=' => '&#61;TOP-TITLE&#61;']);
         $colors = ['' => '', '=' => '', '*' => 'ffd', '+' => 'dfd', '-' => 'fdd', '.' => 'eee'];
         $pad = $c = '';
-        if (!$key) for(; $this->lenb > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++) {
+        if (!$key) for(; $len > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++) {
             $this->lnum .= "<br>";
             $pad .= '<div class="code" style="background:#eee">&nbsp;</div>';
         }
-        if ($this->lenb > $key + $this->disp)
+        if ($len > $key + $this->disp)
             $c = $colors[$this->back[$key + $this->disp]];
         $key++;
         if ($ok = -9 == $this->cut[0] || $key > $this->cut[0] && $key < $this->cut[1])
@@ -181,7 +179,7 @@ class Display
             $val = '&nbsp;</span></span>';
         }
         $val = $pad . ($c ? '<div class="code" style="background:'."#$c\">$val</div>" : "$val\n");
-        for (; $this->lenb > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++) { # = - + * .
+        for (; $len > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++) { # = - + * .
             $this->lnum .= "<br>";
             $val .= '<div class="code" style="background:#eee">&nbsp;</div>';
         }
