@@ -27,8 +27,7 @@ var sky = {
             } else {
                 func += '&ajax';
             }
-            var fn = !ctrl ? '' : ("default_c" == ctrl ? "*" : ctrl.substr(2));
-            dev('?_gate=' + fn + '&func=' + func);
+            dev('?_gate=' + ctrl + '&func=' + func);
         }
     },
     a: { // ajax

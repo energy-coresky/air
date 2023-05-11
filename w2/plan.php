@@ -1,10 +1,5 @@
 <?php
 
-function e() {
-    $top = MVC::instance();
-    DEV && !SKY::s('gate_404') ? DEV::e($top) : $top->set(404);
-}
-
 class Plan
 {
     private static $connections = [];

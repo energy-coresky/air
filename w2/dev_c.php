@@ -56,7 +56,7 @@ class dev_c extends Controller
         $x = explode('_', $func, 2);
         $name = $x[1] ?? '';
         $x = $x[0];
-        if (isset(SKY::$plans[$name])) { // and type=DEV
+        if (isset(SKY::$plans[$name])) {
             trace($name, 'WARE');
             $this->eview = $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
             if (1 == $this->method) {

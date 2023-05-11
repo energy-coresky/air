@@ -1,5 +1,10 @@
 <?php
 
+function e() {
+    $top = MVC::instance();
+    DEV && !SKY::s('gate_404') ? DEV::e($top) : $top->set(404);
+}
+
 function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL injection!
     $sql = new SQL($in, 'parseF');
     return $sql->exec();

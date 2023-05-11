@@ -8,8 +8,8 @@ class DEV
         global $sky;
         $sky->error_no = 71;
         $top->body = $sky->fly ? '' : '_std.e71';
-        list ($class, $action) = explode('::', substr($top->hnd, 0, -2));
-        $sky->ca_path = ['ctrl' => $class, 'func' => $action];
+        [$ctrl, $action] = explode('::', substr($top->hnd, 0, -2));
+        $sky->ca_path = ['ctrl' => Plan::$ware . '.' . $ctrl, 'func' => $action];
         trace(["Gate error in $top->hnd", 'Gate error'], true, 2);
     }
 
