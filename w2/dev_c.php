@@ -83,11 +83,6 @@ class dev_c extends Controller
     }
 
     function j_trace() {
-        $this->a_trace();
-        throw new Stop;
-    }
-
-    function a_trace() {
         SKY::$debug = 0;
         echo '<h1>Tracing</h1>';
         if ($this->_1)
@@ -96,10 +91,9 @@ class dev_c extends Controller
 
     function j_file() {
         SKY::$debug = 0;
-        list($file, $line) = explode('^', $_POST['name']);
+        [$file, $line] = explode('^', $_POST['name']);
         $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
         echo Display::php($txt, [$line, 'true' == $_POST['c'], true]);
-        throw new Stop;
     }
 
     function j_drop() {
@@ -109,7 +103,7 @@ class dev_c extends Controller
     function a_img() {/////////////////
         SKY::$debug = 0;
         list(,$s) = explode("#.$this->_1", file_get_contents(DIR_S . '/w2/__img.jet'), 3);
-        list($type, $data) = explode(",", trim($s), 2);
+        [$type, $data] = explode(",", trim($s), 2);
         header('Cache-Control: private, max-age=3600');
         MVC::mime(substr($type, 5, strlen($type) - 12));
         ob_end_clean();
@@ -201,14 +195,13 @@ class dev_c extends Controller
 
     ///////////////////////////////////// GATE UTILITY /////////////////////////////////////
     static function ary_c23($is_addr = 1, $v = []) {
-        $v += ['', '', '', '', 0];
         return [
-            'kname' => $v[0],
-            'key' => $v[1],
-            'vname' => $v[2],
-            'val' => $v[3],
+            'kname' => $v[0] ?? '',
+            'key' => $v[1] ?? '',
+            'vname' => $v[2] ?? '',
+            'val' => $v[3] ?? '',
             'isaddr' => $is_addr,
-            'chk' => $v[4],
+            'chk' => $v[4] ?? 0,
         ];
     }
 
@@ -387,7 +380,6 @@ class dev_c extends Controller
         Rewrite::get($lib, $map, $keys);
         Rewrite::vars();
         $rshow = SKY::d('sg_rshow');
-        $err = false;
         if (isset($_POST['s'])) {
             SKY::d('sg_rshow', $rshow = $_POST['s']);
         } elseif ($_POST) {
@@ -398,7 +390,7 @@ class dev_c extends Controller
         array_walk($map, 'Rewrite::highlight');
 
         $vars = [
-            'err' => $err,
+            'err' => $err ?? false,
             'rshow' => $rshow,
             'map' => $map,
             'y_1' => $y_1,
@@ -414,7 +406,7 @@ class dev_c extends Controller
                 ["Save R$y_1", 'button', 'onclick="sky.g.rw()" style="margin-top:5px"'],
             ]),
         ];
-        $rshow or $vars += [
+        return $rshow ? $vars : $vars + [
             'e_func' => [
                 'row_c' => function ($in, $e = false) {
                     static $ary;
@@ -432,6 +424,5 @@ class dev_c extends Controller
                 },
             ],
         ];
-        return $vars;
     }
 }

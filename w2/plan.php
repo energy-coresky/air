@@ -35,7 +35,6 @@ class Plan
     }
 
     static function has($in, $class = true) {
-        //if (is_array($in))
         return $class ? isset(SKY::$plans['main']['class'][$in]) : isset(SKY::$plans[$in]);
     }
 
@@ -338,10 +337,10 @@ class Plan
         $i = 0;
         $ary = [];
         foreach ($var as $k => $v) {
-            self::$var_path[2][$pad] = '[' . (is_int($k) ? $k : "'$k'") . ']'; /// $k = 11'22
+            self::$var_path[2][$pad] = '[' . (is_int($k) ? $k : "'$k'") . ']';
             $v = is_array($v) ? self::array($v, $add, 1 + $pad) : self::var($v, $add);
             if (is_string($k)) {
-                $ary[] = "'" . html($k) . "' =&gt; $v"; /// $k = 11'22
+                $ary[] = "'" . html($k) . "' =&gt; $v";
             } else {
                 $ary[] = $i !== $k ? "$k =&gt; $v" : $v;
                 $i = $k < 0 ? 0 : 1 + $k;

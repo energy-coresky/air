@@ -394,7 +394,8 @@ class MVC extends MVC_BASE
         global $sky;
 
         is_numeric($time) or $time = strtotime($time);
-        if (@$_SERVER['HTTP_IF_MODIFIED_SINCE'] && ($if_time = strtotime($_SERVER['HTTP_IF_MODIFIED_SINCE']))) {
+        $if_time = $_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? false;
+        if ($if_time && ($if_time = strtotime($if_time))) {
             !$use_site_ts or $sky->s_site_ts < $time or $time = $sky->s_site_ts; # overall site design timestamp
             if ($if_time >= $time) {
                 http_response_code(304); # Not Modified
