@@ -7,7 +7,7 @@ function view($_in, $_return = false, &$_vars = null) {
         $layout = MVC::$layout;
         $mvc = $_in;
     } else {
-        list($_in, $layout) = is_array($_in) ? $_in : [$_in, ''];
+        [$_in, $layout] = is_array($_in) ? $_in : [$_in, ''];
         $no_handle = false;
         if (!is_bool($_return)) {
             $no_handle = is_array($_vars = $_return);
@@ -313,7 +313,7 @@ class MVC extends MVC_BASE
     public $hnd;
     public $no;
 
-    static $vars;
+    static $vars;///delete?
     static $_y = []; # layout vars
     static $layout = '';
     static $mc; # master controller
@@ -379,7 +379,7 @@ class MVC extends MVC_BASE
         $fn = MVC::fn_parsed($layout, $name);
         $ok = Plan::jet_tp($fn) && (!DEV || $sky->d_jet_cache);
         if ($ok && DEV) {
-            list ($mtime, $files) = Plan::jet_mf($fn); # to get max speed (avoid mtime checking)
+            [$mtime, $files] = Plan::jet_mf($fn);
             foreach ($files as $one) {
                 if (!$ok = Plan::view_('m', "$one.jet") < $mtime)
                     break; # recompilation required
