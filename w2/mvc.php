@@ -72,7 +72,7 @@ class Model_m extends MVC_BASE
     protected $dd;
 
     function __construct($table = false) { # set database driver & onduty table
-        isset($this->table) or $this->table = $table ?: substr(get_class($this), 2);
+        $this->table = $table ?: $this->table ?? substr(get_class($this), 2);
         $this->dd = $this->head_y();
     }
 
@@ -306,20 +306,19 @@ class MVC extends MVC_BASE
 {
     private static $stack = [];
 
-    public $_v = []; # body vars
-    public $body = '';
-    public $ob;
-    public $return = false;
-    public $hnd;
-    public $no;
-
-    static $vars;///delete?
     static $_y = []; # layout vars
     static $layout = '';
     static $mc; # master controller
     static $cc; # common controller
     static $ctrl;
     static $tpl = '_std';
+
+    public $_v = []; # body vars
+    public $body = '';
+    public $ob;
+    public $return = false;
+    public $hnd;
+    public $no;
 
     function __construct() {
         static $no = 0;

@@ -61,9 +61,8 @@ class dev_c extends Controller
             $this->eview = $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
             if (1 == $this->method) {
                 $w1 = parse_url($tmp = $this->d_ware1, PHP_URL_PATH);
-                $this->d_ware1 = URI;
-                if ("_$name" != $w1)
-                    $this->d_ware2 = $tmp;
+                $this->d_ware1 = '_venus' == parse_url(URI, PHP_URL_PATH) ? '_venus?ware' : URI;
+                "_$name" == $w1 or $this->d_ware2 = $tmp;
             }
             Plan::_r('mvc/' . ($ctrl = $name . '_c') . '.php');
             MVC::$cc = MVC::$mc;

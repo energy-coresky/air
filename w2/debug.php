@@ -216,7 +216,7 @@ class Debug
         global $sky, $user;
 
         if ($sky->show_pdaxt || DEV) {
-            $link = $user->pid
+            $link = $user && $user->pid
                 ? ($user->u_uri_admin ? $user->u_uri_admin : Admin::$adm['first_page'])
                 : 'auth';
             echo '<span class="pdaxt">';
@@ -226,7 +226,7 @@ class Debug
                         echo DEV ? a('P', PROTO . '://' . _PUBLIC) : L::r('P');
                     if (DEV) {
                         echo '_venus' == $sky->d_last_page
-                            ? a('V', PATH . '_venus?ware=' . rawurlencode(URI))
+                            ? a('V', PATH . '_venus?page=' . rawurlencode(LINK . URI))
                             : a('D', ["dev('" . ($sky->d_last_page ?: '_dev') . "')"]);
                     }
                     echo a('A', PATH . $link);

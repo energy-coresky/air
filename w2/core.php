@@ -333,11 +333,9 @@ function a($anchor, $href = null, $x = '') {
 }
 
 function js($x = '') {
-    global $sky;
-
     if (is_string($x))
         return "<script>$x</script>";
-    $pf = '?' . ($sky->s_statp ?: '1000p');
+    $pf = '?' . (SKY::s('statp') ?: '1000p');
     $js = '';
     foreach ($x as $src)
         $js .= '<script src="' . ('~' == $src[0] ? PATH . substr($src, 2) . $pf : $src) . '"></script>';
@@ -345,11 +343,9 @@ function js($x = '') {
 }
 
 function css($x = '') {
-    global $sky;
-
     if (is_string($x))
         return '<style>' . $x . '</style>';
-    $pf = '?' . ($sky->s_statp ?: '1000p');
+    $pf = '?' . (SKY::s('statp') ?: '1000p');
     $css = '';
     foreach ($x as $src)
         $css .= '<link rel="stylesheet" href="' . ('~' == $src[0] ? PATH . substr($src, 2) . $pf : $src) . '" />';

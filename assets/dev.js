@@ -342,8 +342,8 @@ sky.d.files = function(callback) {
 
 sky.d.close_box = function(url) {
     $(window.parent.document.getElementById('box')).find('#box-esc a').click();
-    //if (url)
-        //window.parent.location.href = url;
+    if ('string' == typeof url) // for Venus
+        window.parent.location.href = url;
 };
 
 (function() {

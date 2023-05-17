@@ -221,14 +221,14 @@ $(function() {
     <div id="top-head" style="width:calc(100% - 380px)">
     @block(header)
         <div class="fl"><span style="color:red;margin:0 10px;">See also</span>
-        <a href="{{PATH}}_dev?main=10">@inc(__lng.rar) Log Error</a>
-        <a href="{{PATH}}_gate">@inc(__lng.rar) SkyGate</a>
-        <a href="{{PATH}}_glob?settings">@inc(__lng.rar) Globals Report</a>
+        <a href=@p(_dev?main=10)>@inc(__lng.rar) Log Error</a>
+        <a href=@p(_gate)>@inc(__lng.rar) SkyGate</a>
+        <a href=@p(_glob?settings)>@inc(__lng.rar) Globals Report</a>
         </div>
         <div style="display:inline-block; line-height:27px !important; padding:0 10px; background:
             @if($sky->d_dev)#cfc">{{SKY::version()['app'][3]}}@else#ccf">TOOLS.DEV.SKY.~if
         </div>
-        <a href="{{PATH}}_dev?main=0" style="font-family:Verdana;color:{{SKY::d('err')?'red':'#1b1'}}">&#9668;</a>
+        <a href=@p(_dev?main=0) style="font-family:Verdana;color:{{SKY::d('err')?'red':'#1b1'}}">&#9668;</a>
     ~block
     </div>
     <div style="text-align:right; width:110px"><a @href(sky.d.close_box())>Esc - Close @inc(__img.x)</a></div>
