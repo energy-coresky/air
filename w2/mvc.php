@@ -71,8 +71,8 @@ class Model_m extends MVC_BASE
     use SQL_COMMON;
     protected $dd;
 
-    function __construct($table = false) { # set database driver & onduty table
-        $this->table = $table ?: $this->table ?? substr(get_class($this), 2);
+    function __construct($table = null) { # set database driver & onduty table
+        $this->table = $table ?? $this->table ?? substr(get_class($this), 2);
         $this->dd = $this->head_y();
     }
 
@@ -315,7 +315,7 @@ class MVC extends MVC_BASE
 
     public $_v = []; # body vars
     public $body = '';
-    public $ob;
+    public $ob; # output buffer
     public $return = false;
     public $hnd;
     public $no;

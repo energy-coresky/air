@@ -7,7 +7,6 @@ class dev_c extends Controller
     private $_w = '';
     private $_c = '';
     private $_a = '';
-    private $_y = [];
 
     function head_y($action) {
         global $sky;
@@ -15,41 +14,38 @@ class dev_c extends Controller
         $sky->eview = 'dev';
         if (in_array($action, ['a_crash', 'a_etc']))
             return;
-        if ('a_' == substr($action, 0, 2)) {
-            $this->_y = ['page' => substr($action, 2)];
-            MVC::$layout = '__dev.layout';
-        }
+        $sky->fly or MVC::$layout = '__dev.layout';
         $sky->open();
         if ($sky->d_dev)
             SKY::$debug = 0;
         [$this->_w, $this->_c, $this->_a] = explode('.', $this->_1, 3) + ['', '', ''];
-        return ['y_1' => $this->_1];
+        return ['y_1' => $this->_1, 'page' => substr($action, 2)];
     }
 
     function tail_y() {
-        if ($this->_y) {
-            if (1 == $this->method && '_trace' != $this->_0 && 'view' != $this->_1)
-                $this->d_last_page = URI;
-            $this->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
-            return $this->_y + [
-                'y_tx' => '_trace' == $this->_0 ? $this->_1 : 0,
-                'y_ware_dir' => '',
-                'y_tasks' => [
-                    '_dev?main=0' => 'Main',
-                    '_map' == $this->_0 ? '_map' : '_gate' => 'Open SkyGate',
-                    '_lang?list' => 'Open SkyLang',
-                    '_inst' => 'Open SkyProject',
-                    '_glob?' . ($this->d_gr_start ?: 'settings') => 'Global Reports',
-                    '_vend?list' => 'Browse All Vendors',
-                ],
-                'wares' => $this->dev->wares_menu(),
-                'ware1' => substr(parse_url($this->d_ware1, PHP_URL_PATH), 1),
-                'ware2' => substr(parse_url($this->d_ware2, PHP_URL_PATH), 1),
-                'y_act' => function ($uri) {
-                    return $this->_0 == explode('?', $uri)[0] && !in_array($this->_1, ['view', 'ware']);
-                },
-            ];
-        }
+        if (!MVC::$layout)
+            return;
+        if (1 == $this->method && '_trace' != $this->_0 && 'view' != $this->_1)
+            $this->d_last_page = URI;
+        $this->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
+        return [
+            'y_tx' => '_trace' == $this->_0 ? $this->_1 : 0,
+            'y_ware_dir' => '',
+            'y_tasks' => [
+                '_dev?main=0' => 'Main',
+                '_map' == $this->_0 ? '_map' : '_gate' => 'Open SkyGate',
+                '_lang?list' => 'Open SkyLang',
+                '_inst' => 'Open SkyProject',
+                '_glob?' . ($this->d_gr_start ?: 'settings') => 'Global Reports',
+                '_vend?list' => 'Browse All Vendors',
+            ],
+            'wares' => $this->dev->wares_menu(),
+            'ware1' => substr(parse_url($this->d_ware1, PHP_URL_PATH), 1),
+            'ware2' => substr(parse_url($this->d_ware2, PHP_URL_PATH), 1),
+            'y_act' => function ($uri) {
+                return $this->_0 == explode('?', $uri)[0] && !in_array($this->_1, ['view', 'ware']);
+            },
+        ];
     }
 
     function __call($func, $args) {
@@ -72,8 +68,7 @@ class dev_c extends Controller
             if (method_exists(MVC::$mc, 'head_y'))
                 MVC::instance()->set(MVC::$mc->head_y($action), true);
             MVC::body("$name." . ($this->_1 ? $this->_1 : 'empty'));
-            if ($this->_y)
-                $this->_y += ['ware_dir' => Plan::_obj(0)->path];
+            MVC::$_y += ['ware_dir' => Plan::_obj(0)->path];
             return MVC::$mc->$action();
         } elseif ('a' == $x) {
             return call_user_func([$this, "j_$name"], 'c');
