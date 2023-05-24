@@ -51,7 +51,7 @@ class DEV
             }
         }
         if ($list = $sky->d_statics) {
-            $saved = array_explode($list, '#', ',');
+            $saved = strbang($list, '#', ',');
             if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
                 $sky->static_new = true;
             $files = $saved + $files;

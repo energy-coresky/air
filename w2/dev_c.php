@@ -50,9 +50,9 @@ class dev_c extends Controller
 
     function __call($func, $args) {
         $x = explode('_', $func, 2);
-        $name = $x[1] ?? '';
+        $set = isset(SKY::$plans[$name = $x[1] ?? '']);
         $x = $x[0];
-        if (isset(SKY::$plans[$name])) {
+        if ($set && 'dev' == SKY::$plans[$name]['app']['type']) {
             trace($name, 'WARE');
             $this->eview = $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
             if (1 == $this->method) {

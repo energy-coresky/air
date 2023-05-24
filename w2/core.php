@@ -29,9 +29,13 @@ function unhtml($str, $mode = ENT_QUOTES) {
     return html_entity_decode($str, $mode, ENC);
 }
 
-function escape($in, $reverse = false) {
+function escape($str, $reverse = false) {
     $ary = ["\\" => "\\\\", "\r" => "\\r", "\n" => "\\n", "\t" => "\\t"];
-    return strtr($in, $reverse ? array_flip($ary) : $ary);
+    return strtr($str, $reverse ? array_flip($ary) : $ary);
+}
+
+function unl($str) {
+    return str_replace(["\r\n", "\r"], "\n", $str);
 }
 
 function strand($n = 23) {
@@ -41,10 +45,6 @@ function strand($n = 23) {
     return $ret;
 }
 
-function unl($str) {
-    return str_replace(["\r\n", "\r"], "\n", $str);
-}
-
 function strcut($str, $n = 100) { #300
     $text = mb_substr($str, 0, $n);
     return mb_strlen($str) > $n
@@ -52,13 +52,16 @@ function strcut($str, $n = 100) { #300
         : $text;
 }
 
-function array_explode($str, $via1 = ' ', $via2 = "\n") {
-    $ary = explode($via2, $str);
+function strbang($str, $via1 = ' ', $via2 = "\n") {
     $out = [];
-    array_walk($ary, function($item) use (&$out, $via1) {
-        list ($k, $v) = explode($via1, $item, 2);
-        $out[$k] = $v;
-    });
+    foreach (explode($via2, $str) as $item) {
+        if ($via1 instanceof Closure) {
+            $via1($out, $item);
+        } else {
+            [$k, $v] = explode($via1, $item, 2);
+            $out[$k] = $v;
+        }
+    }
     return $out;
 }
 

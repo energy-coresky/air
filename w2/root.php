@@ -322,6 +322,11 @@ class Root
                     'pre' => ['Current prefix for static cache:<br>(increment automatically)', '', 'disabled'],
                     ['Made new prefix', 'submit', 'name=u'],
                 ]);
+                $files = strbang(SKY::d('statics'), function(&$a, $v) {
+                    [$k, $v] = explode('#', $v, 2);
+                    $a["<span>$k</span>"] = date(DATE_DT, $v);
+                }, ',');
+                Admin::out($files, false, '');
             break;
             case 5:
                 Admin::drop_all_cache();
