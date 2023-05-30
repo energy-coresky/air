@@ -135,7 +135,7 @@ class Plan
                 if (strpos($a0, '\\'))
                     return Plan::vendor($a0);
                 $low = strtolower($a0);
-                $cfg =& SKY::$plans['main']['class'];
+                $cfg = SKY::$plans['main']['class'] ?? [];
                 if (in_array(substr($a0, 0, 2), ['m_', 't_'])) {
                     if (is_file($fn = $obj->path . "/mvc/$a0.php"))
                         return require $fn;

@@ -19,11 +19,17 @@ class Console
             SQL::$dd_h = 'Console::dd_h';
             if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
                 $sky->open();
-            if ('s' != $argv[1])
-                return call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
         }
+        's' == $argv[1] ? $this->s($argv[2] ?? 8000) : call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
+    }
 
-        's' == $argv[1] ? $this->s($argv[2] ?? 8000) : $this->__call("c_$argv[1]", []);
+    static function constants() {
+        define('DEV', true);
+        define('DEBUG', 1);
+        define('PHP_TZ', 'GMT');
+        define('DIR_M', '');
+        ini_set('log_errors', 0);
+        ini_set('display_errors', DEBUG);
     }
 
     static function dd_h($dd) {
@@ -33,13 +39,25 @@ class Console
     }
 
     function __call($name, $args) {
-        if ('c_app' == $name && self::$d[0] && is_file(DIR_M . '/w3/app.php'))
-            return new App('a_' . array_shift($args), $args);
+        $ware = self::$d[2] ? basename(self::$d[2]) : false;
+        $src = [];
+        if (self::$d[0]) {
+            $src += ['' => new ReflectionClass('Console')];
+            if (is_file(DIR_M . '/w3/app.php'))
+                $src += ['app' => new ReflectionClass('App')];
+        } elseif ($ware && is_file($fn = DIR . "/w3/$ware.php")) {
+            require_once $fn;
+            $r = new ReflectionClass($ware);
+            if (($pr = $r->getParentClass()) && 'Console' == $pr->name)
+                $src[$ware] = $r;
+        }
+        $com = substr($name, 2);
+        if ($com && isset($src[$com]) && 'c_' == substr($name, 0, 2))
+            return new $com('a_' . array_shift($args), $args);
 
         if ('c_' != $name) {
-            echo "\nCommand `";
-            echo ('Console' != get_class($this) ? "app " : '') . substr($name, 2);
-            echo "` not found\n\n";
+            $cls = strtolower(get_class($this));
+            echo "\nCommand `" . ('console' != $cls ? "$cls $com" : $com) . "` not found\n\n";
         }
 
         $ary = [
@@ -50,20 +68,17 @@ class Console
         if (self::$d[3] || is_dir(DIR_S . '/.git')) {
             $repo = 'new CORESKY version';
             if (self::$d[3])
-                $repo = self::$d[2] ? "ware `" . basename(getcwd()) . "`" : 'repository';
+                $repo = $ware ? "ware `$ware`" : 'repository';
             $ary += ['master' => "Push $repo to remote origin master"];
         }
-        if (self::$d[0]) {
-            $m = (new ReflectionClass('Console'))->getMethods(ReflectionMethod::IS_PUBLIC);
-            $cnt = count($m);
-            if (is_file(DIR_M . '/w3/app.php'))
-                $m = array_merge($m, (new ReflectionClass('App'))->getMethods(ReflectionMethod::IS_PUBLIC));
-            array_walk($m, function ($v, $i) use (&$ary, $cnt) {
-                if ($i >= $cnt && 'c_' == substr($v->name, 0, 2))
-                    return;
+        foreach ($src as $w => $rfn) {
+            $list = $rfn->getMethods(ReflectionMethod::IS_PUBLIC);
+            foreach ($list as $v) {
+                if ('c_' == substr($v->name, 0, 2) && $w)
+                    continue;
                 if ($s = $v->getDocComment())
-                    $ary[($i >= $cnt ? 'app ' : '') . substr($v->name, 2)] = trim($s, "*/ \n\r");
-            });
+                    $ary[($w ? "$w " : '') . substr($v->name, 2)] = trim($s, "*/ \n\r");
+            }
         }
         ksort($ary);
         echo "Usage: sky command [param ...]\nCommands are:\n  ";
@@ -72,8 +87,8 @@ class Console
         }, array_keys($ary), $ary));
         if (self::$d[0])
             echo "\nCoresky app: " . SKY::version()['app'][3] . ' (' . _PUBLIC . ')';
-        if (self::$d[2])
-            echo "\nCoresky ware: " . basename(self::$d[2]);
+        if ($ware)
+            echo "\nCoresky ware: $ware";
         if (self::$d[1]) {
             chdir(self::$d[1]);
             exec('git remote get-url origin', $output);

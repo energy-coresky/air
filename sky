@@ -61,14 +61,16 @@ do {
 } while($cwd = $_cd);
 
 if ($found[0]) {
-    define('DIR', $cwd);
     require "$dir_m/conf.php";
-    new SKY;
-    SKY::$debug = 1;
 } else {
-    chdir($found[1] ?: $found[2] ?: $dir_run());
+    chdir($cwd = $found[1] ?: $found[2] ?: $dir_run());
     define('DIR_S', __DIR__);
+    require DIR_S . '/sky.php';
     require DIR_S . '/w2/console.php';
+    Console::constants();
 }
+define('DIR', $cwd);
+new SKY;
+SKY::$debug = 1;
 new Console($argv, $found);
 echo "\n";

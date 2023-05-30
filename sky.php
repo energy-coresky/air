@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.486 2023-05-24T09:42:33+03:00 energy';
+    const CORE = '0.487 2023-05-30T21:16:58+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
