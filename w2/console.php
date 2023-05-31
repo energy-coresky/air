@@ -17,19 +17,10 @@ class Console
                 return $this->master(!$ns);
         } elseif ($found[0]) {
             SQL::$dd_h = 'Console::dd_h';
-            if ('app' != $argv[1] || '_' !== ($argv[2][0] ?? ''))
+            if ('_' !== ($argv[2][0] ?? '')) // 'app' != $argv[1] || 
                 $sky->open();
         }
         's' == $argv[1] ? $this->s($argv[2] ?? 8000) : call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
-    }
-
-    static function constants() {
-        define('DEV', true);
-        define('DEBUG', 1);
-        define('PHP_TZ', 'GMT');
-        define('DIR_M', '');
-        ini_set('log_errors', 0);
-        ini_set('display_errors', DEBUG);
     }
 
     static function dd_h($dd) {
@@ -39,25 +30,30 @@ class Console
     }
 
     function __call($name, $args) {
-        $ware = self::$d[2] ? basename(self::$d[2]) : false;
-        $src = [];
-        if (self::$d[0]) {
-            $src += ['' => new ReflectionClass('Console')];
+        static $src;
+
+        if (is_null($src) && self::$d[0]) {
+            $src = ['' => new ReflectionClass('Console')];
             if (is_file(DIR_M . '/w3/app.php'))
                 $src += ['app' => new ReflectionClass('App')];
-        } elseif ($ware && is_file($fn = DIR . "/w3/$ware.php")) {
-            require_once $fn;
-            $r = new ReflectionClass($ware);
-            if (($pr = $r->getParentClass()) && 'Console' == $pr->name)
-                $src[$ware] = $r;
+            foreach (SKY::$plans as $w => $_) {
+                if ('main' == $w || !Plan::_rq([$w, "w3/$w.php"]))
+                    continue;
+                $r = new ReflectionClass($w);
+                if (($pr = $r->getParentClass()) && 'Console' == $pr->name)
+                    $src[$w] = $r;
+            }
         }
+
         $com = substr($name, 2);
         if ($com && isset($src[$com]) && 'c_' == substr($name, 0, 2))
             return new $com('a_' . array_shift($args), $args);
 
         if ('c_' != $name) {
             $cls = strtolower(get_class($this));
-            echo "\nCommand `" . ('console' != $cls ? "$cls $com" : $com) . "` not found\n\n";
+            if ('console' != $cls)
+                $com = $cls . ('' === $com ? '' : " $com");
+            echo "\nCommand `$com` not found\n\n";
         }
 
         $ary = [
@@ -65,13 +61,14 @@ class Console
             'd' => 'List dirs (from current dir)',
             'php' => 'Lint PHP files (from current dir)',
         ];
+        $ware = self::$d[2] ? basename(self::$d[2]) : false;
         if (self::$d[3] || is_dir(DIR_S . '/.git')) {
             $repo = 'new CORESKY version';
             if (self::$d[3])
                 $repo = $ware ? "ware `$ware`" : 'repository';
             $ary += ['master' => "Push $repo to remote origin master"];
         }
-        foreach ($src as $w => $rfn) {
+        foreach ($src ?? [] as $w => $rfn) {
             $list = $rfn->getMethods(ReflectionMethod::IS_PUBLIC);
             foreach ($list as $v) {
                 if ('c_' == substr($v->name, 0, 2) && $w)
