@@ -155,7 +155,7 @@ final class SQL
         if (SQL::NO_EXEC & $this->mode)
             return $qstr;
 
-        if (false !== strpos('+-~>^@%#', $char = $qstr[0])) {
+        if (false !== strpos('+-~>^@%#&', $char = $qstr[0])) {
             $qstr = substr($qstr, 1);
         } else {
             $char = '';
@@ -264,7 +264,7 @@ final class SQL
                 $re .= '|' . SQL::$re_func;
             return $str ? preg_replace_callback("~$re~u", [$this, __FUNCTION__], $str) : $re;
         } elseif ('_' == $match[0][1]) { # $_ (onduty table) or $_sometable
-            $table = 2 == strlen($match[0]) ? ($this->table ? $this->table : (string)$this->_dd) : substr($match[0], 2);
+            $table = 2 == strlen($match[0]) ? ($this->table ?: (string)$this->_dd) : substr($match[0], 2);
             return $this->quote . $this->_dd->pref . $table . $this->quote;
         }
         if (isset($match[3]) && strpos($match[3], '$'))

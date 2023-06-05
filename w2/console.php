@@ -23,10 +23,12 @@ class Console
         's' == $argv[1] ? $this->s($argv[2] ?? 8000) : call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
     }
 
-    static function dd_h($dd) {
-        require DIR_S . '/w2/mvc.php';
-        Plan::app_r('mvc/common_c.php');
-        common_c::dd_h($dd);
+    static function dd_h($dd, $name) {
+        if ('' === $name) {
+            require DIR_S . '/w2/mvc.php';
+            Plan::app_r('mvc/common_c.php');
+        }
+        common_c::dd_h($dd, $name);
     }
 
     function __call($name, $args) {
