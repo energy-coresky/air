@@ -311,6 +311,14 @@ class Console
         echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
     }
 
+    /** List installed wares */
+    function c_w() {
+        $list = [];
+        foreach (SKY::$plans as $ware => $cfg)
+            $list[$ware] = ($cfg['app']['type'] ?? 'prod') . '::' . $cfg['app']['path'];
+        print_r($list);
+    }
+
     /** Search for errors using all possible methods */
     function c_e() {
         echo '2do';
@@ -321,10 +329,11 @@ class Console
         echo '2do';
     }
 
-    /** Execute SQL, example: sky sql "+select 1+1" */
-    function c_sql($sql) {
-        $r = sqlf($sql);
-        echo 'result: ' . print_r($r, 1);
+    /** Execute SQL, example: sky sql "+select 1+1" [con-name] [ware] */
+    function c_sql($sql, $name = '', $ware = '') {
+        if ($ware)
+            SKY::$databases += Plan::_r([$ware, 'conf.php'])['app']['databases'];
+        echo 'result: ' . print_r(SQL::open($name)->sqlf($sql), 1);
     }
 
     /** Eval PHP code, example: sky eval "echo $sky->s_online;" */

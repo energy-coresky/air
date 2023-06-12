@@ -126,8 +126,9 @@ class Model_t extends Model_m
     }
 
     function all($rule = 0, $what = '*', String $pref = '#') {
-        if (0 === $rule)
-            return $this->sql(1, '&select * from $_');
+        $is_e = true === $rule;
+        if (0 === $rule || $is_e)
+            return $this->sql(1, ($is_e ? '&' : '') . 'select * from $_');
         if (!in_array($pref, ['', '@', '%', '#', '&']))
             throw new Error("Wrowng prefix $pref");
         if ($what instanceof SQL)
