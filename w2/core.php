@@ -290,12 +290,12 @@ function unjson($in, $assoc = false) {
     return $out;
 }
 
-function get($addr, $headers = '') {
+function get($addr, $headers = '', $unjson = true) {
     $response = file_get_contents($addr, false, stream_context_create(['http' => [
         'method' => "GET",
         'header' => "User-Agent: Coresky\r\n$headers",
     ]]));
-    return $response ? unjson($response, true) : false;
+    return $response ? ($unjson ? unjson($response, true) : $response) : false;
 }
 
 function api($addr, $in) {
@@ -307,14 +307,11 @@ function api($addr, $in) {
     return $response ? unjson($response, true) : false;
 }
 
-function option($selected, $table, $order = 'id') {
-    if (is_string($table)) {
-        $q = sql('select * from $_` order by $`', $table, $order);
-        for ($table = ['' => '---']; $r = $q->one('R'); $table[$r[0]] = $r[1]);
-    }
+function option($selected, $ary, $attr = '') {
     $out = '';
-    foreach ($table as $k => $v)
-        $out .= tag($v, sprintf('value="%s"%s', $k, (string)$selected == $k ? ' selected' : ''), 'option');
+    $attr .= ($attr ? ' ' : '') . 'value="%s"%s';
+    foreach ($ary as $k => $v)
+        $out .= tag(html($v), sprintf($attr, $k, $selected == $k ? ' selected' : ''), 'option');
     return $out;
 }
 
