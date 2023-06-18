@@ -47,7 +47,8 @@ var sky = {
             return tmp;
         },
         start: false,
-        finish: false
+        finish: false,
+        contentType: 'application/x-www-form-urlencoded; charset=UTF-8'
     },
     d: {}, // dev utilities
     orientation: function() {
@@ -56,12 +57,16 @@ var sky = {
     toggle: function(el) {
         $(el).html('&gt;&gt;&gt;' == $(el).html() ? '<<<' : '>>>').next().slideToggle();
     },
-    post: function(url, data, func, jact) {
-        return $.ajax({
+    json: function(j_, obj, func, c_, jact) {
+        ajax(j_, JSON.stringify(obj), func, c_, jact, 'application/json; charset=UTF-8');
+    },
+    post: function(url, data, func, jact, contentType) {
+        $.ajax({
             type: "POST",
             url: url,
             data: data,
             success: func,
+            contentType: contentType || sky.a.contentType,
             headers: {'X-Action-J': jact || 'main'}
         });
     },
@@ -195,7 +200,7 @@ function box(html) {
     sky.show();
 }
 
-function ajax(j_, postfields, func, c_, jact) {
+function ajax(j_, postfields, func, c_, jact, contentType) {
     if ('function' == typeof postfields) {
         jact = c_;
         c_ = func;
@@ -236,7 +241,7 @@ function ajax(j_, postfields, func, c_, jact) {
             case 'object':   return func ? func.html(r) : null; // null is object
             default:         return r ? sky.err(r) : null;
         }
-    }, jact);
+    }, jact, contentType);
 }
 
 (function($) {
