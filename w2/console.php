@@ -10,7 +10,7 @@ class Console
         if ('Console' != get_class($this))
             return $argv && call_user_func_array([$this, $argv], $found);
 
-        self::$d = $found + [3 => $ns = $found[1] && 'air' != basename(getcwd())];
+        self::$d = $found + [3 => $ns = $found[2] && 'air' != basename(getcwd())];
 
         if ('master' == $argv[1]) {
             if ($ns || is_dir(DIR_S . '/.git'))
@@ -63,7 +63,7 @@ class Console
             'd' => 'List dirs (from current dir)',
             'php' => 'Lint PHP files (from current dir)',
         ];
-        $ware = self::$d[2] ? basename(self::$d[2]) : false;
+        $ware = self::$d[1] ? basename(self::$d[1]) : false;
         if (self::$d[3] || is_dir(DIR_S . '/.git')) {
             $repo = 'new CORESKY version';
             if (self::$d[3])
@@ -88,8 +88,8 @@ class Console
             echo "\nCoresky app: " . SKY::version()['app'][3] . ' (' . _PUBLIC . ')';
         if ($ware)
             echo "\nCoresky ware: $ware";
-        if (self::$d[1]) {
-            chdir(self::$d[1]);
+        if (self::$d[2]) {
+            chdir(self::$d[2]);
             exec('git remote get-url origin', $output);
             echo "\nRepository: $output[0]";
         }
@@ -135,7 +135,7 @@ class Console
     }
 
     function master($air) {
-        chdir($air ? DIR_S : self::$d[1]);
+        chdir($air ? DIR_S : self::$d[2]);
         echo "\n>git remote get-url origin\n";
         system('git remote get-url origin');
 
@@ -157,7 +157,7 @@ class Console
         }
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
-        if (self::$d[0]) {
+        if (self::$d[0] && !self::$d[1]) {
             SQL::$dd_h = 'Console::dd_h';
             global $sky;
             $sky->open();
@@ -169,7 +169,7 @@ class Console
         system("git commit -a -m \"$c\"");
         echo "\n>git push origin master\n";
         system("git push origin master");
-        if (self::$d[0])
+        if (self::$d[0] && !self::$d[1])
             common_c::make_h(false);
     }
 

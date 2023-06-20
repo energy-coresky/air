@@ -34,9 +34,9 @@ $dir_run = function ($cwd = false, &$found = null) {
             return $d && $app || !$d && !$app;
         };
         if (is_dir('.git'))
-            $ary[1] = getcwd(); # git dir
+            $ary[2] = getcwd(); # git dir
         if ($conf())
-            $ary[2] = getcwd(); # ware
+            $ary[1] = getcwd(); # ware
         in_array($m, $list = ['main', 'blue']) or $m && array_unshift($list, $m);
         foreach ($list as $main) {
             if ($conf($main)) {
@@ -59,6 +59,15 @@ do {
     if ($cwd == ($_cd = getcwd()))
         break;
 } while($cwd = $_cd);
+
+if ($found[1]) { # ware found
+    $cfg = require "$found[1]/conf.php";
+    if ($cfg['app']['cli'] ?? false) {
+        chdir($cwd = $cfg['app']['cli']);
+        if ($dir_m = is_dir('main') ? 'main' : (is_dir('blue') ? 'blue' : false))
+            $found[0] = true; # attach app
+    }
+}
 
 if ($found[0]) {
     define('DIR', $cwd);
