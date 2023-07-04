@@ -62,8 +62,9 @@ do {
 
 if ($found[1]) { # ware found
     $cfg = require "$found[1]/conf.php";
-    if ($cfg['app']['cli'] ?? false) {
-        chdir($cwd = $cfg['app']['cli']);
+    $cwd = $cfg['app']['cli'] ?? false;
+    if ($cwd && is_dir($cwd)) {
+        chdir($cwd);
         if ($dir_m = is_dir('main') ? 'main' : (is_dir('blue') ? 'blue' : false))
             $found[0] = true; # attach app
     }
