@@ -285,16 +285,19 @@ function unjson($in, $assoc = false) {
     $out = json_decode($in, $assoc);
     if ($err = json_last_error()) {
         strlen($in) < 1000 or $in = substr($in, 0, 1000) . ' ...';
-        trace("unjson() error=$err, in=$in", true);
+        trace("unjson() error=$err, in=$in", true, 1);
     }
     return $out;
 }
 
 function get($addr, $headers = '', $unjson = true) {
+    $ts = microtime(true);
     $response = file_get_contents($addr, false, stream_context_create(['http' => [
         'method' => "GET",
         'header' => "User-Agent: Coresky\r\n$headers",
     ]]));
+    if (DEBUG)
+        trace(sprintf("%01.3f sec - $addr", microtime(true) - $ts), 'GET', 1);
     return $response ? ($unjson ? unjson($response, true) : $response) : false;
 }
 
@@ -461,7 +464,9 @@ class eVar implements Iterator
     private $e;
     private $dd = false;
 
-    function __construct(Array $e) {
+    function __construct($e) {
+        if ($e instanceof Closure)
+            $e = ['row_c' => $e];
         $this->e = $e;
     }
 
