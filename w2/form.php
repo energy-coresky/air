@@ -351,9 +351,11 @@ class Form
                         return [$val, $el];
                     return tag(($val ? "$val<br>" : '') . $el, '', 'p');
                 case 'chk':
-                    $etc = (isset($row[$n]) ? $row[$n] : @$ary[3]) ? ' checked' : '';
-                    $el = $this->input('checkbox', '', $etc . ' onclick="$(this).prev().val(this.checked?1:0)"');
-                    return ['', tag($this->input('hidden', $etc ? 1 : 0, $name) . $el . $val, '', 'label') . ' &nbsp; &nbsp;'];
+                    $etc = isset($ary[2]) ? ' ' . $ary[2] : '';
+                    $chk = (isset($row[$n]) ? $row[$n] : @$ary[3]) ? ' checked' : '';
+                    $el = $this->input('checkbox', '', $chk . ' onclick="$(this).prev().val(this.checked?1:0)"' . $etc);
+                    //return ['', tag($this->input('hidden', $chk ? 1 : 0, $name) . $el . $val, '', 'label') . ' &nbsp; &nbsp;'];
+                    return ['', tag($this->input('hidden', $chk ? 1 : 0, $name) . $el . $val, '', 'label')];
                 case 'checkbox':
                     $etc = ((isset($row[$n]) ? $row[$n] : @$ary[3]) ? ' checked' : '') . (@$ary[2] ? $ary[2] . $name : $name);
                     $el = $this->input('checkbox', isset($ary[4]) ? $ary[4] : 1, $etc);

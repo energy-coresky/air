@@ -11,16 +11,15 @@ class Display
     private $lnum;
     private $cut;
 
-    static function jet($fn, $marker = '', $no_lines = false) {
+    static function jet($jet, $marker = '', $no_lines = false) {
         $s = function ($s, $c) {
             return '<span style="color:' . $c . '">' . html($s) . '</span>';
         };
-        $in = $fn;
         $lnum = $inm = '';
         $ary = [""];
         $yellow = $blue = [];
 
-        foreach (explode("\n", unl($in)) as $i => $line) {
+        foreach (explode("\n", unl($jet)) as $i => $line) {
             $lnum .= str_pad(1 + $i, 3, 0, STR_PAD_LEFT) . "<br>";
             $cnt = count($ary) - 1;
             if (preg_match("/^#\.([\.\w]+)(.*)$/", $line, $m)) {
@@ -74,7 +73,7 @@ class Display
                         $out .= $s($br, '#00b;font-weight:bold');
                 }
                 $v = $out . $fu($v);
-                if (in_array($i, $yellow) || '' === $marker) {
+                if (in_array($i, $yellow)) {// || '' === $marker
                     $v = '<div class="code" style="background:#ffd;">' . "$v</div>";
                 } elseif (array_intersect($mname, $blue)) {
                     $v = '<div class="code" style="background:#eff;">' . "$v</div>";
@@ -82,10 +81,11 @@ class Display
             }
         }
         $out = implode("", $ary);
-        if ($out[-1] == "\n")
-            $out = "\n" . $out;
+        #if ($out[-1] == "\n")
+         #   $out = "\n" . $out;
         if ($no_lines)
-            return '<pre style="margin:0;background:#ffd">' . $out . '</pre>';
+            //return '<pre style="margin:0;background:#ffd">' . $out . '</pre>';
+            return $out;
         $table = self::lay_l . $lnum . self::lay_m . '<pre style="margin:0;width:100%">' . $out . '</pre>' . self::lay_r;
         return '<div class="php">' . $table . '</div>';
     }
