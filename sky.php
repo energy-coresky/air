@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.495 2023-07-27T10:54:52+03:00 energy';
+    const CORE = '0.496 2023-08-24T10:48:17+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -451,8 +451,7 @@ class HEAVEN extends SKY
         } elseif ($exit && !$hs) {
             http_response_code($exit);
         }
-#        if (DEV)
- #           $this->was_warning ? Plan::cache_p('sky_xw', 1) : Plan::cache_dq('sky_xw');
+
         if (SKY::$debug) {
             trace(mb_substr($stdout, 0, 100), 'STDOUT up to 100 chars');
             $this->tracing("Exit with $exit.$this->error_no\n"); # write X-tracing

@@ -89,7 +89,6 @@ class DEV
             array_shift($m);
             $list[] = $m + [7 => 'no-handle' == $m[2]];
         }
-        $menu = ['Source templates', 'Parsed template', 'Master action'];
 
         $layout = '>Layout not used</div>';
         $body = '>Body template not used</div>';
@@ -139,7 +138,7 @@ class DEV
         }
         return [
             'list_views' => $list,
-            'list_menu' => $menu,
+            'list_menu' => ['Source templates', 'Parsed template', 'Master action'],
             'trace_x' => pre($trc, 'class="trace"'),
             'nv' => $nv,
             'y_tx' => $x,
@@ -252,37 +251,33 @@ class DEV
         $wares = Plan::_rq('wares.php');
         return [
             'app' => SKY::version()['app'][4],
-            'e_installed' => [
-                'row_c' => function ($row) use (&$installed, &$wares) {
-                    $name = $installed ? key($installed) : 0;
-                    if (!$ware = array_shift($installed))
-                        return false;
-                    return [
-                        'name' => ucfirst($name),
-                        'type' => $ware['app']['type'],
-                        'class' => $wares[$name]['class'],
-                        'cnt' => count($wares[$name]['class']),
-                        'desc' => $this->desc(Plan::_obj([$name])->path),
-                    ];
-                },
-            ],
-            'e_dir' => [
-                'row_c' => function ($row) use (&$dir) {
-                    global $sky;
-                    if (!$ware = array_shift($dir))
-                        return false;
-                    $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
-                    if (!is_dir($path))
-                        return true;
-                    $conf = require "$path/conf.php";
-                    return [
-                        'name' => ucfirst($ware),
-                        'type' => $conf['app']['type'],
-                        'path' => $path,
-                        'desc' => $this->desc($path),
-                    ];
-                },
-            ],
+            'e_installed' => function ($row) use (&$installed, &$wares) {
+                $name = $installed ? key($installed) : 0;
+                if (!$ware = array_shift($installed))
+                    return false;
+                return [
+                    'name' => ucfirst($name),
+                    'type' => $ware['app']['type'],
+                    'class' => $wares[$name]['class'],
+                    'cnt' => count($wares[$name]['class']),
+                    'desc' => $this->desc(Plan::_obj([$name])->path),
+                ];
+            },
+            'e_dir' => function ($row) use (&$dir) {
+                global $sky;
+                if (!$ware = array_shift($dir))
+                    return false;
+                $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
+                if (!is_dir($path))
+                    return true;
+                $conf = require "$path/conf.php";
+                return [
+                    'name' => ucfirst($ware),
+                    'type' => $conf['app']['type'],
+                    'path' => $path,
+                    'desc' => $this->desc($path),
+                ];
+            },
         ];
     }
 
@@ -316,22 +311,20 @@ class DEV
         $wares = $this->wares(true);
         return [
             'bg_ware' => '#e0e7fe',
-            'e_inet' => [
-                'row_c' => function ($row) use (&$inet, &$wares) {
-                    $name = $inet ? key($inet) : 0;
-                    if (!$ware = array_shift($inet))
-                        return false;
-                    if (in_array($name, $wares))
-                        return true;
-                    return [
-                        'name' => ucfirst($name),
-                        'type' => $ware['type'],
-                        'class' => $cls = ($ware['classes'] ?? 0) ? explode(' ', $ware['classes']) : [],
-                        'cnt' => !$cls ? 0 : count($cls),
-                        'desc' => $ware['desc'],
-                    ];
-                },
-            ],
+            'e_inet' => function ($row) use (&$inet, &$wares) {
+                $name = $inet ? key($inet) : 0;
+                if (!$ware = array_shift($inet))
+                    return false;
+                if (in_array($name, $wares))
+                    return true;
+                return [
+                    'name' => ucfirst($name),
+                    'type' => $ware['type'],
+                    'class' => $cls = ($ware['classes'] ?? 0) ? explode(' ', $ware['classes']) : [],
+                    'cnt' => !$cls ? 0 : count($cls),
+                    'desc' => $ware['desc'],
+                ];
+            },
         ];
     }
 

@@ -4,7 +4,7 @@ class Jet
 {
     use Processor;
 
-    const version = '1.0';
+    const version = '1.02';
 
     private $parsed = [];
     private $files = [];
@@ -30,11 +30,11 @@ class Jet
     }
 
     static function inline($tpl, $_vars = []) {
-        Jet::$tpl[] = [':', false];
+        Jet::$tpl[] = [':', ''];
         $jet = new Jet([$tpl, ''], false, ':');
-        $php = substr($jet->compile(true), 7);
+        $_php = substr($jet->compile(true), 7);
         $_vars += ['sky' => $GLOBALS['sky']];
-        return eval($php);
+        return eval($_php);
     }
 
     function __construct($name, $layout = false, $fn = false, $return = null) {
@@ -53,7 +53,7 @@ class Jet
             $name = '_' == $layout[0] ? $layout : "y_$layout";
         }
         if (is_string($name) && strpos($name, '.'))
-            list($name, $marker) = explode('.', $name, 2);
+            [$name, $marker] = explode('.', $name, 2);
 
         $this->parsed[++Jet::$id] = '';
         $this->parse($name, $marker ?? '');
@@ -174,7 +174,7 @@ class Jet
     }
 
     private function block($name, &$tail, &$set0, $no_use) {
-        list ($id, $jet) = Jet::$block[$name];
+        [$id, $jet] = Jet::$block[$name];
         $pb =& Jet::$ptr[$id];
         $this->b_id = $pb[5] ?: $id;
         $this->b_loop = $pb[3];
@@ -206,7 +206,7 @@ class Jet
         foreach (Jet::$use[$name] as $k => $use) {
             if (in_array($k, $skip))
                 continue;
-            list ($use_id, $jet) = $use; # @use code to add
+            [$use_id, $jet] = $use; # @use code to add
             Jet::$ptr[$use_id][1] = "<?php $bv = $use_id ?>";
             $if = ["if ($use_id == $bv): ?>", $this->code($name, $jet), '<?php ', $if];
             $k == $j or $if = ['else', $if];
@@ -254,7 +254,7 @@ class Jet
     private function parse($name, $marker = '') {
         $this->marker = false;
         if ($inline = is_array($name)) {
-            list ($in, $this->marker) = $name;
+            [$in, $this->marker] = $name;
         } else {
             Jet::$tpl[] = [$name, $marker];
             $this->files[$name] = 1;
@@ -462,9 +462,9 @@ class Jet
         };
         if ($is_block) {
             if (preg_match($regexp, $arg, $m)) {
-                list (, $tpl, $pf, $name) = $m;
+                [, $tpl, $pf, $name] = $m;
             } elseif (preg_match('/^([a-z][ \*]|)(\w+) (.*?)~block(\W|\z)/s', "$arg $str", $m)) {
-                list (, $pf, $name, $tpl) = $m;
+                [, $pf, $name, $tpl] = $m;
                 $str = substr($str, 6 + strlen($tpl));
                 $tpl = "`$tpl`";
             } else {
@@ -484,7 +484,7 @@ class Jet
             }
             if (!preg_match('/^(\.()(\w+))$/', $arg, $m) && !preg_match($regexp, $arg, $m))
                 return $type ? $pos : null;
-            list (, $tpl, $pf, $name) = $m;
+            [, $tpl, $pf, $name] = $m;
             if ($type) {
                 $str = substr($str, 0, $pos - 4) . substr($str, $pos + strlen($br));
             } else {

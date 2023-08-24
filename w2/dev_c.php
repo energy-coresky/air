@@ -94,6 +94,15 @@ class dev_c extends Controller
         echo Admin::drop_all_cache() ? 'OK' : 'Error';
     }
 
+    function a_png() {
+        SKY::$debug = 0;
+        header('Cache-Control: private, max-age=3600');
+        MVC::mime('image/png');
+        ob_end_clean();
+        readfile(DIR_S . "/etc/img/$this->_1.png");
+        throw new Stop;
+    }
+
     function a_img() {/////////////////
         SKY::$debug = 0;
         list(,$s) = explode("#.$this->_1", file_get_contents(DIR_S . '/w2/__img.jet'), 3);
@@ -262,37 +271,31 @@ class dev_c extends Controller
         if ($has_act = is_string($act))
             $src = [$act => $src[$act]];
         $edit = $has_act && $is_edit;
-        $return = [
-            'row_c' => function($row = false) use (&$src, $ary, $gate, $ctrl, $edit) {
-                if ($row && $row->__i && false === next($src) || !$src)
-                    return false;
-                $ary = $ary[$act = key($src)] ?? [];
-                [$flag, $meth, $addr, $pfs] = $ary + [0, [], [], []];
-                if ($is_j = in_array($act, ['empty_j', 'default_j']) || 'j_' == substr($act, 0, 2))
-                    $meth = [0];//2del
-                $vars = [
-                    'act' => $act,
-                    'args' => $args = $src[$act],
-                    'delete' => $delete = true === $args,
-                    'code' => $edit || Gate::$cshow ? $gate->highlight($ary, $ctrl, $act, $delete ? 0 : count($args)) : false,
-                    'gerr' => $gate->gerr,
-                    'uri' => $gate->uri,
-                    'var' => $gate->var,
-                    'meth' => $meth,
-                ];
-                if (Gate::$cshow)
-                    return $vars;
-                return $vars + [
-                    'c1' => self::view_c1($flag, $edit, $meth, $is_j),
-                    'c2' => self::view_c23($flag, $edit, $addr, 1),
-                    'c3' => self::view_c23($flag, $edit, $pfs, 0),
-                ];
-            },
-        ];
-        if (!$has_act)
-            return $return;
-        return [
-            'row' => (object)($return['row_c']()),
+        $row_c = function($row = false) use (&$src, $ary, $gate, $ctrl, $edit) {
+            if ($row && $row->__i && false === next($src) || !$src)
+                return false;
+            $ary = $ary[$act = key($src)] ?? [];
+            [$flag, $meth, $addr, $pfs] = $ary + [0, [], [], []];
+            if ($is_j = in_array($act, ['empty_j', 'default_j']) || 'j_' == substr($act, 0, 2))
+                $meth = [0];//2del
+            $vars = [
+                'act' => $act,
+                'args' => $args = $src[$act],
+                'delete' => $delete = true === $args,
+                'code' => $edit || Gate::$cshow ? $gate->highlight($ary, $ctrl, $act, $delete ? 0 : count($args)) : false,
+                'gerr' => $gate->gerr,
+                'uri' => $gate->uri,
+                'var' => $gate->var,
+                'meth' => $meth,
+            ];
+            return Gate::$cshow ? $vars : $vars + [
+                'c1' => self::view_c1($flag, $edit, $meth, $is_j),
+                'c2' => self::view_c23($flag, $edit, $addr, 1),
+                'c3' => self::view_c23($flag, $edit, $pfs, 0),
+            ];
+        };
+        return !$has_act ? $row_c : [
+            'row' => (object)$row_c(),
             'wc' => "$ware.$ctrl",
         ];
     }

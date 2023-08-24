@@ -11,7 +11,7 @@ class Display
     private $lnum;
     private $cut;
 
-    static function jet($jet, $marker = '', $no_lines = false) {
+    static function jet($jet, $marker = '', $no_lines = false, $no_layout = false) {
         $s = function ($s, $c) {
             return '<span style="color:' . $c . '">' . html($s) . '</span>';
         };
@@ -81,11 +81,10 @@ class Display
             }
         }
         $out = implode("", $ary);
-        #if ($out[-1] == "\n")
-         #   $out = "\n" . $out;
+        if ($out[-1] == "\n" && !$no_layout)
+            $out = "\n" . $out;
         if ($no_lines)
-            //return '<pre style="margin:0;background:#ffd">' . $out . '</pre>';
-            return $out;
+            return $no_layout ? $out : '<pre style="margin:0;background:#ffd">' . $out . '</pre>';
         $table = self::lay_l . $lnum . self::lay_m . '<pre style="margin:0;width:100%">' . $out . '</pre>' . self::lay_r;
         return '<div class="php">' . $table . '</div>';
     }
@@ -114,7 +113,8 @@ class Display
         }
         if ($exist) {
             $md = new Parsedown;
-            return $code($md->text($text), '<pre><code class="language\-(jet|php|bash)">(.*?)</code></pre>');
+            $text = preg_replace("~\"https://github.*?/([^/\.]+)[^/\"]+\"~", '"_png?$1"', $md->text($text));
+            return $code($text, '<pre><code class="language\-(jet|php|bash)">(.*?)</code></pre>');
         }
         $text = str_replace("\n\n", '<p>', unl($text));
         return $code($text, "```(jet|php|bash|)(.*?)```");

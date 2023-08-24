@@ -13,7 +13,7 @@ Energy
 
 ## Documentation
 
-See the [wiki section](https://github.com/energy-coresky/air/wiki) (russian only, open not in frame).
+See the [wiki section](https://github.com/energy-coresky/air/wiki) (russian only).
 
 ## Application examples
 
