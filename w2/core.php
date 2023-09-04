@@ -84,6 +84,8 @@ function array_match($re, $ary, $re_key = false) {
 function is_num($v, $zero = false, $lt = true) {
     if (is_int($v) && ($lt || $v > 0))
         return true;
+    if (!is_string($v))
+        return false;
     return '0' === $v || ctype_digit($v) && ('0' !== $v[0] || $zero);
 }
 
