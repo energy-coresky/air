@@ -105,8 +105,8 @@ class dd_sqlite3 implements DriverDatabase
     }
 
     function _xtrace() {
-        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=2) where id=3');
-        sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=1) where id=2');
+        $this->sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=2) where id=3');
+        $this->sqlf('update $_memory set tmemo=(select tmemo from $_memory where id=1) where id=2');
     }
 
     static function show($what = 'tables') {
