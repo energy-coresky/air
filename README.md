@@ -19,7 +19,7 @@ See the [wiki section](https://github.com/energy-coresky/air/wiki) (russian only
 
 1. [AB.SKY][2] application
 2. [MED.CRM.SKY][3] application
-3. [HOLE.SKY][4] - empty application
+3. [HOLE.SKY][4] - empty application (preferably use composer)
 
 AB (absolute busy) application is product of InfoParc http://absolutebusy.com/ moved into SKY.
 AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
@@ -47,7 +47,7 @@ php moon.php ab.sky root:@localhost/ab:ab_
 
 Will work embedded into PHP's SQLite3 database and PHP's web-server:
 
-With composer:
+With composer (preferably):
 
 ```bash
 composer create-project coresky/hole
