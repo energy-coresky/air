@@ -427,7 +427,7 @@ interface DriverCache
     //function close();
     function test($name);
     function get($name);
-    function run($name);
+    function run($name, $vars);
     function mtime($name);
     function put($name, $data, $is_append = false);
     function glob($mask = '*');

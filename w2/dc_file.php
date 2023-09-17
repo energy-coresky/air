@@ -26,7 +26,7 @@ class dc_file implements DriverCache
         return file_get_contents($this->path . $name);
     }
 
-    function run($name) {
+    function run($name, $vars) {
         return require $this->path . $name;
     }
 

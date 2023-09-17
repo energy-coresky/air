@@ -120,10 +120,11 @@ class Plan
                 return [$obj->con->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'rq':
             case 'r':
-                return $obj->con->run($a0);
             case 'rr': # gate
-                $recompile = $arg[1];
-                return require $obj->path . '/' . $a0;
+                return $obj->con->run($a0, 'rr' != $op ? false : ['recompile' => $arg[1]]);
+     #       case 'rr': # gate
+      #          $recompile = $arg[1];
+       #         return require $obj->path . '/' . $a0;
             case 'da':
             case 'dq':
             case 'd':
