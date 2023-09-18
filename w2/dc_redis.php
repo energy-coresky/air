@@ -12,7 +12,6 @@ class dc_redis implements DriverCache
     public $type = 'Redis';
     public $conn;
 
-    private $obj;
     private $path;
 
     function __construct($cfg) {
@@ -29,10 +28,9 @@ class dc_redis implements DriverCache
         return $ary + ['str' => implode(', ', $ary)];
     }
 
-    function setup($obj) {
-        $this->obj = $obj;
+    function setup($obj, $quiet = false) {
         $this->path = $obj->path . '/' . ($obj->pref ?? '');
-        return $obj->quiet && !$this->conn->exists($this->path . $obj->quiet);
+        return $quiet && !$this->conn->exists($this->path . $quiet);
     }
 
     function test($name) {

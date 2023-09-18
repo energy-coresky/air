@@ -82,7 +82,8 @@ class SKY implements PARADISE
 
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
-        DEV && !CLI ? DEV::init() : Plan::open('cache');
+        Plan::open('cache');
+        DEV && !CLI && DEV::init();
     }
 
     function open($msg = 'OK') {

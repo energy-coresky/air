@@ -79,7 +79,7 @@ class Plan
         static $old_obj = false;
         list ($pn, $op) = explode('_', $func);
         $pn or $pn = 'app';
-        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] + [1 => 1] : [Plan::$ware, $arg[0]];
+        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] + [1 => null] : [Plan::$ware, $arg[0]];
 
         if ('view' == $pn && 'main' == $ware && !is_array($arg[0]))
             $ware = Plan::$view;
@@ -92,12 +92,11 @@ class Plan
             $old_ware = $ware;
             $old_obj = $obj;
         }
-        $obj->quiet = 'q' === ($op[1] ?? 0) ? $a0 : false;
-        if ($obj->con->setup($obj))
+        if ($obj->con->setup($obj, 'q' === ($op[1] ?? false) ? $a0 : false))
             return $arg[1] ?? ('rq' == $op ? [] : ('gq' == $op ? '' : 0));
         switch ($op) {
             case 'obj':
-                return $obj;
+                return null === $a0 ? $obj : $obj->$a0;
             case 'b':
                 return $obj->con->glob($a0); # mask
             case 'a':
@@ -147,46 +146,57 @@ class Plan
         }
     }
 
+    static function wares($wf, &$ctrl, &$class) {
+        foreach (require $wf as $key => $val) {
+            $conf = require ($path = $val['path']) . "/conf.php";
+            if ($val['type'] ?? 0)
+                $conf['app']['type'] = 'pr-dev';
+            if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
+                continue;
+            foreach ($val['class'] as $cls) {
+                $df = 'default_c' == $cls;
+                if ($df || 'c_' == substr($cls, 0, 2)) {
+                    $x = $df ? '*' : substr($cls, 2);
+                    $ctrl[$val['tune'] ? "$val[tune]/$x" : $x] = $key;
+                } else {
+                    $class[$cls] = $key;
+                }
+            }
+            $app =& $conf['app'];
+            unset($app['require'], $app['class'], $app['databases'], $app['options']);
+            SKY::$plans[$key] = ['app' => ['path' => $path] + $conf['app']] + $conf;
+        }
+    }
+
     static function &open($pn, $ware = false) {
         $ware or $ware = Plan::$ware;
 
         if (!Plan::$connections) {
             require DIR_S . "/w2/dc_file.php";
-            Plan::$connections[''] = new dc_file;
+            $drv = Plan::$connections[''] = new dc_file;
             $plans = SKY::$plans + Plan::$defaults;
-            if (is_file($fn = $plans['cache']['path'] . '/' . 'sky_plan.php')) {
-                SKY::$plans = require $fn;
+            $cfg = $plans['cache'];
+            if ($cfg['driver'] ?? false) {
+                $class = 'dc_' . $cfg['driver'];
+                require DIR_S . "/w2/$class.php";
+                $drv = Plan::$connections['cache'] = new $class($cfg);
+                //unset($cfg['dsn']);
+            }
+            $drv->setup((object)$cfg);
+            if ($drv->test('sky_plan.php')) {
+                SKY::$plans = $drv->run('sky_plan.php');
             } else {
                 SKY::$plans = $ctrl = [];
-                $wares = is_file($wf = DIR_M . '/wares.php') ? (require $wf) : [];
                 SKY::$plans['main'] = ['rewrite' => '', 'app' => ['path' => DIR_M], 'class' => []] + $plans;
-                $cfg =& SKY::$plans['main']['class'];
-                foreach ($wares as $key => $val) {
-                    $conf = require ($path = $val['path']) . "/conf.php";
-                    if ($val['type'] ?? 0)
-                        $conf['app']['type'] = 'pr-dev';
-                    if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
-                        continue;
-                    foreach ($val['class'] as $cls) {
-                        $df = 'default_c' == $cls;
-                        if ($df || 'c_' == substr($cls, 0, 2)) {
-                            $x = $df ? '*' : substr($cls, 2);
-                            $ctrl[$val['tune'] ? "$val[tune]/$x" : $x] = $key;
-                        } else {
-                            $cfg[$cls] = $key;
-                        }
-                    }
-                    $ptr =& $conf['app'];
-                    unset($ptr['require'], $ptr['class'], $ptr['databases'], $ptr['options']);
-                    SKY::$plans[$key] = ['app' => ['path' => $path] + $conf['app']] + $conf;
-                }
+                if (is_file($wf = DIR_M . '/wares.php'))
+                    self::wares($wf, $ctrl, SKY::$plans['main']['class']);
                 $plans = SKY::$plans;
                 $plans['main'] += ['ctrl' => $ctrl + Debug::controllers('main')];
-                Plan::cache_p('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite'])); # make dir & save file
-                SKY::$plans = require $fn;
+                Plan::cache_p('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite']));
+                SKY::$plans = Plan::cache_r('sky_plan.php');
             }
-            $cfg =& SKY::$plans['main'][$pn];
             Plan::locale();
+            return $cfg; # ['con'] is absent!
         } elseif (isset(SKY::$plans[$ware][$pn])) {
             $cfg =& SKY::$plans[$ware][$pn];
             if ($cfg['con'] ?? false)

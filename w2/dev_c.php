@@ -68,7 +68,7 @@ class dev_c extends Controller
             if (method_exists(MVC::$mc, 'head_y'))
                 MVC::instance()->set(MVC::$mc->head_y($action), true);
             MVC::body("$name." . ($this->_1 ? $this->_1 : 'empty'));
-            MVC::$_y += ['ware_dir' => Plan::_obj(0)->path];
+            MVC::$_y += ['ware_dir' => Plan::_obj('path')];
             return MVC::$mc->$action();
         } elseif ('a' == $x) {
             return call_user_func([$this, "j_$name"], 'c');

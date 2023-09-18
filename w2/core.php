@@ -423,7 +423,7 @@ class Hacker extends Exception {} # Assume as crash but NOT error on the web-scr
 interface DriverCache
 {
     function info();
-    function setup($obj);
+    function setup($obj, $quiet = false);
     //function close();
     function test($name);
     function get($name);

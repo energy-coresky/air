@@ -17,10 +17,10 @@ class dc_file implements DriverCache
         return $ary + ['str' => implode(', ', $ary)];
     }
 
-    function setup($obj) {
+    function setup($obj, $quiet = false) {
         $this->obj = $obj;
         $this->path = $obj->path . '/' . ($obj->pref ?? '');
-        return $obj->quiet && !is_file($this->path . $obj->quiet);
+        return $quiet && !is_file($this->path . $quiet);
     }
 
     function test($name) {
