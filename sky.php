@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.502 2023-09-17T16:59:17+03:00 energy';
+    const CORE = '0.503 2023-09-18T12:15:39+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -543,13 +543,13 @@ class HEAVEN extends SKY
                     $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
                 }
                 $this->_static = false; # skip app css and js files
-                $vars = MVC::jet('__std.crash');
-                $vars += [
+                $fn = MVC::jet('__std.crash', '', $vars);
+                $vars->data['_vars'] += [
                     'redirect' => $redirect,
                     'no' => $http_code,
                     'tracing' => $toggle ? $tracing : '',
                 ];
-                view(false, 0, $vars);
+                Plan::jet_r($fn, $vars);
             }
         });
         SQL::close();

@@ -1,5 +1,10 @@
 <?php
 
+function run_redis(&$_code, $_data) {
+    $_data && extract($_data->data, EXTR_REFS);
+    return eval(substr($_code, 5));
+}
+
 class dc_redis implements DriverCache
 {
     const TTL = 2592000; # 30 days
@@ -38,21 +43,21 @@ class dc_redis implements DriverCache
         return $this->conn->get($this->path . $name);
     }
 
-    function run($name, $vars) {
-        if ($vars)
-            extract($vars);
+    function run($name, $vars = false) {
         $code = $this->conn->get($this->path . $name);
-        return eval(substr($code, 5));
+        return run_redis($code, $vars);
     }
 
     function mtime($name) {
         return time() - self::TTL + $this->conn->ttl($this->path . $name);
     }
 
-    function put($name, $data, $is_append = false) {
-        return $is_append
-            ? $this->conn->append($this->path . $name, $data)
-            : $this->conn->setEx($this->path . $name, self::TTL, $data);
+    function append($name, $data) {
+        return $this->conn->append($this->path . $name, $data);
+    }
+
+    function put($name, $data, $ttl = false) {
+        return $this->conn->setEx($this->path . $name, self::TTL, $data);
     }
 
     function glob($mask = '*') {

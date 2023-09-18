@@ -427,9 +427,10 @@ interface DriverCache
     //function close();
     function test($name);
     function get($name);
-    function run($name, $vars);
+    function run($name, $vars = false);
     function mtime($name);
-    function put($name, $data, $is_append = false);
+    function append($name, $data);
+    function put($name, $data, $ttl = false);
     function glob($mask = '*');
     function drop($name);
     function drop_all($mask = '*');

@@ -14,7 +14,6 @@ class Plan
 
     static $ware = 'main';
     static $view = 'main';
-    static $parsed_fn;
     static $z_error = false;
     static $see_also = [];
     static $var_path = ['', '?', [], '']; # var_name, property, array's-path
@@ -101,14 +100,13 @@ class Plan
                 return $obj;
             case 'b':
                 return $obj->con->glob($a0); # mask
-            case 'a': # append
+            case 'a':
+                return $obj->con->append($a0, $arg[1]);
             case 'p':
-                return $obj->con->put($a0, $arg[1], 'a' == $op);
+                return $obj->con->put($a0, $arg[1]);
             case 'gq':
             case 'g':
                 return $obj->con->get($a0);
-            case 'tp': # jet for view(..) func
-                Plan::$parsed_fn = $obj->path . '/' . $a0;
             case 't':
                 return $obj->con->test($a0); # if OK return fullname
             case 'mq':
@@ -120,11 +118,7 @@ class Plan
                 return [$obj->con->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'rq':
             case 'r':
-            case 'rr': # gate
-                return $obj->con->run($a0, 'rr' != $op ? false : ['recompile' => $arg[1]]);
-     #       case 'rr': # gate
-      #          $recompile = $arg[1];
-       #         return require $obj->path . '/' . $a0;
+                return $obj->con->run($a0, $arg[1] ?? false);
             case 'da':
             case 'dq':
             case 'd':

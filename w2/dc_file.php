@@ -1,5 +1,10 @@
 <?php
 
+function run_file($_fn, $_data) {
+    $_data && extract($_data->data, EXTR_REFS);
+    return require $_fn;
+}
+
 class dc_file implements DriverCache
 {
     public $type = 'File'; # 2do add opcache control
@@ -26,19 +31,23 @@ class dc_file implements DriverCache
         return file_get_contents($this->path . $name);
     }
 
-    function run($name, $vars) {
-        return require $this->path . $name;
+    function run($name, $vars = false) {
+        return run_file($this->path . $name, $vars);
     }
 
     function mtime($name) {
         return stat($this->path . $name)['mtime'];
     }
 
-    function put($name, $data, $is_append = false) {
+    function append($name, $data) {
+        return file_put_contents($this->path . $name, $data, FILE_APPEND);
+    }
+
+    function put($name, $data, $ttl = false) {
         global $sky;
         if (!is_dir($this->obj->path))
             mkdir($this->obj->path, (int)($sky->s_mkdir_mode ?: 0777), true);
-        return file_put_contents($this->path . $name, $data, $is_append ? FILE_APPEND : 0);
+        return file_put_contents($this->path . $name, $data);
     }
 
     function glob($mask = '*') {

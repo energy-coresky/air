@@ -1,20 +1,18 @@
 <?php
 
-function view($_in, $_return = false, &$_vars = null) {
-    if (!$_in) {
-        return require Plan::$parsed_fn;
-    } elseif ($_in instanceof MVC) {
+function view($in, $return = false, &$param = null) {
+    if ($in instanceof MVC) {
         $layout = MVC::$layout;
-        $mvc = $_in;
+        $mvc = $in;
     } else {
-        [$_in, $layout] = is_array($_in) ? $_in : [$_in, ''];
+        [$in, $layout] = is_array($in) ? $in : [$in, ''];
         $no_handle = false;
-        if (!is_bool($_return)) {
-            $no_handle = is_array($_vars = $_return);
-            $_return = true;
+        if (!is_bool($return)) {
+            $no_handle = is_array($param = $return);
+            $return = true;
         }
-        $mvc = MVC::sub($_in, $_vars, $no_handle);
-        $mvc->return = $_return;
+        $mvc = MVC::sub($in, $param, $no_handle);
+        $mvc->return = $return;
     }
     if ('' !== $mvc->ob) {
         $mvc->body = '';
@@ -24,7 +22,7 @@ function view($_in, $_return = false, &$_vars = null) {
     trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->no ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 
     if ($layout || $mvc->body)
-        $mvc->ob = view(false, 0, MVC::jet($mvc, $layout));
+        $mvc->ob = Plan::jet_r(MVC::jet($mvc, $layout, $vars), $vars);
     if ($mvc->no)
         return $mvc->return ? $mvc->ob : null;
     global $sky;
@@ -364,22 +362,24 @@ class MVC extends MVC_BASE
         });
     }
 
-    static function &jet($mvc, $layout = '') {
+    static function jet($mvc, $layout, &$vars) {
         global $sky;
-        $vars = SKY::$vars;
+        $vars = new stdClass;
+        $vars->data['_vars'] = SKY::$vars;
+        $_vars =& $vars->data['_vars'];
         if (is_string($mvc)) { # for __std.crash
             $name = $mvc;
-            $vars['sky'] = $sky;
+            $_vars['sky'] = $sky;
         } else {
             $name = "_$mvc->body";
-            $mvc->no or MVC::vars($vars, MVC::$_y, 'y_');
-            MVC::vars($vars, $mvc->_v);
-            $vars['sky'] = $mvc;
+            $mvc->no or MVC::vars($_vars, MVC::$_y, 'y_');
+            MVC::vars($_vars, $mvc->_v);
+            $_vars['sky'] = $mvc;
         }
         $fn = MVC::fn_parsed($layout, $name);
-        $ok = Plan::jet_tp($fn) && (!DEV || $sky->d_jet_cache);
+        $ok = Plan::jet_t($fn) && (!DEV || $sky->d_jet_cache);
         if ($ok && DEV) {
-            [$mtime, $files] = Plan::jet_mf($fn);
+            [$mtime, $files] = Plan::jet_mf($fn);///////////////////2do: del _mf
             foreach ($files as $one) {
                 if (!$ok = Plan::view_('m', "$one.jet") < $mtime)
                     break; # recompilation required
@@ -387,7 +387,7 @@ class MVC extends MVC_BASE
         }
         $ok or new Jet($name, $layout, $fn, is_string($mvc) ? false : $mvc->return);
         trace("JET: $fn, " . ($ok ? 'used cached' : 'recompiled'));
-        return $vars;
+        return $fn;
     }
 
     static function last_modified($time, $use_site_ts = true, $func = null) {
@@ -533,7 +533,7 @@ class MVC extends MVC_BASE
         }
         $x = $this->return ? 'j' : 'a';
         $action = '' === $i0 ? "empty_$x" : $x . '_' . $i0;
-        Plan::gate_rr($fn_dst, $recompile);
+        Plan::gate_r($fn_dst, (object)['data' => ['recompile' => $recompile]]);
         $cls_g = $class . '_G';
         if (!method_exists($gate = new $cls_g, $action))
             $action = "default_$x";
