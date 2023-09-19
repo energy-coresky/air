@@ -7,7 +7,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.503 2023-09-18T12:15:39+03:00 energy';
+    const CORE = '0.504 2023-09-19T11:02:43+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -82,7 +82,7 @@ class SKY implements PARADISE
 
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
-        Plan::open('cache');
+        Plan::open('cache'); # load composed SKY::$plans
         DEV && !CLI && DEV::init();
     }
 

@@ -2,22 +2,11 @@
 
 class Plan
 {
-    private static $connections = [];
-    private static $defaults = [
-        'view' => ['path' => DIR_M . '/mvc/view'],
-        'cache' => ['path' => 'var/cache'],
-        'jet' => ['path' => 'var/jet'],
-        'gate' => ['path' => 'var/gate'],
-        'mem' => ['path' => 'var/mem'],
-        //'sql' => ['path' => 'var/sql'], #2do
-    ];
-
     static $ware = 'main';
     static $view = 'main';
     static $z_error = false;
     static $see_also = [];
     static $var_path = ['', '?', [], '']; # var_name, property, array's-path
-
     /*
         path   => required!
         driver => 'file' by default with '' (empty name) connection
@@ -92,38 +81,40 @@ class Plan
             $old_ware = $ware;
             $old_obj = $obj;
         }
-        if ($obj->con->setup($obj, 'q' === ($op[1] ?? false) ? $a0 : false))
+        if ($obj->dc->setup($obj, 'q' === ($op[1] ?? false) ? $a0 : false))
             return $arg[1] ?? ('rq' == $op ? [] : ('gq' == $op ? '' : 0));
         switch ($op) {
             case 'obj':
                 return null === $a0 ? $obj : $obj->$a0;
             case 'b':
-                return $obj->con->glob($a0); # mask
+                return $obj->dc->glob($a0); # mask
             case 'a':
-                return $obj->con->append($a0, $arg[1]);
+                return $obj->dc->append($a0, $arg[1]);
             case 'p':
-                return $obj->con->put($a0, $arg[1]);
+                return $obj->dc->put($a0, $arg[1]);
+            case 's':
+                return $obj->dc->set($a0, $arg[1]);
             case 'gq':
             case 'g':
-                return $obj->con->get($a0);
+                return $obj->dc->get($a0);
             case 't':
-                return $obj->con->test($a0); # if OK return fullname
+                return $obj->dc->test($a0); # if OK return fullname
             case 'mq':
             case 'm':
-                return $obj->con->mtime($a0);
+                return $obj->dc->mtime($a0);
             case 'mf': # jet
-                $s = $obj->con->get($a0);
+                $s = $obj->dc->get($a0);
                 $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
-                return [$obj->con->mtime($a0), explode(' ', trim($line, " \r\n#"))];
+                return [$obj->dc->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'rq':
             case 'r':
-                return $obj->con->run($a0, $arg[1] ?? false);
+                return $obj->dc->run($a0, $arg[1] ?? false);
             case 'da':
             case 'dq':
             case 'd':
                 if (in_array($pn, ['view', 'mem', 'app']))
                     throw new Error("Failed when Plan::{$pn}_$op(..)");
-                return 'da' == $op ? $obj->con->drop_all($a0) : $obj->con->drop($a0);
+                return 'da' == $op ? $obj->dc->drop_all($a0) : $obj->dc->drop($a0);
             case 'autoload':
                 trace("autoload($a0)");
                 if (strpos($a0, '\\'))
@@ -149,7 +140,7 @@ class Plan
     static function wares($wf, &$ctrl, &$class) {
         foreach (require $wf as $key => $val) {
             $conf = require ($path = $val['path']) . "/conf.php";
-            if ($val['type'] ?? 0)
+            if ($val['type'] ?? false)
                 $conf['app']['type'] = 'pr-dev';
             if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
                 continue;
@@ -168,55 +159,6 @@ class Plan
         }
     }
 
-    static function &open($pn, $ware = false) {
-        $ware or $ware = Plan::$ware;
-
-        if (!Plan::$connections) {
-            require DIR_S . "/w2/dc_file.php";
-            $drv = Plan::$connections[''] = new dc_file;
-            $plans = SKY::$plans + Plan::$defaults;
-            $cfg = $plans['cache'];
-            if ($cfg['driver'] ?? false) {
-                $class = 'dc_' . $cfg['driver'];
-                require DIR_S . "/w2/$class.php";
-                $drv = Plan::$connections['cache'] = new $class($cfg);
-                //unset($cfg['dsn']);
-            }
-            $drv->setup((object)$cfg);
-            if ($drv->test('sky_plan.php')) {
-                SKY::$plans = $drv->run('sky_plan.php');
-            } else {
-                SKY::$plans = $ctrl = [];
-                SKY::$plans['main'] = ['rewrite' => '', 'app' => ['path' => DIR_M], 'class' => []] + $plans;
-                if (is_file($wf = DIR_M . '/wares.php'))
-                    self::wares($wf, $ctrl, SKY::$plans['main']['class']);
-                $plans = SKY::$plans;
-                $plans['main'] += ['ctrl' => $ctrl + Debug::controllers('main')];
-                Plan::cache_p('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite']));
-                SKY::$plans = Plan::cache_r('sky_plan.php');
-            }
-            Plan::locale();
-            return $cfg; # ['con'] is absent!
-        } elseif (isset(SKY::$plans[$ware][$pn])) {
-            $cfg =& SKY::$plans[$ware][$pn];
-            if ($cfg['con'] ?? false)
-                return $cfg;
-        } else {
-            $cfg =& SKY::$plans['main'][$pn];
-            SKY::$plans[$ware][$pn] =& $cfg;
-            if ($cfg['con'] ?? false)
-                return $cfg;
-        }
-        if ($cfg['driver'] ?? false) {
-            $class = 'dc_' . $cfg['driver'];
-            Plan::$connections[$pn] = $cfg['con'] = new $class($cfg);
-            unset($cfg['dsn']);
-        } else {
-            $cfg['con'] = Plan::$connections[$cfg['use'] ?? ''];
-        }
-        return $cfg;
-    }
-
     static function rewrite(&$in) {
         $code = "\n";
         foreach (Plan::_rq('rewrite.php') as $rw)
@@ -224,6 +166,53 @@ class Plan
         $in = explode("'',", $in, 2);
         $in = "$in[0]function(\$cnt, &\$surl, \$uri, \$sky) {{$code}},$in[1]";
         return '';
+    }
+
+    static function &open($pn, $ware = false) {
+        static $connections = [];
+        $ware or $ware = Plan::$ware;
+        $new_dc = function (&$cfg) use (&$connections, $pn) {
+            $class = 'dc_' . $cfg['driver'];
+            require DIR_S . "/w2/$class.php";
+            $connections[$pn] = new $class($cfg);
+            unset($cfg['dsn']);
+            return $connections[$pn];
+        };
+        if ($connections) {
+            $set = isset(SKY::$plans[$ware][$pn]);
+            $cfg =& SKY::$plans[$set ? $ware : 'main'][$pn];
+            $set or SKY::$plans[$ware][$pn] =& $cfg;
+            isset($cfg['dc']) or $cfg['dc'] = isset($cfg['driver']) ? $new_dc($cfg) : $connections[$cfg['use'] ?? ''];
+        } else {
+            require DIR_S . "/w2/dc_file.php";
+            $dc = $connections[''] = $connections['cache'] = new dc_file;
+            $plans = SKY::$plans + [
+                'view' => ['path' => DIR_M . '/mvc/view'],
+                'cache' => ['path' => 'var/cache'],
+                'jet' => ['path' => 'var/jet'],
+                'gate' => ['path' => 'var/gate'],
+                'mem' => ['path' => 'var/mem'],
+            ];
+            $cfg = $plans['cache'];
+            if (isset($cfg['driver']))
+                $dc = $new_dc($cfg);
+            $dc->setup((object)$cfg);
+            if ($dc->test('sky_plan.php')) {
+                SKY::$plans = $dc->run('sky_plan.php');
+            } else {
+                SKY::$plans = $ctrl = [];
+                SKY::$plans['main'] = ['rewrite' => '', 'app' => ['path' => DIR_M], 'class' => []] + $plans;
+                is_file($wf = DIR_M . '/wares.php') && self::wares($wf, $ctrl, SKY::$plans['main']['class']);
+                $plans = SKY::$plans;
+                $plans['main'] += ['ctrl' => $ctrl + Debug::controllers('main')];
+                SKY::$plans['main']['cache']['dc'] = $dc;
+                Plan::cache_s('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite']));
+                SKY::$plans = Plan::cache_r('sky_plan.php');
+            }
+            SKY::$plans['main']['cache']['dc'] = $dc;
+            Plan::locale();
+        }
+        return $cfg;
     }
 
     static function locale($lg = 'en') {

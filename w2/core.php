@@ -431,6 +431,7 @@ interface DriverCache
     function mtime($name);
     function append($name, $data);
     function put($name, $data, $ttl = false);
+    function set($name, $data);
     function glob($mask = '*');
     function drop($name);
     function drop_all($mask = '*');

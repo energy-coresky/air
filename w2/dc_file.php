@@ -50,6 +50,10 @@ class dc_file implements DriverCache
         return file_put_contents($this->path . $name, $data);
     }
 
+    function set($name, $data) {
+        return $this->put($name, $data);
+    }
+
     function glob($mask = '*') {
         return glob($this->path . $mask);
     }

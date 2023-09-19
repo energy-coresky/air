@@ -58,6 +58,10 @@ class dc_redis implements DriverCache
         return $this->conn->setEx($this->path . $name, self::TTL, $data);
     }
 
+    function set($name, $data) {
+        return $this->conn->set($this->path . $name, $data);
+    }
+
     function glob($mask = '*') {
         return $this->conn->keys($this->path . $mask);
     }
