@@ -13,7 +13,7 @@ class dc_file implements DriverCache
     private $path;
 
     function info() {
-        $ary = ['name' => $this->name, 'version' => ''];
+        $ary = ['type' => $this->type, 'version' => ''];
         return $ary + ['str' => implode(', ', $ary)];
     }
 
@@ -23,43 +23,43 @@ class dc_file implements DriverCache
         return $quiet && !is_file($this->path . $quiet);
     }
 
-    function test($name) {
-        return is_file($this->path . $name) ? $this->path . $name : false;
+    function test($key) {
+        return is_file($this->path . $key) ? $this->path . $key : false;
     }
 
-    function get($name) {
-        return file_get_contents($this->path . $name);
+    function get($key) {
+        return file_get_contents($this->path . $key);
     }
 
-    function run($name, $vars = false) {
-        return run_file($this->path . $name, $vars);
+    function run($key, $vars = false) {
+        return run_file($this->path . $key, $vars);
     }
 
-    function mtime($name) {
-        return stat($this->path . $name)['mtime'];
+    function mtime($key) {
+        return stat($this->path . $key)['mtime'];
     }
 
-    function append($name, $data) {
-        return file_put_contents($this->path . $name, $data, FILE_APPEND);
+    function append($key, $data) {
+        return file_put_contents($this->path . $key, $data, FILE_APPEND);
     }
 
-    function put($name, $data, $ttl = false) {
+    function put($key, $data, $ttl = false) {
         global $sky;
         if (!is_dir($this->obj->path))
             mkdir($this->obj->path, (int)($sky->s_mkdir_mode ?: 0777), true);
-        return file_put_contents($this->path . $name, $data);
+        return file_put_contents($this->path . $key, $data);
     }
 
-    function set($name, $data) {
-        return $this->put($name, $data);
+    function set($key, $data) {
+        return $this->put($key, $data);
     }
 
     function glob($mask = '*') {
         return glob($this->path . $mask);
     }
 
-    function drop($name) {
-        return (int)unlink($this->path . $name);
+    function drop($key) {
+        return (int)unlink($this->path . $key);
     }
 
     function drop_all($mask = '*') {

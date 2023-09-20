@@ -379,7 +379,10 @@ class MVC extends MVC_BASE
         $fn = MVC::fn_parsed($layout, $name);
         $ok = Plan::jet_t($fn) && (!DEV || $sky->d_jet_cache);
         if ($ok && DEV) {
-            [$mtime, $files] = Plan::jet_mf($fn);///////////////////2do: del _mf
+            $mtime = Plan::jet_m($fn);
+            $jet = Plan::jet_g($fn);
+            $line = substr($jet, $n = strpos($jet, "\n"), strpos($jet, "\n", 2 + $n) - $n);
+            $files = explode(' ', trim($line, " \r\n#"));
             foreach ($files as $one) {
                 if (!$ok = Plan::view_('m', "$one.jet") < $mtime)
                     break; # recompilation required

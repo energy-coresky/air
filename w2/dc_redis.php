@@ -7,7 +7,8 @@ function run_redis(&$_code, $_data) {
 
 class dc_redis implements DriverCache
 {
-    const TTL = 2592000; # 30 days
+    const TTL = 604800; # 1 week
+    const EDGE = 10; # 10 sec
 
     public $type = 'Redis';
     public $conn;
@@ -24,54 +25,57 @@ class dc_redis implements DriverCache
     }
 
     function info() {
-        $ary = ['name' => $this->name, 'version' => $this->conn->info()['redis_version']];
+        $ary = ['type' => $this->type, 'version' => $this->conn->info()['redis_version']];
         return $ary + ['str' => implode(', ', $ary)];
     }
 
     function setup($obj, $quiet = false) {
         $this->path = $obj->path . '/' . ($obj->pref ?? '');
-        return $quiet && !$this->conn->exists($this->path . $quiet);
+        return $quiet && !$this->test($quiet);
     }
 
-    function test($name) {
-        return $this->conn->exists($this->path . $name) ? $this->path . $name : false;
+    function test($key) {
+        $ttl = $this->conn->ttl($this->path . $key);
+        return -1 == $ttl || $ttl > self::EDGE ? $this->path . $key : false;
     }
 
-    function get($name) {
-        return $this->conn->get($this->path . $name);
+    function get($key) {
+        return $this->conn->get($this->path . $key);
     }
 
-    function run($name, $vars = false) {
-        $code = $this->conn->get($this->path . $name);
+    function run($key, $vars = false) {
+        $code = $this->conn->get($this->path . $key);
         return run_redis($code, $vars);
     }
 
-    function mtime($name) {
-        return time() - self::TTL + $this->conn->ttl($this->path . $name);
+    function mtime($key) {
+        //return -1 == $ttl ? PHP_INT_MAX : time() - self::TTL + $ttl;
+        return time() - self::TTL + $this->conn->ttl($this->path . $key);
     }
 
-    function append($name, $data) {
-        return $this->conn->append($this->path . $name, $data);
+    function append($key, $data) {
+        return $this->conn->append($this->path . $key, $data);
     }
 
-    function put($name, $data, $ttl = false) {
-        return $this->conn->setEx($this->path . $name, self::TTL, $data);
+    function put($key, $data, $ttl = false) {
+        return $this->conn->setEx($this->path . $key, self::TTL, $data);
     }
 
-    function set($name, $data) {
-        return $this->conn->set($this->path . $name, $data);
+    function set($key, $data) {
+        return $this->conn->set($this->path . $key, $data);
     }
 
     function glob($mask = '*') {
         return $this->conn->keys($this->path . $mask);
     }
 
-    function drop($name) {
-        return (int)$this->conn->del($this->path . $name);
+    function drop($key) {
+        return (int)$this->conn->del($this->path . $key);
     }
 
     function drop_all($mask = '*') {
         // use ->unlink(..) perform the actual deletion asynchronously
-        return (int)$this->conn->del($this->conn->keys($this->path . $mask));
+        $keys = $this->conn->keys($this->path . $mask);
+        return count($keys) ? (int)$this->conn->del($keys) : 1;
     }
 }

@@ -259,43 +259,65 @@ class Root
         return $TOP;
     }
 
+    static function post() {
+        if (isset($_POST['extra'])) {
+            $html = file_get_contents($url = $_POST['extra']);
+            $url = DOMAIN . urlencode($u = substr($url, strlen(LINK)));
+            is_dir('var/extra') or mkdir('var/extra');
+            'main/error' == $u
+                ? Plan::mem_p(['main', 'error.html'], $html)
+                : file_put_contents("var/extra/$url.html", $html);
+        } else foreach ($_POST['id'] as $file) {
+            if (strpos($file, ':')) {
+                [$plan, $file] = explode(':', $file);
+                call_user_func("Plan::{$plan}_d", ['main', basename($file)]);
+            } else {
+                unlink($file);
+            }
+        }
+        jump(URI);
+    }
+
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     static function _cache($i = null) {
         global $sky;
 
         $menu = ['Hard cache', 'Jet cache', 'Gate cache', 'Extra cache', 'Static cache'];
         '_dev' == $sky->_0 or $menu += [5 => 'Drop ALL cache'];
+        $right = $dir = false;
         switch ($i) {
-            case 0:
-            case 1:
-            case 2:
             case 3:
-                $ary = [
-                    Plan::cache_obj(['main'])->path,
-                    Plan::jet_obj(['main'])->path,
-                    Plan::gate_obj(['main'])->path,
-                    'var/extra',
-                ];
-                if (isset($_POST['extra'])) {
-                    $html = file_get_contents($url = $_POST['extra']);
-                    $url = DOMAIN . urlencode($u = substr($url, strlen(LINK)));
-                    is_dir('var/extra') or mkdir('var/extra');
-                    'main/error' == $u
-                        ? Plan::mem_p(['main', 'error.html'], $html)
-                        : file_put_contents("var/extra/$url.html", $html);
-                    jump(URI);
-                } elseif ($_POST) {
-                    foreach ($_POST['id'] as $file)
-                        unlink($file);
-                    jump(URI);
+                $dir = 'var/extra';
+            case 2:
+            case 1:
+            case 0:
+                $_POST && self::post();
+                $ary = ['cache', 'jet', 'gate', ''];
+                if ($name = $ary[(int)$i]) {
+                    $obj = call_user_func("Plan::{$name}_obj", ['main']);
+                    $dc = $obj->dc->type;
+                    if ('File' == $dc) {
+                        $dir = $obj->path;
+                        $right = "<b>Driver: File</b>";
+                    } else {
+                        $keys = call_user_func("Plan::{$name}_b", ['main', '*']);
+                        $info = $obj->dc->info()['str'];
+                        $right = "<b>Driver: <r>$info</r></b>";
+                    }
                 }
-                if (is_dir($path = $ary[(int)$i])) {
-                    $files = [];
-                    $glob = glob("$path/*");
+                $dc = isset($dc) && 'File' != $dc ? "$name:" : '';
+                $mtime = function ($fn) use ($name) {
+                    $ts = call_user_func("Plan::{$name}_m", ['main', basename($fn)]);
+                    return !$ts ? 'permanent' : date(DATE_DT, $ts);
+                };
+                if (!$dir || is_dir($dir)) {
+                    $glob = $dir ? glob("$dir/*") : $keys;
                     if (3 == $i && Plan::mem_t('error.html'))
                         $glob[] = Plan::mem_obj(['main'])->path . '/error.html';
+                    $files = [];
                     foreach ($glob as $k) {
-                        $v = tag(sprintf(TPL_CHECKBOX . ' ', $k, '') . date(DATE_DT, stat($k)['mtime']), '', 'label');
+                        $tinfo = $dir ? date(DATE_DT, stat($k)['mtime']) : $mtime($k);
+                        $v = tag(sprintf(TPL_CHECKBOX . ' ', $dc . $k, '') . $tinfo, '', 'label');
                         $files["<span>$k</span>"] = $v;
                     }
                     if ($files) {
@@ -333,7 +355,7 @@ class Root
                 jump('?main=4');
             break;
         }
-        return menu($i, $menu);
+        return menu($i, $menu) . tag($right, 'style="margin-left:35px"', 'span');
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=

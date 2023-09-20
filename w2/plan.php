@@ -7,18 +7,10 @@ class Plan
     static $z_error = false;
     static $see_also = [];
     static $var_path = ['', '?', [], '']; # var_name, property, array's-path
-    /*
-        path   => required!
-        driver => 'file' by default with '' (empty name) connection
-        pref   => '' by default
-        ttl    => -1 (infinity) by default
-        dsn    => '' by default
-        use    => '' by default ( => 'plan_name') - use selected connection
-    */
 
     static function set($ware) {
-        $prev = Plan::$ware;
-        Plan::$ware = $ware;
+        $prev = self::$ware;
+        self::$ware = $ware;
         return $prev;
     }
 
@@ -47,20 +39,20 @@ class Plan
 
     static function _g($a0, $w2 = false) {
         $std = is_array($a0) ? $a0[1] : $a0;
-        return $w2 ? file_get_contents(DIR_S . "/$std") : Plan::__callStatic('_g', [$a0]);
+        return $w2 ? file_get_contents(DIR_S . "/$std") : self::__callStatic('_g', [$a0]);
     }
 
     static function view_($op, $a0) { # g or m
-        list ($ware, $a0) = is_array($a0) ? $a0 : [Plan::$ware, $a0];
+        list ($ware, $a0) = is_array($a0) ? $a0 : [self::$ware, $a0];
         if (!preg_match($re = "/^\w+\.jet$/", $a0))
             throw new Error("Jet: file `$a0` do not match $re");
         if ('_' == ($a0[1] ?? '') && '_' == $a0[0]) {
             $a0 = DIR_S . '/w2/' . $a0;
             return 'g' == $op ? file_get_contents($a0) : stat($a0)['mtime'];
         }
-        if ('main' != $ware && !Plan::view_t([$ware, $a0]))
-            return Plan::__callStatic('view_' . $op, [['main', $a0]]);
-        return Plan::__callStatic('view_' . $op, [[$ware, $a0]]);
+        if ('main' != $ware && !self::view_t([$ware, $a0]))
+            return self::__callStatic('view_' . $op, [['main', $a0]]);
+        return self::__callStatic('view_' . $op, [[$ware, $a0]]);
     }
 
     static function __callStatic($func, $arg) {
@@ -68,21 +60,22 @@ class Plan
         static $old_obj = false;
         list ($pn, $op) = explode('_', $func);
         $pn or $pn = 'app';
-        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] + [1 => null] : [Plan::$ware, $arg[0]];
+        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] + [1 => null] : [self::$ware, $arg[0]];
 
         if ('view' == $pn && 'main' == $ware && !is_array($arg[0]))
-            $ware = Plan::$view;
+            $ware = self::$view;
 
         if ($old_ware == $ware && $old_obj->pn == $pn) {
             $obj = $old_obj;
         } else {
-            $obj = (object)Plan::open($pn, $ware);
+            $obj = (object)self::open($pn, $ware);
             $obj->pn = $pn;
             $old_ware = $ware;
             $old_obj = $obj;
         }
-        if ($obj->dc->setup($obj, 'q' === ($op[1] ?? false) ? $a0 : false))
+        if ($obj->dc->setup($obj, 'q' === ($op[1] ?? 0) ? $a0 : false))
             return $arg[1] ?? ('rq' == $op ? [] : ('gq' == $op ? '' : 0));
+
         switch ($op) {
             case 'obj':
                 return null === $a0 ? $obj : $obj->$a0;
@@ -102,10 +95,6 @@ class Plan
             case 'mq':
             case 'm':
                 return $obj->dc->mtime($a0);
-            case 'mf': # jet
-                $s = $obj->dc->get($a0);
-                $line = substr($s, $n = strpos($s, "\n"), strpos($s, "\n", 2 + $n) - $n);
-                return [$obj->dc->mtime($a0), explode(' ', trim($line, " \r\n#"))];
             case 'rq':
             case 'r':
                 return $obj->dc->run($a0, $arg[1] ?? false);
@@ -118,50 +107,50 @@ class Plan
             case 'autoload':
                 trace("autoload($a0)");
                 if (strpos($a0, '\\'))
-                    return Plan::vendor($a0);
+                    return self::vendor($a0);
                 $low = strtolower($a0);
                 $cfg = SKY::$plans['main']['class'] ?? [];
                 if (in_array(substr($a0, 0, 2), ['m_', 't_'])) {
                     if (is_file($fn = $obj->path . "/mvc/$a0.php"))
                         return require $fn;
-                    if ('main' != $ware && ($fn = Plan::_t(['main', "mvc/$a0.php"])))
+                    if ('main' != $ware && ($fn = self::_t(['main', "mvc/$a0.php"])))
                         return require $fn;
-                    return Plan::vendor($a0);
+                    return self::vendor($a0);
                 } elseif (isset($cfg[$a0])) {
-                    return Plan::_r([$cfg[$a0], "w3/$low.php"]);
+                    return self::_r([$cfg[$a0], "w3/$low.php"]);
                 }
                 $fn = DIR_S . '/w2/' . $low . '.php';
-                return is_file($fn) ? require $fn : Plan::_rq("w3/$low.php") || Plan::vendor($a0);
+                return is_file($fn) ? require $fn : self::_rq("w3/$low.php") || self::vendor($a0);
             default:
-                throw new Error("Plan::$func(..) - method not exists");
+                throw new Error("self::$func(..) - method not exists");
         }
     }
 
-    static function wares($wf, &$ctrl, &$class) {
-        foreach (require $wf as $key => $val) {
-            $conf = require ($path = $val['path']) . "/conf.php";
-            if ($val['type'] ?? false)
+    static function wares($fn, &$ctrl, &$class) {
+        foreach (require $fn as $ware => $cfg) {
+            $conf = require ($path = $cfg['path']) . "/conf.php";
+            if ($cfg['type'] ?? false)
                 $conf['app']['type'] = 'pr-dev';
             if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
                 continue;
-            foreach ($val['class'] as $cls) {
+            foreach ($cfg['class'] as $cls) {
                 $df = 'default_c' == $cls;
                 if ($df || 'c_' == substr($cls, 0, 2)) {
                     $x = $df ? '*' : substr($cls, 2);
-                    $ctrl[$val['tune'] ? "$val[tune]/$x" : $x] = $key;
+                    $ctrl[$cfg['tune'] ? "$cfg[tune]/$x" : $x] = $ware;
                 } else {
-                    $class[$cls] = $key;
+                    $class[$cls] = $ware;
                 }
             }
             $app =& $conf['app'];
             unset($app['require'], $app['class'], $app['databases'], $app['options']);
-            SKY::$plans[$key] = ['app' => ['path' => $path] + $conf['app']] + $conf;
+            SKY::$plans[$ware] = ['app' => ['path' => $path] + $conf['app']] + $conf;
         }
     }
 
     static function rewrite(&$in) {
         $code = "\n";
-        foreach (Plan::_rq('rewrite.php') as $rw)
+        foreach (self::_rq('rewrite.php') as $rw)
             !DEV && $rw[2] or $code .= $rw[1] . "\n";
         $in = explode("'',", $in, 2);
         $in = "$in[0]function(\$cnt, &\$surl, \$uri, \$sky) {{$code}},$in[1]";
@@ -170,7 +159,8 @@ class Plan
 
     static function &open($pn, $ware = false) {
         static $connections = [];
-        $ware or $ware = Plan::$ware;
+        $ware or $ware = self::$ware;
+
         $new_dc = function (&$cfg) use (&$connections, $pn) {
             $class = 'dc_' . $cfg['driver'];
             require DIR_S . "/w2/$class.php";
@@ -178,6 +168,7 @@ class Plan
             unset($cfg['dsn']);
             return $connections[$pn];
         };
+
         if ($connections) {
             $set = isset(SKY::$plans[$ware][$pn]);
             $cfg =& SKY::$plans[$set ? $ware : 'main'][$pn];
@@ -189,8 +180,8 @@ class Plan
             $plans = SKY::$plans + [
                 'view' => ['path' => DIR_M . '/mvc/view'],
                 'cache' => ['path' => 'var/cache'],
-                'jet' => ['path' => 'var/jet'],
                 'gate' => ['path' => 'var/gate'],
+                'jet' => ['path' => 'var/jet'],
                 'mem' => ['path' => 'var/mem'],
             ];
             $cfg = $plans['cache'];
@@ -202,15 +193,15 @@ class Plan
             } else {
                 SKY::$plans = $ctrl = [];
                 SKY::$plans['main'] = ['rewrite' => '', 'app' => ['path' => DIR_M], 'class' => []] + $plans;
-                is_file($wf = DIR_M . '/wares.php') && self::wares($wf, $ctrl, SKY::$plans['main']['class']);
+                is_file($fn = DIR_M . '/wares.php') && self::wares($fn, $ctrl, SKY::$plans['main']['class']);
                 $plans = SKY::$plans;
                 $plans['main'] += ['ctrl' => $ctrl + Debug::controllers('main')];
                 SKY::$plans['main']['cache']['dc'] = $dc;
-                Plan::cache_s('sky_plan.php', Plan::auto($plans, ['Plan', 'rewrite']));
-                SKY::$plans = Plan::cache_r('sky_plan.php');
+                self::cache_s('sky_plan.php', self::auto($plans, ['Plan', 'rewrite']));
+                SKY::$plans = self::cache_r('sky_plan.php');
             }
             SKY::$plans['main']['cache']['dc'] = $dc;
-            Plan::locale();
+            self::locale();
         }
         return $cfg;
     }
@@ -247,13 +238,13 @@ class Plan
 
         if (null !== $msg)
             return $msg; # empty string or msg
-        $msg = Plan::cache_gq($addr = ['main', 'dev_z_err']);
+        $msg = self::cache_gq($addr = ['main', 'dev_z_err']);
         if (!SKY::$debug) # j_trace don't erase file
             return $msg;
         $z_fly = HEAVEN::Z_FLY == $z_fly;
         if ($msg) {
             if ($drop) {
-                $z_fly or Plan::cache_dq($addr); # erase flash file
+                $z_fly or self::cache_dq($addr); # erase flash file
                 SKY::$debug = false; # skip self tracing to show z-error's one
             }
         } elseif ($z_fly && $is_error) {
@@ -263,8 +254,8 @@ class Plan
                 $msg .= '<h1>' . $p[1][0] . '</h1><pre>' . $p[1][1] . '</pre>';
             if (isset($p[2]))
                 $msg .= '<h1>' . $p[2][0] . '</h1><pre>' . $p[2][1] . '</pre>';
-            Plan::cache_p($addr, $msg);
-            Plan::$z_error = true;
+            self::cache_p($addr, $msg);
+            self::$z_error = true;
         }
         return $msg;
     }
@@ -275,7 +266,7 @@ class Plan
         if ($context) {
             $vars = "\n";
             foreach ($context as $k => $v)
-                $vars .= "\$$k = " . Plan::var($v) . ";\n";
+                $vars .= "\$$k = " . self::var($v) . ";\n";
         }
         $p =& SKY::$errors;
         $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", $desc . $vars];
