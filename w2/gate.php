@@ -68,7 +68,7 @@ class Gate
             return $list;
 
         $bt = DEV ? "trace('GATE: $ctrl, ' . (\$recompile ? 'recompiled' : 'used cached'));\n\n" : '';
-        $bt .= "class {$ctrl}_G extends Bolt\n{";
+        $bt .= "class {$ctrl}_G extends Guard\n{";
 
         $ary = Plan::_rq([$ware, 'gate.php'])[$ctrl] ?? [];
         foreach ($list as $act => $args) {

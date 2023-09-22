@@ -1,31 +1,29 @@
 <?php
 
-function run_redis(&$_code, $_data) {
+function run_memcached(&$_code, $_data) {
     $_data && extract($_data->data, EXTR_REFS);
     return eval(substr($_code, 5));
 }
 
-class dc_redis implements DriverCache
+class dc_memcached implements DriverCache # 2do: https://www.php.net/manual/en/memcached.set.php
 {
     const TTL = 604800; # 1 week
     const EDGE = 10; # 10 sec
 
-    public $type = 'Redis';
+    public $type = 'Memcached';
     public $conn;
 
     private $path;
 
     function __construct($cfg) {
-        [$host, $port, $pwd] = explode(':', $cfg['dsn'], 3) + ['localhost', 6379, false];
-        $this->conn = new Redis;
-        if (!$this->conn->connect($host, (int)$port))
-            throw new Error('Cannot connect to Redis');
-        if ($pwd)
-            $this->conn->auth($pwd);
+        [$host, $port] = explode(':', $cfg['dsn'], 2) + ['localhost', 11211];
+        $this->conn = new Memcached;
+        if (!$this->conn->addServer($host, (int)$port))
+            throw new Error('Cannot connect to Memcached');
     }
 
     function info() {
-        $ary = ['type' => $this->type, 'version' => $this->conn->info()['redis_version']];
+        $ary = ['type' => $this->type, 'version' => $this->conn->getVersion()];
         return $ary + ['str' => implode(', ', $ary)];
     }
 
@@ -45,12 +43,11 @@ class dc_redis implements DriverCache
 
     function run($key, $vars = false) {
         $code = $this->conn->get($this->path . $key);
-        return run_redis($code, $vars);
+        return run_memcached($code, $vars);
     }
 
     function mtime($key) {
-        //return -1 == $ttl ? PHP_INT_MAX : time() - self::TTL + $ttl;
-        return time() - self::TTL + $this->conn->ttl($this->path . $key);
+        //return time() - self::TTL + $this->conn->ttl($this->path . $key);
     }
 
     function append($key, $data) {
@@ -65,17 +62,19 @@ class dc_redis implements DriverCache
         return $this->conn->set($this->path . $key, $data);
     }
 
-    function glob($mask = '*') {
-        return $this->conn->keys($this->path . $mask);
+    function glob($mask = '*') { # 2do
+        if (!DEV)
+            return [];
+        $all = $this->conn->getAllKeys();
+        //return 
     }
 
     function drop($key) {
-        return (int)$this->conn->del($this->path . $key);
+        return (int)$this->conn->delete($this->path . $key);
     }
 
     function drop_all($mask = '*') {
-        // use ->unlink(..) perform the actual deletion asynchronously
         $keys = $this->conn->keys($this->path . $mask);
-        return count($keys) ? (int)$this->conn->del($keys) : 1;
+        return count($keys) ? (int)$this->conn->delete($keys) : 1;
     }
 }

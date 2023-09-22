@@ -53,7 +53,7 @@ abstract class MVC_BASE
     }
 }
 
-abstract class Bolt {
+abstract class Guard {
     function __call($name, $args) {
     }
 
