@@ -106,8 +106,12 @@ class Plan
                 return 'da' == $op ? $obj->dc->drop_all($a0) : $obj->dc->drop($a0);
             case 'autoload':
                 trace("autoload($a0)");
-                if (strpos($a0, '\\'))
-                    return self::vendor($a0);
+                if (strpos($a0, '\\')) {
+                    if (2 != count($x = explode("\\", $a0)) || !isset(SKY::$plans[$x[0]]))
+                        return self::vendor($a0);
+                    $pref = 1 == strlen($x[1]) || '_' != $x[1][1] ? 'w3' : 'mvc';
+                    return self::_rq([$x[0], "$pref/$x[1].php"]) || self::vendor($a0);
+                }
                 $low = strtolower($a0);
                 $cfg = SKY::$plans['main']['class'] ?? [];
                 if (in_array(substr($a0, 0, 2), ['m_', 't_'])) {
@@ -124,6 +128,20 @@ class Plan
             default:
                 throw new Error("self::$func(..) - method not exists");
         }
+    }
+
+    static function xload(&$name) {
+        static $instances = [];
+        $n0 = substr($name, 1);
+        if (isset($instances[self::$ware][$name = 'm' . $n0]))
+            return $instances[self::$ware][$name];
+        if (isset($instances[self::$ware][$name = 't' . $n0]))
+            return $instances[self::$ware][$name];
+        self::_rq("mvc/x$n0.php");
+        if (class_exists($model = self::$ware . "\\t$n0", false))
+            return $instances[self::$ware][$name] = new $model;
+        $model = self::$ware . "\\m$n0";
+        return $instances[self::$ware][$name = 'm' . $n0] = new $model;
     }
 
     static function wares($fn, &$ctrl, &$class) {

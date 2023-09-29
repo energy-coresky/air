@@ -35,8 +35,10 @@ abstract class MVC_BASE
 {
     function __get($name) {
         static $instances = [];
-        if (in_array(substr($name, 0, 2), ['m_', 't_'])) {
-            $obj = $instances[$name] ?? ($instances[$name] = new $name);
+        if (in_array(substr($name, 0, 2), ['m_', 't_', 'x_'])) {
+            $obj = 'x' == $name[0]
+                ? Plan::xload($name)
+                : $instances[$name] ?? ($instances[$name] = new $name);
             if ('m' != $name[0]) {
                 SQL::$dd = $obj->dd;
                 SQL::$dd->onduty($obj->table);
