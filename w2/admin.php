@@ -178,8 +178,10 @@ class Admin
         $result = 1;
         foreach (['cache', 'gate', 'jet'] as $plan)
             $result &= call_user_func(['Plan', "{$plan}_da"], '*');
-        $s = (int)substr($sky->s_statp, 0, -1) + 1;
-        $sky->s_statp = $s > 9999 ? '1000p' : $s . 'p';
+        if (SKY::$dd) {
+            $s = (int)substr($sky->s_statp, 0, -1) + 1;
+            $sky->s_statp = $s > 9999 ? '1000p' : $s . 'p';
+        }
         return $result;
     }
 

@@ -29,10 +29,7 @@ class Gate
     private $ns;
 
     function __construct() {
-        global $sky;
-        $sky->memory(); # this run $sky->open() also
-        if (defined('WWW'))
-            Schedule::setWWW($sky->n_www);
+        defined('WWW') && Plan::mem_p('www_dir', WWW);
     }
 
     static function default() {
@@ -95,7 +92,7 @@ class Gate
 
     function code($ary, $cmode, $argc) {
         [$flag, $meth, $addr, $pfs] = $ary + [0, [], [], []];
-        $this->_e = SKY::s('gate_404') || DEV ? 'e();' : 'die;';
+        $this->_e = defined('GATE_404') || DEV ? 'e();' : 'die;';
         $this->gerr = $s0 = '';
         $this->opcnt = [0, 0, 0]; # optimize count of surl GET POST
         $this->ends = $this->pfs_ends = $this->eq_a = $this->eq_b = $this->eq_z = [];
