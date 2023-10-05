@@ -5,7 +5,6 @@ Using the framework, you can create web applications of any type. It contains a 
 "sky gate", "ghost query", "wares system" and more. By the way: the [Jet view parser][1]
 has a release-candidate status and is architecturally more powered than Blade or Twig.
 
-Wellcome for contributors!
 This project is my favorite "oil painting"! Not finished yet, but you can use it.
 
 Regards,
