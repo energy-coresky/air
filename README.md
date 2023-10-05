@@ -55,7 +55,7 @@ cd hole
 # then run PHP's embedded web-server:
 php vendor/bin/sky s
 ```
-Or with moon:
+Or with moon (rare updates):
 
 ```bash
 curl https://coresky.net/api?get=hole.zip > hole.zip
@@ -64,7 +64,7 @@ unzip hole.zip -d hole/public
 cd hole/public
 php moon.php hole.sky
 ```
-Or download all with git:
+Or download all with git (dev-master):
 
 ```bash
 # the app
