@@ -162,13 +162,15 @@ class DEV
         echo 'OK';
     }
 
-    function j_ware($class = false) {
+    function j_ware($class = false, $method = 0) {
         if ($class) {
-            [$ware] = explode('\\', $class);
             $obj = new $class;
-            echo method_exists($obj, 'install')
-                ? '+' . js("sky.d.ware('$ware.install',0)")
-                : 'OK';
+            if (method_exists($obj, $method)) {
+                [$ware] = explode('\\', $class);
+                echo '+' . js("sky.d.ware('$ware.$method',0)");
+            } else {
+                echo 'uninstall' == $method ? $obj->off_ware() : 'OK';
+            }
         } else {
             [$ware, $action] = explode('.', $_POST['s'], 2);
             $class = "$ware\\ware";
@@ -182,29 +184,33 @@ class DEV
     }
 
     function j_attach() {
-        $wares = (array)Plan::_rq('wares.php');
         $dir = trim($_POST['s'], " \t\r\n/");
-        $install = false;
-        if ('un' != ($mode = $_POST['mode'])) { # Install
-            [$type, $dir] = explode('.', $dir, 2);
-            if (!is_file("$dir/conf.php")) {
-                print("File `$dir/conf.php` not found");
-                return 801;
-            }
+        [$type, $dir] = explode('.', $dir, 2);
+        if (!is_file("$dir/conf.php")) {
+            print("File `$dir/conf.php` not found");
+            return 801;
+        }
+        $name = basename($dir);
+        if ($class = is_file($fn = "$dir/w3/ware.php") ? "$name\\ware" : false)
+            require $fn;
+        $wares = (array)Plan::_rq('wares.php');
+        if ('un' == ($mode = $_POST['mode'])) { # UnInstall
+            if ($class)
+                return $this->j_ware($class, 'uninstall');
+            unset($wares[$name]);
+            
+        } else { # Install
             $conf = require "$dir/conf.php";
             $required = explode(' ', $conf['app']['require'] ?? '');
-            $name = basename($dir);
-            if ($install = is_file($fn = "$dir/w3/ware.php") ? "$name\\ware" : false)
-                require $fn;
             $flags = explode(' ', $conf['app']['flags'] ?? '');
             if ('' == $required[0])
                 array_shift($required);
-            foreach ($required as $class) {
-                if (!Plan::has($class)) {
+            foreach ($required as $one) {
+                if (!Plan::has($one)) {
                     if ($isv = is_dir('vendor'))
                         Plan::vendor();
-                    if (!class_exists($class, $isv)) {
-                        print("Class `$class` not found");
+                    if (!class_exists($one, $isv)) {
+                        print("Class `$one` not found");
                         return 801;
                     }
                 }
@@ -212,7 +218,7 @@ class DEV
             $cls = [];
             if ('prod' == $type && -2 == $mode) {
                 return [
-                    'opt' => $install ? (new $install) : false,
+                    'opt' => $class ? (new $class) : false,
                     'classes' => Globals::def($dir),
                     'name' => $name,
                     'dir' => $dir,
@@ -234,16 +240,12 @@ class DEV
             unset($_POST['dev'], $_POST['tune'], $_POST['cls'], $_POST['s'], $_POST['mode']);
             if ($_POST)
                 $wares[$name] += ['options' => $_POST];
-        } else {
-            unset($wares[strtolower($dir)]);
         }
-        Plan::_p('wares.php', Plan::auto($wares));
+        Plan::app_p('wares.php', Plan::auto($wares));
         Plan::cache_d('sky_plan.php');
-        if ($install) {
-            return $this->j_ware($install);
-        } else {
-            echo 'OK';
-        }
+        if ($class)
+            return $this->j_ware($class, 'install');
+        echo 'OK';
     }
 
     function desc($path) {
@@ -283,7 +285,8 @@ class DEV
                     'type' => $ware['app']['type'],
                     'class' => $wares[$name]['class'],
                     'cnt' => count($wares[$name]['class']),
-                    'desc' => $this->desc(Plan::_obj([$name])->path),
+                    'desc' => $this->desc($path = Plan::_obj([$name])->path),
+                    'path' => $path,
                 ];
             },
             'e_dir' => function ($row) use (&$dir) {

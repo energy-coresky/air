@@ -16,9 +16,8 @@
 #._801
 
 
-#.attach
+#.attach.title
 +
-#.title
 <div class="other-task">
     <div class="fs16">Install "{{ucfirst($k_ware ?? $name)}}" ware:</div>
 </div>
@@ -114,7 +113,7 @@
     </div>
     <div style="width:150px;position:relative;top:0px">
     @if(!$bg_ware)
-        <button onclick="sky.d.ware('{{$row->name}}','un')">Uninstall</button>
+        <button onclick="sky.d.ware('{{$row->type . '.' . $row->path}}','un')">Uninstall</button>
     @elseif('#e0e7ff' == $bg_ware)
         <button onclick="sky.d.ware('{{$row->type . '.' . $row->path}}',-2)">Install</button>
     @else
