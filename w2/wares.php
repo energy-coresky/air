@@ -2,38 +2,29 @@
 
 class Wares extends MVC_BASE # Base class for wares installation
 {
-
-    function __construct($mode = false) {
+    function __construct() {
+        [$this->k_ware] = explode('\\', get_class($this));
     }
 
-    static function open($name, $char = false) {
-        static $dd;
-        if ($dd)
-            return $dd;
-        SKY::$databases += Plan::app_r('conf.php')['app']['databases'];
-        $dd = SQL::open($name);
-        global $sky;
-        if ($char)
-            $sky->memory(8, $char, $dd);
-        return $dd;
+    function form() {
+        return ["No options"];
+    }
+
+    function databases() {
+        $list = SKY::$databases;
+        unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
+        $k = array_keys($list);
+        return array_combine([-1 => ''] + $k, [-1 => 'main'] + $k);
+    }
+
+    function __toString() {
+        return Form::A([], $this->form());
     }
 
     function test() {
         return false;
     }
 
-    function __toString() {
-        return '---';
-    }
-
     function create_tables() {
-    }
-
-    function install() {
-        return 'tables: 1';
-    }
-
-    function uninstall() {
-        // 2do
     }
 }

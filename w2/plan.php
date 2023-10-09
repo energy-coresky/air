@@ -149,6 +149,8 @@ class Plan
             $conf = require ($path = $cfg['path']) . "/conf.php";
             if ($cfg['type'] ?? false)
                 $conf['app']['type'] = 'pr-dev';
+            if ($cfg['options'] ?? false)
+                $conf['app']['options'] = $cfg['options'];
             if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
                 continue;
             foreach ($cfg['class'] as $cls) {
@@ -161,7 +163,7 @@ class Plan
                 }
             }
             $app =& $conf['app'];
-            unset($app['require'], $app['class'], $app['databases'], $app['options']);
+            unset($app['require'], $app['class'], $app['databases']);
             SKY::$plans[$ware] = ['app' => ['path' => $path] + $conf['app']] + $conf;
         }
     }

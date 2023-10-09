@@ -134,8 +134,9 @@ sky.d.drop_cache = function(r, el) {
     }, 2000);
 };
 
-sky.d.attach = function(s, m, form) {
-    ajax('attach', form ? form : {s:s, mode:m}, function(r) {
+sky.d.ware = function(s, m, form) {
+    let action = 'un' == m || m < 0 ? 'attach' : 'ware';
+    ajax(action, form ? form : {s:s, mode:m}, function(r) {
         r = $.trim(r);
         if ('+' == r.charAt(0)) {
             $('#v-body div:eq(0)').html(r.substr(1));

@@ -18,25 +18,35 @@
 
 #.attach
 +
+#.title
 <div class="other-task">
-    <div class="fs16">Install {{$name}} ware:</div>
+    <div class="fs16">Install "{{ucfirst($k_ware ?? $name)}}" ware:</div>
 </div>
+#.title
 <form id="attach-ware">
 <input type="hidden" name="s" value="prod.{{$dir}}">
-<input type="hidden" name="mode" value="2">
-<div class="" style="padding:10px;">
-    {!$more!}
+<input type="hidden" name="mode" value="-1">
+<div class="" style="padding:0 10px;">
     @if(in_array('tune', $flags))
         <h2>Tune address:</h2>
-        <input name="tune" value="{{$name}}"> - empty for no address tuning
+        <dl><dt></dt>
+        <dd><input name="tune" value="{{$name}}"> - empty for no address tuning</dd>
+        </dl>
     ~if
     <h2>Select classes:</h2>
     @loop($classes as $cls)
-        @continue(in_array($cls, ['Ware']))
-        <label><input checked type="checkbox" name="cls[]" value="{{$cls}}"> {{$cls}}</label><br>
+        @continue(strpos($cls, '\\'))
+        <dl><dt></dt>
+        <dd><label><input checked type="checkbox" name="cls[]" value="{{$cls}}"> {{$cls}}</label><br></dd>
+        </dl>
     ~loop
-    <input type="button" onclick="sky.d.attach(0,0, $('#attach-ware').serialize())" value="Install">
-    <label><input type="checkbox" name="dev"> install for DEV mode only</label>
+    @if($opt)
+        <h2>{{ucfirst($name)}} ware options:</h2>{!$opt!}
+    ~if
+    <hr><dl><dt></dt>
+    <dd><input type="button" onclick="sky.d.ware(0,-1, $('#attach-ware').serialize())" value="Install">
+    <label><input type="checkbox" name="dev"> install for DEV mode only</label></dd>
+    </dl>
 </div>
 </form>
 #.attach
@@ -104,9 +114,9 @@
     </div>
     <div style="width:150px;position:relative;top:0px">
     @if(!$bg_ware)
-        <button onclick="sky.d.attach('{{$row->name}}','un')">Uninstall</button>
+        <button onclick="sky.d.ware('{{$row->name}}','un')">Uninstall</button>
     @elseif('#e0e7ff' == $bg_ware)
-        <button onclick="sky.d.attach('{{$row->type . '.' . $row->path}}',1)">Install</button>
+        <button onclick="sky.d.ware('{{$row->type . '.' . $row->path}}',-2)">Install</button>
     @else
         <button onclick="sky.d.download('{{$row->name}}')">Download</button>
     ~if

@@ -162,11 +162,31 @@ class DEV
         echo 'OK';
     }
 
+    function j_ware($class = false) {
+        if ($class) {
+            [$ware] = explode('\\', $class);
+            $obj = new $class;
+            echo method_exists($obj, 'install')
+                ? '+' . js("sky.d.ware('$ware.install',0)")
+                : 'OK';
+        } else {
+            [$ware, $action] = explode('.', $_POST['s'], 2);
+            $class = "$ware\\ware";
+            $obj = new $class;
+            global $sky;
+            $sky->eview = false;
+            Plan::$ware = Plan::$view = $ware;
+            MVC::body("ware.$action");
+            return $obj->$action($_POST['mode']);
+        }
+    }
+
     function j_attach() {
         $wares = (array)Plan::_rq('wares.php');
         $dir = trim($_POST['s'], " \t\r\n/");
+        $install = false;
         if ('un' != ($mode = $_POST['mode'])) { # Install
-            list ($type, $dir) = explode('.', $dir, 2);
+            [$type, $dir] = explode('.', $dir, 2);
             if (!is_file("$dir/conf.php")) {
                 print("File `$dir/conf.php` not found");
                 return 801;
@@ -174,6 +194,8 @@ class DEV
             $conf = require "$dir/conf.php";
             $required = explode(' ', $conf['app']['require'] ?? '');
             $name = basename($dir);
+            if ($install = is_file($fn = "$dir/w3/ware.php") ? "$name\\ware" : false)
+                require $fn;
             $flags = explode(' ', $conf['app']['flags'] ?? '');
             if ('' == $required[0])
                 array_shift($required);
@@ -188,21 +210,15 @@ class DEV
                 }
             }
             $cls = [];
-            if ('prod' == $type && 1 == $mode) {
-                $classes = Globals::def($dir);
-                $more = '';
-                if (in_array('Ware', $classes)) {
-                    require "$dir/w3/ware.php";
-                    $more = '<h2>Install options:</h2>' . (new Ware);
-                }
+            if ('prod' == $type && -2 == $mode) {
                 return [
-                    'more' => $more,
-                    'classes' => $classes,
+                    'opt' => $install ? (new $install) : false,
+                    'classes' => Globals::def($dir),
                     'name' => $name,
                     'dir' => $dir,
                     'flags' => $flags,
                 ];
-            } else if (2 == $mode) {
+            } else if (-1 == $mode) {
                 if (!$cls = $_POST['cls'] ?? []) {
                     print('Must select at least one class');
                     return 801;
@@ -215,12 +231,19 @@ class DEV
             ];
             if (isset($_POST['dev']))
                 $wares[$name] += ['type' => 'dev'];
+            unset($_POST['dev'], $_POST['tune'], $_POST['cls'], $_POST['s'], $_POST['mode']);
+            if ($_POST)
+                $wares[$name] += ['options' => $_POST];
         } else {
             unset($wares[strtolower($dir)]);
         }
         Plan::_p('wares.php', Plan::auto($wares));
         Plan::cache_d('sky_plan.php');
-        echo 'OK';
+        if ($install) {
+            return $this->j_ware($install);
+        } else {
+            echo 'OK';
+        }
     }
 
     function desc($path) {
