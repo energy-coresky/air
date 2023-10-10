@@ -217,13 +217,18 @@ class DEV
             }
             $cls = [];
             if ('prod' == $type && -2 == $mode) {
+                $doc = is_file($fn = "$dir/README.md") ? Display::md(file_get_contents($fn)) : '';
+                if (is_file($fn = "$dir/LICENSE"))
+                    $doc .= Display::bash(file_get_contents($fn));
                 return [
                     'opt' => $class ? (new $class) : false,
                     'classes' => Globals::def($dir),
                     'name' => $name,
                     'dir' => $dir,
                     'flags' => $flags,
+                    'md' => $doc,
                 ];
+                
             } else if (-1 == $mode) {
                 if (!$cls = $_POST['cls'] ?? []) {
                     print('Must select at least one class');

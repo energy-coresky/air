@@ -25,7 +25,7 @@
 <form id="attach-ware">
 <input type="hidden" name="s" value="prod.{{$dir}}">
 <input type="hidden" name="mode" value="-1">
-<div class="" style="padding:0 10px;">
+<div style="padding:0 10px;">
     @if(in_array('tune', $flags))
         <h2>Tune address:</h2>
         <dl><dt></dt>
@@ -48,6 +48,11 @@
     </dl>
 </div>
 </form>
+@if($md)
+<div class="other-task">
+    <div class="fs16">README.md</div>
+</div><div style="padding:0 10px;">{!$md!}</div>
+~if
 #.attach
 
 #.ware //////////////////////////////////////////////////////////////////////////////
@@ -92,7 +97,7 @@
 #end
 #.inet
 <script>
-  ajax('inet',{},'inet-wares');
+  //ajax('inet',{},'inet-wares'); /////////////////////////////////////????????????????????????????????????????????????????????
 </script>
 </div>
 #.ware.single ------------------------------------------------------------------------------
@@ -114,14 +119,17 @@
     <div style="width:150px;position:relative;top:0px">
     @if(!$bg_ware)
         <button onclick="sky.d.ware('{{$row->type . '.' . $row->path}}','un')">Uninstall</button>
+        &nbsp; <a @href()>readme</a>
     @elseif('#e0e7ff' == $bg_ware)
         <button onclick="sky.d.ware('{{$row->type . '.' . $row->path}}',-2)">Install</button>
+        &nbsp; <a @href()>readme</a>
     @else
         <button onclick="sky.d.download('{{$row->name}}')">Download</button>
     ~if
     </div>
 </div>
 #.single
+
 
 #.header ------------------------------------------------------------------------------
 <h4>@if(1 == $n)OVERVIEW SYSTEM INFORMATION
