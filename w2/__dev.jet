@@ -55,10 +55,37 @@
 ~if
 #.attach
 
+#.repo
+<div class="other-task">
+    <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{$app}}</span> application:</div>
+</div>
+<div id="inet-wares" style="padding:10px;">
+    <h1>Connecting ...</h1>
+#.inet
+#if(:-)
+    @loop($e_inet)@eat
+        @inc(.single)@empty<h1>No wares</h1>
+    ~loop
+#end
+#.inet
+<script>
+  ajax('inet',{},'inet-wares');
+</script>
+</div>
+#.repo
+
+#.readme
+<div class="other-task">
+    <div class="fs16">Docs for "{{ucfirst(basename($dir))}}" ware:</div>
+</div>
+<div style="padding:10px;">{!$html!}</div>
+#.readme
+
 #.ware //////////////////////////////////////////////////////////////////////////////
 #use(`<h4>WALK ALL WARES..</h4>` as header)
 <div class="other-task">
-    <div class="fs16">Installed wares:</div>
+    <span class="fs16">Installed wares:</span>
+    <input type="button" value="Repository" onclick="ajax('repo',{},'dev-dev')" style="margin-left:10%">
 </div>
 <div class="bg-x" style="padding:10px">@php $bg_ware='' ~php
     @loop($e_installed)@eat
@@ -83,22 +110,6 @@
     @loop($e_dir)@eat
         @inc(.single)@empty<h1>No wares</h1>
     ~loop
-</div><br>
-<div class="other-task">
-    <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{$app}}</span> application:</div>
-</div>
-<div id="inet-wares" style="padding:10px;">
-    <h1>Connecting ...</h1>
-#.inet
-#if(:-)
-    @loop($e_inet)@eat
-        @inc(.single)@empty<h1>No wares</h1>
-    ~loop
-#end
-#.inet
-<script>
-  //ajax('inet',{},'inet-wares'); /////////////////////////////////////????????????????????????????????????????????????????????
-</script>
 </div>
 #.ware.single ------------------------------------------------------------------------------
 <div class="ware" style="background:{{$bg_ware}}">
@@ -119,10 +130,10 @@
     <div style="width:150px;position:relative;top:0px">
     @if(!$bg_ware)
         <button onclick="sky.d.ware('{{$row->type . '.' . $row->path}}','un')">Uninstall</button>
-        &nbsp; <a @href()>readme</a>
+        &nbsp; <a @href(ajax('readme',{dir:'{{$row->path}}'},'dev-dev'))>readme</a>
     @elseif('#e0e7ff' == $bg_ware)
         <button onclick="sky.d.ware('{{$row->type . '.' . $row->path}}',-2)">Install</button>
-        &nbsp; <a @href()>readme</a>
+        &nbsp; <a @href(ajax('readme',{dir:'{{$row->path}}'},'dev-dev'))>readme</a>
     @else
         <button onclick="sky.d.download('{{$row->name}}')">Download</button>
     ~if

@@ -280,7 +280,6 @@ class DEV
         $dir = array_diff($wares, $works);
         $wares = Plan::_rq('wares.php');
         return [
-            'app' => SKY::version()['app'][4],
             'e_installed' => function ($row) use (&$installed, &$wares) {
                 $name = $installed ? key($installed) : 0;
                 if (!$ware = array_shift($installed))
@@ -330,6 +329,20 @@ class DEV
             unlink($fn);
         }
         echo $ok ? 'OK' : 'Error in ZIP archive';
+    }
+
+    function j_readme() {
+        $dir = $_POST['dir'];
+        $html = is_file($fn = "$dir/README.md") ? Display::md(file_get_contents($fn)) : '';
+        if (is_file($fn = "$dir/LICENSE"))
+            $html .= Display::bash(file_get_contents($fn));
+        return ['html' => $html, 'dir' => $dir];
+    }
+
+    function j_repo() {
+        return [
+            'app' => SKY::version()['app'][4],
+        ];
     }
 
     function j_inet() {
