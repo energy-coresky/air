@@ -154,10 +154,8 @@ class DEV
     function j_second_dir() {
         global $sky;
         $dir = trim($_POST['s'], " \t\r\n/");
-        if (!is_dir($dir)) {
-            print("Dir `$dir` not exists");
-            return 801;
-        }
+        if (!is_dir($dir))
+            return $this->error("Dir `$dir` not exists");
         $sky->d_second_wares = $dir;
         echo 'OK';
     }
@@ -186,10 +184,8 @@ class DEV
     function j_attach() {
         $dir = trim($_POST['s'], " \t\r\n/");
         [$type, $dir] = explode('.', $dir, 2);
-        if (!is_file("$dir/conf.php")) {
-            print("File `$dir/conf.php` not found");
-            return 801;
-        }
+        if (!is_file("$dir/conf.php"))
+            return $this->error("File `$dir/conf.php` not found");
         $name = basename($dir);
         if ($class = is_file($fn = "$dir/w3/ware.php") ? "$name\\ware" : false)
             require $fn;
@@ -209,10 +205,8 @@ class DEV
                 if (!Plan::has($one)) {
                     if ($isv = is_dir('vendor'))
                         Plan::vendor();
-                    if (!class_exists($one, $isv)) {
-                        print("Class `$one` not found");
-                        return 801;
-                    }
+                    if (!class_exists($one, $isv))
+                        return $this->error("Class `$one` not found");
                 }
             }
             $cls = [];
@@ -230,10 +224,8 @@ class DEV
                 ];
                 
             } else if (-1 == $mode) {
-                if (!$cls = $_POST['cls'] ?? []) {
-                    print('Must select at least one class');
-                    return 801;
-                }
+                if (!$cls = $_POST['cls'] ?? [])
+                    return $this->error('Must select at least one class');
             }
             $wares[$name] = [
                 'path' => $dir,
@@ -329,6 +321,32 @@ class DEV
             unlink($fn);
         }
         echo $ok ? 'OK' : 'Error in ZIP archive';
+    }
+
+    function error($desc) {
+        echo $desc;
+        return 801;
+    }
+
+    function j_new() {
+        if (!$name = strtolower(trim($_POST['name'])))
+            return $this->error("Empty ware name");
+        if (file_exists($dir = "wares/$name"))
+            return $this->error("Directory `$dir` already exists");
+        $is_view = 'view' == ($type = $_POST['type']);
+        $list = ["$dir/assets", "$dir/" . ($is_view ? 'view' : 'mvc'), "$dir/w3"];
+        foreach ($list as $one)
+            mkdir($one, 0777, true);
+        if ($is_view) {
+            foreach (Plan::view_b('*') as $fn)
+                copy($fn, "$dir/view/" . basename($fn));
+        }
+        $files = unl(view('_dev.files', ['name' => $name, 'type' => $type]));
+        foreach (explode("\n~\n", $files) as $one) {
+            [$fn, $t3, $data] = explode(' ', $one, 3);
+            if (false !== strpos($t3, $type[0]))
+                file_put_contents("$dir/$fn", str_replace('<.php', '<?php', $data));
+        }
     }
 
     function j_readme() {

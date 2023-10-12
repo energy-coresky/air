@@ -134,6 +134,16 @@ sky.d.drop_cache = function(r, el) {
     }, 2000);
 };
 
+sky.d.new = function(el) {
+    let name = $(el).prev(), h = {
+        name: name.val(),
+        type: name.prev().val()
+    };
+    ajax('new', h, function () {
+        location.href = '_dev?ware'
+    })
+};
+
 sky.d.ware = function(s, m, form) {
     let action = 'un' == m || m < 0 ? 'attach' : 'ware';
     ajax(action, form ? form : {s:s, mode:m}, function(r) {

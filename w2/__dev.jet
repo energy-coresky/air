@@ -15,8 +15,120 @@
 <h3 style="background:pink;color:red">{{$stdout}}</h3>
 #._801
 
+#.files //////////////////////////////////////////////////////////////////////////////
+conf.php dpv <.php
 
-#.attach.title
+return [
+    'view' => ['path' => __DIR__ . '/{{'view' == $type ? 'view' : 'mvc'}}'],
+    'app' => [
+        'type' => '{{$type}}',
+@if('prod' == $type)        'flags' => 'tune',~if
+    ],
+];
+
+~
+README.md dpv # {{ucfirst($name)}}
+
+~
+w3/{{$name}}.php dpv <.php
+
+class {{ucfirst($name)}} extends Console
+{
+    function __construct($argv = [], $found = []) {
+        Plan::$ware = '{{$name}}';
+        parent::__construct($argv, $found);
+        Plan::$ware = 'main';
+    }
+
+    /** {{ucfirst($name)}} hello world test */
+    function a_hw() {
+        echo 'hello world!';
+    }
+}
+~
+mvc/{{$name}}_c.php d <.php
+
+class {{$name}}_c extends Controller
+{
+    function a_ware() {
+    }
+
+    function head_y($action) {
+        return [];
+    }
+
+    function tail_y() {
+    }
+
+    function j_action() {
+    }
+}
+~
+mvc/_{{$name}}.jet d #.jet
+~
+mvc/default_c.php p <.php
+
+class default_c extends Controller
+{
+    function a_test() {
+        if (!DEV)
+            return 404;
+        echo 'test';
+    }
+}
+~
+mvc/_default.jet p #.jet
+~
+gate.php p <.php
+
+return ['default_c' => [
+    'a_test' => [0 => 1, 1 => [0 => 1], 2 => [],3 => []]
+]];
+
+~
+w3/ware.php p <.php
+
+namespace {{$name}};
+use Plan;
+
+class ware extends \Wares
+{
+    function form() {
+        return [
+            'connection' => ['Database connection', 'select', $this->databases()],
+            'table' => ['Table name', '', '', '{{$name}}'],
+        ];
+    }
+
+    function install($mode) {
+    }
+
+    function uninstall($mode) {
+    }
+
+    function update($mode) {
+    }
+}
+
+~
+mvc/x_{{$name}}.php p <.php
+
+namespace {{$name}};
+
+class t_{{$name}} extends \Model_t
+{
+    /* function head_y() {
+        return \SQL::open('');
+    }*/
+}
+~
+assets/{{$name}}.css dp /*  */
+~
+assets/{{$name}}.js dp /*  */
+#.files
+
+
+#.attach.title //////////////////////////////////////////////////////////////////////////////
 +
 <div class="other-task">
     <div class="fs16">Install "{{ucfirst($k_ware ?? $name)}}" ware:</div>
@@ -103,7 +215,9 @@
             <option value="view">View</option>
             <option value="dev">Dev</option>
             <option value="prod">Prod</option>
-        </select><button>Create</button>
+        </select>
+        <input size="5" placeholder="Name">
+        <button onclick="sky.d.new(this)">Create</button>
     </div>
 </div>
 <div class="bg-y" style="padding:10px;">@php $bg_ware='#e0e7ff' ~php

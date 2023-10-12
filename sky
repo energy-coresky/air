@@ -60,7 +60,7 @@ do {
         break;
 } while($cwd = $_cd);
 
-if ($found[1]) { # ware found
+if ($found[1] && !$found[0]) { # ware found
     $cfg = require "$found[1]/conf.php";
     $cwd = $cfg['app']['cli'] ?? false;
     if ($cwd && is_dir($cwd)) {
