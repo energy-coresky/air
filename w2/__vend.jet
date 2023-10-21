@@ -1,90 +1,142 @@
 #.jet core template
 
-#.list //////////////////////////////////////////////////////////////////////////////
+#.m_vend
+<a @active('local'==$sky->_1) class="inner-menu" href="_vend?local">Local</a>
+<a @active('remote'==$sky->_1) class="inner-menu" href="_vend?remote">Remote</a>
+#.m_vend.remote //////////////////////////////////////////////////////////////////////////////
 #use(`<h4>WALK ALL VENDORS..</h4>` as header)
+#use(.m_vend)
 <div class="bg-wx bg-x" style="position:sticky; top:0px; z-index:2;">
-    <form style="display:inline-flex" id="f1">
+  <form style="display:inline-flex" id="f1">
     <input name="p" type="hidden" value="1">
     <input name="g" type="hidden" value="">
     <div class="fs16">Type:
-        <select name="t" style="width:80px">
-        @loop($types as $type)
-            <option value="{{$type}}"@selected($type == $sky->d_vend_type)>{{$type}}</option>
-        ~loop
-        </select>
+      <select name="t" style="width:80px">
+      @loop($vnd->types as $type)
+        <option value="{{$type}}"@selected($type == $sky->d_vend_type)>{{$type}}</option>
+      ~loop
+      </select>
     </div>
     <div class="fs16" style="padding-left:20px;">
-        <input name="s" size="11" value="{{$sky->d_vend_s ?: 'coresky'}}">
-        <input type="button" value="search" onclick="sky.d.vend(1)">
+      <input name="s" size="11" value="{{$sky->d_vend_s ?: 'coresky'}}">
+      <input type="button" value="search" onclick="sky.d.vend(1)">
     </div>
     <div class="fs16" style="padding-left:50px;"></div>
-    </form>
+  </form>
 </div>
 <div id="vend-pk" style="padding:0px;">
-    <h1>&nbsp; Connecting ...</h1>
+  <h1>&nbsp; Connecting ...</h1>
 </div>
 @inc(.jscss)
-#.list
+#.remote
+
+#.local
+#use(`<h4>WALK ALL VENDORS..</h4>` as header)
+#use(.m_vend)
+<div class="bg-wx bg-x" style="position:sticky; top:0px; z-index:2;">
+  vendor dir {{$vnd->e[2] ? '' : 'NOT '}}found,
+  composer.json {{$vnd->e[0] ? '' : 'NOT '}}found,
+  composer.lock {{$vnd->e[1] ? '' : 'NOT '}}found
+</div>
+<div style="display:inline-flex;width:100%">
+  <div>
+    <div style="position:sticky; top:41px; width:370px;height:calc(100vh - 96px); overflow:auto">
+      <div class="bg-wx bg-a fs16">{{'2do'}}</div>
+      <div id="vend-tags">{!'2do'!}</div>
+      <dl><dt>Url</dt><dd>{{'2do'}}</dd></dl>
+      <dl><dt>Repository</dt><dd>{{'2do'}}</dd></dl>
+      <div id="vend-detail">
+      </div>
+    </div>
+  </div>
+  <div style="width:calc(100% - 370px);"><script>sky.d.packs = []</script>
+    <table id="packages">
+      <tr>
+        <th># Name</th>
+        <th>Vers.</th>
+        <th>Description</th>
+        <th>Created</th>
+      </tr>
+    @loop($e_list)
+      <tr>
+        <td>{{1+$_}}. {!$row->name!}</td>
+        <td>{{$row->ver}}</td>
+        <td>{{$row->desc}}</td>
+        <td>{{$row->time}}</td>
+      </tr>
+      @empty<h1>No packages found</h1>
+    ~loop
+    </table>
+  </div>
+</div>
+@inc(.css)
+#.local @dump($json)
 
 #.packages //////////////////////////////////////////////////////////////////////////////
 <div style="display:inline-flex;">
-<div>@if($act_name)<div style="position:sticky; top:41px; width:370px;height:calc(100vh - 96px); overflow:auto">
-    <div class="bg-wx bg-a fs16">{{$act_name}}</div>
-    <div id="vend-tags">{!$row->tags!}</div>
-    <dl><dt>Url</dt><dd>{{$url}}</dd></dl>
-    <dl><dt>Repository</dt><dd>{{$repo}}</dd></dl>
-    <div id="vend-detail">
+  <div>
+  @if($act_name)
+    <div style="position:sticky; top:41px; width:370px;height:calc(100vh - 96px); overflow:auto">
+      <div class="bg-wx bg-a fs16">{{$act_name}}</div>
+      <div id="vend-tags">{!$row->tags!}</div>
+      <dl><dt>Url</dt><dd>{{$url}}</dd></dl>
+      <dl><dt>Repository</dt><dd>{{$repo}}</dd></dl>
+      <div id="vend-detail">
 #.detail ------------------------------------------------------------------------------
 #if(:-)
-    <dl><dt>Type</dt><dd>{{$row->type ?? 'library'}}, PHP {{$row->require->php ?? '?'}}</dd></dl>
-    <dl><dt>Versions ({{$cnt}})</dt><dd>{{$cnt ? $row->version . $ver : '-'}}</dd></dl>
-    @if($row && $row->homepage)<dl><dt>Homepage</dt><dd>{{$row->homepage}}</dd></dl>~if
-    <dl><dt>License</dt><dd>{{implode(', ', $row->license ?? []) ?: '-'}}</dd></dl>
-    @if($authors)<dl><dt>Authors</dt><dd>{!$authors!}</dd></dl>~if
-    <dl><dt>Last version</dt><dd>{{$row->time ?? '-'}}</dd></dl>
-    @if(0)<pre>{{$sky->_1.' authors '.$detail}}</pre>~if
-    <hr>
-    <pre> composer {{$composer}}</pre>
-    <br>
-    &nbsp; <input type="button" value="exec" onclick="sky.d.exec('{{$composer}}',this)">
-    <pre></pre>
-    <hr>
-    <h3>&nbsp; Vendor dir:</h3>
-    @loop($vendors as $one)
-    &nbsp; <a @href($('input[name=s]').val('{{$one}}'); sky.d.vend(1))>{{$one}}</a>
+  <dl><dt>Type</dt><dd>{{$row->type ?? 'library'}}, PHP {{$row->require->php ?? '?'}}</dd></dl>
+  <dl><dt>Versions ({{$cnt}})</dt><dd>{{$cnt ? $row->version . $ver : '-'}}</dd></dl>
+  @if($row && $row->homepage)<dl><dt>Homepage</dt><dd>{{$row->homepage}}</dd></dl>~if
+  <dl><dt>License</dt><dd>{{implode(', ', $row->license ?? []) ?: '-'}}</dd></dl>
+  @if($authors)<dl><dt>Authors</dt><dd>{!$authors!}</dd></dl>~if
+  <dl><dt>Last version</dt><dd>{{$row->time ?? '-'}}</dd></dl>
+  @if(0)<pre>{{$sky->_1.' authors '.$detail}}</pre>~if
+  <hr>
+  <pre> composer {{$composer}}</pre>
+  <br>
+  &nbsp; <input type="button" value="exec" onclick="sky.d.exec('{{$composer}}',this)">
+  <pre></pre>
+  <hr>
+  <h3>&nbsp; Vendor dir:</h3>
+  @loop($vendors as $one)
+  &nbsp; <a @href($('input[name=s]').val('{{$one}}'); sky.d.vend(1))>{{$one}}</a>
+  ~loop
+  <h3>&nbsp; Documentation:</h3>
+  <div style="padding:0 7px 7px 7px;">
+  @loop($mds as $one)
+    <a @href(sky.d.md('{{$one}}'))>{{substr($one,7)}}</a><br>
+  ~loop
+  </div>
+  <h3>&nbsp; Remote Documentation:</h3>
+  <div style="padding:0 7px 7px 7px;">
+    @loop($docs as $name => $url)
+      <a @href(sky.d.md('{{$url}}'))>{{$name}}</a><br>
     ~loop
-    <h3>&nbsp; Documentation:</h3>
-    <div style="padding:0 7px 7px 7px;">
-    @loop($mds as $one)
-      <a @href(sky.d.md('{{$one}}'))>{{substr($one,7)}}</a><br>
-    ~loop
-    </div>
-    <h3>&nbsp; Remote Documentation:</h3>
-    <div style="padding:0 7px 7px 7px;">
-      @loop($docs as $name => $url)
-        <a @href(sky.d.md('{{$url}}'))>{{$name}}</a><br>
-      ~loop
-    </div>
-    <button onclick="sky.d.toggle()">Toggle</button>
-    <div id="vr-toggle" style="display:none"></div>
+  </div>
+  <button onclick="sky.d.toggle()">Toggle</button>
+  <div id="vr-toggle" style="display:none"></div>
 #else{!$row->html!}#end
 #.detail
+      </div>
     </div>
-</div>
-</div>@eat
-<div style="width:calc(100% - 370px);"><script>sky.d.packs = []</script>
-@loop($list as $row)
-<div class="vend-x" onclick="sky.d.detail(this)" i="{{$_}}" n="{{$row->name}}" r="{{$row->repository ?? ''}}">
-    <span style="position:absolute;top:1px;left:8px;"><span style="font:bold 17px serif">⬇</span> {{$row->downloads ?? 0}}</span>
-    <span style="position:absolute;top:3px;right:8px;"><big>★</big>{{$row->favers ?? 0}}</span>
-    <h2 style="line-height:20px;">{{$row->name}}</h2><script>sky.d.packs.push(['{{$row->url}}', '{{$row->repository}}'])</script>
-    <div class="were-desc" style="height:70px; position:absolute; top:90px;">
-        @if($row->description){{$row->description}}@else
-            This package don't have description
-        ~if
-    </div>
-</div>@empty<h1>No packages found</h1>
-~loop~if</div>
+  </div>@eat
+  <div style="width:calc(100% - 370px);"><script>sky.d.packs = []</script>
+    @loop($list as $row)
+      <div class="vend-x" onclick="sky.d.detail(this)" i="{{$_}}" n="{{$row->name}}" r="{{$row->repository ?? ''}}">
+        <span style="position:absolute;top:1px;left:8px;"><span style="font:bold 17px serif">⬇</span> {{$row->downloads ?? 0}}</span>
+        <span style="position:absolute;top:3px;right:8px;"><big>★</big>{{$row->favers ?? 0}}</span>
+        <h2 style="line-height:20px;">{{$row->name}}</h2>
+        <script>sky.d.packs.push(['{{$row->url}}', '{{$row->repository}}'])</script>
+        <div class="were-desc" style="height:70px; position:absolute; top:90px;">
+          @if($row->description){{$row->description}}@else
+          This package don't have description
+          ~if
+        </div>
+      </div>
+      @empty<h1>No packages found</h1>
+    ~loop
+  ~if
+  </div>
 </div>
 #.packages
 
@@ -145,6 +197,7 @@ $(function() {
 });
 
 </script>
+#.css
 <style>
 .tags {
     display:inline-block;
@@ -157,11 +210,12 @@ $(function() {
 #vend-tags {
     text-align:center;
 }
+#packages {
+    width:100%;
+}
+#packages tr:hover td {
+    background-color:#eee;
+    cursor:default;
+}
 </style>
-#.jscss
-
-    <button onclick="sky.d.attach('{{0}}','un')">Require</button>
-
-
-
-
+#.jscss.css

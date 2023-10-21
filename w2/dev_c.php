@@ -37,7 +37,7 @@ class dev_c extends Controller
                 '_lang?list' => 'Open SkyLang',
                 '_inst' => 'Open SkyProject',
                 '_glob?' . ($this->d_gr_start ?: 'settings') => 'Global Reports',
-                '_vend?list' => 'Browse All Vendors',
+                '_vend?local' => 'Browse All Vendors',
             ],
             'wares' => $this->dev->wares_menu(),
             'ware1' => substr(parse_url($this->d_ware1, PHP_URL_PATH), 1),

@@ -267,7 +267,17 @@ class DEV
         return $merge ? array_merge($wares, $works) : [$works, $wares, $installed];
     }
 
+    function remote() {
+        MVC::body('_dev.remote');
+        return [
+            'app' => SKY::version()['app'][4],
+        ];
+    }
+
     function c_ware() {
+        global $sky;
+        if ('remote' == $sky->_2)
+            return $this->remote();
         list ($works, $wares, $installed) = $this->wares();
         $dir = array_diff($wares, $works);
         $wares = Plan::_rq('wares.php');
@@ -333,6 +343,8 @@ class DEV
             return $this->error("Empty ware name");
         if (file_exists($dir = "wares/$name"))
             return $this->error("Directory `$dir` already exists");
+        if (isset(SKY::$plans[$name]))
+            return $this->error("Ware `$name` already exists");
         $is_view = 'view' == ($type = $_POST['type']);
         $list = ["$dir/assets", "$dir/" . ($is_view ? 'view' : 'mvc'), "$dir/w3"];
         foreach ($list as $one)
@@ -355,12 +367,6 @@ class DEV
         if (is_file($fn = "$dir/LICENSE"))
             $html .= Display::bash(file_get_contents($fn));
         return ['html' => $html, 'dir' => $dir];
-    }
-
-    function j_repo() {
-        return [
-            'app' => SKY::version()['app'][4],
-        ];
     }
 
     function j_inet() {

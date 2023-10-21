@@ -35,7 +35,7 @@ class Debug
         $p =& self::$vars[$no];
 
         foreach ($in as $k => $v) {
-            if (in_array($k, ['_vars', '_in', '_return', '_a', '_b']))
+            if (in_array($k, ['_data', '_vars', '_in', '_return', '_a', '_b']))
                 continue;
             if ('$' == $k && isset($p['$$']))
                 return;

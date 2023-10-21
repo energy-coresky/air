@@ -2,7 +2,16 @@
 
 class Vendor
 {
+    public $types = ['all', 'library', 'project', 'metapackage', 'composer-plugin', 'symfony-bundle'];
+    public $e = [];
+    public $lock = [];
+    public $json = [];
+
     function __construct() {
+        $this->e = [is_file('composer.json'), is_file('composer.lock'), is_dir('vendor')];
+        $this->lock = $this->e[1] ? json_decode(file_get_contents('composer.lock'))->packages : [];
+        if ($this->json = $this->e[0] ? json_decode(file_get_contents('composer.json'), true) : [])
+            $this->json = ($this->json['require'] ?? []) + ($this->json['require-dev'] ?? []);
     }
 
     function c_md() {
@@ -63,7 +72,7 @@ class Vendor
         };
         $com = is_dir("vendor/$name") ? 'remove' : 'require';
         $skip = ['bin', 'composer', 'autoload.php'];
-        $json = ['html' => view('_vend.detail', [
+        $ary = ['html' => view('_vend.detail', [
             'act_name' => $name,
             'cnt' => $cnt = count($list = unjson($response)->packages->$name),
             'row' => $last = $list[0] ?? [],
@@ -75,7 +84,7 @@ class Vendor
             'mds' => $mds($name),
             'docs' => $docs,
         ]), 'tags' => $last ? $tags($last->keywords) : ''];
-        return $return ? (object)$json : json($json);
+        return $return ? (object)$ary : json($ary);
     }
 
     function c_search() {
@@ -112,11 +121,35 @@ class Vendor
         ]);
     }
 
-    function c_list() {
-        global $sky;
+    function c_local() {
+        $mode = $this->lock ? 0 : ($this->json ? 1 : 2);
         return [
-            'obj' => $this,
-            'types' => ['all', 'library', 'project', 'metapackage', 'composer-plugin', 'symfony-bundle'],
+            'vnd' => $this,
+            'e_list' => function () use ($mode) {
+                if (2 == $mode || !$this->lock && !$mode || !$this->json && $mode)
+                    return false;
+                if ($mode) {
+                    $n = key($this->json);
+                    $ver = array_shift($this->json);
+                    return !strpos($n, '/') ? true : [
+                        'name' => tag($n, '', 'b'),
+                        'ver' => $ver,
+                        'desc' => '??',
+                        'time' => '??',
+                    ];
+                }
+                $row = array_shift($this->lock);
+                return [
+                    'name' => isset($this->json[$n = $row->name]) ? "<b>$n</b>" : $n,
+                    'ver' => $row->version,
+                    'desc' => $row->description ?? '??',
+                    'time' => substr($row->time ?? '???', 0,10),
+                ];
+            },
         ];
+    }
+
+    function c_remote() {
+        return ['vnd' => $this];
     }
 }

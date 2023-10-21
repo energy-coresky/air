@@ -29,6 +29,7 @@ return [
 ~
 README.md dpv # {{ucfirst($name)}}
 
+Ware type: {{$type}}
 ~
 w3/{{$name}}.php dpv <.php
 
@@ -42,7 +43,7 @@ class {{ucfirst($name)}} extends Console
 
     /** {{ucfirst($name)}} hello world test */
     function a_hw() {
-        echo 'hello world!';
+        echo 'hello {{$name}}!';
     }
 }
 ~
@@ -167,7 +168,7 @@ assets/{{$name}}.js dp /*  */
 ~if
 #.attach
 
-#.repo
+#.remote
 <div class="other-task">
     <div class="fs16">Wares in the Internet for <span style="text-transform:uppercase">{{$app}}</span> application:</div>
 </div>
@@ -184,7 +185,7 @@ assets/{{$name}}.js dp /*  */
   ajax('inet',{},'inet-wares');
 </script>
 </div>
-#.repo
+#.remote
 
 #.readme
 <div class="other-task">
@@ -197,7 +198,6 @@ assets/{{$name}}.js dp /*  */
 #use(`<h4>WALK ALL WARES..</h4>` as header)
 <div class="other-task">
     <span class="fs16">Installed wares:</span>
-    <input type="button" value="Repository" onclick="ajax('repo',{},'dev-dev')" style="margin-left:10%">
 </div>
 <div class="bg-x" style="padding:10px">@php $bg_ware='' ~php
     @loop($e_installed)@eat
@@ -386,9 +386,14 @@ $(function() {
         @elseif('_inst' == $uri)@block(`` as m_inst)
         @elseif('_glob' == explode('?', $uri)[0])@block(`` as m_glob)
         @elseif('_dev' == explode('?', $uri)[0])@block(`` as m_dev)
+        @elseif('_vend' == explode('?', $uri)[0])@block(`` as m_vend)
         ~if
     ~loop
-    <a @active('_dev?ware' == URI) href="_dev?ware">Browse All Wares</a>
+    <a @active($submw = '_dev?ware' == substr(URI,0,9)) href="_dev?ware">Browse All Wares</a>
+    @if($submw)
+        <a @active('remote'!=$sky->_2) class="inner-menu" href="_dev?ware">Local</a>
+        <a @active('remote'==$sky->_2) class="inner-menu" href="_dev?ware=remote">Remote</a>
+    ~if
     @block(.wares as all_wares)
     <a @href(var x=this;ajax('',function(r) { sky.d.drop_cache(r,x) },'_drop'))>Drop All Cache</a>
     @block(menu)
