@@ -99,11 +99,12 @@ class dev_c extends Controller
         header('Cache-Control: private, max-age=3600');
         MVC::mime('image/png');
         ob_end_clean();
-        readfile(DIR_S . "/etc/img/$this->_1.png");
+        $dir = $this->_2 ? "$this->_2/assets" : DIR_S . "/etc/img";
+        readfile("$dir/$this->_1.png");
         throw new Stop;
     }
 
-    function a_img() {/////////////////
+    function a_img() {
         SKY::$debug = 0;
         list(,$s) = explode("#.$this->_1", file_get_contents(DIR_S . '/w2/__img.jet'), 3);
         [$type, $data] = explode(",", trim($s), 2);

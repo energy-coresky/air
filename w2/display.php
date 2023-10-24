@@ -113,7 +113,7 @@ class Display
         }
         if ($exist) {
             $md = new Parsedown;
-            $text = preg_replace("~\"https://github.*?/([^/\.]+)[^/\"]+\"~", '"_png?$1"', $md->text($text));
+            $text = preg_replace("~\"https://github.*?/([^/\.]+)[^/\"]+\"~", '"_png?$1=' . Plan::$pngdir . '"', $md->text($text));
             return $code($text, '<pre><code class="language\-(jet|php|bash)">(.*?)</code></pre>');
         }
         $text = str_replace("\n\n", '<p>', unl($text));

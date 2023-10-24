@@ -95,8 +95,18 @@ class Console
         }
     }
 
+    static function get_public() {
+        if ($dir = Plan::mem_gq('www_dir')) //$sky->memory();
+            return $dir;
+        foreach (glob('*') as $dir) {
+            if ('_' != $dir[0] && is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
+                return $dir;
+        }
+        return false;
+    }
+
     function s($port) {
-        global $dir_run, $sky;
+        global $dir_run;
 
         $public = false;
         if (self::$d[0]) {
@@ -105,9 +115,7 @@ class Console
             echo "\n";
             $this->c_drop();
             echo "\n";
-            $sky->memory();
-            if ($sky->n_www)
-                $public = explode('~', $sky->n_www)[0];
+            $public = self::get_public();
         }
         if (function_exists('socket_create')) {
             for ($i = 0; $i < 9; $i++, $port++) {
@@ -254,10 +262,7 @@ class Console
 
     /** Check globals */
     function c_g() {
-        global $sky, $argv;
-        $sky->memory();
-        $ary = explode('~', $sky->n_www);
-        define('WWW', DEV ? $ary[0] . '/' : $ary[1] . '/');
+        define('WWW', self::get_public() . '/');
         DEV::init();
         (new Globals)->c_run();
     }

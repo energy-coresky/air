@@ -40,10 +40,6 @@ class Schedule
         global $sky;
         $sky->memory();
         $ary =& SKY::$mem['n'][3];
-        if ('www' == $name) {
-            $ary = explode('~', $ary['www']);
-            return DEV ? $ary[0] . '/' : $ary[1] . '/';
-        }
         return $ary[substr($name, 2)];
     }
 
@@ -53,12 +49,6 @@ class Schedule
             $sky->memory();
             SKY::n(substr($name, 2), $value);
         }
-    }
-
-    static function setWWW($www) {
-        $ary = explode('~', $www);
-        $ary[DEV ? 0 : 1] = rtrim(WWW, '/');
-        SKY::n('www', implode('~', $ary));
     }
 
     function mail_error() {

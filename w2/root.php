@@ -247,7 +247,6 @@ class Root
                     'clear_nc' => ['Visitor\'s cleaning (no cookie), days', '', '', 2],
                     'clear_hc' => ['Visitor\'s cleaning (has cookie), days', '', '', 10],
                     'clear_ua' => ['Visitor\'s cleaning (authed), days', '', '', 1000],
-                    'www'   => ['Index file directory', '', '', 'web~public_html'],
                 ];
                 break;
             case 'f':

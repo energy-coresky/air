@@ -29,7 +29,7 @@ class Gate
     private $ns;
 
     function __construct() {
-        defined('WWW') && Plan::mem_p('www_dir', WWW);
+        defined('WWW') && Plan::mem_p('www_dir', substr(WWW, 0, -1));
     }
 
     static function default() {

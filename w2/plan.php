@@ -7,6 +7,7 @@ class Plan
     static $z_error = false;
     static $see_also = [];
     static $var_path = ['', '?', [], '']; # var_name, property, array's-path
+    static $pngdir = ''; # for DEV
 
     static function set($ware) {
         $prev = self::$ware;

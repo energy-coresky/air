@@ -327,13 +327,7 @@ class Install
         global $sky;
         static $index;
 
-        if (defined('WWW')) {
-            $fn = WWW . 'index.php';
-        } else {
-            $sky->memory();
-            $ary = explode('~', $sky->n_www);
-            $fn = $ary[DEV ? 0 : 1] . '/index.php';
-        }
+        $fn = (defined('WWW') ? WWW : Console::get_public() . '/') . 'index.php';
         if (!$forward)
             return file_put_contents($fn, $index);
         $sky->memory(11, 'i');

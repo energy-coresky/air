@@ -131,7 +131,7 @@ class Vendor
                 if ($mode) {
                     $n = key($this->json);
                     $ver = array_shift($this->json);
-                    return !strpos($n, '/') ? true : [
+                    return !strpos($n, '/') ?: [
                         'name' => tag($n, '', 'b'),
                         'ver' => $ver,
                         'desc' => '??',

@@ -362,7 +362,7 @@ class DEV
     }
 
     function j_readme() {
-        $dir = $_POST['dir'];
+        Plan::$pngdir = $dir = $_POST['dir'];
         $html = is_file($fn = "$dir/README.md") ? Display::md(file_get_contents($fn)) : '';
         if (is_file($fn = "$dir/LICENSE"))
             $html .= Display::bash(file_get_contents($fn));
