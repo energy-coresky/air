@@ -45,7 +45,7 @@ class Globals extends Usage
         $marker = $name ? 'name' : $this->_2;
         $html = view("_glob.$marker", 'def' == $this->_2 ? $this->_def() : $this->_use());
         if (CLI)
-            return print("Unchecked: " . parent::$cnt[5]);
+            return print("Unchecked definitions: " . parent::$cnt[5]);
         if ($name)
             return json(['html' => $html, 'menu' => count($this->list)]);
         json(['html' => $html, 'menu' => view('_glob.xmenu', [

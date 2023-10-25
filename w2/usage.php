@@ -24,7 +24,8 @@ class Usage
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $this->path = $path;
         $sky->k_gr = $this;
-        $this->_2 = CLI ? ($argv[2] ?? '') : $sky->_2;
+        //$this->_2 = CLI ? ($argv[2] ?? '') : $sky->_2;
+        $this->_2 = CLI ? ('def') : $sky->_2; # 2do cli user code usage
     }
 
     function parse_use($fn) {
