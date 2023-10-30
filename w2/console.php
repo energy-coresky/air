@@ -15,12 +15,13 @@ class Console
         if ('master' == $argv[1]) {
             if ($ns || is_dir(DIR_S . '/.git'))
                 return $this->master(!$ns);
+        } elseif ('s' == $argv[1]) {
+            $this->s($argv[2] ?? 8000);
         } elseif ($found[0]) {
             SQL::$dd_h = 'Console::dd_h';
-            if ('_' !== ($argv[2][0] ?? '')) // 'app' != $argv[1] || 
-                $sky->open();
+            '_' === ($argv[2][0] ?? '') or $sky->open();
         }
-        's' == $argv[1] ? $this->s($argv[2] ?? 8000) : call_user_func_array([$this, "c_$argv[1]"], array_slice($argv, 2));
+        $this->__call("c_$argv[1]", array_slice($argv, 2));
     }
 
     static function dd_h($dd, $name) {
@@ -51,13 +52,6 @@ class Console
         if ($com && isset($src[$com]) && 'c_' == substr($name, 0, 2))
             return new $com('a_' . array_shift($args), $args);
 
-        if ('c_' != $name) {
-            $cls = strtolower(get_class($this));
-            if ('console' != $cls)
-                $com = $cls . ('' === $com ? '' : " $com");
-            echo "\nCommand `$com` not found\n\n";
-        }
-
         $ary = [
             's' => 'Run PHP web-server',
             'd' => 'List dirs (from current dir)',
@@ -73,12 +67,20 @@ class Console
         foreach ($src ?? [] as $w => $rfn) {
             $list = $rfn->getMethods(ReflectionMethod::IS_PUBLIC);
             foreach ($list as $v) {
-                if ('c_' == substr($v->name, 0, 2) && $w)
-                    continue;
-                if ($s = $v->getDocComment())
-                    $ary[($w ? "$w " : '') . substr($v->name, 2)] = trim($s, "*/ \n\r");
+                $pfx = substr($v->name, 0, 2);
+                if ('c_' == $pfx && !$w || 'a_' == $pfx && $w)
+                    $ary[($w ? "$w " : '') . substr($v->name, 2)] = trim($v->getDocComment(), "*/ \n\r");
             }
         }
+
+        $cls = strtolower(get_class($this));
+        $pfx = 'console' == $cls ? '' : "$cls ";
+        if (isset($ary[$pfx . $com])) {
+            return call_user_func_array([$this, $name], $args);
+        } elseif ($pfx || $com) {
+            echo "\nCommand `" . trim($pfx . $com) . "` not found\n\n";
+        }
+        $ary = array_filter($ary);
         ksort($ary);
         echo "Usage: sky command [param ...]\nCommands are:\n  ";
         echo implode("\n  ", array_map(function($k, $v) {
@@ -332,6 +334,13 @@ class Console
     /** Warm all cache */
     function c_warm() {
         echo '2do';
+    }
+
+    /** Show tables [con-name] [ware] */
+    function c_t($name = '', $ware = '') {
+        if ($ware)
+            SKY::$databases += Plan::_r([$ware, 'conf.php'])['app']['databases'];
+        echo 'result: ' . print_r(SQL::open($name)->_tables(), 1);
     }
 
     /** Execute SQL, example: sky sql "+select 1+1" [con-name] [ware] */

@@ -4,7 +4,7 @@
 if (1 == $argc)
     $argv = [0, ''];
 $d = 'd' == $argv[1];
-if ($d || 'php' == $argv[1]) {
+if ($d || 'php' == $argv[1]) { // 2do cut too long lists
     require __DIR__ . '/w2/rare.php';
     $dirs = Rare::walk_dirs('.');
     if ($d) {
