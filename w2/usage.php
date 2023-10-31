@@ -135,8 +135,14 @@ case '&':
                 case ',':
                     if ('IMP' === $pos) {
                         $use(0, self::$classes, $name, 3); # interfaces via comma
-                    } elseif ('USE' === $pos && $curly) {
-                        $use(0, self::$classes, $name, 4); # traits via comma
+                    } elseif ('USE' === $pos) {
+                        if ($curly) {
+                            $use(0, self::$classes, $name, 4); # traits via comma
+                        } else {
+                            $ary = explode('\\', $name);
+                            $this->use[$usn][end($ary)] = $name; # use ns name
+                            $name = '';
+                        }
                     } else {
                         $pos = '';
                     }
@@ -152,7 +158,7 @@ case '&':
                             $use(0, self::$classes, $name, 4); # traits
                         } else {
                             $ary = explode('\\', $name);
-                            $this->use[$usn][end($ary)] = $name;
+                            $this->use[$usn][end($ary)] = $name; # use ns name
                         }
                     }
                     $pos = $name = '';

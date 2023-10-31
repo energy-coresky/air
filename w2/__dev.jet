@@ -191,7 +191,7 @@ assets/{{$name}}.js dp /*  */
 <div class="other-task">
     <div class="fs16">
         Documentation for "{{ucfirst(basename($dir))}}" ware:
-        <button class="f4" style="margin-left:150px" onclick="ajax('readme',{dir:'../air_wares/upload'},'dev-dev')">Refresh - F4</button>
+        <button class="f4" style="margin-left:150px" onclick="ajax('readme',{dir:'{{$dir}}'},'dev-dev')">Refresh - F4</button>
     </div>
 </div>
 <div style="padding:10px;">{!$html!}</div><script>
