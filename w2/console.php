@@ -55,6 +55,7 @@ class Console
         $ary = [
             's' => 'Run PHP web-server',
             'd' => 'List dirs (from current dir)',
+            'v' => 'Show Coresky version',
             'php' => 'Lint PHP files (from current dir)',
         ];
         $ware = self::$d[1] ? basename(self::$d[1]) : false;
@@ -183,6 +184,12 @@ class Console
             common_c::make_h(false);
     }
 
+    /** Show Coresky version */
+    function c_v() {
+        class_exists('SKY', false) or require DIR_S . '/sky.php';
+        echo SKY::CORE;
+    }
+
     static function tail_x($exit, $stdout = '') {
         //
     }
@@ -219,11 +226,6 @@ class Console
                 }
             }
         }
-    }
-
-    /** Show Coresky version */
-    function c_v() {
-        echo SKY::CORE;
     }
 
     /** Write default rewrite.php */
