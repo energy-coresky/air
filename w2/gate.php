@@ -115,8 +115,8 @@ class Gate
         $php = $this->process_addr($addr, $flag, $cmode, $eq0);
         if ($is_post)
             $php .= $this->process_pfs($pfs, $flag, $cnt_meth, $eq0);
-        if ($argc != count($this->ends))
-            $this->gerr .= "$this->_e # parameters counts doesn't match\n";
+        if ($argc != ($pc = count($this->ends) + count($this->pfs_ends)))
+            $this->gerr .= "$this->_e # parameters counts doesn't match $argc=$pc\n";
         $php .= $this->gerr;
         if ($this->ends || $this->pfs_ends) {
             $php .= $this->ends ? "return [" . implode(', ', $this->ends) . "]" : 'return $post';
