@@ -187,7 +187,7 @@ class Console
     /** Show Coresky version */
     function c_v() {
         class_exists('SKY', false) or require DIR_S . '/sky.php';
-        echo SKY::CORE;
+        echo SKY::CORE . ' path:' . realpath(DIR_S);
     }
 
     static function tail_x($exit, $stdout = '') {
@@ -349,7 +349,10 @@ class Console
     function c_sql($sql, $name = '', $ware = '') {
         if ($ware)
             SKY::$databases += Plan::_r([$ware, 'conf.php'])['app']['databases'];
-        echo 'result: ' . print_r(SQL::open($name)->sqlf($sql), 1);
+        $list = Rare::split($sql);
+        foreach ($list as $sql)
+            $out = SQL::open($name)->sqlf(trim($sql));
+        echo !$list || $out instanceof SQL ? 'queries executed: ' . count($list) : 'result: ' . print_r($out, 1);
     }
 
     /** Eval PHP code, example: sky eval "echo $sky->s_online;" */
