@@ -21,6 +21,7 @@ class Jet
     private static $empty = [];
     private static $if = [];
     private static $depth = [];
+    private static $wares = [];
 
     static $tpl = [];
     static $fn;
@@ -47,6 +48,8 @@ class Jet
             if (MVC::$mc) # not console!
                 MVC::handle('jet_c');
             Plan::_rq('mvc/jet.php');
+            Jet::$wares = array_flip(SKY::$plans['main']['ctrl']);
+            unset(Jet::$wares['main']);
         }
         if ($layout) {
             $this->body = $name;
@@ -378,7 +381,10 @@ class Jet
                 array_push(Jet::$if, 0);
                 return $this->_loop(true, '') . '<?php if (!' . ($i ? '$_' . (1 + $i) : '$_') . '): ?>';
             default:
-                return !$br || '()' == $br ? null : "<?php echo $br ? ' $tag' : '' ?>";
+                if (!isset(Jet::$wares[$tag]))
+                    return !$br || '()' == $br ? null : "<?php echo $br ? ' $tag' : '' ?>";
+                $path = PATH . (strpos(Jet::$wares[$tag], '/') ? explode('/', Jet::$wares[$tag], 2)[0] . '/' : '');
+                return $q('echo \'"' . $path . '\' . %s . \'"\'', $arg);
         }
     }
 

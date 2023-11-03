@@ -99,10 +99,12 @@ function jump($uri = '', $code = 302, $exit = true) {
         $sky->jump = $uri;
     } else {
         $sky->is_front or '' === $uri or '?' != $uri[0] or $uri = "adm$uri";
+        if (common_c::$tune && $code)
+            $uri = common_c::$tune . '/' . $uri;
         $sky->jump = LINK . $uri;
     }
 
-    header("Location: $sky->jump", true, $code);
+    header("Location: $sky->jump", true, $code ?: 302);
     $sky->tailed = "JUMP: $sky->jump\n";
     if ($exit)
         exit;
