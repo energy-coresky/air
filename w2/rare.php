@@ -39,13 +39,17 @@ class Rare
         return $list;
     }
 
-    static function split(String $in, $b = ';') {
+    static function split(String $in, $b = ';', $sql_comment = true) {
         $out = [];
-        $s = '';
+        $s = $rest = '';
         foreach (token_get_all("<?php " . trim($in, "\n\r \t$b")) as $i => $v) {
             if (!$i)
                 continue;
             is_array($v) or $v = [0, $v];
+            if (T_DEC == $v[0] && $sql_comment || $rest) {
+                $rest .= '' === $rest ? '#' : $v[1]; # replace "--" to "#"
+                continue;
+            }
             if (!$v[0] && $v[1] === $b) {
                 '' === ($s = trim($s)) or $out[] = $s;
                 $s = '';
@@ -53,7 +57,13 @@ class Rare
                 $s .= $v[1];
             }
         }
-        '' === ($s = trim($s)) or $out[] = $s;
+        if ($rest) {
+            $rest = self::split($rest, $b, true);
+            $rest[0] = ltrim($s) . '--' . substr($rest[0], 1);
+            return array_merge($out, $rest);
+        } elseif ('' !== ($s = trim($s))) {
+            $out[] = $s;
+        }
         return $out;
     }
 
