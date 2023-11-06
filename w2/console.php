@@ -338,6 +338,19 @@ class Console
         echo '2do';
     }
 
+    /** Show table structure [tbl-name] [con-name] [ware] */
+    function c_ts($tbl = '', $name = '', $ware = '') {
+        if (!$tbl)
+            return print 'Error: write a table name';
+        if ($ware)
+            SKY::$databases += Plan::_r([$ware, 'conf.php'])['app']['databases'];
+        if ($struct = SQL::open($name)->_struct($tbl))
+            $struct = array_map(function ($ary) {
+                return $ary[2];
+            }, $struct);
+        echo 'result: ' . print_r($struct, 1);
+    }
+
     /** Show tables [con-name] [ware] */
     function c_t($name = '', $ware = '') {
         if ($ware)

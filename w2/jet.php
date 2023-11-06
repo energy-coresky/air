@@ -4,7 +4,7 @@ class Jet
 {
     use Processor;
 
-    const version = '1.02';
+    const version = '1.03';
 
     private $parsed = [];
     private $files = [];
@@ -305,10 +305,27 @@ class Jet
         $inline or array_pop(Jet::$tpl);
     }
 
+    private function optimize($code) {
+        $set = [T_OPEN_TAG, T_CLOSE_TAG, T_ECHO, T_WHITESPACE, T_CONSTANT_ENCAPSED_STRING];
+        $easy = true;
+        foreach (token_get_all($code) as $v) {
+            if ('.' === $v || is_array($v) && in_array($v[0], $set))
+                continue;
+            $easy = false;
+            break;
+        }
+        if (!$easy)
+            return $code;
+        ob_start();
+        eval(substr($code, 6));
+        return ob_get_clean();
+    }
+
     private function statements($tag, $arg, $end, &$str, &$br) {
         $q = function ($p, $arg) {
             $ok = '' !== $arg && in_array($arg[0], ["'", '"']);
-            return sprintf("<?php $p ?>", $ok ? $arg : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"');
+            $code = sprintf("<?php $p ?>", $ok ? $arg : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"');
+            return $this->optimize($code);
         };
         switch ($tag) {
             case 'php':
@@ -354,7 +371,8 @@ class Jet
             case 't':
                 return $q('echo t(%s)', $arg);
             case 'p':
-                return $q('echo \'"\' . PATH . %s . \'"\'', $arg);
+                // 2do: save PATH for console "sky warm"
+                return $q('echo \'"' . PATH . '\' . %s . \'"\'', $arg);
             case 'dump':
                 return "<?php echo '<pre>' . html(print_r($arg, true)) . '</pre>' ?>";
             case 'mime':

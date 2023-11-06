@@ -300,9 +300,9 @@ class DEV
                 if (!$ware = array_shift($dir))
                     return false;
                 $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
-                if (!is_dir($path))
+                if (!is_dir($path) || !is_file($fn = "$path/conf.php"))
                     return true;
-                $conf = require "$path/conf.php";
+                $conf = require $fn;
                 return [
                     'name' => ucfirst($ware),
                     'type' => $conf['app']['type'],

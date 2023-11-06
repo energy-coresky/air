@@ -58,7 +58,7 @@ class Rare
             }
         }
         if ($rest) {
-            $rest = self::split($rest, $b, true);
+            $rest = self::split($rest, $b);
             $rest[0] = ltrim($s) . '--' . substr($rest[0], 1);
             return array_merge($out, $rest);
         } elseif ('' !== ($s = trim($s))) {
