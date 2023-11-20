@@ -2,7 +2,7 @@
 
 class Usage
 {
-    protected static $functions = [];
+    protected static $functions = []; // 2do: detect SKY::$vars collisions
     protected static $constants = [];
     protected static $classes = [];
     protected static $special_const = ['STDIN', 'STDOUT', 'STDERR', '__COMPILER_HALT_OFFSET__'];

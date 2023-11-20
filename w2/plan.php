@@ -9,10 +9,14 @@ class Plan
     static $var_path = ['', '?', [], '']; # var_name, property, array's-path
     static $pngdir = ''; # for DEV
 
-    static function set($ware) {
+    static function set($ware, $func = false) {
         $prev = self::$ware;
         self::$ware = $ware;
-        return $prev;
+        if ($func) {
+            $return = $func();
+            self::$ware = $prev;
+        }
+        return $func ? $return : $prev;
     }
 
     static function has($in, $class = true) {

@@ -89,9 +89,9 @@ sky.d.draw = {
     c: function(data, str) {
         str = '';
         const base = [
-            'Bolt', 'Controller', 'DEV', 'Debug', 'dc_file', 'Func', 'HEAVEN', 'MVC', 'MVC_BASE',
+            'Guard', 'Controller', 'DEV', 'Debug', 'dc_file', 'Func', 'HEAVEN', 'MVC', 'MVC_BASE',
             'Model_m', 'Model_q', 'Model_t', 'Plan', 'SKY', 'SQL', 'Stop', 'USER', 'common_c', 'eVar',
-            'PARADISE', 'Cache_driver', 'Database_driver', 'SQL_COMMON', 'HOOK', 'Hacker'
+            'PARADISE', 'DriverCache', 'DriverDatabase', 'SQL_COMMON', 'HOOK_C', 'HOOK_D', 'Hacker'
         ];
         for (var i in data.classes) {
             let s = data.classes[i], inc = base.includes(s), n;
