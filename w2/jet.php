@@ -318,7 +318,7 @@ class Jet
             return $code;
         ob_start();
         eval(substr($code, 6));
-        return ob_get_clean();
+        return $this->echos(ob_get_clean());
     }
 
     private function statements($tag, $arg, $end, &$str, &$br) {
