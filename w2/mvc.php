@@ -531,12 +531,8 @@ class MVC extends MVC_BASE
         if (!$dst || DEV) {
             if ('main' != Plan::$ware)
                 trace(Plan::$ware, 'WARE');
-
-            $fn_src = "mvc/$class.php";
-            //if (!Plan::_t($fn_src = "mvc/$class.php"))
-                //throw new Error("Controller `$class` not found");
-            if ($recompile = !$dst || Plan::_mq($fn_src) > Plan::gate_m($fn_dst))
-                Plan::gate_p($fn_dst, Gate::instance()->parse(Plan::$ware, $fn_src, false));
+            if ($recompile = !$dst || Plan::_mq("mvc/$class.php") > Plan::gate_m($fn_dst))
+                Plan::gate_p($fn_dst, Gate::instance()->parse(Plan::$ware, "mvc/$class.php", false));
         }
         $x = $this->return ? 'j' : 'a';
         $action = '' === $i0 ? "empty_$x" : $x . '_' . $i0;
