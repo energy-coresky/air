@@ -54,8 +54,8 @@ class Gate
     }
 
     function parse($ware, $fn, $act_only = true) {
-        $content = Plan::_g([$ware, $fn]);
         $ctrl = basename($fn, '.php');
+        $content = Plan::_gq([$ware, $fn]) or $content = "<?php\n\nclass $ctrl extends Controller\n{}\n";
         $list = (Globals::instance())->parse_def($ctrl, $content);
         if ('main' == $ware && 'default_c' == $ctrl) {
             foreach ($this->trait as $k => $v)

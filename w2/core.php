@@ -100,7 +100,7 @@ function jump($uri = '', $code = 302, $exit = true) {
     } else {
         $sky->is_front or '' === $uri or '?' != $uri[0] or $uri = "adm$uri";
         if (common_c::$tune && $code)
-            $uri = common_c::$tune . '/' . $uri;
+            $uri = common_c::$tune . ('' === $uri || '?' == $uri[0] ? '' : '/') . $uri;
         $sky->jump = LINK . $uri;
     }
 

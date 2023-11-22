@@ -167,6 +167,8 @@ class Plan
                     $class[$cls] = $ware;
                 }
             }
+            if ($cfg['tune'])
+                $ctrl["$cfg[tune]/*"] = $ware;
             $app =& $conf['app'];
             unset($app['require'], $app['class'], $app['databases']);
             SKY::$plans[$ware] = ['app' => ['path' => $path] + $conf['app']] + $conf;

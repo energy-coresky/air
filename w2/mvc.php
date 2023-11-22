@@ -518,7 +518,7 @@ class MVC extends MVC_BASE
             $set = isset($ctrl[$w0 = $i0]);
         }
         if ($set) {
-            Plan::$ware = $ctrl[$w0];
+            Plan::$ware = Plan::$view = $ctrl[$w0];
             if ($set = '*' !== $i0 && !$x) {
                 $class = 'c_' . (MVC::$tpl = $i0);
                 is_string($i0 = $this->_1) or $i0 = '*';
@@ -531,9 +531,11 @@ class MVC extends MVC_BASE
         if (!$dst || DEV) {
             if ('main' != Plan::$ware)
                 trace(Plan::$ware, 'WARE');
-            if (!Plan::_t($fn_src = "mvc/$class.php"))
-                throw new Error("Controller `$class` not found");
-            if ($recompile = !$dst || Plan::_m($fn_src) > Plan::gate_m($fn_dst))
+
+            $fn_src = "mvc/$class.php";
+            //if (!Plan::_t($fn_src = "mvc/$class.php"))
+                //throw new Error("Controller `$class` not found");
+            if ($recompile = !$dst || Plan::_mq($fn_src) > Plan::gate_m($fn_dst))
                 Plan::gate_p($fn_dst, Gate::instance()->parse(Plan::$ware, $fn_src, false));
         }
         $x = $this->return ? 'j' : 'a';
