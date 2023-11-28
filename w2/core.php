@@ -182,7 +182,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
 
 function pagination(&$limit, $cnt = false, $tpl = false) {
     global $sky;
-    false !== $tpl or $tpl = $sky->pagination;
+    $tpl or $tpl = $sky->pagination;
 
     if (!is_num($cnt)) {
         if ($cnt instanceof SQL) {
@@ -194,6 +194,7 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
     }
     [$su, $qs] = array_values(parse_url(URI) + ['path' => '', 'query' => '']);
     $err = false;
+
     if (is_array($tpl)) { # $tpl = [0, 'p-2'] for surl
         $su = explode('/', $su);
         $current = 1;
@@ -224,6 +225,7 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
     $limit = ($ipp = $limit) * ($current - 1);
     $last = ceil($cnt / $ipp);
     common_c::$page = $err || $current < 1 || $current > $last;
+
     return (object)[
         'current' => $current,
         'cnt' => $cnt,

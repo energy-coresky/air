@@ -144,12 +144,12 @@ class Admin
         $limit = $ipp;
         $p = pagination($limit, $cnt, 'p');
         if ($p->cnt <= $ipp)
-            return [0, 'Pages: 1', $p->cnt];
+            return [0, 'Pages: 1, Items: 1..' . $p->cnt, $p->cnt];
         $y = '<li%s><a href="%s">%s</a></li>';
-        $html = '';
+        $html = 'Pages: <ul class="pagination">';
         foreach (($p->ary)($ipl) as $n)
             $html .= $n ? sprintf($y, $n == $p->current ? ' class="active"' : '', $p->url($n), $n) : '<li>..</li>';
-        return [$limit, "Pages: <ul class=\"pagination\">$html</ul>", $p->cnt];
+        return [$limit, "$html</ul>, Items: " . $p->item[0] . '..' . $p->item[0] . " of $p->cnt", $p->cnt];
     }
 
     function process($delete = false) {
