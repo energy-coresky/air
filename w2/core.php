@@ -212,10 +212,8 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
         $url = 1;//2do
     } else {
         parse_str($qs, $qs);
-        if (isset($qs[$tpl])) {
-            $current = (int)$qs[$tpl];
-            $current > 1 or $err = true;
-        }
+        if (isset($qs[$tpl]) && ($current = (int)$qs[$tpl]) < 2)
+            $err = $current = 1;
         $url = function ($page = 1) use ($su, $qs, $tpl) {
             if (1 == $page) {
                 unset($qs[$tpl]);
@@ -228,7 +226,7 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
     }
     $limit = ($ipp = $limit) * ($current - 1);
     $last = ceil($cnt / $ipp);
-    common_c::$page = $err || $current < 1 || $current > $last;
+    common_c::$page = $err || $current > $last;
 
     return (object)[
         'current' => $current,
