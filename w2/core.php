@@ -180,79 +180,79 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
     }
 }
 
-function pagination($ipp, $cnt = null, $ipl = 5, $current = null, $throw = true) {
+function pagination(&$limit, $cnt = false, $tpl = false) {
     global $sky;
-    $page = $sky->page_p or $page = 'p'; #   
+    false !== $tpl or $tpl = $sky->pagination;
 
-    if (!is_numeric($cnt)) {
+    if (!is_num($cnt)) {
         if ($cnt instanceof SQL) {
             $cnt = sql('+select count(1) $$', $cnt);
         } else {
             is_string($cnt) or $cnt = (string)(SQL::$dd);
-            $cnt = SQL::$dd->_rows_count($cnt);//////////////////
+            $cnt = SQL::$dd->_rows_count($cnt);
         }
     }
-    $sky->is_front or $throw = false;
-    $e = function ($no) use ($throw, $cnt, $sky) {
-        if ($throw && (404 != $no))
-            throw new Hacker("pagination error $no");
-        return [0, $no, $cnt];
-    };
-    if ($cnt <= $ipp) {
-        if (isset($_GET[$page]) && $sky->is_front) return $e(1);
-        return [0, false, $cnt]; # pagination don't required
-    }
-    $br = [1, $last = floor($cnt / $ipp) + ($cnt % $ipp ? 1 : 0)]; # start, end
-    if ($addr = !is_numeric($current)) {
-        $current = 0;
-        if (preg_match("/^(.*?)(\?|&)$page=([^&]+)(.*)$/", URI, $m)) {
-            if (!is_numeric($m[3]) || $m[3] < 1) return $e(2);
-            $current = $m[3] - 1;
-            if ($current >= $last) {
-                if ($sky->is_front) return $e(404); else $current = $last ? $last - 1 : 0;
+    [$su, $qs] = array_values(parse_url(URI) + ['path' => '', 'query' => '']);
+    $err = false;
+    if (is_array($tpl)) { # $tpl = [0, 'p-2'] for surl
+        $su = explode('/', $su);
+        $current = 1;
+        if (false !== common_c::$page) {
+            array_splice($su, $tpl[0], 1);
+            if (($current = (int)common_c::$page) < 2)
+                $err = $current = 1;
+        }
+        $url = function ($page = 1) use ($su, $qs, $tpl) {
+            1 == $page or array_splice($su, $tpl[0], 0, str_replace('2', $page, $tpl[1]));
+            return PATH . implode('/', $su) . ($qs ? '?' . $qs : '');
+        };
+    } elseif (is_num($tpl)) { # for javascript links or custom
+        $current = (int)$tpl;
+        $url = 1;///
+    } else {
+        parse_str($qs, $qs);
+        $current = isset($qs[$tpl]) ? (int)$qs[$tpl] : 1;
+        $url = function ($page = 1) use ($su, $qs, $tpl) {
+            if (1 == $page) {
+                unset($qs[$tpl]);
+            } else {
+                $qs[$tpl] = $page;
             }
-            $m[4] = trim($m[4], '&');
-            $func = function ($i) use ($m, $page) {
-                if (1 == $i) return '' === $m[4] ? ('' === $m[1] ? LINK : $m[1]) : $m[1] . $m[2] . $m[4];
-                return html("$m[1]$m[2]$page=$i") . ('' === $m[4] ? '' : "&amp;$m[4]");
-            };
-        } else {
-            if (isset($_GET[$page])) return $e(3);
-            $func = function ($i) use ($page) {
-                return 1 == $i ? html(URI) : html(URI) . (strpos(URI, '?') === false ? '?' : '&amp;') . "$page=$i";
-            };
-        }
+            return PATH . $su . ($qs ? '?' . array_join($qs, '=', '&') : '');
+        };
     }
-    if ($last > $ipl) {
-        $br = [$start = $current - floor($ipl / 2) + 1, $start + $ipl - 1];
-        if ($br[0] < 1) {
-            $br = [1, $ipl];
-        } elseif($br[1] > $last) {
-            $br = [$last - $ipl + 1, $last];
-        }
-    }
-    $ps = [
-        'current' => $current + 1,
+    $limit = ($ipp = $limit) * ($current - 1);
+    $last = ceil($cnt / $ipp);
+    common_c::$page = $err || $current < 1 || $current > $last;
+    return (object)[
+        'current' => $current,
+        'cnt' => $cnt,
+        'ipp' => $ipp,
+        'item' => [1 + $limit, 1 + $limit == $cnt ? 0 : ($limit + $ipp > $cnt ? $cnt : $limit + $ipp)],
         'last' => $last,
-        'br' => $br,
+        'url' => $url,
+        'ary' => function ($m = 7, $b = 1) use ($last, $current) {
+            $r = [1, $last];
+            if ($last > $m) {
+                $r = [$start = $current - floor($m / 2), $start + $m - 1];
+                if ($r[0] < 1) {
+                    $r = [1, $m];
+                } elseif($r[1] > $last) {
+                    $r = [$last - $m + 1, $last];
+                }
+            }
+            $left = $right = [];
+            if ($b && 1 < $r[0]) {
+                $left = range(1, $m = min($b, $r[0] - 1));
+                $m + 2 > $r[0] or array_push($left, 0);
+            }
+            if ($b && $last > $r[1]) {
+                $right = range($m = max($last - $b + 1, $r[1] + 1), $last);
+                $m - 2 < $r[1] or array_unshift($right, 0);
+            }
+            return array_merge($left, range($r[0], $r[1]), $right);
+        },
     ];
-    if (!$addr) return [
-        $current * $ipp,
-        (object)($ps + ['middle' => range($br[0], $br[1])]),
-        $cnt,
-    ];
-    $ps += [
-        'a_current' => $func($current + 1),
-        'a_prev' => $func($current ? $current : 1),
-        'a_next' => $func($current + 1 == $last ? $last : $current + 2),
-        'a_first' => $func(1),
-        'a_last' => $func($last),
-    ];
-    for ($i = $br[0], $ps['left'] = ''; $i <= $current; $i++)
-        $ps['left'] .= '<li><a href="' . $func($i) . "\">$i</a></li>";
-    for (++$i, $ps['right'] = ''; $i <= $br[1]; $i++)
-        $ps['right'] .= '<li><a href="' . $func($i) . "\">$i</a></li>";
-    return [$current * $ipp, (object)$ps, $cnt];
 }
 
 function menu($act, $ary, $tpl = '', $by = '</li><li>', $class = 'menu') {

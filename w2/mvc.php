@@ -176,9 +176,9 @@ abstract class Controller extends MVC_BASE
 
 trait HOOK_C
 {
-    static $lg;
-    static $page = 1; # for pagination
-    static $tune = false; # for rewritten wares
+    static $lg; # (not set)
+    static $page = false; # for pagination (page not set)
+    static $tune = false; # for rewritten wares (not set)
 
     static function langs_h() {
     }
@@ -570,6 +570,8 @@ class MVC extends MVC_BASE
             trace($sky->error_no ? 'not-called' : "->$action(..)", 'MASTER ACTION');
         if (!$sky->error_no)
             $this->set(call_user_func_array([MVC::$mc, $action], $param ?? [])); # call master action
+        if (false !== common_c::$page)
+            $this->set(404);
 
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $this->set($tail, true); # call tail_y
 

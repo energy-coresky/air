@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.519 2023-11-22T13:59:49+02:00 energy';
+    const CORE = '0.521 2023-11-28T13:44:05+02:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -335,7 +335,7 @@ class HEAVEN extends SKY
     public $profiles = ['Anonymous', 'Root'];
     public $admins = 1; # root only has admin access or list pids in array
     public $has_public = true; # web-site or CRM
-   public $page_p = 'p';
+    public $pagination = 'p';
     public $show_pdaxt = false;
 
     function __construct() {
