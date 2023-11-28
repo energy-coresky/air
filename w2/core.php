@@ -194,10 +194,10 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
     }
     [$su, $qs] = array_values(parse_url(URI) + ['path' => '', 'query' => '']);
     $err = false;
+    $current = 1;
 
-    if (is_array($tpl)) { # $tpl = [0, 'p-2'] for surl
+    if (is_array($tpl)) { # $tpl = [0, 'page-2'] for surl
         $su = explode('/', $su);
-        $current = 1;
         if (false !== common_c::$page) {
             array_splice($su, $tpl[0], 1);
             if (($current = (int)common_c::$page) < 2)
@@ -209,17 +209,21 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
         };
     } elseif (is_num($tpl)) { # for javascript links or custom
         $current = (int)$tpl;
-        $url = 1;///
+        $url = 1;//2do
     } else {
         parse_str($qs, $qs);
-        $current = isset($qs[$tpl]) ? (int)$qs[$tpl] : 1;
+        if (isset($qs[$tpl])) {
+            $current = (int)$qs[$tpl];
+            $current > 1 or $err = true;
+        }
         $url = function ($page = 1) use ($su, $qs, $tpl) {
             if (1 == $page) {
                 unset($qs[$tpl]);
             } else {
                 $qs[$tpl] = $page;
             }
-            return PATH . $su . ($qs ? '?' . array_join($qs, '=', '&') : '');
+            $fn = fn($k, $v) => '' === $v ? $k : "$k=$v";
+            return PATH . $su . ($qs ? '?' . array_join($qs, $fn, '&') : '');
         };
     }
     $limit = ($ipp = $limit) * ($current - 1);
@@ -228,31 +232,31 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
 
     return (object)[
         'current' => $current,
+        'last' => $last,
         'cnt' => $cnt,
         'ipp' => $ipp,
         'item' => [1 + $limit, 1 + $limit == $cnt ? 0 : ($limit + $ipp > $cnt ? $cnt : $limit + $ipp)],
-        'last' => $last,
         'url' => $url,
         'ary' => function ($m = 7, $b = 1) use ($last, $current) {
-            $r = [1, $last];
+            $x = [1, $last];
             if ($last > $m) {
-                $r = [$start = $current - floor($m / 2), $start + $m - 1];
-                if ($r[0] < 1) {
-                    $r = [1, $m];
-                } elseif($r[1] > $last) {
-                    $r = [$last - $m + 1, $last];
+                $x = [$start = $current - floor($m / 2), $start + $m - 1];
+                if ($x[0] < 1) {
+                    $x = [1, $m];
+                } elseif($x[1] > $last) {
+                    $x = [$last - $m + 1, $last];
                 }
             }
             $left = $right = [];
-            if ($b && 1 < $r[0]) {
-                $left = range(1, $m = min($b, $r[0] - 1));
-                $m + 2 > $r[0] or array_push($left, 0);
+            if ($b && 1 < $x[0]) {
+                $left = range(1, $m = min($b, $x[0] - 1));
+                $m + 2 > $x[0] or array_push($left, 0);
             }
-            if ($b && $last > $r[1]) {
-                $right = range($m = max($last - $b + 1, $r[1] + 1), $last);
-                $m - 2 < $r[1] or array_unshift($right, 0);
+            if ($b && $last > $x[1]) {
+                $right = range($m = max($last - $b + 1, $x[1] + 1), $last);
+                $m - 2 < $x[1] or array_unshift($right, 0);
             }
-            return array_merge($left, range($r[0], $r[1]), $right);
+            return array_merge($left, range($x[0], $x[1]), $right);
         },
     ];
 }

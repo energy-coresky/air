@@ -335,7 +335,7 @@ class HEAVEN extends SKY
     public $profiles = ['Anonymous', 'Root'];
     public $admins = 1; # root only has admin access or list pids in array
     public $has_public = true; # web-site or CRM
-    public $pagination = 'p';
+    public $pagination = 'page';
     public $show_pdaxt = false;
 
     function __construct() {

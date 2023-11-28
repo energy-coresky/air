@@ -142,7 +142,7 @@ class Admin
 
     static function pages($ipp, $cnt = false, $ipl = 7) {
         $limit = $ipp;
-        $p = pagination($limit, $cnt, 'p');
+        $p = pagination($limit, $cnt, 'page');
         if ($p->cnt <= $ipp)
             return [0, 'Pages: 1, Items: 1..' . $p->cnt, $p->cnt];
         $y = '<li%s><a href="%s">%s</a></li>';
