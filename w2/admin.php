@@ -140,16 +140,16 @@ class Admin
         return $me;
     }
 
-    static function pages($ipp, $cnt = null, $ipl = 7, $throw = false) {
-        list($limit, $pages, $cnt) = pagination($ipp, $cnt, $ipl, null, $throw);
-        if (!$pages) return [0, 'Pages: 1', $cnt];
+    static function pages($ipp, $cnt = false, $ipl = 7) {
+        $limit = $ipp;
+        $p = pagination($limit, $cnt, 'p');
+        if ($p->cnt <= $ipp)
+            return [0, 'Pages: 1', $p->cnt];
+        $y = '<li%s><a href="%s">%s</a></li>';
         $html = '';
-        $tpl = '<li%s><a href="%s">%s</a></li>';
-        $br = $pages->br[0] != 1 || $pages->br[1] != $pages->last;
-        if ($br) $html .= sprintf($tpl . $tpl, '', $pages->a_first, '&laquo;', '', $pages->a_prev, '&lsaquo;');
-        $html .= $pages->left . sprintf($tpl, ' class="active"', $pages->a_current, $pages->current) . $pages->right;
-        if ($br) $html .= sprintf($tpl . $tpl, '', $pages->a_next, '&rsaquo;', '', $pages->a_last, '&raquo;');
-        return [$limit, "Pages: <ul class=\"pagination\">$html</ul>", $cnt];
+        foreach (($p->ary)($ipl) as $n)
+            $html .= $n ? sprintf($y, $n == $p->current ? ' class="active"' : '', $p->url($n), $n) : '<li>..</li>';
+        return [$limit, "Pages: <ul class=\"pagination\">$html</ul>", $p->cnt];
     }
 
     function process($delete = false) {
