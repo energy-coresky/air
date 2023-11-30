@@ -225,8 +225,8 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
         };
     }
     $limit = ($ipp = $limit) * ($current - 1);
-    $last = ceil($cnt / $ipp);
-    common_c::$page = $err || 1 != $current && $current > $last;
+    $last = ceil($cnt / $ipp) ?: 1;
+    common_c::$page = $err || $current > $last;
 
     return (object)[
         'current' => $current,
@@ -235,21 +235,21 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
         'ipp' => $ipp,
         'item' => [($cnt ? 1 : 0) + $limit, 1 + $limit == $cnt ? 0 : ($limit + $ipp > $cnt ? $cnt : $limit + $ipp)],
         'url' => $url,
-        'ary' => function ($m = 7, $b = 1) use ($last, $current) {
+        'ary' => function ($m = 5, $b = 1) use ($last, $current) {
             if ($last <= $m + 2 * $b)
-                return range(1, $last ?: 1);
-            $x = $b ? range(1, $b) : [];
+                return range(1, $last);
+            $x = $b ? range(1, $b) : []; # left boundary
             $start = $current - floor($m / 2);
             if ($start < $b + 1)
                 $start = $b + 1;
             if ($b && $b + 1 < $start)
-                array_push($x, 0);
+                array_push($x, 0); # left break
             if ($start + $m + $b > $last)
                 $start = $last - $m - $b + 1;
-            $x = array_merge($x, range($start, $start + $m - 1));
+            $x = array_merge($x, range($start, $start + $m - 1)); # middle
             if ($b && end($x) + 1 < $last - $b + 1)
                 array_push($x, 0);
-            return array_merge($x, $b ? range($last - $b + 1, $last) : []);
+            return $b ? array_merge($x, range($last - $b + 1, $last)) : $x;
         },
     ];
 }
