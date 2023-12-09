@@ -205,25 +205,32 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
         }
         $url = function ($page = 1) use ($su, $qs, $frag, $tpl) {
             1 == $page or array_splice($su, $tpl[0], 0, str_replace('2', $page, $tpl[1]));
-            return PATH . implode('/', $su) . ($qs ? '?' . $qs : '') . $frag;
+            return PATH . implode('/', $su) . ('' === $qs ? '' : "?$qs") . $frag;
         };
     } elseif (is_num($tpl)) { # for javascript links or custom
         $current = (int)$tpl;
         $url = $sky->page_url;
     } else {
-        parse_str($qs = trim($qs, '&'), $ary);
-        if ($set = isset($ary[$tpl])) {
-            if (($current = (int)$ary[$tpl]) < 2)
+        $quoted = preg_quote($tpl, '/');
+        if (preg_match("/^(.+?&|\A)($quoted=)(\d+)(\Z|&.+)$/", $qs, $m)) {
+            array_shift($m);
+            if (($current = (int)$m[2]) < 2)
                 $err = $current = 1;
-            $tpl = preg_quote($tpl, '/');
+        } else {
+            $m = ['' === $qs ? '' : "$qs&", "$tpl=", 2, ''];
         }
-        $url = function ($page = 1) use ($su, $set, $qs, $frag, $tpl) {
-            if ($set) {
-                $qs = preg_replace("/((&|\A)$tpl)=\d+/", 1 == $page ? '' : '$1=' . $page, $qs);
-            } elseif ($page > 1) {
-                $qs = '' === $qs ? "$tpl=$page" : "$qs&$tpl=$page";
+        $url = function ($page = 1) use ($su, $m, $frag) {
+            if ($page > 1) {
+                $m[2] = $page;
+            } else { # page = 1
+                unset($m[1], $m[2]);
+                if ('' !== $m[0]) {
+                    $m[0] = substr($m[0], 0, -1);
+                } elseif ('' !== $m[3]) {
+                    $m[3] = substr($m[3], 1);
+                }
             }
-            return PATH . $su . ('' === $qs ? '' : "?$qs") . $frag;
+            return PATH . $su . ('' === ($qs = implode('', $m)) ? '' : "?$qs") . $frag;
         };
     }
     $limit = ($ipp = $limit) * ($current - 1);

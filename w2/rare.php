@@ -95,7 +95,7 @@ class Rare
     static function parse_url($url) { # for relative url
         $a = parse_url(LINK . $url) + ['path' => '', 'query' => '', 'fragment' => ''];
         $a['path'] = substr($a['path'], strlen(PATH));
-        return [$a['path'], $a['query'], '' === $a['fragment'] ? '' : '#' . $a['fragment']];
+        return [$a['path'], trim($a['query'], '&'), '' === $a['fragment'] ? '' : '#' . $a['fragment']];
     }
 
     static function optimize($in) {
