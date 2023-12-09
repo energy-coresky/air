@@ -180,7 +180,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
     }
 }
 
-function pagination(&$limit, $cnt = false, $tpl = false) {
+function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
     global $sky;
     $tpl or $tpl = $sky->pagination;
 
@@ -192,7 +192,7 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
             $cnt = SQL::$dd->_rows_count($cnt);
         }
     }
-    [$su, $qs] = array_values(parse_url(URI) + ['path' => '', 'query' => '']);
+    [$su, $qs, $frag] = Rare::parse_url(URI);
     $err = false;
     $current = 1;
 
@@ -203,32 +203,35 @@ function pagination(&$limit, $cnt = false, $tpl = false) {
             if (($current = (int)common_c::$page) < 2)
                 $err = $current = 1;
         }
-        $url = function ($page = 1) use ($su, $qs, $tpl) {
+        $url = function ($page = 1) use ($su, $qs, $frag, $tpl) {
             1 == $page or array_splice($su, $tpl[0], 0, str_replace('2', $page, $tpl[1]));
-            return PATH . implode('/', $su) . ($qs ? '?' . $qs : '');
+            return PATH . implode('/', $su) . ($qs ? '?' . $qs : '') . $frag;
         };
     } elseif (is_num($tpl)) { # for javascript links or custom
         $current = (int)$tpl;
-        $url = 1;//2do
+        $url = $sky->page_url;
     } else {
-        parse_str($qs, $qs);
-        if (isset($qs[$tpl]) && ($current = (int)$qs[$tpl]) < 2)
-            $err = $current = 1;
-        $url = function ($page = 1) use ($su, $qs, $tpl) {
-            if (1 == $page) {
-                unset($qs[$tpl]);
-            } else {
-                $qs[$tpl] = $page;
+        parse_str($qs = trim($qs, '&'), $ary);
+        if ($set = isset($ary[$tpl])) {
+            if (($current = (int)$ary[$tpl]) < 2)
+                $err = $current = 1;
+            $tpl = preg_quote($tpl, '/');
+        }
+        $url = function ($page = 1) use ($su, $set, $qs, $frag, $tpl) {
+            if ($set) {
+                $qs = preg_replace("/((&|\A)$tpl)=\d+/", 1 == $page ? '' : '$1=' . $page, $qs);
+            } elseif ($page > 1) {
+                $qs = '' === $qs ? "$tpl=$page" : "$qs&$tpl=$page";
             }
-            $fn = fn($k, $v) => '' === $v ? $k : "$k=$v";
-            return PATH . $su . ($qs ? '?' . array_join($qs, $fn, '&') : '');
+            return PATH . $su . ('' === $qs ? '' : "?$qs") . $frag;
         };
     }
     $limit = ($ipp = $limit) * ($current - 1);
-    $last = ceil($cnt / $ipp) ?: 1;
+    $last = (int)ceil($cnt / $ipp) ?: 1;
     common_c::$page = $err || $current > $last;
 
     return (object)[
+        'v' => $v,
         'current' => $current,
         'last' => $last,
         'cnt' => $cnt,

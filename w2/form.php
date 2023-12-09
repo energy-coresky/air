@@ -14,8 +14,10 @@ class xForm
 
 class Form
 {
+    const version = '0.501';
     const OPT_TABLE = 1;
     const OPT_DIV   = 2;
+    const TPL_CHK = '<li class="elm-chk"><label><ul class="row"><li class="elm">%s</li><li class="desc-chk">%s</li></ul></label></li>';
 
     private $dm = [
         '+' => 'this field cannot be empty',
@@ -23,13 +25,15 @@ class Form
         '~' => 'enter valid phone number',
         '.' => 'enter login',
         '*' => 'enter password',
-        '#' => 'enter numbers', #   '/' => 'RegExp', # '|' => 'Function', key 0 => MODIFY KEYS
+        '#' => 'enter numbers', #   , # '|' => 'Function', key 0 => MODIFY KEYS
+        // '/' => Custom RegExp
+        // '&' => Custom validation function (JS + PHP)
     ];
     private $re = [
         '-' => RE_EMAIL,
         '~' => RE_PHONE,
         '.' => RE_LOGIN,
-        '*' => RE_PASSW,
+        '*' => RE_PASSW, //2do: not simple regexp
         '#' => '/^\d+$/',
     ];
     private $tag = [
@@ -110,12 +114,12 @@ class Form
         return $as_string ? $js . tag($html, $etc, 'form') : [$js, tag($html, $etc, 'form')];
     }
 
-    function validate() {
+    function validate(array $ary = []) {
         $this->validation = true;
         unset($this->form['_csrf']);
         $this->cv_prepare($this->js, $this->mk);
         $this->walk($this->form);
-        return $this->post;
+        return $ary + $this->post;
     }
 
     function input($type, $val, $etc = '') {
@@ -265,7 +269,7 @@ class Form
                 $this->proc_char($char = $name[0], $name = substr($name, 1), $mk);
             } elseif ($this->validation) {
                 if (isset($_POST[$name]))
-                $this->post[$name] = $_POST[$name]; # collect form fields only !
+                    $this->post[$name] = $_POST[$name]; # collect form fields only !
             }
 
             if ($func) { # draw html
@@ -317,8 +321,6 @@ class Form
         }, array_keys($ary));
         return array_combine($keys, array_values($ary));
     }
-
-    const TPL_CHK = '<li class="elm-chk"><label><ul class="row"><li class="elm">%s</li><li class="desc-chk">%s</li></ul></label></li>';
 
     function draw_form($row = [], $mk = [], $add_post = true) {
         if ($this->spec)
