@@ -192,8 +192,9 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
             $cnt = SQL::$dd->_rows_count($cnt);
         }
     }
-    [$su, $qs, $frag] = Rare::parse_url(URI);
     $err = false;
+    $su = $sky->orig_surl;
+    $qs = $sky->orig_qstr;
     $current = 1;
 
     if (is_array($tpl)) { # $tpl = [0, 'page-2'] for surl
@@ -203,9 +204,9 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
             if (($current = (int)common_c::$page) < 2)
                 $err = $current = 1;
         }
-        $url = function ($page = 1) use ($su, $qs, $frag, $tpl) {
+        $url = function ($page = 1) use ($su, $qs, $tpl) {
             1 == $page or array_splice($su, $tpl[0], 0, str_replace('2', $page, $tpl[1]));
-            return PATH . implode('/', $su) . ('' === $qs ? '' : "?$qs") . $frag;
+            return PATH . implode('/', $su) . ('' === $qs ? '' : "?$qs");
         };
     } elseif (is_num($tpl)) { # for javascript links or custom
         $current = (int)$tpl;
@@ -219,7 +220,7 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
         } else {
             $m = ['' === $qs ? '' : "$qs&", "$tpl=", 2, ''];
         }
-        $url = function ($page = 1) use ($su, $m, $frag) {
+        $url = function ($page = 1) use ($su, $m) {
             if ($page > 1) {
                 $m[2] = $page;
             } else { # page = 1
@@ -230,7 +231,7 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
                     $m[3] = substr($m[3], 1);
                 }
             }
-            return PATH . $su . ('' === ($qs = implode('', $m)) ? '' : "?$qs") . $frag;
+            return PATH . $su . ('' === ($qs = implode('', $m)) ? '' : "?$qs");
         };
     }
     $limit = ($ipp = $limit) * ($current - 1);

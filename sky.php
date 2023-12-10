@@ -327,7 +327,8 @@ class HEAVEN extends SKY
     const Z_FLY = 2;
 
     public $fly = 0;
-    public $surl_orig = '';
+    public $orig_surl;
+    public $orig_qstr;
     public $jump = false; # INPUT_POST=0 INPUT_GET=1 0..8
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
     public $method;
@@ -364,7 +365,7 @@ class HEAVEN extends SKY
 
         parent::__construct(); # 9/7 classes at that point on DEV/Prod
 
-        $this->ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        $this->ip = $_SERVER['REMOTE_ADDR'];
         $this->origin = $_SERVER['HTTP_ORIGIN'] ?? false;
         $this->orientation = 0;
         if (isset($_SERVER['HTTP_X_ORIENTATION'])) {
@@ -384,10 +385,12 @@ class HEAVEN extends SKY
         $mvc = new MVC;
         $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
         $this->is_front = true;
+        $this->orig_qstr = $_SERVER['QUERY_STRING'];
+        $this->orig_surl = '' === $this->orig_qstr ? rtrim(URI, '?') : substr(URI, 0, -1 - strlen($this->orig_qstr));
         $cnt = 0;
         if ('' !== URI) { # not main page
-            $this->surl = explode('/', $this->surl_orig = explode('?', URI)[0]);
-            if (false !== strpos($this->surl_orig, '//')) {
+            $this->surl = explode('/', $this->orig_surl);
+            if (false !== strpos($this->orig_surl, '//')) {
                 SKY::$debug && $this->open();
                 throw new Hacker('403 Twice slash');
             }
