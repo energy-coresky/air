@@ -570,8 +570,6 @@ class MVC extends MVC_BASE
             trace($sky->error_no ? 'not-called' : "->$action(..)", 'MASTER ACTION');
         if (!$sky->error_no)
             $this->set(call_user_func_array([MVC::$mc, $action], $param ?? [])); # call master action
-        if (false !== common_c::$page)
-            $this->set(404);
 
         is_string($tail = MVC::$mc->tail_y()) ? (MVC::$layout = $tail) : $this->set($tail, true); # call tail_y
 

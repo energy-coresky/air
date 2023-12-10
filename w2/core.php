@@ -210,7 +210,7 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
     } elseif (is_num($tpl)) { # for javascript links or custom
         $current = (int)$tpl;
         $url = $sky->page_url;
-    } else {
+    } else { # pagination in the query string
         $quoted = preg_quote($tpl, '/');
         if (preg_match("/^(.+?&|\A)($quoted=)(\d+)(\Z|&.+)$/", $qs, $m)) {
             array_shift($m);
@@ -238,7 +238,7 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
     common_c::$page = $err || $current > $last;
 
     return (object)[
-        'v' => $v,
+        'v' => $v, # extra value
         'current' => $current,
         'last' => $last,
         'cnt' => $cnt,
@@ -480,8 +480,7 @@ class eVar implements Iterator
     private $dd = false;
 
     function __construct($e) {
-        if ($e instanceof Closure)
-            $e = ['row_c' => $e];
+        is_array($e) or $e = [$e instanceof Closure ? 'row_c' : 'query' => $e];
         $this->e = $e;
     }
 
