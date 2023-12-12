@@ -117,10 +117,8 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
         $sky->was_error |= SKY::ERR_DETECT;
         if (null === SKY::$dd)
             $sky->open(is_array($var) ? $var[1] : $var);
-        if (SKY::$debug && SKY::$errors[0]++ > 49) {
+        if (SKY::$debug && SKY::$errors[0]++ > 49)
             return;
-            //throw new Error("500 Internal SKY error");
-        }
     }
     if (SKY::$debug || $sky->log_error && $err) {
         if ($err && is_array($var))
@@ -152,7 +150,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
                 $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
                 $sky->error_prod .= L::r('<b>' . NOW . ' - ' . $type . '</b>');
                 if (!SKY::$cli)
-                    $sky->error_prod .= ' ' . $sky->methods[$sky->method] . ' uri: ' . html(URI);
+                    $sky->error_prod .= ' ' . $sky->methods[$sky->method] . ' /' . html(URI);
                 $sky->error_prod .= "\n$mgs\n\n";
             }
         }
@@ -192,10 +190,10 @@ function pagination(&$limit, $cnt = false, $tpl = false, $v = false) {
             $cnt = SQL::$dd->_rows_count($cnt);
         }
     }
+    $current = 1;
     $err = false;
     $su = $sky->orig_surl;
     $qs = $sky->orig_qstr;
-    $current = 1;
 
     if (is_array($tpl)) { # $tpl = [0, 'page-2'] for surl
         $su = explode('/', $su);

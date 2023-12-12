@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.523 2023-12-09T16:06:28+02:00 energy';
+    const CORE = '0.524 2023-12-12T18:49:38+02:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -242,7 +242,7 @@ class SKY implements PARADISE
     }
 
     function log($mode, $data) {
-        if (!SKY::$dd || !in_array(SKY::s('test_mode'), [$mode, 'all']))
+        if (!SKY::$dd || !in_array(SKY::s('log_a'), [$mode, 'all']))
             return;
         $new = date(DATE_DT) . " $mode $data\n";
         SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=7', $new);
@@ -390,7 +390,7 @@ class HEAVEN extends SKY
         $cnt = 0;
         if ('' !== URI) { # not main page
             $this->surl = explode('/', $this->orig_surl);
-            if (false !== strpos($this->orig_surl, '//')) {
+            if (false !== strpos(PATH . $this->orig_surl, '//')) {
                 SKY::$debug && $this->open();
                 throw new Hacker('403 Twice slash');
             }
@@ -496,7 +496,7 @@ class HEAVEN extends SKY
                 }
                 # save to Crash log
                 if (($dd = SKY::$dd) && $this->s_log_crash) {
-                    $str = NOW . "[$this->error_no] $_SERVER[REQUEST_METHOD] (" . html(URI) . ') ' . $title . ', ';
+                    $str = NOW . " <r>$this->error_no</r> $_SERVER[REQUEST_METHOD] /" . html(URI) . ' ' . $title . ', ';
                     $str .= isset($user) ? a('v' . $user->vid, "?visitors=" . ($user->vid ? "vid$user->vid" : "ip$user->ip")) : $this->ip;
                     sqlf('update $_memory set dt=' . $dd->f_dt() . ', tmemo=substr(' . $dd->f_cc('%s', 'tmemo') . ',1,10000) where id=5', "$str\n");
                 }

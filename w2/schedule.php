@@ -52,15 +52,12 @@ class Schedule
     }
 
     function mail_error() {
-        global $sky;
         $this->database();
         list ($dt, $err) = sqlf('-select dt, tmemo from $_memory where id=4');
         if (!$dt)
             return;
         sqlf('update $_memory set dt=null where id=4');
-        $mail = new Mail;
-        $mail->add_html("<pre>$err</pre>");
-        return $mail->send($sky->s_email, 'error on production', 'nr@' . _PUBLIC);
+        return Rare::mail(pre($err), 'Error on production');
     }
 
     function bot_google($ip) { # see https://support.google.com/webmasters/answer/80553
@@ -169,10 +166,12 @@ class Schedule
         $task or $task = $this->task;
         $date = date(DATE_DT);
         $this->database($this->amp);
-        $tpl = 'update $_memory set tmemo=substr($cc(%s,%s,tmemo),1,10000) where id=%d';
         if (!SKY::$dd) {
             echo "$date [$task] $str\n";
-        } elseif ($is_error) {
+            return;
+        }
+        $tpl = 'update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr($cc(%s,%s,tmemo),1,10000) where id=%d';
+        if ($is_error) {
             $time = sprintf("$date %01.3fs - cron task #$task:", microtime(true) - START_TS);
             sqlf($tpl, L::z("<b>$time</b>\n"), html("$str\n\n"), 4);
         } else {

@@ -2,8 +2,7 @@
 
 class Root
 {
-    static $menu1 = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Databases'];
-    static $menu2 = [7 => 'Special', 'Log Cron', 'Log Crash', 'Log Error'];
+    static $menu = [1 => 'Overview', 'phpinfo()', 'Config', 'Cache', 'Guard', 'Databases'];
     static $core = [ # is core: hash json ?
         'Core', 'date', 'hash', 'json', 'pcre', 'Reflection', 'SPL', 'standard',
     ];
@@ -17,16 +16,46 @@ class Root
         'tidy', 'tokenizer', 'wddx', 'xml', 'xmlreader', 'xmlwriter', 'xsl', 'Zend OPcache', 'zip', 'zlib',
     ];
 
-    const js = 'http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js';
+    static function menu() {
+        $a = sqlf('@select id, dt from $_memory where id>3 order by id limit 4');
+        if (preg_match("/^_dev\?main=(7|8|9|10)$/", URI, $m))
+            $a[$id = 14 - $m[1]] && sqlf('update $_memory set dt=null where id=%d', $id) && ($a[$id] = 0);
+        $a = array_map(fn($v) => $v ? ' <span style="color:red">*</span>' : '', $a);
+        $a[7] .= ' <span style="color:blue">(' . SKY::s('log_a') . ')</span>';
+        return [7 => "Sky Log$a[7]", "Log Cron$a[6]", "Log Crash$a[5]", "Log Error$a[4]"];
+    }
 
     static function run($n, $id) {
         if ($n < 7) {
             define('TPL_MENU', "?main=$n&id=%d");
-            $funs = array_map('strtolower', Root::$menu1);
+            $funs = array_map('strtolower', Root::$menu);
             $funs[2] = substr($funs[2], 0, 7);
             return call_user_func(['Root', '_' . $funs[$n]], $id);
+        } elseif ($n < 11) {
+            echo Display::log(sqlf('+select tmemo from $_memory where id=%d', 14 - $n));
+            return 7 == $n ? self::_skylog() : '';
         }
-        echo Display::log(sqlf('+select tmemo from $_memory where id=%d', 14 - $n));
+    }
+
+    static function _skylog() {
+        $y = '' === SKY::s('log_y') ? [] : explode(' ', SKY::s('log_y'));
+        $opt = [-2 => 'off', -1 => 'all'] + $y;
+        false !== ($act = array_search(SKY::s('log_a'), $opt)) or $act = -2;
+        if ($m = $_POST['m'] ?? false) {
+            [$s, $a] = [$_POST['s'] ?? '', $_POST['a'] ?? ''];
+            if ('s' === $m && isset($opt[$s])) {
+                SKY::s('log_a', $opt[$s]);
+            } elseif ('a' === $m && preg_match("/^[a-z\d]+$/", $a) && !in_array($a, $opt)) {
+                SKY::s('log_a', $y[] = $a);
+                SKY::s('log_y', implode(' ', $y));
+            } elseif ('d' === $m && $act >= 0) {
+                unset($y[$act]);
+                SKY::s('log_a', 'off');
+                SKY::s('log_y', implode(' ', $y));
+            }
+            jump(URI);
+        }
+        return view('_dev.skylog', ['act' => $act, 'opt' => $opt]);
     }
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -402,7 +431,6 @@ class Root
         return menu($i, ['index.htm', '.htaccess']);
     }
 
-
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     static function _databases($i = null) {
         global $sky;
@@ -475,78 +503,6 @@ class Root
             echo '</table>';
         }
         return $TOP;
-    }
-
-    static function start() {
-        global $sky;
-
-        if ($sky->s_init_needed) {
-            $js = WWW . 'm/' . basename(Root::js);
-            file_exists($js) or file_put_contents($js, file_get_contents(Root::js)) or exit("Cannot save `$js`");
-            Root::init_reset(sql('+select tmemo from memory where id=5'));
-            SKY::s('init_needed', null); # run once only
-        }
-    }
-
-    static function init_reset($code) {
-        if (!DEV)
-            return;
-
-        foreach (explode("\n", unl($code)) as $line) {
-            if ($line) list($key, $val) = explode(' ', $line, 2); else continue;
-            switch ($key) {
-                case 'htaccess':
-                    foreach (explode(' ', $line) as $dir)
-                        if ($dir && file_exists($dir) && !file_exists($file = "$dir/.htaccess"))
-                            file_put_contents($file, "deny from all\n");
-                break;
-                case 'index':
-                    foreach (explode(' ', $line) as $dir)
-                        if ($dir && file_exists($dir) && !file_exists($file = "$dir/index.htm"))
-                            file_put_contents($file, "<html><body>Forbidden folder</body></html>\n");
-                break;
-                case 'php':
-                    if (is_numeric($val)) {
-                        $php = sqlf('+select tmemo from $_memory where id=%d union select 0 as tmemo', $val)
-                            and sqlf('delete from $_memory where id=%d', $val)
-                            and eval($php);
-                    } elseif (is_file($val)) {
-                        require $val;//req
-                    }
-                break;
-            }
-        }
-    }
-
-    static function dummy_txt($chars = 0) {
-        $s = 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua';
-        $ary = explode(' ', $s);
-        for ($j = 0, $str = '', $cnt = rand(2, 10); $chars ? true : $j < $cnt; $j++) {
-            $str .= $chars ? $ary[rand(0, count($ary) - 1)] . ' ' : "<p>$s</p>";
-            if ($chars && strlen($str) > $chars) return substr($str, 0, $chars);
-        }
-        return $str;
-    }
-
-    static function dummy_gen($table, $size = null) {
-        $ary = [];
-        $txt = 0;
-        foreach (sql('@explain $_' . ($table = preg_replace("/`/u", '', $table))) as $c => $r) {
-            $ary[$c] = "return ";
-            if ('auto_increment' == $r[4]) $ary[$c] .= "null;";
-            elseif (preg_match("/^[a-z]*text$/i", $r[0])) $ary[$c] .= 'Root::dummy_txt();' and $txt = 1;
-            elseif ('datetime' == $r[0]) $ary[$c] .= 'date(DATE_DT, time() - rand(0, 3600 * 24 * 7));';
-            elseif (preg_match("/varchar\((\d+)\)/", $r[0], $m)) $ary[$c] .= "Root::dummy_txt($m[1] > 15 ? rand(9, $m[1] - 5) : $m[1]);";
-            elseif ('YES' == $r[1]) $ary[$c] .= "null;";
-            elseif (!is_null($r[3])) $ary[$c] .= "'$r[3]';";
-            else $ary[$c] .= "rand(0, 9);";
-        }
-        if (is_null($size)) $size = $txt ? 300 : 5;
-        for ($i = 0; $i < $size; $i++) {
-            $ins = $ary;
-            foreach ($ins as &$v) $v = eval($v);
-            sql('insert into $_` @@', $table, $ins);
-        }
     }
 
     static function form_prod() {

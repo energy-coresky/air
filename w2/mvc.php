@@ -201,6 +201,10 @@ trait HOOK_C
         $dd->init();
     }
 
+    static function mail_h($message, $ary, $subject, $to) {
+        return Debug::mail($message, $ary, $subject, $to);
+    }
+
     static function make_h($forward) {
         return Install::make($forward);
     }

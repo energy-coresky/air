@@ -39,6 +39,14 @@ class Rare
         return $list;
     }
 
+    static function mail($message, $ary = [], $subject = false, $to = false) {
+        if (is_string($ary)) {
+            $to = $subject;
+            $ary = ['subject' => $ary];
+        }
+        return common_c::mail_h($message, $ary, $subject, $to);
+    }
+
     static function split(String $in, $b = ';', $sql_comment = true) {
         $out = [];
         $s = $rest = '';

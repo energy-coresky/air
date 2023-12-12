@@ -270,14 +270,14 @@ sky.key[115] = function() { // F2
 @elseif(4 == $n)SYSTEM CACHE
 @elseif(5 == $n)SYSTEM GUARD PAGE
 @elseif(6 == $n)@view(databases)
-@elseif(7 == $n)USER LOG
+@elseif(7 == $n)SKY LOG
 @elseif(8 == $n)LOG CRON
 @elseif(9 == $n)LOG CRASH@else LOG ERROR~if</h4>
 #.main.header //////////////////////////////////////////////////////////////////////////////
 #use(.header)
 @use(.m_dev)
 @if($sky->_2)
-    @if($n < 7)
+    @if($n < 8)
         <div class="bg-wx bg-x" style="border-bottom:1px solid #4338ca;position:sticky; top:0px">@block(`` as menus)</div>
     ~if
 <div style="padding:10px 0 0 10px">
@@ -310,7 +310,7 @@ $(function() {
     @inc(.development)
 ~if
 #.main.m_dev ------------------------------------------------------------------------------
-@loop(['Development'] + Root::$menu1 + Root::$menu2 as $i => $name)
+@loop(['Development'] + Root::$menu + Root::menu() as $i => $name)
     <a class="inner-menu" href="_dev?main={!$i!}"@active($i == $sky->_2)>{!$name!}</a>
 ~loop
 #.m_dev.development ------------------------------------------------------------------------------
@@ -323,7 +323,21 @@ $(function() {
 {! $form2 !}
 </fieldset>
 </div>
-#.development
+#.development.skylog
+<form method="post">
+    <b>Active target</b>:<input type="hidden" name="m">
+    &nbsp;<select name="s" onchange="skylog(this,'s')">{!option($act, $opt)!}</select>
+    &nbsp;<input@disabled($act < 0) type="button" onclick="skylog(this,'d')" value="Delete target">
+    <span style="margin-left:45px;">
+        <input name="a" size="7"> <input type="button" onclick="skylog(this,'a')" value="Add target">
+    </span>
+</form><script>
+    function skylog(el, mode) {
+        $('input[name=m]').val(mode)
+        el.form.submit()
+    }
+</script>
+#.skylog
 
 
 #.view //////////////////////////////////////////////////////////////////////////////

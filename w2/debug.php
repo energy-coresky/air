@@ -158,6 +158,7 @@ class Debug
         if (SKY::$debug > 1) {
             $top .= 'Request headers:'  . html(substr(print_r(self::request_headers(), true), 7, -2));
             $top .= 'Response headers:' . html(substr(print_r(self::response_headers(), true), 7, -2));
+            $top .= '$sky->orig_surl: ' . html($sky->orig_surl) . "\n" . '$sky->orig_qstr: ' . html($sky->orig_qstr);
         }
     }
 
@@ -210,6 +211,31 @@ class Debug
             }
         }
         return $list;
+    }
+
+    static function mail($message, $ary, $subject, $to) {
+        global $sky;
+        $ary += [
+            'from' => 'nor@' . _PUBLIC,
+            'to' => $to ?: $sky->s_email,
+            'subject' => $subject ?: 'SKY-Mail from ' . _PUBLIC,
+            'vars' => [],
+            'files' => [],
+        ];
+        extract($ary);
+        $boundary = md5(uniqid(time()));
+        if ($vars)
+            $message = Jet::inline($message, $vars);
+        if ($files) {
+            # 2do
+        }
+        $headers = "From: $from\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"$boundary\"";
+        //$sky->s_email_cnt = $sky->s_email_cnt + 1;
+        if (!DEV)
+            return mail($to, $subject, $message, $headers);
+
+        $data = "to=$to\n\nsubject=$subject\n\nheaders=$headers\n\nmessage:\n\n$message";
+        $sky->log('mail', html($data));
     }
 
     static function pdaxt($plus = '') {

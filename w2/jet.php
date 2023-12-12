@@ -327,6 +327,7 @@ class Jet
             $code = sprintf("<?php $p ?>", $ok ? $arg : '"' . strtr($arg, ["\\" => "\\\\", '"' => '\\"']) . '"');
             return $this->optimize($code);
         };
+
         switch ($tag) {
             case 'php':
                 return $arg ? '<?php ' . trim($arg) . ' ?>' : ($end ? '?>' : '<?php');
@@ -341,10 +342,12 @@ class Jet
             case 'loop':
                 return $this->_loop($end, $arg);
         }
+
         if ($end)
             return;
         if (isset(Jet::$custom[$tag]))
             return call_user_func(Jet::$custom[$tag], $arg, $this); # user defined
+
         switch ($tag) {
             case 'inc':
                 $this->_inc('' === $arg ? '*' : $arg);
@@ -476,7 +479,6 @@ class Jet
     }
 
     private function _block($arg, &$str, $is_block) {
-        $regexp = '/^(.+?) as ([a-z][ \*]|)(\w+)$/';
         $get_id = function ($name) use ($is_block) {
             $id = ++Jet::$id;
             $this->parsed[$id] = [$name => $id];
@@ -484,6 +486,8 @@ class Jet
             $this->parsed[++Jet::$id] = '';
             return $id;
         };
+
+        $regexp = '/^(.+?) as ([a-z][ \*]|)(\w+)$/';
         if ($is_block) {
             if (preg_match($regexp, $arg, $m)) {
                 [, $tpl, $pf, $name] = $m;
@@ -515,11 +519,13 @@ class Jet
                 $id = $get_id($name);
             }
         }
+
         if ('`' == $tpl[0]) {
             $tpl = [substr($tpl, 1, -1), $this->marker];
         } else {
             $this->test_cycled($tpl, $is_block ? '@block' : ($type ? '#use' : '@use'));
         }
+
         Jet::$depth[] = 1;
         $jet = new Jet($tpl);
         $jet->pf = $pf;
