@@ -381,7 +381,7 @@ $(function() {
     <div style="width:144px">
     @loop($_ < 4)<a @href(sky.d.trace({{"$_,'$y_page'"}},this))@active($_ == $y_tx)>{{$_ ? "X$_" : 'T0'}}</a>~loop
     </div>
-    <div id="top-head" style="width:calc(100% - 380px)">
+    <div id="top-head" style="width:calc(100% - 390px)">
     @block(header)
         <div class="fl"><span style="color:red;margin:0 10px;">See also</span>
         <a href=@p(_dev?main=10)>@inc(__lng.rar) Log Error</a>
@@ -394,7 +394,12 @@ $(function() {
         <a href=@p(_dev?main=0) style="font-family:Verdana;color:{{SKY::d('err')?'red':'#1b1'}}">&#9668;</a>
     ~block
     </div>
-    <div style="text-align:right; width:110px"><a @href(sky.d.close_box())>Esc - Close @inc(__img.x)</a></div>
+    <div style="text-align:right; width:122px">
+        <a class="sce@scea($y_log[7])" href=@p(_dev?main=7)>S</a>@eat
+        <a class="sce@scea($y_log[5])" href=@p(_dev?main=9)>C</a>@eat
+        <a class="sce@scea($y_log[4])" href=@p(_dev?main=10)>E</a>@eat
+        <a @href(sky.d.close_box())>Esc - Close @inc(__img.x)</a>
+    </div>
 </div>
 
 <div id="v-menu">

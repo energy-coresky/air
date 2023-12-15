@@ -360,4 +360,12 @@ div#popup div#popup-in {
     float:right;
     font-weight:bold;
 }
-
+a.sce {
+    width: 10px;
+    padding: 0 1px !important;
+}
+a.scea {
+    background: pink !important;
+    color:#fff !important;
+    border-bottom: 3px solid red;
+}

@@ -29,6 +29,7 @@ class SKY implements PARADISE
     static $databases = [];
     static $dd = null;
     static $cli;
+    static $profiles = ['Anonymous', 'Root', 'Mia'];
     static $debug;
     static $errors = [0]; # cnt_error
 
@@ -242,7 +243,7 @@ class SKY implements PARADISE
     }
 
     function log($mode, $data) {
-        if (!SKY::$dd || !in_array(SKY::s('log_a'), [$mode, 'all']))
+        if (!SKY::$dd || !in_array($this->s_log_a, [$mode, 'all']))
             return;
         $new = date(DATE_DT) . " $mode $data\n";
         SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=7', $new);
@@ -294,7 +295,7 @@ class SKY implements PARADISE
 
         if ($web)
             return $web($err, $code);
-        # CLI
+        # else CLI
         $hnd = $this->shutdown ? get_class($this->shutdown[0][0]) : 'Console';
         trace("0 $hnd ^", 'TOP-VIEW', 1);
         if (DEV)
@@ -333,7 +334,6 @@ class HEAVEN extends SKY
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
     public $method;
     public $auth = false;
-    public $profiles = ['Anonymous', 'Root'];
     public $admins = 1; # root only has admin access or list pids in array
     public $has_public = true; # web-site or CRM
     public $pagination = 'page';

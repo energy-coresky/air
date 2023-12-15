@@ -154,17 +154,20 @@ abstract class Controller extends MVC_BASE
 {
     # for overload if needed
     function head_y($action) {
-        return $this === MVC::$cc ? null : MVC::$cc->head_y($action);
+        if ($this !== MVC::$cc)
+            return 'main' == Plan::$ware ? MVC::$cc->head_y($action) : Plan::set('main', fn() => MVC::$cc->head_y($action));
     }
 
     # for overload if needed
     function error_y($action) {
-        return $this === MVC::$cc ? null : MVC::$cc->error_y($action);
+        if ($this !== MVC::$cc)
+            return 'main' == Plan::$ware ? MVC::$cc->error_y($action) : Plan::set('main', fn() => MVC::$cc->error_y($action));
     }
 
     # for overload if needed
     function tail_y() {
-        return $this === MVC::$cc ? null : MVC::$cc->tail_y();
+        if ($this !== MVC::$cc)
+            return 'main' == Plan::$ware ? MVC::$cc->tail_y() : Plan::set('main', fn() => MVC::$cc->tail_y());
     }
 
     function __call($name, $args) {

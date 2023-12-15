@@ -29,6 +29,7 @@ class dev_c extends Controller
             $this->d_last_page = URI;
         $this->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
         return [
+            'y_log' => $this->log_dt = SKY::$dd->sqlf('@select id, dt from $_memory where id>3 order by id limit 4'),
             'y_tx' => '_trace' == $this->_0 ? $this->_1 : 0,
             'y_ware_dir' => '',
             'y_tasks' => [

@@ -13,7 +13,7 @@ class Plan
         $prev = self::$ware;
         self::$ware = $ware;
         if ($func) {
-            $return = $func();
+            $return = $func($prev);
             self::$ware = $prev;
         }
         return $func ? $return : $prev;
@@ -114,19 +114,19 @@ class Plan
                 if (strpos($a0, '\\')) {
                     if (2 != count($x = explode("\\", $a0)) || !isset(SKY::$plans[$x[0]]))
                         return self::vendor($a0);
-                    $pref = 1 == strlen($x[1]) || '_' != $x[1][1] ? 'w3' : 'mvc';
-                    return self::_rq([$x[0], "$pref/$x[1].php"]) || self::vendor($a0);
+                    $dir = 1 == strlen($x[1]) || '_' != $x[1][1] ? 'w3' : 'mvc';
+                    return self::_rq([$x[0], "$dir/$x[1].php"]) || self::vendor($a0);
                 }
                 $low = strtolower($a0);
-                $cfg = SKY::$plans['main']['class'] ?? [];
+                $classes = SKY::$plans['main']['class'] ?? [];
                 if (in_array(substr($a0, 0, 2), ['m_', 't_'])) {
                     if (is_file($fn = $obj->path . "/mvc/$a0.php"))
                         return require $fn;
                     if ('main' != $ware && ($fn = self::_t(['main', "mvc/$a0.php"])))
                         return require $fn;
                     return self::vendor($a0);
-                } elseif (isset($cfg[$a0])) {
-                    return self::_r([$cfg[$a0], "w3/$low.php"]);
+                } elseif (isset($classes[$a0])) {
+                    return self::_r([$classes[$a0], "w3/$low.php"]);
                 }
                 $fn = DIR_S . '/w2/' . $low . '.php';
                 return is_file($fn) ? require $fn : self::_rq("w3/$low.php") || self::vendor($a0);
