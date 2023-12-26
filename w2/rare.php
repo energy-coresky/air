@@ -39,12 +39,12 @@ class Rare
         return $list;
     }
 
-    static function mail($message, $ary = [], $subject = false, $to = false) {
+    static function mail($message, $ary = [], $subject = '', $to = '') {
         if (is_string($ary)) {
             $to = $subject;
-            $ary = ['subject' => $ary];
+            $ary = ['subject' => trim($ary)];
         }
-        return common_c::mail_h($message, $ary, $subject, $to);
+        return common_c::mail_h(trim($message), $ary, trim($subject), trim($to));
     }
 
     static function split(String $in, $b = ';', $sql_comment = true) {
@@ -120,7 +120,7 @@ class Rare
     static function cache($name = false, $func = '', $ttl = -3) {
         global $sky;
         static $cache = [];
-        
+
         if ($name) { # the begin place
             if (is_numeric($func)) {
                 $tmp = $ttl;
@@ -218,65 +218,6 @@ class Rare
         return $_51 >= $i8 ? 'cp1251' : 'koi8';
     }
 
-    private $err = [];
-    private $ai_name;
-
-    function insert($table, $set = []) {
-        $ary = $this->values($table, $set);
-        return $this->err ? false : sql('insert into $_` @@', $table, $ary);
-    }
-
-    function update($table, $id, $set = []) {
-        $ary = $this->values($table, $set);
-        return $this->err ? false : sql('update $_` set @@ where $`=$.', $table, $ary, $this->ai_name, $id);
-    }
-
-    function replace($table, $id = 0, $set = []) {
-        return $id ? $this->update($table, $id, $set) : $this->insert($table, $set);
-    }
-
-    function get_errors($by = '<br>') {
-        return implode($by, $this->err);
-    }
-
-    protected function values($table, $set) {
-        $ary = [];
-        $in_set = $set;
-        if (true === $set) $set = [];
-        if ($q = sql('explain $_`', $table)) {
-            for ($struct = []; $r = $q->one('R'); ) $struct[] = $r[0] . ('datetime' == $r[1] ? '.N' : ('auto_increment' == $r[5] ? '.A' : ''));
-        } else {
-            return $this->err[''] = "Table `$table` absent";
-        }
-        foreach ($struct as $col) {
-            in_array($x = substr($col, -2), ['.A', '.N']) and $col = substr($col, 0, -2);
-            '.A' == $x and $this->ai_name = $col;
-            $vall = true === $in_set && isset($_POST[$col]);
-            if ('.N' == $x && !$vall) {
-                if (!isset($set[$col])) $ary["!$col"] = 'now()'; # datetime column, set to now() as default
-                elseif (false === $set[$col]) continue; # dont touch datetime column if set to false
-            }
-            if ($vall || isset($set[$col]) && is_array($set[$col])) { # validation
-                if ($vall) $set[$col] = [".+", ucfirst($col) . ' can\'t be empty'];
-                $val = isset($set[$col][2]) ? $set[$col][2] : trim($_POST[$col]);
-                $rule = $set[$col][0];
-                $err = false;
-                if (!$set[$col][1]) {
-                    $err = call_user_func($rule, $val);
-                } elseif (is_array($val)) {
-                    foreach($val as $c) preg_match("~$rule~", $c) or $err = $set[$col][1];
-                } else preg_match("~$rule~", $val) or $err = $set[$col][1];
-
-                if (false === $err) $ary[$col] = isset($set[$col][2]) ? $set[$col][2] : $_POST[$col];
-                else $this->err[$col] = $err;
-
-            }
-            elseif (isset($set[$col])) $ary[$col] = $set[$col];
-            elseif (isset($_POST[$col])) $ary[$col] = $_POST[$col];
-        }
-        return $ary;
-    }
-
     static function oauth2($via, $func = false) {
         global $sky, $user;
 
@@ -328,6 +269,7 @@ class Rare
     }
 
     static function register($data, $user_id = 0) {
+        $dd = SKY::$dd;
         if (!$user_id && is_array($data)) { # step 1, insert
             $or = qp();
             if (isset($data['login'])) {
@@ -340,16 +282,16 @@ class Rare
             }
             if (!preg_match(RE_PASSW, $data['passw']) || !preg_match(RE_EMAIL, $data['email']))
                 return 4;
-            if (sql('+select count(1) from $_users where email=$+ $$', $data['email'], $or))
+            if ($dd->sql('+select count(1) from $_users where email=$+ $$', $data['email'], $or))
                 return 3;
             $data['access'] = strand(30);
             if (PASS_CRYPT)
                 $data['passw'] = self::passwd($data['passw']);
-            return $data + ['id' => sql('insert into $_users @@', $data)];
+            return $data + ['id' => $dd->sql('insert into $_users @@', $data)];
 
         # step 2 (e-mail confirmation)
-        } elseif (is_numeric($user_id) && $user_id > 0 && preg_match("/^[\da-z]{23}$/i", $data)) {
-            return sql('update $_users set state="act" where id=$. and access=$+', $user_id, $data);
+        } elseif (is_num($user_id) && $user_id > 0 && preg_match("/^[\da-z]{23}$/i", $data)) {
+            return $dd->sql('update $_users set state="act" where id=$. and access=$+', $user_id, $data);
         }
         return 0;
     }
@@ -375,6 +317,7 @@ class Rare
             } else {
                 $user->row['auth'] = 2;
             }
+            SKY::v('emulate', null);
             $now = SQL::$dd->f_dt();
             $uid = 2 == $user->auth ? -$user->id : $user->id;
             SKY::v(null, ['!dt_l' => $now, 'uid' => $uid]);
@@ -391,6 +334,7 @@ class Rare
         if ($ary)
             SKY::u(null, $ary);
         SKY::v(null, ['uid' => 2 == $user->auth ? $user->id : 0]);
+        SKY::v('emulate', null);
         if (!$sky->fly && false !== $to)
             jump($to);
     }

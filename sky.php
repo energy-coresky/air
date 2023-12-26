@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.524 2023-12-12T18:49:38+02:00 energy';
+    const CORE = '0.525 2023-12-26T14:09:09+02:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -30,6 +30,7 @@ class SKY implements PARADISE
     static $dd = null;
     static $cli;
     static $profiles = ['Anonymous', 'Root', 'Mia'];
+    static $states = [];
     static $debug;
     static $errors = [0]; # cnt_error
 
@@ -245,7 +246,7 @@ class SKY implements PARADISE
     function log($mode, $data) {
         if (!SKY::$dd || !in_array($this->s_log_a, [$mode, 'all']))
             return;
-        $new = date(DATE_DT) . " $mode $data\n";
+        $new = date(DATE_DT) . " <r>$mode</r>\n$data\n";
         SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=7', $new);
     }
 

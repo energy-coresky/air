@@ -29,6 +29,12 @@ class Globals extends Usage
         return $glb ?? ($glb = new self);
     }
 
+    static function file($fn, $php) {
+        $glb = new Globals;
+        $glb->parse_def($fn, $php);
+        return $glb->definitions;
+    }
+
     static function def($dir, $sect = 'CLASS') {
         $glb = new Globals($dir);
         return array_keys($glb->_def()[$sect]);

@@ -43,9 +43,20 @@ echo $redirect;
 <head>@head</head>
 <body style="background:url({{PATH}}_img?cloud2);background-size:cover;margin:0 10px;@if(!$tracing)text-align:center;~if">
 #.inner
-<style>.error {background-color:red !important;color:#fff !important}</style>
-    @if(!$tracing)<div style="display:inline-block; background:#fff; padding:10px; margin-top:15%">~if
-    <h1>{{$error}}</h1>
+<style>
+.error {
+    background-color: red !important;
+    color: #fff !important;
+}
+.box-error {
+    display: inline-block;
+    background: #fff;
+    padding: 10px;
+    margin-top: 15%;
+    box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+}
+</style>
+    @if(!$tracing)<div class="box-error">~if<h1>{{$error}}</h1>
     <a href="javascript:;" onclick="history.back()">{{$p_prev}}</a>
     @if($ru) или@else or~if
     <a href="{!PATH!}">{{$p_main}}</a>

@@ -76,8 +76,8 @@ class Model_m extends MVC_BASE
         $this->dd = $this->head_y();
     }
 
-    function dd() {
-        return $this->dd;
+    function dd($dd = null) {
+        return null === $dd ? $this->dd : ($this->dd = $dd);
     }
 
     # for overload if needed

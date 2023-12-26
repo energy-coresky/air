@@ -424,9 +424,7 @@ define('TPL_HIDDEN', '<input type="hidden" name="%s" value="%s" />');
 define('TPL_META',   '<meta name="%s" content="%s" />');
 
 //////////////////////////////////////////////////////////////////////////
-if (!class_exists('Error', false)) {
-    class Error extends Exception {} # Assume as crash and error, `throw new Error` should never works!
-}
+# class Error Assume as crash and error, `throw new Error` should never works!
 class Stop extends Exception {} # Assume as just "stop", NOT crash, NOT error
 class Hacker extends Exception {} # Assume as crash but NOT error on the web-scripts
 
