@@ -47,6 +47,44 @@ class Rare
         return common_c::mail_h(trim($message), $ary, trim($subject), trim($to));
     }
 
+    static function yaml(String $in) {
+        $ary = [];
+        $p = ['' => &$ary];
+        foreach (explode("\n", unl($in)) as $s) {
+            $s = rtrim($s);
+            if ('' === $s)
+                continue;
+            if (!preg_match("/^(\s*)(\- |[^\s:]+:)(.*)$/", $s, $m))
+                throw new Error('Yaml error');
+            [, $pad, $x, $v] = $m;
+            $flag = 0;
+            if ('' === ($v = trim($v))) {
+                $v = [];
+            } elseif ($flag = '"' == $v[0] || "'" == $v[0]) {
+                $v = substr($v, 1, -1);
+            } elseif (is_num($v)) {
+                $v = (int)$v;
+            } elseif (in_array($v, ['true', 'false'])) {
+                $v = 'true' === $v ? true : false;
+            }
+            if ('-' == $x[0]) {
+                $k2 = array_key_last($p[$k1 = array_key_last($p)]);
+                $p[$k1][$k2][] = $v;
+            } else {
+                $x = substr($x, 0, -1);
+                if (isset($p[$pad])) {
+                    $p[$pad][$x] = $v;
+                    array_splice($p, 1 + array_flip(array_keys($p))[$pad]);
+                } else {
+                    $k2 = array_key_last($p[$k1 = array_key_last($p)]);
+                    $p[$k1][$k2][$x] = $v;
+                    $p[$pad] =& $p[$k1][$k2];
+                }
+            }
+        }
+        return $ary;
+    }
+
     static function split(String $in, $b = ';', $sql_comment = true) {
         $out = [];
         $s = $rest = '';
@@ -98,6 +136,13 @@ class Rare
                 return $s;
         }
         return '';
+    }
+
+    static function strcut($str, $n = 100) {
+        $z = mb_substr($str, 0, $n);
+        return mb_strlen($str) > $n
+            ? trim(mb_substr($z, 0, mb_strrpos($z, ' ', 0) - mb_strlen($z)), '.,?!') . '&nbsp;...'
+            : $z;
     }
 
     static function optimize($in) {
@@ -285,7 +330,7 @@ class Rare
             if ($dd->sql('+select count(1) from $_users where email=$+ $$', $data['email'], $or))
                 return 3;
             $data['access'] = strand(30);
-            if (PASS_CRYPT)
+            if (cfg('auth')->crypt)
                 $data['passw'] = self::passwd($data['passw']);
             return $data + ['id' => $dd->sql('insert into $_users @@', $data)];
 
@@ -308,7 +353,7 @@ class Rare
         }
         $r = sql('~select * from $_users where state="act" and !! = $+', $match_email ? 'email' : 'login', $login);
 
-        if ($r && (PASS_CRYPT ? $r['passw'] == self::passwd($paswd, $r['passw']) : $r['passw'] == $paswd)) {
+        if ($r && (cfg('auth')->crypt ? $r['passw'] == self::passwd($paswd, $r['passw']) : $r['passw'] == $paswd)) {
             $user->row = $r + $user->row;
             if (!$user->auth) {
                 $user->row['u'] = SKY::ghost('u', $user->row['umemo'], ['umemo' => "update \$_users set @@ where id=$user->id"]);

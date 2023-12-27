@@ -38,18 +38,15 @@ function unl($str) {
     return str_replace(["\r\n", "\r"], "\n", $str);
 }
 
-function strand($n = 23) {
-    $str = 'abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679'; # length == 53
-    if ($n != 7) $str .= 'o0Ol1iIB8'; # skip for passwords (9 chars)
-    for ($ret = '', $i = 0; $i < $n; $i++, $ret .= $str[rand(0, 7 == $n ? 52 : 61)]);
-    return $ret;
+function cfg($name = 'plan', $as_array = false) {
+    return Plan::cfg($name, $as_array);
 }
 
-function strcut($str, $n = 100) { #300
-    $text = mb_substr($str, 0, $n);
-    return mb_strlen($str) > $n
-        ? trim(mb_substr($text, 0, mb_strrpos($text, ' ', 0) - mb_strlen($text)), '.,?!') . '&nbsp;...'
-        : $text;
+function strand($n = 23) {
+    $str = 'abcdefghjkmnpqrstuvwxyzACDEFGHJKLMNPQRSTUVWXYZ2345679'; # length == 53
+    7 == $n or $str .= 'o0Ol1iIB8'; # skip for passwords (9 chars)
+    for ($ret = '', $i = 0; $i < $n; $i++, $ret .= $str[rand(0, 7 == $n ? 52 : 61)]);
+    return $ret;
 }
 
 function strbang($str, $via1 = ' ', $via2 = "\n") {

@@ -150,29 +150,35 @@ class Plan
     }
 
     static function wares($fn, &$ctrl, &$class) {
-        foreach (require $fn as $ware => $cfg) {
-            $conf = require ($path = $cfg['path']) . "/conf.php";
-            if ($cfg['type'] ?? false)
+        $ymls = [];
+        foreach (require $fn as $ware => $plan) {
+            $conf = require ($path = $plan['path']) . "/conf.php";
+            if ($plan['type'] ?? false)
                 $conf['app']['type'] = 'pr-dev';
-            if ($cfg['options'] ?? false)
-                $conf['app']['options'] = $cfg['options'];
+            if ($plan['options'] ?? false)
+                $conf['app']['options'] = $plan['options'];
             if (!DEV && in_array($conf['app']['type'], ['dev', 'pr-dev']))
                 continue;
-            foreach ($cfg['class'] as $cls) {
+            foreach ($plan['class'] as $cls) {
                 $df = 'default_c' == $cls;
                 if ($df || 'c_' == substr($cls, 0, 2)) {
                     $x = $df ? '*' : substr($cls, 2);
-                    $ctrl[$cfg['tune'] ? "$cfg[tune]/$x" : $x] = $ware;
+                    $ctrl[$plan['tune'] ? "$plan[tune]/$x" : $x] = $ware;
                 } else {
                     $class[$cls] = $ware;
                 }
             }
-            if ($cfg['tune'])
-                $ctrl["$cfg[tune]/*"] = $ware;
+            if ($plan['tune'])
+                $ctrl["$plan[tune]/*"] = $ware;
             $app =& $conf['app'];
-            unset($app['require'], $app['class'], $app['databases']);
+            unset($yml, $app['require'], $app['class'], $app['databases']);
+            if ($cfg = self::yml($yml, "$path/conf.yml"))
+                $app['cfg'] = $cfg;
+            if ($yml)
+                $ymls[$ware] = $yml;
             SKY::$plans[$ware] = ['app' => ['path' => $path] + $conf['app']] + $conf;
         }
+        return $ymls;
     }
 
     static function rewrite(&$in) {
@@ -203,6 +209,7 @@ class Plan
             isset($cfg['dc']) or $cfg['dc'] = isset($cfg['driver']) ? $new_dc($cfg) : $connections[$cfg['use'] ?? ''];
         } else {
             require DIR_S . "/w2/dc_file.php";
+            require DIR_S . "/w2/rare.php";
             $dc = $connections[''] = $connections['cache'] = new dc_file;
             $plans = SKY::$plans + [
                 'view' => ['path' => DIR_M . '/mvc/view'],
@@ -219,13 +226,18 @@ class Plan
                 SKY::$plans = $dc->run('sky_plan.php');
             } else {
                 SKY::$plans = $ctrl = [];
-                SKY::$plans['main'] = ['rewrite' => '', 'app' => ['path' => DIR_M], 'class' => []] + $plans;
-                is_file($fn = DIR_M . '/wares.php') && self::wares($fn, $ctrl, SKY::$plans['main']['class']);
+                $app = ['path' => DIR_M, 'cfg' => self::yml($ymls, DIR_M . '/conf.yml')];
+                SKY::$plans['main'] = ['rewrite' => '', 'app' => $app, 'class' => []] + $plans;
+                $ymls = ['main' => $ymls];
+                if (is_file($fn = DIR_M . '/wares.php'))
+                    $ymls += self::wares($fn, $ctrl, SKY::$plans['main']['class']);
                 $plans = SKY::$plans;
                 $plans['main'] += ['ctrl' => $ctrl + Debug::controllers('main')];
                 SKY::$plans['main']['cache']['dc'] = $dc;
                 self::cache_s('sky_plan.php', self::auto($plans, ['Plan', 'rewrite']));
                 SKY::$plans = self::cache_r('sky_plan.php');
+                foreach ($ymls as $ware => $yml)
+                    self::yml($yml, $ware);
             }
             SKY::$plans['main']['cache']['dc'] = $dc;
             self::locale();
@@ -237,6 +249,40 @@ class Plan
         if ('en' == $lg && setlocale(LC_ALL, 'en_US.utf8', 'en_US.UTF-8'))
             return 1;
         return $lg ? setlocale(LC_ALL, "$lg.utf8", "$lg.UTF-8", $lg) : setlocale(LC_ALL, 0);
+    }
+
+    static function yml(&$name, $ware = 'main') {
+        if (null === $name) {
+            $name = Rare::yaml(is_file($ware) ? file_get_contents($ware) : '');
+            return $name['plan'] ?? [];
+        } elseif (is_array($name)) {
+            foreach ($name as $key => $val) {
+                if ('plan' != $key && is_array($val))
+                    self::cache_s(['main', "cfg_{$ware}_$key.php"], self::auto($val));
+            }
+        } else {
+            $yml = Rare::yaml(self::_g([$ware, 'conf.yml']))[$name];
+            if (is_string($yml))
+                $yml = Rare::yaml(self::_g([$ware, $yml]));
+            return $yml;
+        }
+    }
+
+    static function cfg($name, $as_array) {
+        static $cache = [];
+
+        [$ware, $name] = is_array($name) ? $name + ['main', 'plan'] : [self::$ware, $name];
+        
+        if ('plan' == $name) {
+            $p =& SKY::$plans[$ware]['app']['cfg'];
+        } else {
+            $p =& $cache[$ware][$name];
+            if (null === $p) {
+                $p = self::cache_rq($addr = ['main', "cfg_{$ware}_$name.php"])
+                    or self::cache_s($addr, self::auto($p = self::yml($name, $ware)));
+            }
+        }
+        return $as_array ? $p : (object)$p;
     }
 
     static function check_other() {

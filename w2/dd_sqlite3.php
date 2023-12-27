@@ -155,7 +155,7 @@ class dd_sqlite3 implements DriverDatabase
     }
 
     function tz() {
-        $min = (new DateTimeZone(PHP_TZ))->getOffset(new DateTime) / 60;
+        $min = (new DateTimeZone(cfg([])->timezone))->getOffset(new DateTime) / 60;
         return ($min < 0 ? ",'" : ",'+") . "$min minute'";
     }
 

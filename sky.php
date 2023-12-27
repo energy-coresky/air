@@ -48,9 +48,7 @@ class SKY implements PARADISE
         ini_set('error_reporting', $this->log_error = -1);
         if (SKY::$cli = CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
-        date_default_timezone_set(PHP_TZ);
         mb_internal_encoding(ENC);
-        define('NOW', date(DATE_DT));
         srand(microtime(true) * 1e6);//srand((double)microtime() * 1e6);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
@@ -87,6 +85,8 @@ class SKY implements PARADISE
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
         Plan::open('cache'); # load composed SKY::$plans
+        date_default_timezone_set(cfg()->timezone);
+        define('NOW', date(DATE_DT));
         DEV && !CLI && DEV::init();
     }
 

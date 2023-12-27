@@ -51,6 +51,10 @@ class Schedule
         }
     }
 
+    function visitors() {
+        $this->sql('delete from visitors where (dt_l + interval $. day < now()) and uid is null', $this->n_clear_nc);
+    }
+
     function mail_error() {
         $this->database();
         list ($dt, $err) = sqlf('-select dt, tmemo from $_memory where id=4');
