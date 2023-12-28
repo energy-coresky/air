@@ -262,13 +262,21 @@ class Plan
             }
         } else {
             $yml = Rare::yaml(self::_g([$ware, 'conf.yml']))[$name];
-            if (is_string($yml))
-                $yml = Rare::yaml(self::_g([$ware, $yml]));
+            if (is_string($yml)) {
+                $ext = explode('.', $yml);
+                switch (end($ext)) {
+                    case 'php': return self::_r([$ware, $yml]);
+                    case 'yml':
+                    case 'yaml': return Rare::yaml(self::_g([$ware, $yml]));
+                    case 'json': return json_decode(self::_g([$ware, $yml]), true);
+                    case 'default': return strbang(unl(self::_g([$ware, $yml])));
+                }
+            }
             return $yml;
         }
     }
 
-    static function cfg($name, $as_array) {
+    static function &cfg($name) {
         static $cache = [];
 
         [$ware, $name] = is_array($name) ? $name + ['main', 'plan'] : [self::$ware, $name];
@@ -282,7 +290,7 @@ class Plan
                     or self::cache_s($addr, self::auto($p = self::yml($name, $ware)));
             }
         }
-        return $as_array ? $p : (object)$p;
+        return $p;
     }
 
     static function check_other() {

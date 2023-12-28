@@ -328,6 +328,12 @@ class Console
         print_r($list);
     }
 
+    /** Validate Yaml files [file-name] [ware] [func] */
+    function c_y($fn = 'conf.yml', $ware = 'main', $func = 'print_r') {
+        echo "File `$fn`, ware=$ware is: ";
+        $func(Rare::yaml(Plan::_gq([$ware, $fn])));
+    }
+
     /** Search for errors using all possible methods */
     function c_e() {
         echo '2do';

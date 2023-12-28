@@ -39,7 +39,8 @@ function unl($str) {
 }
 
 function cfg($name = 'plan', $as_array = false) {
-    return Plan::cfg($name, $as_array);
+    $ary =& Plan::cfg($name);
+    return $as_array ? $ary : (object)$ary;
 }
 
 function strand($n = 23) {

@@ -47,38 +47,71 @@ class Rare
         return common_c::mail_h(trim($message), $ary, trim($subject), trim($to));
     }
 
+    static function val(String $in) {
+        $out = $type = $x = '';
+        $space = true;
+        $bool = fn($s) => 'true' == $s || 'false' == $s;
+        foreach (token_get_all("<?php " . trim($in)) as $v) {
+            [$k, $v] = is_array($v) ? $v : [0, $v];
+            if ($space && in_array($k, [T_OPEN_TAG, T_COMMENT, T_DOC_COMMENT]))
+                continue;
+            $space = T_WHITESPACE == $k or $type or $type = '{' == $v || '[' == $v ? 1 : 2;
+            if (1 == $type) {
+                if (in_array($v, [',', ':', '{', '[', ']', '}'])) {
+                    if ($x && "'" == $x[0]) {
+                        $x = '"' . substr($x, 1, -1) . '"';
+                    } elseif ($x && '"' != $x[0] && !is_numeric($x) && !$bool($x) && 'null' !== $x) {
+                        $x = '"' . $x . '"';
+                    }
+                    $out .= $x . $v;
+                    $x = '';
+                } elseif (!$space) {
+                    $x .= $v;
+                }
+                continue;
+            }
+            $out .= $v;
+        }
+        if (!$type || 'null' === $out)
+            return null;
+        $out = trim($out);
+        if (1 == $type) {
+            $out = json_decode($out, true);
+            if (json_last_error())
+                throw new Error('Yaml error 2');
+            return $out;
+        }
+        if ('"' == $out[0] || "'" == $out[0])
+            return substr($out, 1, -1);
+        if (is_numeric($out))
+            return is_num($out) ? (int)$out : (float)$out;
+        return $bool($out) ? 'true' === $out : $out;
+    }
+
     static function yaml(String $in) {
         $ary = [];
         $p = ['' => &$ary];
         foreach (explode("\n", unl($in)) as $s) {
-            $s = rtrim($s);
-            if ('' === $s)
+            if ('' === trim($s) || '#' == substr(trim($s), 0, 1))
                 continue;
-            if (!preg_match("/^(\s*)(\- |[^\s:]+:)(.*)$/", $s, $m))
-                throw new Error('Yaml error');
-            [, $pad, $x, $v] = $m;
-            $flag = 0;
-            if ('' === ($v = trim($v))) {
-                $v = [];
-            } elseif ($flag = '"' == $v[0] || "'" == $v[0]) {
-                $v = substr($v, 1, -1);
-            } elseif (is_num($v)) {
-                $v = (int)$v;
-            } elseif (in_array($v, ['true', 'false'])) {
-                $v = 'true' === $v ? true : false;
-            }
-            if ('-' == $x[0]) {
-                $k2 = array_key_last($p[$k1 = array_key_last($p)]);
-                $p[$k1][$k2][] = $v;
+            if (!preg_match("/^(\s*)(\-|[^\s:]+:)(| .*)$/", $s, $match))
+                throw new Error('Yaml error 1');
+            [, $indent, $k, $v] = $match;
+            $indent = str_replace("\t", '    ', $indent); # tab is 4 space
+            $v = self::val($v);
+
+            if ('-' == $k[0]) {
+                $_2 = array_key_last($p[$_1 = array_key_last($p)]);
+                $p[$_1][$_2][] = $v;
             } else {
-                $x = substr($x, 0, -1);
-                if (isset($p[$pad])) {
-                    $p[$pad][$x] = $v;
-                    array_splice($p, 1 + array_flip(array_keys($p))[$pad]);
+                $k = substr($k, 0, -1);
+                if (isset($p[$indent])) {
+                    $p[$indent][$k] = $v;
+                    array_splice($p, 1 + array_flip(array_keys($p))[$indent]);
                 } else {
-                    $k2 = array_key_last($p[$k1 = array_key_last($p)]);
-                    $p[$k1][$k2][$x] = $v;
-                    $p[$pad] =& $p[$k1][$k2];
+                    $_2 = array_key_last($p[$_1 = array_key_last($p)]);
+                    $p[$_1][$_2][$k] = $v;
+                    $p[$indent] =& $p[$_1][$_2];
                 }
             }
         }
