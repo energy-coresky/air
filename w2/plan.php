@@ -269,7 +269,7 @@ class Plan
                     case 'yml':
                     case 'yaml': return Rare::yaml(self::_g([$ware, $yml]));
                     case 'json': return json_decode(self::_g([$ware, $yml]), true);
-                    case 'default': return strbang(unl(self::_g([$ware, $yml])));
+                    default: return strbang(unl(self::_g([$ware, $yml])));
                 }
             }
             return $yml;
