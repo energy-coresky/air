@@ -2,15 +2,30 @@
 
 class Saw
 {
+    const version = 0.888;
+
     static function obj($in = []) {
-        $in = (array)$in + ['m' => '', 'p' => '', 'k' => '', 'v' => '', 'voc' => false];
+        $in = (array)$in + [
+            'm' => '',
+            'p' => '',
+            'k' => '',
+            'v' => '',
+            'voc' => false,
+            'json' => false,
+        ];
         return (object)$in;
     }
 
-    static function yaml(string $in, int $tab = 4) {
+    static function yaml(string $in, int $tab = 4) : array {
         $array = [];
         $p = ['' => &$array];
+        $tab = str_pad('', $tab, ' ');
+        $n = self::obj();
+
         $add = function ($m) use (&$p) {
+            $v = $m->json ? json_decode($m->json, true) : self::scalar($m->m ? $m->v : trim($m->v));
+            if ($m->json && json_last_error())
+                throw new Error('Yaml error (json)');
             if (array_key_exists($m->p, $p)) {
                 array_splice($p, 1 + array_flip(array_keys($p))[$m->p]);
                 $z =& $p[$m->p];
@@ -18,19 +33,17 @@ class Saw
                 $lt = array_key_last($p);
                 $z =& $p[$lt][array_key_last($p[$lt])];
             }
-            true === $m->k ? ($z[] = $m->v) : ($z[$m->k] = $m->v);
+            true === $m->k ? ($z[] = $v) : ($z[$m->k] = $v);
             $p[$m->p] =& $z;
         };
 
-        $tab = str_pad('', $tab, ' ');
-        $n = self::obj();
         foreach (explode("\n", unl($in)) as $line) {
             $m = self::obj($n);
-            if (self::parse($line, $tab, $m, $n))
+            if (self::parse($line, $tab, $n))
                 continue;
             '' === $m->k or $add($m);
             if ($n->voc) {
-                $n->v = [];
+                $n->v = null;
                 $add($n); # vocabulary: - key: val
                 $n = $n->voc;
             }
@@ -40,8 +53,8 @@ class Saw
         return $array;
     }
 
-    static function parse(string $in, $tab, &$m, &$n) {
-        static $json = false, $pad_0 = '', $pad_1;
+    static function parse(string $in, $tab, &$n) {
+        static $pad_0 = '', $pad_1;
         $pad = '';
         $tabs = fn($s) => str_replace("\t", $tab, $s);
         $w2 = $is_k = true;
@@ -60,17 +73,13 @@ class Saw
             $w = T_WHITESPACE == $t;
             if (1 == $i) { # first step
                 $w ? ($pad = $tabs($s)) : ($p .= $s);
-                if ($reqk = $pad <= $pad_0) # require match key
-                    $pad_0 = $pad;
+                $reqk = $pad <= $pad_0; # require match key
                 if (!$reqk && '|' == $n->m)
                     '' === $p ? ($pad_1 = strlen($pad)) : ($p .= "\n" . substr($pad, $pad_1));
             } elseif ($w && $is_k && $k2 && ($reqk || !$n->m)) { # key found
                 if (0)
                     throw new Error('Yaml error (Mapping disabled)');
-                $m->v = $json ? json_decode($json, true) : self::scalar($m->m ? $m->v : trim($m->v));
-                if ($json && json_last_error())
-                    throw new Error('Yaml error (json)');
-                $json = $is_k = false;
+                $is_k = false;
                 $sps = $s;
                 $n = self::obj([
                     'p' => $pad_0 = $pad,
@@ -84,11 +93,11 @@ class Saw
                     'k' => substr($p, 0, -1),
                 ]);
                 $p =& $n->voc->v;
-            } elseif ($json && 1 == strlen($s) && !$reqk && strpbrk($s, '[]{},:')) {
-                $json .= '' === ($p = trim($p)) ? $s : self::scalar($p, true, ':' != $s) . $s;
+            } elseif ($n->json && 1 == strlen($s) && !$reqk && strpbrk($s, '[]{},:')) {
+                $n->json .= '' === ($p = trim($p)) ? $s : self::scalar($p, true, ':' != $s) . $s;
                 $p = '';
             } elseif ('' === $p && ('{' == $s || '[' == $s) && !$n->m) {
-                $n->m = $json = $s;
+                $n->m = $n->json = $s;
                 $reqk = false;
             } else {
                 $p .= $s;
