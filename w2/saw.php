@@ -36,6 +36,7 @@ class Saw
             }
         }
         '' === $n->k or $add($n);
+
         return $array;
     }
 
@@ -67,14 +68,12 @@ class Saw
                 if (0)
                     throw new Error('Yaml error (Mapping disabled)');
                 $m->v = $json ? json_decode($json, true) : self::scalar($m->m ? $m->v : trim($m->v));
-     #if ($json)
-      #   var_export($json);
                 if ($json && json_last_error())
                     throw new Error('Yaml error (json)');
                 $json = $is_k = false;
                 $sps = $s;
                 $n = self::obj([
-                    'p' => $pad,
+                    'p' => $pad_0 = $pad,
                     'k' => $c2 ? substr($p, $len, -1) : true,
                 ]);
                 $p =& $n->v;
@@ -88,7 +87,7 @@ class Saw
             } elseif ($json && 1 == strlen($s) && !$reqk && strpbrk($s, '[]{},:')) {
                 $json .= '' === ($p = trim($p)) ? $s : self::scalar($p, true, ':' != $s) . $s;
                 $p = '';
-            } elseif ('' === $p && ('{' == $s || '[' == $s)) {
+            } elseif ('' === $p && ('{' == $s || '[' == $s) && !$n->m) {
                 $n->m = $json = $s;
                 $reqk = false;
             } else {
@@ -97,12 +96,13 @@ class Saw
             $k2 = ($c2 = ':' == $s) || '-' == $s;
             $w2 = $w;
         }
+
         if ($is_k) {
             if ($reqk)
                 throw new Error('Yaml error (Cannot match key)');
         } else {
             $p = rtrim($p);
-            if ('|' == $p || '>' == $p) { // mode = 0 | > { [
+            if ('|' == $p || '>' == $p) {
                 $n->m = $p;
                 $p = '';
             }
