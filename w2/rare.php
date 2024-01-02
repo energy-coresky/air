@@ -47,66 +47,6 @@ class Rare
         return common_c::mail_h(trim($message), $ary, trim($subject), trim($to));
     }
 
-    static function strscalar(string $in, $json = false, $notkey = true) {
-        if ('' === ($in = trim($in)) || 'null' === $in)
-            return $json ? 'null' : null;
-        $true = 'true' === $in;
-        if ($true || 'false' === $in)
-            return $json ? $in : $true;
-        if ('"' == $in[0])
-            return $json ? $in : substr($in, 1, -1);
-        if ("'" == $in[0])
-            return $json ? '"' . substr($in, 1, -1) . '"' : substr($in, 1, -1);
-        if ($notkey && is_numeric($in))
-            return is_num($in) ? (int)$in : (float)$in;
-        return $json ? '"' . $in . '"' : $in;
-    }
-
-    static function strvar(string $in, &$json) {
-        $x = $y = $json = '';
-        $space = true;
-        foreach (token_get_all("<?php " . trim($in)) as $v) {
-            [$k, $v] = is_array($v) ? $v : [0, $v];
-            if ($space && in_array($k, [T_OPEN_TAG, T_COMMENT, T_DOC_COMMENT]))
-                continue;
-            $space = T_WHITESPACE == $k or '' !== $json or $json = '{' == $v || '[' == $v;
-            if ($json && 1 == strlen($v) && strpbrk($v, '[]{},:')) {
-                $y .= '' === ($x = trim($x)) ? $v : self::strscalar($x, true, ':' != $v) . $v;
-                $x = '';
-            } else {
-                $x .= $v;
-            }
-        }
-        return $json ? json_decode($y, true) : self::strscalar($x);
-    }
-
-    static function yaml(string $in, int $tab = 4) {
-        $array = [];
-        $p = ['' => &$array];
-        $tab = str_pad('', $tab, ' ');
-        foreach (explode("\n", unl($in)) as $s) {
-            if ('' === trim($s) || '#' == substr(trim($s), 0, 1))
-                continue;
-            if (!preg_match("/^(\s*)(\-|[^\s:]+:)(| .*)$/", $s, $match))
-                throw new Error('Yaml error (regexp)');
-            [, $indent, $k, $v] = $match;
-            $v = self::strvar($v, $json);
-            if ($json && json_last_error())
-                throw new Error('Yaml error (json)');
-            $indent = str_replace("\t", $tab, $indent); # tab is 4 space
-            if (array_key_exists($indent, $p)) {
-                array_splice($p, 1 + array_flip(array_keys($p))[$indent]);
-                $z =& $p[$indent];
-            } else {
-                $lst = array_key_last($p);
-                $z =& $p[$lst][array_key_last($p[$lst])];
-            }
-            '-' == $k ? ($z[] = $v) : ($z[substr($k, 0, -1)] = $v);
-            $p[$indent] =& $z;
-        }
-        return $array;
-    }
-
     static function split(string $in, $b = ';', $sql_comment = true) {
         $out = [];
         $s = $rest = '';

@@ -209,7 +209,7 @@ class Plan
             isset($cfg['dc']) or $cfg['dc'] = isset($cfg['driver']) ? $new_dc($cfg) : $connections[$cfg['use'] ?? ''];
         } else {
             require DIR_S . "/w2/dc_file.php";
-            require DIR_S . "/w2/rare.php";
+            require DIR_S . "/w2/saw.php";
             $dc = $connections[''] = $connections['cache'] = new dc_file;
             $plans = SKY::$plans + [
                 'view' => ['path' => DIR_M . '/mvc/view'],
@@ -253,7 +253,7 @@ class Plan
 
     static function yml(&$name, $ware = 'main') {
         if (null === $name) {
-            $name = Rare::yaml(is_file($ware) ? file_get_contents($ware) : '');
+            $name = Saw::yaml(is_file($ware) ? file_get_contents($ware) : '');
             return $name['plan'] ?? [];
         } elseif (is_array($name)) {
             foreach ($name as $key => $val) {
@@ -261,13 +261,13 @@ class Plan
                     self::cache_s(['main', "cfg_{$ware}_$key.php"], self::auto($val));
             }
         } else {
-            $yml = Rare::yaml(self::_g([$ware, 'conf.yml']))[$name];
+            $yml = Saw::yaml(self::_g([$ware, 'conf.yml']))[$name];
             if (is_string($yml)) {
                 $ext = explode('.', $yml);
                 switch (end($ext)) {
                     case 'php': return self::_r([$ware, $yml]);
                     case 'yml':
-                    case 'yaml': return Rare::yaml(self::_g([$ware, $yml]));
+                    case 'yaml': return Saw::yaml(self::_g([$ware, $yml]));
                     case 'json': return json_decode(self::_g([$ware, $yml]), true);
                     default: return strbang(unl(self::_g([$ware, $yml])));
                 }
