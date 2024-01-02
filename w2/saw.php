@@ -4,12 +4,12 @@ class Saw
 {
     const version = 0.888;
 
-    static function obj($in = []) {
-        $in = (array)$in + [
-            'm' => '',
-            'p' => '',
-            'k' => '',
-            'v' => '',
+    static function obj(array $in = []) : stdClass {
+        $in += [
+            'mod' => '',
+            'pad' => '',
+            'key' => '',
+            'val' => '',
             'voc' => false,
             'json' => false,
         ];
@@ -23,32 +23,32 @@ class Saw
         $n = self::obj();
 
         $add = function ($m) use (&$p) {
-            $v = $m->json ? json_decode($m->json, true) : self::scalar($m->m ? $m->v : trim($m->v));
+            $v = $m->json ? json_decode($m->json, true) : self::scalar($m->mod ? $m->val : trim($m->val));
             if ($m->json && json_last_error())
                 throw new Error('Yaml error (json)');
-            if (array_key_exists($m->p, $p)) {
-                array_splice($p, 1 + array_flip(array_keys($p))[$m->p]);
-                $z =& $p[$m->p];
+            if (array_key_exists($m->pad, $p)) {
+                array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
+                $z =& $p[$m->pad];
             } else {
                 $lt = array_key_last($p);
                 $z =& $p[$lt][array_key_last($p[$lt])];
             }
-            true === $m->k ? ($z[] = $v) : ($z[$m->k] = $v);
-            $p[$m->p] =& $z;
+            true === $m->key ? ($z[] = $v) : ($z[$m->key] = $v);
+            $p[$m->pad] =& $z;
         };
 
         foreach (explode("\n", unl($in)) as $line) {
-            $m = self::obj($n);
+            $m = clone $n;
             if (self::parse($line, $tab, $n))
                 continue;
-            '' === $m->k or $add($m);
+            '' === $m->key or $add($m);
             if ($n->voc) {
-                $n->v = null;
+                $n->val = null;
                 $add($n); # vocabulary: - key: val
                 $n = $n->voc;
             }
         }
-        '' === $n->k or $add($n);
+        '' === $n->key or $add($n);
 
         return $array;
     }
@@ -59,7 +59,7 @@ class Saw
         $tabs = fn($s) => str_replace("\t", $tab, $s);
         $w2 = $is_k = true;
         $k2 = $reqk = false;
-        $len = strlen($n->voc ? ($p =& $n->voc->v) : ($p =& $n->v));
+        $len = strlen($n->voc ? ($p =& $n->voc->val) : ($p =& $n->val));
         if ('' === trim($in))
             return true;
 
@@ -74,30 +74,30 @@ class Saw
             if (1 == $i) { # first step
                 $w ? ($pad = $tabs($s)) : ($p .= $s);
                 $reqk = $pad <= $pad_0; # require match key
-                if (!$reqk && '|' == $n->m)
+                if (!$reqk && '|' == $n->mod)
                     '' === $p ? ($pad_1 = strlen($pad)) : ($p .= "\n" . substr($pad, $pad_1));
-            } elseif ($w && $is_k && $k2 && ($reqk || !$n->m)) { # key found
+            } elseif ($w && $is_k && $k2 && ($reqk || !$n->mod)) { # key found
                 if (0)
                     throw new Error('Yaml error (Mapping disabled)');
                 $is_k = false;
                 $sps = $s;
                 $n = self::obj([
-                    'p' => $pad_0 = $pad,
-                    'k' => $c2 ? substr($p, $len, -1) : true,
+                    'pad' => $pad_0 = $pad,
+                    'key' => $c2 ? substr($p, $len, -1) : true,
                 ]);
-                $p =& $n->v;
-            } elseif ($w && true === $n->k && $c2 && !$is_k && !$n->voc) { # vocabulary
+                $p =& $n->val;
+            } elseif ($w && true === $n->key && $c2 && !$is_k && !$n->voc) { # vocabulary
                 $n->voc = self::obj([
-                    'm' => &$n->m,
-                    'p' => $n->p . ' ' . $tabs($sps),
-                    'k' => substr($p, 0, -1),
+                    'mod' => &$n->mod,
+                    'pad' => $n->pad . ' ' . $tabs($sps),
+                    'key' => substr($p, 0, -1),
                 ]);
-                $p =& $n->voc->v;
+                $p =& $n->voc->val;
             } elseif ($n->json && 1 == strlen($s) && !$reqk && strpbrk($s, '[]{},:')) {
                 $n->json .= '' === ($p = trim($p)) ? $s : self::scalar($p, true, ':' != $s) . $s;
                 $p = '';
-            } elseif ('' === $p && ('{' == $s || '[' == $s) && !$n->m) {
-                $n->m = $n->json = $s;
+            } elseif ('' === $p && ('{' == $s || '[' == $s) && !$n->mod) {
+                $n->mod = $n->json = $s;
                 $reqk = false;
             } else {
                 $p .= $s;
@@ -112,7 +112,7 @@ class Saw
         } else {
             $p = rtrim($p);
             if ('|' == $p || '>' == $p) {
-                $n->m = $p;
+                $n->mod = $p;
                 $p = '';
             }
         }
