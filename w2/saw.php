@@ -63,22 +63,23 @@ class Saw
     }
 
     static function parse($in, &$n) {
-        static $pad_0 = '', $pad_1;
+        static $pad_0 = '', $pad_1 = 0;
         $pad = '';
         $szv = strlen($n->voc ? ($p =& $n->voc->val) : ($p =& $n->val));
+        $cont = '' !== $p;
         $k2 = $reqk = $ne = false;
         $w2 = $setk = true; # set key first
 
         for ($j = 0, $szl = strlen($in); $j < $szl; $j += $x) {
             if ($w = ' ' == $in[$j]) {
                 $t = substr($in, $j, $x = strspn($in, ' ', $j));
-            } elseif ($pad && !$reqk && '|' == $n->mod || '>' == $n->mod) {
-                $t = substr($in, $j);
+            } elseif ($pad && !$reqk && ('|' == $n->mod || '>' == $n->mod)) {
+                $t = substr($in, $j); # set rest of line
                 $x = $szl;
             } elseif ('"' == $in[$j] || "'" == $in[$j]) {
                 $x = Rare::str($in, $j) or self::failed('Incorrect string');
                 $t = substr($in, $j, $x -= $j);
-            } elseif ('#' == $in[$j] && $w2 && !$n->mod) {
+            } elseif ('#' == $in[$j] && $w2 && ('|' !== $n->mod || strlen($pad) < $pad_1)) {
                 break; # cut comment
             } elseif (strpbrk($in[$j], '#:-|>{},[]')) {
                 $t = $in[$j];
@@ -94,7 +95,7 @@ class Saw
                 if (!$reqk && '|' == $n->mod)
                     '' === $p ? ($pad_1 = strlen($pad)) : ($p .= "\n" . substr($pad, $pad_1));
             } elseif ($w && $setk && $k2 && ($reqk || !$n->mod)) { # key found
-                if (0)
+                if (!$reqk && $cont)
                     self::failed('Mapping disabled');
                 $setk = false;
                 $sps = $t;
@@ -103,10 +104,10 @@ class Saw
                     'key' => $c2 ? self::scalar(substr($p, ($char ?? 0) + $szv, -1)) : true,
                 ]);
                 $p =& $n->val;
-            } elseif ($w && true === $n->key && $c2 && !$n->voc) { # vocabulary
+            } elseif ($w && true === $n->key && $c2 && !$n->voc) { # vocabulary key
                 $n->voc = self::obj([
                     'mod' => &$n->mod,
-                    'pad' => "$n->pad $sps",
+                    'pad' => $pad_0 = "$n->pad $sps",
                     'key' => substr($p, 0, -1),
                 ]);
                 $p =& $n->voc->val;
