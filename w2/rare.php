@@ -40,13 +40,13 @@ class Rare
     }
 
     static function str(string &$in, $p) {
-        $quot = $in[$p] . '\\';
-        for ($len = strlen($in), $p++; true; $p += ++$bs % 2) {
-            $p += 1 + strcspn($in, $quot, $p);
-            if ($p > $len)
-                return 0;
-            if ($quot[0] == $in[$p - 1])
-                return $p;
+        $quot = $in[$p++] . '\\';
+        for ($len = strlen($in); true; $p += $bs % 2) {
+            $p += strcspn($in, $quot, $p);
+            if ($p >= $len)
+                return false;
+            if ('\\' != $in[$p])
+                return ++$p;
             $p += ($bs = strspn($in, '\\', $p));
         }
     }

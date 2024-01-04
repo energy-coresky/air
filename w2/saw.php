@@ -83,7 +83,7 @@ class Saw
             } elseif (strpbrk($in[$j], '#:-|>{},[]')) {
                 $t = $in[$j];
                 $x = 1;
-            } else {
+            } else { # get token anyway
                 $t = substr($in, $j, $x = strcspn($in, '"\' #:-|>{},[]', $j));
             }
             $w2 = $w;
@@ -137,6 +137,7 @@ class Saw
                 $p = '';
             }
         }
+
         return $setk;
     }
 
