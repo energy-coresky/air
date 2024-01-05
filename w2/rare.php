@@ -39,18 +39,6 @@ class Rare
         return $list;
     }
 
-    static function str(string &$in, $p) {
-        $quot = $in[$p++] . '\\';
-        for ($len = strlen($in); true; $p += $bs % 2) {
-            $p += strcspn($in, $quot, $p);
-            if ($p >= $len)
-                return false;
-            if ('\\' != $in[$p])
-                return ++$p;
-            $p += ($bs = strspn($in, '\\', $p));
-        }
-    }
-
     static function mail($message, $ary = [], $subject = '', $to = '') {
         if (is_string($ary)) {
             $to = $subject;

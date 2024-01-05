@@ -17,6 +17,7 @@ class SKY implements PARADISE
     public $error_last = 0;
     public $was_error = 0;
     public $was_warning = 0;
+    public $bootstrap = false;
     public $gpc = '';
     public $langs = [];
     public $shutdown = [];
@@ -86,7 +87,10 @@ class SKY implements PARADISE
         register_shutdown_function([$this, 'shutdown']);
         Plan::open('cache'); # load composed SKY::$plans
         date_default_timezone_set(cfg()->timezone);
+        foreach (cfg()->ini_set as $k => $v)
+            ini_set($k, 'dev' === $v ? (int)DEV : $v);
         define('NOW', date(DATE_DT));
+        $this->bootstrap = true;
         DEV && !CLI && DEV::init();
     }
 
@@ -310,7 +314,8 @@ class SKY implements PARADISE
     function tracing($top = '', $is_x = true) {
         $data = DEV ? Debug::data() : '';
         $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
-        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, NOW, microtime(true) - START_TS) . $data;
+        $now = defined('NOW') ? NOW : 'Timestamp: ' . time();
+        $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, $now, microtime(true) - START_TS) . $data;
         if ($is_x && SKY::$dd) {
             if (DEV)
                 SKY::$dd->_xtrace();

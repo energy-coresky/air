@@ -7,9 +7,12 @@ class Saw
     static $file = '';
     static $line = 0;
 
-    static function failed(string $error) {
-        $fn = '' === self::$file ? '' : self::$file . ', ';
-        throw new Error("Yaml error, {$fn}Line " . self::$line . ": $error");
+    static function halt(string $error, $space = false) {
+        if ($space && !strpbrk($space, "\t"))
+            return $space;
+
+        $pos = ('' === self::$file ? 'Line ' : self::$file . ', Line ') . self::$line;
+        throw new Error("Yaml, $pos: " . ($error ?: 'Tabs disabled for indent'));
     }
 
     static function obj(array $in = []) : stdClass {
@@ -33,7 +36,8 @@ class Saw
         $add = function ($m) use (&$p) {
             $v = $m->json ? json_decode($m->json, true) : self::scalar($m->mod ? $m->val : trim($m->val));
             if ($m->json && json_last_error())
-                self::failed('JSON failed');
+                self::halt('JSON failed');
+
             if (array_key_exists($m->pad, $p)) {
                 array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
                 $z =& $p[$m->pad];
@@ -46,10 +50,12 @@ class Saw
         };
 
         foreach (explode("\n", unl($in)) as $ln => $line) {
-            $m = clone $n;
             self::$line = 1 + $ln;
+
+            $m = clone $n;
             if (self::parse($line . ' ', $n))
                 continue;
+
             '' === $m->key or $add($m);
             if ($n->voc) {
                 $n->val = null;
@@ -64,6 +70,7 @@ class Saw
 
     static function parse($in, &$n) {
         static $pad_0 = '', $pad_1 = 0;
+
         $pad = '';
         $szv = strlen($n->voc ? ($p =& $n->voc->val) : ($p =& $n->val));
         $cont = '' !== $p;
@@ -71,32 +78,35 @@ class Saw
         $w2 = $setk = true; # set key first
 
         for ($j = 0, $szl = strlen($in); $j < $szl; $j += $x) {
-            if ($w = ' ' == $in[$j]) {
-                $t = substr($in, $j, $x = strspn($in, ' ', $j));
+            if ($w = ' ' == $in[$j] || "\t" == $in[$j]) {
+                # whitespaces
+                $t = substr($in, $j, $x = strspn($in, "\t ", $j));
             } elseif ($pad && !$reqk && ('|' == $n->mod || '>' == $n->mod)) {
                 $t = substr($in, $j); # set rest of line
                 $x = $szl;
             } elseif ('"' == $in[$j] || "'" == $in[$j]) {
-                $x = Rare::str($in, $j) or self::failed('Incorrect string');
+                $x = self::str($in, $j) or self::halt('Incorrect string');
                 $t = substr($in, $j, $x -= $j);
             } elseif ('#' == $in[$j] && $w2 && ('|' !== $n->mod || strlen($pad) < $pad_1)) {
-                break; # cut comment
-            } elseif (strpbrk($in[$j], '#:-|>{},[]')) {
+                # cut comment
+                break;
+            } elseif (strpbrk($in[$j], '#:-{},[]')) {
                 $t = $in[$j];
                 $x = 1;
-            } else { # get token anyway
-                $t = substr($in, $j, $x = strcspn($in, '"\' #:-|>{},[]', $j));
+            } else {
+                # get token anyway
+                $t = substr($in, $j, $x = strcspn($in, "\t\"' #:-{},[]", $j));
             }
             $w2 = $w;
 
             if (!$j) { # first step
-                $w ? ($pad = $t) : ($ne = $p .= $t);
+                $w ? ($pad = self::halt(false, $t)) : ($ne = $p .= $t);
                 $reqk = $pad <= $pad_0; # require match key
                 if (!$reqk && '|' == $n->mod)
                     '' === $p ? ($pad_1 = strlen($pad)) : ($p .= "\n" . substr($pad, $pad_1));
             } elseif ($w && $setk && $k2 && ($reqk || !$n->mod)) { # key found
                 if (!$reqk && $cont)
-                    self::failed('Mapping disabled');
+                    self::halt('Mapping disabled');
                 $setk = false;
                 $sps = $t;
                 $n = self::obj([
@@ -107,11 +117,11 @@ class Saw
             } elseif ($w && true === $n->key && $c2 && !$n->voc) { # vocabulary key
                 $n->voc = self::obj([
                     'mod' => &$n->mod,
-                    'pad' => $pad_0 = "$n->pad $sps",
+                    'pad' => $pad_0 = self::halt(false, $sps) . ' ' . $n->pad,
                     'key' => substr($p, 0, -1),
                 ]);
                 $p =& $n->voc->val;
-            } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, '[]{},:')) {
+            } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
                 $n->json .= '' === ($p = trim($p)) ? $t : self::scalar($p, true, ':' != $t) . $t;
                 $p = '';
             } elseif ('' === $p && ('{' == $t || '[' == $t) && !$n->mod) {
@@ -128,7 +138,7 @@ class Saw
 
         if ($setk) {
             if ($reqk && $ne)
-                self::failed('Cannot match key');
+                self::halt('Cannot match key');
             if ($p && ' ' == $p[-1])
                 $p = substr($p, 0, -1);
         } else {
@@ -140,6 +150,18 @@ class Saw
         }
 
         return $setk;
+    }
+
+    static function str(string &$in, $p) {
+        $quot = $in[$p++] . '\\';
+        for ($len = strlen($in); true; $p += $bs % 2) {
+            $p += strcspn($in, $quot, $p);
+            if ($p >= $len)
+                return false;
+            if ('\\' != $in[$p])
+                return ++$p;
+            $p += ($bs = strspn($in, '\\', $p));
+        }
     }
 
     static function scalar(string $in, $json = false, $notkey = true) {

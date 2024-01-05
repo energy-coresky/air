@@ -111,9 +111,10 @@ function jump($uri = '', $code = 302, $exit = true) {
 function trace($var, $is_error = false, $line = 0, $file = '', $context = false) {
     global $sky;
 
+    //$sky->bootstrap or define('NOW', );
     if ($err = true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;
-        if (null === SKY::$dd)
+        if (null === SKY::$dd && $sky->bootstrap)
             $sky->open(is_array($var) ? $var[1] : $var);
         if (SKY::$debug && SKY::$errors[0]++ > 49)
             return;
@@ -142,11 +143,14 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
         $mgs = "$fln\n$var";// . html($var);
         if ($err) {
             $sky->was_error |= SKY::ERR_SHOW;
-            if (SKY::$cli)
-                echo "\n$file^$line\n$var\n\n";//2do striptags
+            if (SKY::$cli) {
+                echo "\n$file^$line\n$var\n";//2do striptags
+                echo is_string($context) ? "Stack trace:\n$context\n" : "\n";
+            }
             if ($sky->log_error) { # collect error log
                 $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
-                $sky->error_prod .= L::r('<b>' . NOW . ' - ' . $type . '</b>');
+                $now = defined('NOW') ? NOW : 'Timestamp: ' . time();
+                $sky->error_prod .= L::r("<b>$now - $type</b>");
                 if (!SKY::$cli)
                     $sky->error_prod .= ' ' . $sky->methods[$sky->method] . ' /' . html(URI);
                 $sky->error_prod .= "\n$mgs\n\n";
