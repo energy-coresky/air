@@ -200,7 +200,7 @@ class Install
             $head = "type app\nmod_required $head";
             $head .= "\ndesc " . escape($_POST['desc']);
             $head .= "\nversion $_POST[vphp] $and $_POST[vphp2] $_POST[vmysql]\nwww " . WWW;
-            $head .= "\ncompiled " . cfg()->timezone . ' ' . $sky->s_version;
+            $head .= "\ncompiled " . date_default_timezone_get() . ' ' . $sky->s_version;
             $sql = isset($_POST['sql']) ? $this->memo('count_tr', '0.0.') : '0.0.';
             $head .= "\nftrd A^$max.$sql" . count($mkdir);
             $head .= "\n\nDIRS: " . strlen($mkdir = implode(' ', $mkdir)) . "\n$mkdir";
@@ -327,7 +327,7 @@ class Install
         global $sky;
         static $index;
 
-        $fn = (defined('WWW') ? WWW : Console::get_public() . '/') . 'index.php';
+        $fn = WWW . 'index.php';
         if (!$forward)
             return file_put_contents($fn, $index);
         $sky->memory(11, 'i');

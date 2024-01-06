@@ -110,7 +110,7 @@ class Root
                     'Database:' => "$db[name], $db[version], Client charset: $db[charset]",
                     'HTTP server version' => $_SERVER['SERVER_SOFTWARE'],
                     'Visitors online:' => $sky->s_online,
-                    'PHP NOW:' => NOW . ' (' . cfg([])->timezone . '), ' . gmdate(DATE_DT) . ' (GMT)',
+                    'PHP NOW:' => NOW . ' (' . date_default_timezone_get() . '), ' . gmdate(DATE_DT) . ' (GMT)',
                     'SQL NOW:' => ($t = sql('+select $now')) . ' ' . (NOW == $t ? L::g('equal') : L::r('not equal')),
                     'Server localtime' => $ltime . ' ' . ($sky->date(NOW) . ' ' == $ltime ? L::g('equal') : L::r('not equal')),
                     'Cron layer last tick:' => (new Schedule)->n_cron_dt,

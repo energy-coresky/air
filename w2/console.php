@@ -19,7 +19,7 @@ class Console
             $this->s($argv[2] ?? 8000);
         } elseif ($found[0]) {
             SQL::$dd_h = 'Console::dd_h';
-            '_' === ($argv[2][0] ?? '') or $sky->open();
+            '_' === ($argv[2][0] ?? '') or !SKY::$databases or $sky->open();
         }
         $this->__call("c_$argv[1]", array_slice($argv, 2));
     }
@@ -98,27 +98,17 @@ class Console
         }
     }
 
-    static function get_public() {
-        if ($dir = Plan::mem_gq('www_dir')) //$sky->memory();
-            return $dir;
-        foreach (glob('*') as $dir) {
-            if ('_' != $dir[0] && is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
-                return $dir;
-        }
-        return false;
-    }
-
     function s($port) {
         global $dir_run;
 
-        $public = false;
+        $www = false;
         if (self::$d[0]) {
             if (!DEV)
                 return print("Cannot run php-server on production");
             echo "\n";
             $this->c_drop();
             echo "\n";
-            $public = self::get_public();
+            $www = WWW;
         }
         if (function_exists('socket_create')) {
             for ($i = 0; $i < 9; $i++, $port++) {
@@ -129,7 +119,7 @@ class Console
                     break;
             }
         }
-        chdir($public && is_dir($public) ? $public : $dir_run());
+        chdir($www ?: $dir_run());
         if (!file_exists($fn = '../s.php')) {
             echo "File `$fn` written\n\n";
             file_put_contents($fn, "<?php\n\n"
@@ -266,7 +256,6 @@ class Console
 
     /** Check globals */
     function c_g() {
-        define('WWW', self::get_public() . '/');
         DEV::init();
         (new Globals)->c_run();
     }
@@ -315,11 +304,6 @@ class Console
         }
     }
 
-    /** Drop all cache */
-    function c_drop() {
-        echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
-    }
-
     /** List installed wares */
     function c_w() {
         $list = [];
@@ -329,18 +313,28 @@ class Console
     }
 
     /** Validate Yaml files [file-name] [ware] [func] */
-    function c_y($fn = 'conf.yml', $ware = 'main', $func = 'print_r') {
+    function c_y($fn = 'config.yaml', $ware = 'main', $func = 'print_r') {
         echo "File `$fn`, ware=$ware is: ";
-        $func(Saw::yaml(Plan::_gq([$ware, $fn])));
+        $func(Boot::yml(Plan::_gq([$ware, $fn])));
     }
 
-    /** Search for errors using all possible methods */
-    function c_e() {
-        echo '2do';
+    /** Drop all cache */
+    function c_drop() {
+        echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
     }
 
     /** Warm all cache */
     function c_warm() {
+        foreach (SKY::$plans['main']['ctrl'] as $ctrl => $ware) {
+            $ctrl = explode('/', $ctrl);
+            echo "Controller: $ware." . ($ctrl = $ctrl[1] ?? $ctrl[0]) . "\n";
+            $ctrl = '*' == $ctrl ? 'default_c' : "c_$ctrl";
+            Plan::gate_p("$ware-$ctrl.php", Gate::instance()->parse($ware, "mvc/$ctrl.php", false));
+        }
+    }
+
+    /** Search for errors using all possible methods */
+    function c_e() {
         echo '2do';
     }
 

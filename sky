@@ -1,8 +1,11 @@
 #!/usr/bin/env php
 <?php
 
+define('START_TS', microtime(true));
+
 if (1 == $argc)
     $argv = [0, ''];
+
 $d = 'd' == $argv[1];
 if ($d || 'php' == $argv[1]) { // 2do cut too long lists
     require __DIR__ . '/w2/rare.php';
@@ -25,21 +28,21 @@ $dir_run = function ($cwd = false, &$found = null) {
     $dir_r = $cwd;
     $ary =& $found;
     return function (&$m) use (&$ary) {
-        $conf = function ($d = '') {
+        $ok = function ($fn, $d = '') {
             $d and $d .= '/';
             $has_dir = is_dir($d . 'mvc') || is_dir($d . 'w3');
-            if (!is_file($d . 'conf.php') || !$has_dir)
+            if (!is_file($d . $fn) || !$has_dir)
                 return false;
-            $app = (bool)strpos(file_get_contents($d . 'conf.php'), '/sky.php');
+            $app = (bool)strpos(file_get_contents($d . $fn), '/sky.php');
             return $d && $app || !$d && !$app;
         };
         if (is_dir('.git'))
             $ary[2] = getcwd(); # git dir
-        if ($conf())
+        if ($ok('conf.php'))
             $ary[1] = getcwd(); # ware
         in_array($m, $list = ['main', 'blue']) or $m && array_unshift($list, $m);
         foreach ($list as $main) {
-            if ($conf($main)) {
+            if ($ok('../bootstrap.php', $main)) {
                 $m = $main;
                 return $ary[0] = true; # the coresky app
             }
@@ -63,16 +66,12 @@ do {
 if ($found[1] && !$found[0]) { # ware found
     $cfg = require "$found[1]/conf.php";
     $cwd = $cfg['app']['cli'] ?? false;
-    if ($cwd && is_dir($cwd)) {
-        chdir($cwd);
-        if ($dir_m = is_dir('main') ? 'main' : (is_dir('blue') ? 'blue' : false))
-            $found[0] = true; # attach app
-    }
+    if ($cwd && is_dir($cwd))
+        $found[0] = true; # attach app
 }
 
 if ($found[0]) {
-    define('DIR', $cwd);
-    require "$dir_m/conf.php";
+    require "$cwd/bootstrap.php";
     new SKY;
     SKY::$debug = 1;
 } else {

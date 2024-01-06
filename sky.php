@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.526 2024-01-04T16:01:51+02:00 energy';
+    const CORE = '0.527 2024-01-06T22:40:07+02:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -45,7 +45,6 @@ class SKY implements PARADISE
         ob_get_level() && ob_end_clean();
         require DIR_S . '/w2/core.php';
         require DIR_S . '/w2/plan.php';
-        SKY::$debug = DEBUG;
         ini_set('error_reporting', $this->log_error = -1);
         if (SKY::$cli = CLI)
             $this->gpc = '$argv = ' . html(var_export($argv, true));
@@ -86,10 +85,9 @@ class SKY implements PARADISE
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
         Plan::open('cache'); # load composed SKY::$plans
-        date_default_timezone_set(cfg()->timezone);
-        foreach (cfg()->ini_set as $k => $v)
-            ini_set($k, 'dev' === $v ? (int)DEV : $v);
+        SKY::$debug = DEBUG;
         define('NOW', date(DATE_DT));
+        define('WWW', cfg()->www . '/');
         $this->bootstrap = true;
         DEV && !CLI && DEV::init();
     }
@@ -391,7 +389,7 @@ class HEAVEN extends SKY
         $mvc = new MVC;
         $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
         $this->is_front = true;
-        $this->orig_qstr = $_SERVER['QUERY_STRING'];
+        $this->orig_qstr = $_SERVER['QUERY_STRING'] ?? '';
         $this->orig_surl = '' === $this->orig_qstr ? rtrim(URI, '?') : substr(URI, 0, -1 - strlen($this->orig_qstr));
         $cnt = 0;
         if ('' !== URI) { # not main page

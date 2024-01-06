@@ -52,7 +52,7 @@ trait Processor
                     break;
             }
             if ($i > 21)
-                throw new Error("Jet preprocessor: cycled pseudo-variables");
+                throw new Error("Preprocessor: cycled pseudo-variables");
             global $sky;
             return eval("return $arg;");
         };

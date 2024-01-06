@@ -9,6 +9,7 @@ class dd_sqlite3 implements DriverDatabase
     public $conn;
     public $pref;
     public $cname;
+    static $timezone = false;
 
     function __construct($filename, $pref) {
         if (!class_exists('SQLite3', false))
@@ -16,6 +17,7 @@ class dd_sqlite3 implements DriverDatabase
         $this->conn = new SQLite3($filename);
         $this->conn->busyTimeout(30000); # 30 secs
         $this->pref = $pref;
+        self::$timezone or self::$timezone = date_default_timezone_get();
     }
 
     function init($tz = null) {
@@ -155,7 +157,7 @@ class dd_sqlite3 implements DriverDatabase
     }
 
     function tz() {
-        $min = (new DateTimeZone(cfg([])->timezone))->getOffset(new DateTime) / 60;
+        $min = (new DateTimeZone(self::$timezone))->getOffset(new DateTime) / 60;
         return ($min < 0 ? ",'" : ",'+") . "$min minute'";
     }
 

@@ -34,13 +34,10 @@ class DEV
             }
         }
 
-        if (!$static = $sky->d_static)
+        if (!$stat = $sky->d_static)
             return;
 
-        $stat = array_map(function ($v) {
-            return '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v;
-        }, explode(',', $static));
-
+        $stat = array_map(fn($v) => '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v, explode(',', $stat));
         $files = [];
         foreach ($stat as $one) {
             if ('' !== $one && is_dir($one)) {

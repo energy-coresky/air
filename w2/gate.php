@@ -28,10 +28,6 @@ class Gate
     private $ra;
     private $ns;
 
-    function __construct() {
-        defined('WWW') && Plan::mem_p('www_dir', substr(WWW, 0, -1));
-    }
-
     static function default() {
         fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
         $ary = json_decode(stream_get_contents($fp), true);
