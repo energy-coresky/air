@@ -227,7 +227,7 @@ class Console
             echo 'Old file moved to `' . Plan::mem_t('rewrite.php') . "`\n";
         }
         Rewrite::lib($map);
-        Plan::_p('rewrite.php', Plan::auto($map));
+        Plan::_p('rewrite.php', Boot::auto($map));
         $this->c_drop();
     }
 
@@ -239,7 +239,7 @@ class Console
             Plan::mem_p('gate.php', $dat);
             echo 'Old file moved to `' . Plan::mem_t('gate.php') . "`\n";
         }
-        Plan::_p('gate.php', Plan::auto(Gate::default()));
+        Plan::_p('gate.php', Boot::auto(Gate::default()));
         $this->c_drop();
     }
 
@@ -262,7 +262,7 @@ class Console
 
     /** Show controllers */
     function c_c() {
-        echo "Rescanned:\n  " . array_join(Debug::controllers(), function($k, $v) {
+        echo "Rescanned:\n  " . array_join(Boot::controllers(), function($k, $v) {
             return "$k: " . ($v[0] ? '' : 'not ') . 'exist'; # 2do: red
         }, "\n  ");
         echo "\nFrom SKY::\$plans:\n  " . array_join(SKY::$plans['main']['ctrl'], ' => ', "\n  ");
@@ -274,7 +274,7 @@ class Console
         Rewrite::get($lib, $map, $keys);
         $max = 0;
         $out = [];
-        foreach (Debug::controllers() as $x) {
+        foreach (Boot::controllers() as $x) {
             if (!$x[0]) {
                 $max > ($len = strlen($a = "$x[1]::")) or $max = $len;
                 $out[$a] = (object)['gerr' => 'Controller not found'];
@@ -312,10 +312,11 @@ class Console
         print_r($list);
     }
 
-    /** Validate Yaml files [file-name] [ware] [func] */
-    function c_y($fn = 'config.yaml', $ware = 'main', $func = 'print_r') {
+    /** Validate Yaml files [file-name] [one of 0|1|2 0=var_export] [ware] */
+    function c_y($fn = 'config.yaml', $func = 0, $ware = 'main') {
+        $list = ['var_export', 'print_r', 'var_dump'];
         echo "File `$fn`, ware=$ware is: ";
-        $func(Boot::yml(Plan::_gq([$ware, $fn])));
+        $list[$func](Boot::yml(Plan::_gq([$ware, $fn])));
     }
 
     /** Drop all cache */

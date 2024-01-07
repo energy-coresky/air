@@ -164,7 +164,7 @@ class dev_c extends Controller
         ];
         return [
             'wc' => "$this->_w.$this->_c",
-            'ctrl' => Debug::controllers(),
+            'ctrl' => Boot::controllers(),
             'cshow' => self::cshow() ? ' checked' : '',
             'e_func' => self::gate($this->_w, $this->_c),
             'act' => $this->_3 ?? '',
@@ -254,7 +254,7 @@ class dev_c extends Controller
             $ary[$ctrl][$act] = true === $in ? self::post_data() : $in;
         }
         Plan::gate_dq([$ware, "$ware-$ctrl.php"]); # drop cache file
-        Plan::_p([$ware, 'gate.php'], Plan::auto($ary));
+        Plan::_p([$ware, 'gate.php'], Boot::auto($ary));
     }
 
     static function cshow() {
@@ -393,7 +393,7 @@ class dev_c extends Controller
             'rshow' => $rshow,
             'map' => $map,
             'y_1' => $y_1,
-            'ctrl' => Debug::controllers(),
+            'ctrl' => Boot::controllers(),
             'opt' => option(-2, array_reverse($keys, true)),
             'json' => tag(html(json_encode($lib)), 'id="json" style="display:none"'),
             'form' => Form::A($data, [

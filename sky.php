@@ -84,10 +84,9 @@ class SKY implements PARADISE
 
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
-        Plan::open('cache'); # load composed SKY::$plans
+        Plan::open('cache'); # bootstrap for composed SKY::$plans
         SKY::$debug = DEBUG;
         define('NOW', date(DATE_DT));
-        define('WWW', cfg()->www . '/');
         $this->bootstrap = true;
         DEV && !CLI && DEV::init();
     }

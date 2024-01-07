@@ -38,7 +38,7 @@ function unl($str) {
     return str_replace(["\r\n", "\r"], "\n", $str);
 }
 
-function cfg($name = 'plan', $as_array = false) {
+function cfg($name = 'core', $as_array = false) {
     $ary =& Plan::cfg($name);
     return $as_array ? $ary : (object)$ary;
 }

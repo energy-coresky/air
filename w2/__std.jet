@@ -80,11 +80,21 @@ echo $redirect;
 <{{'?'}}php
 
 define('START_TS', microtime(true));
-define('DIR', dirname(__DIR__));
-chdir(DIR);
-require 'main/conf.php';
+require __DIR__ . '/../bootstrap.php';
 new HEAVEN;
 #.index
+
+#.bootstrap
+<{{'?'}}php
+ 
+define('DIR', __DIR__);
+chdir(DIR);
+define('EXTRA', 0); # 0 - off, 1 - on
+define('DIR_S', 'vendor/energy/air');
+define('DIR_M', 'main');
+ 
+require DIR_S . '/sky.php';
+#.bootstrap
 
 #.htaccess
 AddDefaultCharset utf-8

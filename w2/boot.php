@@ -20,39 +20,62 @@ class Boot
     function __construct($dc = false) {
         if (!$dc)
             return;
-        $cfg = Boot::cfg($ymls, DIR_M . '/config.yaml') + ['www' => Boot::www()];
+        $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
         $plans = SKY::$plans + ($cfg['plans'] ?? []) + [
             'view' => ['path' => DIR_M . '/mvc/view'],
             'cache' => ['path' => 'var/cache'],
             'gate' => ['path' => 'var/gate'],
             'jet' => ['path' => 'var/jet'],
-            'mem' => ['path' => 'var/mem'],
+            $key = 'mem' => ['path' => 'var/mem'],
         ];
-        Boot::$dev = eval('return ' . $cfg['define']['DEV'] . ';');
+        $val = $cfg['define']['DEV'];
+        $this->test($key, $val);
+        self::$dev = eval("return $val;");
+
         $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
-        foreach ($cfg['define'] as $key => $val)
-            $more .= "define('$key', $val);\n";
+        foreach ($cfg['define'] + ['WWW' => self::www()] as $key => $val)
+            $this->test($key, $val) or $more .= "define('$key', $val);\n";
         foreach ($cfg['ini_set'] as $key => $val)
-            $more .= "ini_set('$key', $val);\n";
+            $this->test($key, $val) or $more .= "ini_set('$key', $val);\n";
+
         unset($cfg['plans'], $cfg['define'], $cfg['ini_set'], $cfg['timezone']);
         SKY::$plans = $ctrl = [];
         $app = ['path' => DIR_M, 'cfg' => $cfg];
         SKY::$plans['main'] = ['rewrite' => '', 'class' => [], 'app' => $app] + $plans;
         $ymls = ['main' => $ymls];
         if (is_file($fn = DIR_M . '/wares.php'))
-            $ymls += Boot::wares($fn, $ctrl, SKY::$plans['main']['class']);
+            $ymls += self::wares($fn, $ctrl, SKY::$plans['main']['class']);
         $plans = SKY::$plans;
-        $plans['main'] += ['ctrl' => $ctrl + Debug::controllers('main')]; /////////////////////////
+        $plans['main'] += ['ctrl' => $ctrl + self::controllers('main')];
         SKY::$plans['main']['cache']['dc'] = $dc;
-        Plan::cache_s('sky_plan.php', Boot::auto($plans, $more, ['Boot', 'rewrite']));
+        Plan::cache_s('sky_plan.php', self::auto($plans, $more, ['Boot', 'rewrite']));
         SKY::$plans = Plan::cache_r('sky_plan.php');
         foreach ($ymls as $ware => $yml)
-            Boot::cfg($yml, $ware);
+            self::cfg($yml, $ware);
+    }
+
+    private function test(&$key, &$val) {
+        if ('DEV-' == substr($key, 0, 4)) {
+            if (!self::$dev)
+                return true;
+            $key = substr($key, 4);
+        }
+        if ('@php(' == substr($val, 0, 5)) {
+            $val = substr($val, 5, -1);
+        } else {
+            if (is_string($val) && '{' == $val[0]) {
+                $new = $this->echos($val);
+                if ($new != $val)
+                    $val = eval('return' . substr($new, 10));
+            }
+            $val = var_export($val, true);
+        }
+        return false;
     }
 
     static function lint(string $in, $nofile = true) : bool {
         try {
-            Boot::yml($in, $nofile);
+            self::yml($in, $nofile);
         } catch (Error $e) {
             return false;
         }
@@ -71,7 +94,7 @@ class Boot
         $n = $this->obj();
 
         $add = function ($m) use (&$p) {
-            $v = $m->json ? json_decode($m->json, true) : Boot::scalar($m->mod ? $m->val : trim($m->val));
+            $v = $m->json ? json_decode($m->json, true) : self::scalar($m->mod ? $m->val : trim($m->val));
             if ($m->json && json_last_error())
                 $this->halt('JSON failed');
 
@@ -93,14 +116,14 @@ class Boot
             if ($this->yml_line($in . ' ', $n))
                 continue;
 
-            '' === $m->key or $add($m);
+            is_null($m->key) or $add($m);
             if ($n->voc) {
                 $n->val = null;
                 $add($n); # vocabulary: - key: val
                 $n = $n->voc;
             }
         }
-        '' === $n->key or $add($n);
+        is_null($n->key) or $add($n);
     }
 
     private function yml_line(string $in, &$n) {
@@ -120,14 +143,17 @@ class Boot
                 $t = substr($in, $j); # set rest of line
                 $x = $szl;
             } elseif ('"' == $in[$j] || "'" == $in[$j]) {
-                $x = Boot::str($in, $j) or $this->halt('Incorrect string');
+                $x = self::str($in, $j) or $this->halt('Incorrect string');
                 $t = substr($in, $j, $x -= $j);
             } elseif ('#' == $in[$j] && $w2 && ('|' !== $n->mod || strlen($pad) < $pad_1)) {
                 # cut comment
                 break;
             } elseif (strpbrk($in[$j], '#:-{},[]')) {
-                $t = $in[$j];
                 $x = 1;
+                if ('{' == ($t = $in[$j]) && ('!' == $in[$j + 1] || '{' == $in[$j + 1])) {
+                    $t .= $in[$j + 1];////////////////////////////
+                    $x = 2;
+                }
             } else {
                 # get token anyway
                 $t = substr($in, $j, $x = strcspn($in, "\t\"' #:-{},[]", $j));
@@ -146,18 +172,22 @@ class Boot
                 $sps = $t;
                 $n = $this->obj([
                     'pad' => $pad_0 = $pad,
-                    'key' => $c2 ? Boot::scalar(substr($p, ($char ?? 0) + $szv, -1)) : true,
+                    'key' => $c2 ? self::scalar(substr($p, ($char ?? 0) + $szv, -1)) : true,
                 ]);
+                if (null === $n->key)
+                    $this->halt('Key cannot be NULL');
                 $p =& $n->val;
             } elseif ($w && true === $n->key && $c2 && !$n->voc) { # vocabulary key
                 $n->voc = $this->obj([
                     'mod' => &$n->mod,
                     'pad' => $pad_0 = $this->halt(false, $sps) . ' ' . $n->pad,
-                    'key' => substr($p, 0, -1),
+                    'key' => self::scalar(substr($p, 0, -1)),
                 ]);
+                if (null === $n->voc->key)
+                    $this->halt('Key cannot be NULL');
                 $p =& $n->voc->val;
             } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
-                $n->json .= '' === ($p = trim($p)) ? $t : Boot::scalar($p, true, ':' != $t) . $t;
+                $n->json .= '' === ($p = trim($p)) ? $t : self::scalar($p, true, ':' != $t) . $t;
                 $p = '';
             } elseif ('' === $p && ('{' == $t || '[' == $t) && !$n->mod) {
                 $n->mod = $n->json = $t;
@@ -191,15 +221,15 @@ class Boot
         if ($space && !strpbrk($space, "\t"))
             return $space;
 
-        $pos = ('' === $this->at[0] ? 'Line ' : $this->at[0] . ', Line ') . $this->at[1];
-        throw new Error("Yaml, $pos: " . ($error ?: 'Tabs disabled for indent'));
+        $at = (false === $this->at[0] ? 'Line ' : $this->at[0] . ', Line ') . $this->at[1];
+        throw new Error("Yaml, $at: " . ($error ?: 'Tabs disabled for indent'));
     }
 
     private function obj(array $in = []) : stdClass {
         $in += [
             'mod' => '',
             'pad' => '',
-            'key' => '',
+            'key' => null,
             'val' => '',
             'voc' => false,
             'json' => false,
@@ -236,21 +266,21 @@ class Boot
 
     static function cfg(&$name, $ware = 'main') {
         if (null === $name) {
-            $name = is_file($ware) ? Boot::yml($ware, false) : [];
-            return $name['plan'] ?? [];
+            $name = is_file($ware) ? self::yml($ware, false) : [];
+            return $name['core'] ?? [];
         } elseif (is_array($name)) {
             foreach ($name as $key => $val) {
-                if ('plan' != $key && is_array($val))
-                    Plan::cache_s(['main', "cfg_{$ware}_$key.php"], Boot::auto($val));
+                if ('core' != $key && is_array($val))
+                    Plan::cache_s(['main', "cfg_{$ware}_$key.php"], self::auto($val));
             }
         } else {
-            $yml = Boot::yml(Plan::_t([$ware, 'config.yaml']), false)[$name];
+            $yml = self::yml(Plan::_t([$ware, 'config.yaml']), false)[$name];
             if (is_string($yml)) {
                 $ext = explode('.', $yml);
                 switch (end($ext)) {
                     case 'php': return Plan::_r([$ware, $yml]);
                     case 'yml':
-                    case 'yaml': return Boot::yml(Plan::_t([$ware, $yml]), false);
+                    case 'yaml': return self::yml(Plan::_t([$ware, $yml]), false);
                     case 'json': return json_decode(Plan::_g([$ware, $yml]), true);
                     default: return strbang(unl(Plan::_g([$ware, $yml])));
                 }
@@ -267,7 +297,7 @@ class Boot
                 $conf['app']['type'] = 'pr-dev';
             if ($plan['options'] ?? false)
                 $conf['app']['options'] = $plan['options'];
-            if (!Boot::$dev && in_array($conf['app']['type'], ['dev', 'pr-dev']))
+            if (!self::$dev && in_array($conf['app']['type'], ['dev', 'pr-dev']))
                 continue;
             foreach ($plan['class'] as $cls) {
                 $df = 'default_c' == $cls;
@@ -282,7 +312,7 @@ class Boot
                 $ctrl["$plan[tune]/*"] = $ware;
             $app =& $conf['app'];
             unset($yml, $app['require'], $app['class'], $app['databases']);
-            if ($cfg = Boot::cfg($yml, "$path/config.yaml"))
+            if ($cfg = self::cfg($yml, "$path/config.yaml"))
                 $app['cfg'] = $cfg;
             if ($yml)
                 $ymls[$ware] = $yml;
@@ -294,21 +324,59 @@ class Boot
     static function rewrite(&$in) {
         $code = "\n";
         foreach (Plan::_rq('rewrite.php') as $rw)
-            !Boot::$dev && $rw[2] or $code .= $rw[1] . "\n";
+            !self::$dev && $rw[2] or $code .= $rw[1] . "\n";
         $in = explode("'',", $in, 2);
         $in = "$in[0]function(\$cnt, &\$surl, \$uri, \$sky) {{$code}},$in[1]";
-        return '';
     }
 
     static function www() {
         foreach (['public', 'public_html', 'www', 'web'] as $dir) {
             if (is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
-                return $dir;
+                return "$dir/";
         }
         foreach (glob('*') as $dir) {
             if ('_' != $dir[0] && is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
-                return $dir;
+                return "$dir/";
         }
         return false;
+    }
+
+    static function env($key) {
+        if (false === ($val = getenv($key))) {
+            $val = 0;
+            if (is_file('.env')) {
+                $ary = strbang(unl(trim(file_get_contents('.env'))));
+                $val = $ary[$key] ?? 0;
+            }
+        }
+        return self::scalar($val);
+        //return var_export(self::scalar($val), true);
+    }
+
+    static function controllers($ware = false, $plus = false) {
+        $list = [];
+        if (!$ware) {
+            foreach (SKY::$plans as $ware => &$cfg) {
+                if ('main' == $ware || 'prod' == $cfg['app']['type'])
+                    $list += self::controllers($ware, true);
+            }
+            return $list;
+        }
+        $glob = Plan::_b([$ware, 'mvc/c_*.php']);
+        if ($fn = Plan::_t([$ware, 'mvc/default_c.php']))
+            array_unshift($glob, $fn);
+        $z = 'main' == $ware ? false : $ware;
+        foreach ($glob as $v) {
+            $k = basename($v, '.php');
+            $v = 'default_c' == $k ? '*' : substr($k, 2);
+            $list[$plus ? "$ware.$k" : $v] = $plus ? [1, $k, $z] : $ware;
+        };
+        if ($plus) {
+            foreach (Plan::_rq([$ware, 'gate.php']) as $k => $v) {
+                $v = 'default_c' == $k ? '*' : substr($k, 2);
+                isset($list["$ware.$k"]) or $list["$ware.$k"] = [0, $k, $z]; # deleted
+            }
+        }
+        return $list;
     }
 }

@@ -101,6 +101,7 @@ trait Processor
     }
 
     private function echos($str) {
+        //$echo = 'Jet' == get_class($this) ? 'echo' : 'return';
         return preg_replace_callback('/[~@]?{[{!\-](.*?)[\-!}]}/s', function ($m) {
             if ('@' == $m[0][0])
                 return substr($m[0], 1); # verbatim

@@ -235,7 +235,7 @@ class DEV
             if ($_POST)
                 $wares[$name] += ['options' => $_POST];
         }
-        Plan::app_p('wares.php', Plan::auto($wares));
+        Plan::app_p('wares.php', Boot::auto($wares));
         Plan::cache_d('sky_plan.php');
         if ($class)
             return $this->j_ware($class, 'install');

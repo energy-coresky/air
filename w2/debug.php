@@ -186,33 +186,6 @@ class Debug
         return $r;
     }
 
-    static function controllers($ware = false, $plus = false) {
-        $list = [];
-        if (!$ware) {
-            foreach (SKY::$plans as $ware => &$cfg) {
-                if ('main' == $ware || 'prod' == $cfg['app']['type'])
-                    $list += self::controllers($ware, true);
-            }
-            return $list;
-        }
-        $glob = Plan::_b([$ware, 'mvc/c_*.php']);
-        if ($fn = Plan::_t([$ware, 'mvc/default_c.php']))
-            array_unshift($glob, $fn);
-        $z = 'main' == $ware ? false : $ware;
-        foreach ($glob as $v) {
-            $k = basename($v, '.php');
-            $v = 'default_c' == $k ? '*' : substr($k, 2);
-            $list[$plus ? "$ware.$k" : $v] = $plus ? [1, $k, $z] : $ware;
-        };
-        if ($plus) {
-            foreach (Plan::_rq([$ware, 'gate.php']) as $k => $v) {
-                $v = 'default_c' == $k ? '*' : substr($k, 2);
-                isset($list["$ware.$k"]) or $list["$ware.$k"] = [0, $k, $z]; # deleted
-            }
-        }
-        return $list;
-    }
-
     static function mail($message, $ary, $subject, $to) {
         global $sky;
         $ary += [

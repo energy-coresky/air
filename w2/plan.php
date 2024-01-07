@@ -23,13 +23,6 @@ class Plan
         return $class ? isset(SKY::$plans['main']['class'][$in]) : isset(SKY::$plans[$in]);
     }
 
-    static function auto($v, $more = '') {
-        $array = var_export($v, true);
-        if (!is_string($more))
-            $more = call_user_func_array($more, [&$array]);
-        return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn $array;\n";
-    }
-
     static function vendor($class = false) {
         static $vendor = false;
         if ($class && $vendor) {
@@ -191,15 +184,15 @@ class Plan
     static function &cfg($name) {
         static $cache = [];
 
-        [$ware, $name] = is_array($name) ? $name + ['main', 'plan'] : [self::$ware, $name];
+        [$ware, $name] = is_array($name) ? $name + ['main', 'core'] : [self::$ware, $name];
         
-        if ('plan' == $name) {
+        if ('core' == $name) {
             $p =& SKY::$plans[$ware]['app']['cfg'];
         } else {
             $p =& $cache[$ware][$name];
             if (null === $p) {
                 $p = self::cache_rq($addr = ['main', "cfg_{$ware}_$name.php"])
-                    or self::cache_s($addr, self::auto($p = Boot::cfg($name, $ware)));
+                    or self::cache_s($addr, Boot::auto($p = Boot::cfg($name, $ware)));
             }
         }
         return $p;

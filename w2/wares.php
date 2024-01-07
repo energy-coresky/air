@@ -24,7 +24,7 @@ class Wares extends MVC_BASE # Base class for wares installation
     function off_ware() {
         $wares = (array)Plan::_rq($plan = ['main', 'wares.php']);
         unset($wares[$this->k_ware]);
-        Plan::app_p($plan, Plan::auto($wares));
+        Plan::app_p($plan, Boot::auto($wares));
         Plan::cache_d(['main', 'sky_plan.php']);
         return 'OK';
     }

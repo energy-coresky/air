@@ -156,7 +156,7 @@ class Globals extends Usage
     function c_mark() {
         $nap = Plan::mem_rq('report.nap');
         $nap[$_POST['ident']] = $_POST['desc'];
-        Plan::mem_p('report.nap', Plan::auto($nap));
+        Plan::mem_p('report.nap', Boot::auto($nap));
         return $this->_def();
     }
 
