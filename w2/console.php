@@ -7,8 +7,11 @@ class Console
     function __construct($argv = [], $found = []) {
         global $sky;
 
-        if ('Console' != get_class($this))
+        if ('console' != ($name = strtolower(get_class($this)))) {
+            'app' == $name or ($path = SKY::$plans[$name]['app']['path'])
+                && !file_exists("$path/.coresky") && file_put_contents("$path/.coresky", DIR);
             return $argv && call_user_func_array([$this, $argv], $found);
+        }
 
         self::$d = $found + [3 => $ns = $found[2] && 'air' != basename(getcwd())];
 
@@ -19,7 +22,8 @@ class Console
             $this->s($argv[2] ?? 8000);
         } elseif ($found[0]) {
             SQL::$dd_h = 'Console::dd_h';
-            '_' === ($argv[2][0] ?? '') or !SKY::$databases or $sky->open();
+            if ('_' !== ($argv[2][0] ?? '') && SKY::$plans['main']['app']['cfg']['databases'])
+                $sky->open();
         }
         $this->__call("c_$argv[1]", array_slice($argv, 2));
     }
@@ -312,11 +316,15 @@ class Console
         print_r($list);
     }
 
-    /** Validate Yaml files [file-name] [one of 0|1|2 0=var_export] [ware] */
-    function c_y($fn = 'config.yaml', $func = 0, $ware = 'main') {
+    /** Validate Yaml files [ware] [file-name] [one of 0|1|2 0=var_export] */
+    function c_y($ware = 'main', $fn = 'config.yaml', $func = 0) {
         $list = ['var_export', 'print_r', 'var_dump'];
         echo "File `$fn`, ware=$ware is: ";
-        $list[$func](Boot::yml(Plan::_gq([$ware, $fn])));
+        if (!$fn = Plan::_t([$ware, $fn])) {
+            echo "not found";
+        } else {echo $fn;
+            $list[$func](Boot::yml($fn, false));
+        }
     }
 
     /** Drop all cache */
@@ -343,9 +351,7 @@ class Console
     function c_ts($tbl = '', $name = '', $ware = '') {
         if (!$tbl)
             return print 'Error: write a table name';
-        if ($ware)
-            SKY::$databases += Plan::_r([$ware, 'conf.php'])['app']['databases'];
-        if ($struct = SQL::open($name)->_struct($tbl))
+        if ($struct = SQL::open($name, $ware)->_struct($tbl))
             $struct = array_map(function ($ary) {
                 return $ary[2];
             }, $struct);
@@ -354,18 +360,14 @@ class Console
 
     /** Show tables [con-name] [ware] */
     function c_t($name = '', $ware = '') {
-        if ($ware)
-            SKY::$databases += Plan::_r([$ware, 'conf.php'])['app']['databases'];
-        echo 'result: ' . print_r(SQL::open($name)->_tables(), 1);
+        echo 'result: ' . print_r(SQL::open($name, $ware)->_tables(), 1);
     }
 
     /** Execute SQL, example: sky sql "+select 1+1" [con-name] [ware] */
     function c_sql($sql, $name = '', $ware = '') {
-        if ($ware)
-            SKY::$databases += Plan::_r([$ware, 'conf.php'])['app']['databases'];
         $list = Rare::split($sql);
         foreach ($list as $sql)
-            $out = SQL::open($name)->sqlf(trim($sql));
+            $out = SQL::open($name, $ware)->sqlf(trim($sql));
         echo !$list || $out instanceof SQL ? 'queries executed: ' . count($list) : 'result: ' . print_r($out, 1);
     }
 

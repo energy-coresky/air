@@ -10,12 +10,13 @@ class Wares extends MVC_BASE # Base class for wares installation
         return ["No options"];
     }
 
-    function databases() {
-        $list = SKY::$databases;
-        unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
-        $k = array_keys($list);
-        return array_combine([-1 => ''] + $k, [-1 => 'main'] + $k);
-    }
+    #function databases($ware = ['main']) {
+        #$list = SKY::$databases;
+        #unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
+        #$k = array_keys($list);
+        #return array_combine([-1 => ''] + $k, [-1 => 'main'] + $k);
+    #    return DEV::databases($ware);
+    #}
 
     function __toString() {
         return Form::A([], $this->form());

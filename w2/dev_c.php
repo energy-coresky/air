@@ -123,9 +123,10 @@ class dev_c extends Controller
     }
 
     function x_databases() {
-        $list = ['main' => 0] + SKY::$databases;
-        unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
-        return ['databases' => array_keys($list), 'is_merc' => 'mercury' == Plan::$ware];
+        #$list = ['main' => 0] + SKY::$databases;
+        #unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
+        //return ['databases' => array_keys($list), 'is_merc' => 'mercury' == Plan::$ware];
+        return ['databases' => DEV::databases(), 'is_merc' => 'mercury' == Plan::$ware];
     }
 
     # ---------------- j_ + a_, see self::__call(..)

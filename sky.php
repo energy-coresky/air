@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.527 2024-01-06T22:40:07+02:00 energy';
+    const CORE = '0.528 2024-01-09T12:56:01+02:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -27,7 +27,6 @@ class SKY implements PARADISE
     static $mem = [];
     static $reg = [];
     static $vars = [];
-    static $databases = [];
     static $dd = null;
     static $cli;
     static $profiles = ['Anonymous', 'Root', 'Mia'];

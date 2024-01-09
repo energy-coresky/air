@@ -71,9 +71,9 @@ class Model_m extends MVC_BASE
     use SQL_COMMON;
     protected $dd;
 
-    function __construct($table = null) { # set database driver & onduty table
+    function __construct($table = null, $dd = null) { # set database driver & onduty table
         $this->table = $table ?? $this->table ?? substr(get_class($this), 2);
-        $this->dd = $this->head_y();
+        $this->dd = $dd ?? $this->head_y();
     }
 
     function dd($dd = null) {
@@ -82,7 +82,7 @@ class Model_m extends MVC_BASE
 
     # for overload if needed
     function head_y() {
-        return SQL::$dd;
+        return SQL::$dd;// SQL::open()
     }
 }
 

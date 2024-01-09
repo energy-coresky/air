@@ -7,6 +7,7 @@ class Boot
     const version = 0.888;
 
     private static $dev = false;
+    private static $dir;
     private $at;
     private $array = [];
 
@@ -28,15 +29,12 @@ class Boot
             'jet' => ['path' => 'var/jet'],
             $key = 'mem' => ['path' => 'var/mem'],
         ];
-        $val = $cfg['define']['DEV'];
-        $this->test($key, $val);
-        self::$dev = eval("return $val;");
 
         $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
         foreach ($cfg['define'] + ['WWW' => self::www()] as $key => $val)
-            $this->test($key, $val) or $more .= "define('$key', $val);\n";
+            $more .= "define('$key', " . var_export($val, true) . ");\n";
         foreach ($cfg['ini_set'] as $key => $val)
-            $this->test($key, $val) or $more .= "ini_set('$key', $val);\n";
+            $more .= "ini_set('$key', " . var_export($val, true) . ");\n";
 
         unset($cfg['plans'], $cfg['define'], $cfg['ini_set'], $cfg['timezone']);
         SKY::$plans = $ctrl = [];
@@ -54,25 +52,6 @@ class Boot
             self::cfg($yml, $ware);
     }
 
-    private function test(&$key, &$val) {
-        if ('DEV-' == substr($key, 0, 4)) {
-            if (!self::$dev)
-                return true;
-            $key = substr($key, 4);
-        }
-        if ('@php(' == substr($val, 0, 5)) {
-            $val = substr($val, 5, -1);
-        } else {
-            if (is_string($val) && '{' == $val[0]) {
-                $new = $this->echos($val);
-                if ($new != $val)
-                    $val = eval('return' . substr($new, 10));
-            }
-            $val = var_export($val, true);
-        }
-        return false;
-    }
-
     static function lint(string $in, $nofile = true) : bool {
         try {
             self::yml($in, $nofile);
@@ -82,7 +61,8 @@ class Boot
         return true;
     }
 
-    static function yml(string $in, $nofile = true) : array {
+    static function yml(string $in, $nofile = true) {
+        self::$dir = $nofile ? '???' : realpath(dirname($in));
         $yml = new Boot;
         $yml->at = [$nofile ? false : $in, 0];
         $yml->yml_text($nofile ? $in : file_get_contents($in));
@@ -92,12 +72,15 @@ class Boot
     private function yml_text(string $in) {
         $p = ['' => &$this->array];
         $n = $this->obj();
-
+        if (defined('DEV'))
+            self::$dev = DEV;
         $add = function ($m) use (&$p) {
-            $v = $m->json ? json_decode($m->json, true) : self::scalar($m->mod ? $m->val : trim($m->val));
-            if ($m->json && json_last_error())
-                $this->halt('JSON failed');
-
+            if (is_string($m->key) && 'DEV.' == substr($m->key, 0, 4)) {
+                if (!self::$dev)
+                    return;
+                $m->key = substr($m->key, 4);
+            }
+            $v = $this->yml_val($m);
             if (array_key_exists($m->pad, $p)) {
                 array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
                 $z =& $p[$m->pad];
@@ -111,7 +94,6 @@ class Boot
 
         foreach (explode("\n", unl($in)) as $key => $in) {
             $this->at[1] = 1 + $key;
-
             $m = clone $n;
             if ($this->yml_line($in . ' ', $n))
                 continue;
@@ -124,6 +106,15 @@ class Boot
             }
         }
         is_null($n->key) or $add($n);
+    }
+
+    private function yml_val($m) {
+        $v = $m->json ? json_decode($m->json, true) : self::scalar($m->mod ? $m->val : trim($m->val));
+        if ($m->json && json_last_error())
+            $this->halt('JSON failed');
+        if ('DEV' == $m->key)////////
+            self::$dev = $v;
+        return $v;
     }
 
     private function yml_line(string $in, &$n) {
@@ -150,10 +141,7 @@ class Boot
                 break;
             } elseif (strpbrk($in[$j], '#:-{},[]')) {
                 $x = 1;
-                if ('{' == ($t = $in[$j]) && ('!' == $in[$j + 1] || '{' == $in[$j + 1])) {
-                    $t .= $in[$j + 1];////////////////////////////
-                    $x = 2;
-                }
+                $t = $in[$j];
             } else {
                 # get token anyway
                 $t = substr($in, $j, $x = strcspn($in, "\t\"' #:-{},[]", $j));
@@ -250,6 +238,10 @@ class Boot
     }
 
     static function scalar(string $in, $json = false, $notkey = true) {
+        if ($in && '$' == $in[0] && preg_match("/^\\$([A-Z\d_]+)(\(.+)$/", $in, $m)) {
+            [, $key, $in] = $m;
+            $in = self::env($key, substr($in, 1, -1));
+        }
         if ('' === $in || 'null' === $in || '~' === $in)
             return $json ? 'null' : null;
         $true = 'true' === $in;
@@ -261,7 +253,11 @@ class Boot
             return $json ? '"' . substr($in, 1, -1) . '"' : substr($in, 1, -1);
         if ($notkey && is_numeric($in))
             return $json ? $in : (is_num($in) ? (int)$in : (float)$in);
-        return $json ? '"' . $in . '"' : $in;
+        if ('__DIR__' == substr($in, 0, 7))
+            $in = self::$dir . substr($in, 7);
+        if (!$json)
+            return $in;
+        return '"' . str_replace('\\', '\\\\', $in) . '"';
     }
 
     static function cfg(&$name, $ware = 'main') {
@@ -292,7 +288,9 @@ class Boot
     static function wares($fn, &$ctrl, &$class) {
         $ymls = [];
         foreach (require $fn as $ware => $plan) {
-            $conf = require ($path = $plan['path']) . "/conf.php";
+            unset($yml);
+            $cfg = self::cfg($yml, ($path = $plan['path']) . "/config.yaml");
+            $conf = $cfg['plans'];
             if ($plan['type'] ?? false)
                 $conf['app']['type'] = 'pr-dev';
             if ($plan['options'] ?? false)
@@ -311,9 +309,8 @@ class Boot
             if ($plan['tune'])
                 $ctrl["$plan[tune]/*"] = $ware;
             $app =& $conf['app'];
-            unset($yml, $app['require'], $app['class'], $app['databases']);
-            if ($cfg = self::cfg($yml, "$path/config.yaml"))
-                $app['cfg'] = $cfg;
+            unset($cfg['plans'], $app['require'], $app['class']);
+            $app['cfg'] = $cfg;
             if ($yml)
                 $ymls[$ware] = $yml;
             SKY::$plans[$ware] = ['app' => ['path' => $path] + $conf['app']] + $conf;
@@ -341,16 +338,15 @@ class Boot
         return false;
     }
 
-    static function env($key) {
+    static function env($key, $default = 0) {
         if (false === ($val = getenv($key))) {
-            $val = 0;
+            $val = $default;
             if (is_file('.env')) {
                 $ary = strbang(unl(trim(file_get_contents('.env'))));
-                $val = $ary[$key] ?? 0;
+                $val = $ary[$key] ?? $default;
             }
         }
-        return self::scalar($val);
-        //return var_export(self::scalar($val), true);
+        return $val;
     }
 
     static function controllers($ware = false, $plus = false) {

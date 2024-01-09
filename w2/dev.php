@@ -63,6 +63,24 @@ class DEV
             SKY::d('statics', array_join($files, '#', ','));
     }
 
+    static function databases($wares = []) {
+        $out = [];
+        foreach (SKY::$plans as $ware => $list) {
+            if ($wares && !in_array($ware, $wares)
+                || (!$list = $list['app']['cfg']['databases'] ?? false)
+            )
+                continue;
+            if (isset($list['driver']) || isset($list[''])) {
+                unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
+                $out["$ware/core"] = "$ware::core";
+            }
+            foreach ($list as $name => $_)
+                $out["$ware/$name"] = "$ware::$name";
+        }
+        return $out;
+        //return array_combine([-1 => ''] + $k, [-1 => 'main'] + $k);
+    }
+
     ///////////////////////////////////// DEV UTILITY /////////////////////////////////////
     function c_view($x) {
         global $sky;
@@ -181,8 +199,8 @@ class DEV
     function j_attach() {
         $dir = trim($_POST['s'], " \t\r\n/");
         [$type, $dir] = explode('.', $dir, 2);
-        if (!is_file("$dir/conf.php"))
-            return $this->error("File `$dir/conf.php` not found");
+        if (!is_file("$dir/config.yaml"))
+            return $this->error("File `$dir/config.yaml` not found");
         $name = basename($dir);
         if ($class = is_file($fn = "$dir/w3/ware.php") ? "$name\\ware" : false)
             require $fn;
@@ -193,7 +211,7 @@ class DEV
             unset($wares[$name]);
             
         } else { # Install
-            $conf = require "$dir/conf.php";
+            $conf = Boot::yml("$dir/config.yaml", false)['core']['plans'];
             $required = explode(' ', $conf['app']['require'] ?? '');
             $flags = explode(' ', $conf['app']['flags'] ?? '');
             if ('' == $required[0])
@@ -297,9 +315,9 @@ class DEV
                 if (!$ware = array_shift($dir))
                     return false;
                 $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
-                if (!is_dir($path) || !is_file($fn = "$path/conf.php"))
+                if (!is_dir($path) || !is_file($fn = "$path/config.yaml"))
                     return true;
-                $conf = require $fn;
+                $conf = Boot::yml("$path/config.yaml", false)['core']['plans'];
                 return [
                     'name' => ucfirst($ware),
                     'type' => $conf['app']['type'],

@@ -38,7 +38,7 @@ $dir_run = function ($cwd = false, &$found = null) {
         };
         if (is_dir('.git'))
             $ary[2] = getcwd(); # git dir
-        if ($ok('conf.php'))
+        if ($ok('config.yaml'))
             $ary[1] = getcwd(); # ware
         in_array($m, $list = ['main', 'blue']) or $m && array_unshift($list, $m);
         foreach ($list as $main) {
@@ -63,9 +63,8 @@ do {
         break;
 } while($cwd = $_cd);
 
-if ($found[1] && !$found[0]) { # ware found
-    $cfg = require "$found[1]/conf.php";
-    $cwd = $cfg['app']['cli'] ?? false;
+if ($found[1] && !$found[0] && is_file("$found[1]/.coresky")) { # ware found
+    $cwd = trim(file_get_contents("$found[1]/.coresky"));
     if ($cwd && is_dir($cwd))
         $found[0] = true; # attach app
 }

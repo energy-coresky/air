@@ -66,7 +66,9 @@ class Plan
         if ($old_ware == $ware && $old_obj->pn == $pn) {
             $obj = $old_obj;
         } else {
-            $obj = (object)self::open($pn, $ware);
+            if (!$obj = self::open($pn, $ware))
+                return false;
+            $obj = (object)$obj;
             $obj->pn = $pn;
             $old_ware = $ware;
             $old_obj = $obj;
@@ -142,7 +144,7 @@ class Plan
         return $instances[self::$ware][$name = 'm' . $n0] = new $model;
     }
 
-    static function &open($pn, $ware = false) {
+    static function open($pn, $ware = false) {
         static $connections = [];
         $ware or $ware = self::$ware;
 
@@ -155,6 +157,8 @@ class Plan
         };
 
         if ($connections) {
+            if (!isset(SKY::$plans[$ware]))
+                return false;
             $set = isset(SKY::$plans[$ware][$pn]);
             $cfg =& SKY::$plans[$set ? $ware : 'main'][$pn];
             $set or SKY::$plans[$ware][$pn] =& $cfg;
@@ -176,7 +180,6 @@ class Plan
             }
             SKY::$plans['main']['cache']['dc'] = $dc;
             self::locale();
-            SKY::$databases =& SKY::$plans['main']['app']['cfg']['databases'];
         }
         return $cfg;
     }

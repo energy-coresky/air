@@ -436,13 +436,13 @@ class Root
     static function _databases($i = null) {
         global $sky;
 
-        $db = $sky->_4 ?: 'main';
+        [$ware, $name] = explode('::', $db = $sky->_4 ?: 'main::core');
         $tpl = "?main=6&db=$db&dt=";
         $act = (int)!$sky->_6;
         $TOP = a('Summary', $tpl, $sky->_6 ? '' : 'class="active"');
         $TOP .= '<b style="margin:0 10px 0 30px">Migrations:</b> ';
         $out = $sel = [];
-        if ($list = Plan::mem_b(['main', "migration_*_$db.sql"])) {
+        if ($list = Plan::mem_b(['main', "migration_*_{$ware}_{$name}.sql"])) {
             $list = array_reverse($list);
             array_walk($list, function($v) use (&$TOP, &$sel, $tpl, $sky, &$act) {
                 static $i = 0;
@@ -464,12 +464,12 @@ class Root
             $TOP .= '<u>none</u>';
         }
         if (!$sky->_6) {
-            $DSN = SKY::$databases[$db]['dsn'] ?? ($db ? '' : (SKY::$databases['dsn'] ?? ''))
-                or $DSN = L::g('DSN erased at that point');
+            $databases = cfg([$ware])->databases;
+            $DSN = $databases['core' == $name ? '' : $name]['dsn'] ?? $databases['dsn'] ?? L::g('DSN erased at that point');
             if (!DEV)
                 $DSN = L::r('Production');
             try {
-                $dd = SQL::open($db = 'main' == $db ? '' : $db);
+                $dd = SQL::open($name, $ware);
             } catch (Throwable $e) {
                 $dd = false;
             }
@@ -496,7 +496,7 @@ class Root
                 echo "<h1>Can't connect to the database. DSN: $DSN</h1>";
             }
         } else {
-            $out = explode("\n", unl(trim(Plan::mem_g('migration_' . date("Y-m-d", $sky->_6) . "_$db.sql"))));
+            $out = explode("\n", unl(trim(Plan::mem_g('migration_' . date("Y-m-d", $sky->_6) . "_{$ware}_{$name}.sql"))));
             $i = 0;
             echo th(['#', 'SQL'], 'id="table"');
             foreach ($out as $v)

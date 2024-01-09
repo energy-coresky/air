@@ -78,32 +78,33 @@ final class SQL
         return $this;
     }
 
-    static function open($name = '', $p2 = false) {
-        if (isset(SQL::$connections[$name])) {
-            $dd = SQL::$connections[$name];
+    static function open($name = '', $ware = false, $p2 = false) {
+        'core' != $name or $name = '';
+        $ware or $ware = Plan::$ware;
+        if (isset(SQL::$connections[$ware][$name])) {
+            $dd = SQL::$connections[$ware][$name];
         } else {
-            '' === $name && !isset(SKY::$databases['']) ? ($cfg =& SKY::$databases) : ($cfg =& SKY::$databases[$name]);
+            $databases =& SKY::$plans[$ware]['app']['cfg']['databases'];
+            '' === $name && !isset($databases['']) ? ($cfg =& $databases) : ($cfg =& $databases[$name]);
             $driver = "dd_$cfg[driver]";
-            
             $dd = new $driver($cfg['dsn'], $cfg['pref'] ?? '');
             if (!$dd->conn)
                 return false;
             $dd->cname = $name;
-            SQL::$connections[$name] = $dd;
-            trace("name=$name, driver=$dd->name", 'DATABASE');
-
+            SQL::$connections[$ware][$name] = $dd;
             unset($cfg['dsn']);
             call_user_func(SQL::$dd_h, $dd, $name);
         }
         return $p2 || !SQL::$dd ? (SQL::$dd = $dd) : $dd;
     }
 
-    static function close($name = false) {
+    static function close($name = false, $ware = false) {
+        $ware or $ware = Plan::$ware;
         if ($name) {
-            SQL::$connections[$name]->close();
-            unset(SQL::$connections[$name]);
-        } else {
-            foreach (SQL::$connections as $dd)
+            SQL::$connections[$ware][$name]->close();
+            unset(SQL::$connections[$ware][$name]);
+        } else foreach (SQL::$connections as $ware) {
+            foreach ($ware as $dd)
                 $dd->close();
         }
     }

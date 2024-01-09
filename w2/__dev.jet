@@ -119,7 +119,7 @@ namespace {{$name}};
 class t_{{$name}} extends \Model_t
 {
     /* function head_y() {
-        return \SQL::open('');
+        return \SQL::open('core', 'main');
     }*/
 }
 ~
