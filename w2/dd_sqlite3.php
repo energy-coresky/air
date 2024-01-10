@@ -9,6 +9,7 @@ class dd_sqlite3 implements DriverDatabase
     public $conn;
     public $pref;
     public $cname;
+
     static $timezone = false;
 
     function __construct($filename, $pref) {

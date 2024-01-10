@@ -70,15 +70,15 @@ class DEV
                 || (!$list = $list['app']['cfg']['databases'] ?? false)
             )
                 continue;
+            $_ware = 1 == count($wares) ? '' : "$ware/";
             if (isset($list['driver']) || isset($list[''])) {
                 unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
-                $out["$ware/core"] = "$ware::core";
+                $out[$_ware . 'core'] = "$ware::core";
             }
             foreach ($list as $name => $_)
-                $out["$ware/$name"] = "$ware::$name";
+                $out[$_ware . $name] = "$ware::$name";
         }
         return $out;
-        //return array_combine([-1 => ''] + $k, [-1 => 'main'] + $k);
     }
 
     ///////////////////////////////////// DEV UTILITY /////////////////////////////////////
@@ -252,6 +252,7 @@ class DEV
             unset($_POST['dev'], $_POST['tune'], $_POST['cls'], $_POST['s'], $_POST['mode']);
             if ($_POST)
                 $wares[$name] += ['options' => $_POST];
+            file_exists("$dir/.coresky") or file_put_contents("$dir/.coresky", DIR);
         }
         Plan::app_p('wares.php', Boot::auto($wares));
         Plan::cache_d('sky_plan.php');

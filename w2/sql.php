@@ -78,14 +78,13 @@ final class SQL
         return $this;
     }
 
-    static function open($name = '', $ware = false, $p2 = false) {
-        'core' != $name or $name = '';
+    static function open($name = 'core', $ware = false, $p2 = false) {
         $ware or $ware = Plan::$ware;
         if (isset(SQL::$connections[$ware][$name])) {
             $dd = SQL::$connections[$ware][$name];
         } else {
             $databases =& SKY::$plans[$ware]['app']['cfg']['databases'];
-            '' === $name && !isset($databases['']) ? ($cfg =& $databases) : ($cfg =& $databases[$name]);
+            'core' === $name && !isset($databases['core']) ? ($cfg =& $databases) : ($cfg =& $databases[$name]);
             $driver = "dd_$cfg[driver]";
             $dd = new $driver($cfg['dsn'], $cfg['pref'] ?? '');
             if (!$dd->conn)

@@ -2,7 +2,7 @@
 
 class Boot
 {
-    use Processor;
+    use Processor;#2do ?
 
     const version = 0.888;
 
@@ -27,7 +27,7 @@ class Boot
             'cache' => ['path' => 'var/cache'],
             'gate' => ['path' => 'var/gate'],
             'jet' => ['path' => 'var/jet'],
-            $key = 'mem' => ['path' => 'var/mem'],
+            'mem' => ['path' => 'var/mem'],
         ];
 
         $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
@@ -165,7 +165,7 @@ class Boot
                 if (null === $n->key)
                     $this->halt('Key cannot be NULL');
                 $p =& $n->val;
-            } elseif ($w && true === $n->key && $c2 && !$n->voc) { # vocabulary key
+            } elseif ($w && true === $n->key && $c2 && !$n->voc && !$n->json) { # vocabulary key
                 $n->voc = $this->obj([
                     'mod' => &$n->mod,
                     'pad' => $pad_0 = $this->halt(false, $sps) . ' ' . $n->pad,

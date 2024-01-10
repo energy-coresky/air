@@ -7,11 +7,8 @@ class Console
     function __construct($argv = [], $found = []) {
         global $sky;
 
-        if ('console' != ($name = strtolower(get_class($this)))) {
-            'app' == $name or ($path = SKY::$plans[$name]['app']['path'])
-                && !file_exists("$path/.coresky") && file_put_contents("$path/.coresky", DIR);
+        if ('Console' != get_class($this))
             return $argv && call_user_func_array([$this, $argv], $found);
-        }
 
         self::$d = $found + [3 => $ns = $found[2] && 'air' != basename(getcwd())];
 
@@ -29,7 +26,7 @@ class Console
     }
 
     static function dd_h($dd, $name) {
-        if ('' === $name) {
+        if ('core' === $name) {
             require DIR_S . '/w2/mvc.php';
             Plan::app_r('mvc/common_c.php');
         }
@@ -316,13 +313,13 @@ class Console
         print_r($list);
     }
 
-    /** Validate Yaml files [ware] [file-name] [one of 0|1|2 0=var_export] */
+    /** Validate Yaml files [ware=main] [fn=config.yaml] [one of 0=var_export|1|2] */
     function c_y($ware = 'main', $fn = 'config.yaml', $func = 0) {
         $list = ['var_export', 'print_r', 'var_dump'];
         echo "File `$fn`, ware=$ware is: ";
         if (!$fn = Plan::_t([$ware, $fn])) {
             echo "not found";
-        } else {echo $fn;
+        } else {
             $list[$func](Boot::yml($fn, false));
         }
     }
@@ -348,7 +345,7 @@ class Console
     }
 
     /** Show table structure [tbl-name] [con-name] [ware] */
-    function c_ts($tbl = '', $name = '', $ware = '') {
+    function c_ts($tbl = '', $name = 'core', $ware = 'main') {
         if (!$tbl)
             return print 'Error: write a table name';
         if ($struct = SQL::open($name, $ware)->_struct($tbl))
@@ -359,12 +356,12 @@ class Console
     }
 
     /** Show tables [con-name] [ware] */
-    function c_t($name = '', $ware = '') {
+    function c_t($name = 'core', $ware = 'main') {
         echo 'result: ' . print_r(SQL::open($name, $ware)->_tables(), 1);
     }
 
     /** Execute SQL, example: sky sql "+select 1+1" [con-name] [ware] */
-    function c_sql($sql, $name = '', $ware = '') {
+    function c_sql($sql, $name = 'core', $ware = 'main') {
         $list = Rare::split($sql);
         foreach ($list as $sql)
             $out = SQL::open($name, $ware)->sqlf(trim($sql));

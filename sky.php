@@ -87,7 +87,7 @@ class SKY implements PARADISE
         SKY::$debug = DEBUG;
         define('NOW', date(DATE_DT));
         $this->bootstrap = true;
-        DEV && !CLI && DEV::init();
+        CLI or DEV && DEV::init();
     }
 
     function open($msg = 'OK') {

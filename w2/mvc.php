@@ -82,7 +82,7 @@ class Model_m extends MVC_BASE
 
     # for overload if needed
     function head_y() {
-        return SQL::$dd;// SQL::open()
+        return SQL::$dd;
     }
 }
 
