@@ -179,9 +179,16 @@ class Plan
                 new Boot($dc);
             }
             SKY::$plans['main']['cache']['dc'] = $dc;
+            SKY::$debug = DEBUG;
             self::locale();
         }
         return $cfg;
+    }
+
+    static function locale($lg = 'en') {
+        if ('en' == $lg && setlocale(LC_ALL, 'en_US.utf8', 'en_US.UTF-8'))
+            return 1;
+        return $lg ? setlocale(LC_ALL, "$lg.utf8", "$lg.UTF-8", $lg) : setlocale(LC_ALL, 0);
     }
 
     static function &cfg($name) {
@@ -199,12 +206,6 @@ class Plan
             }
         }
         return $p;
-    }
-
-    static function locale($lg = 'en') {
-        if ('en' == $lg && setlocale(LC_ALL, 'en_US.utf8', 'en_US.UTF-8'))
-            return 1;
-        return $lg ? setlocale(LC_ALL, "$lg.utf8", "$lg.UTF-8", $lg) : setlocale(LC_ALL, 0);
     }
 
     static function check_other() {

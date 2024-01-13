@@ -252,6 +252,7 @@ class Console
     /** Read tmemo cell from $_memory */
     function c_m($id = 8, $unhtml = false) {
         $s = sqlf('+select tmemo from $_memory where id=%d', $id);
+        //$id > 3 or $s = strip_tags($s);
         echo !$unhtml ? $s : (1 == $unhtml ? unhtml($s) : unhtml(unhtml($s)));
     }
 
@@ -320,7 +321,7 @@ class Console
         if (!$fn = Plan::_t([$ware, $fn])) {
             echo "not found";
         } else {
-            $list[$func](Boot::yml($fn, false));
+            $list[$func](Boot::yml($fn));
         }
     }
 

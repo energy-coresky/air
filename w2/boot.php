@@ -7,20 +7,22 @@ class Boot
     const version = 0.888;
 
     private static $dev = false;
+    private static $boot = false;
     private static $dir;
+
     private $at;
     private $array = [];
 
     static function auto($v, $more = '', $func = false) {
         $array = var_export($v, true);
-        if ($func)
-            call_user_func_array($func, [&$array]);
+        $func && call_user_func_array($func, [&$array]);
         return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn $array;\n";
     }
 
     function __construct($dc = false) {
         if (!$dc)
             return;
+        self::$boot = true;
         $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
         $plans = SKY::$plans + ($cfg['plans'] ?? []) + [
             'view' => ['path' => DIR_M . '/mvc/view'],
@@ -31,6 +33,7 @@ class Boot
         ];
 
         $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
+        $more .= "define('NOW', date(DATE_DT));\n";
         foreach ($cfg['define'] + ['WWW' => self::www()] as $key => $val)
             $more .= "define('$key', " . var_export($val, true) . ");\n";
         foreach ($cfg['ini_set'] as $key => $val)
@@ -47,33 +50,33 @@ class Boot
         $plans['main'] += ['ctrl' => $ctrl + self::controllers('main')];
         SKY::$plans['main']['cache']['dc'] = $dc;
         Plan::cache_s('sky_plan.php', self::auto($plans, $more, ['Boot', 'rewrite']));
-        SKY::$plans = Plan::cache_r('sky_plan.php');
         foreach ($ymls as $ware => $yml)
             self::cfg($yml, $ware);
+        SKY::$plans = Plan::cache_r('sky_plan.php');
     }
 
-    static function lint(string $in, $nofile = true) : bool {
+    static function lint(string $in, $is_file = true) : bool {
         try {
-            self::yml($in, $nofile);
+            self::yml($in, $is_file);
         } catch (Error $e) {
             return false;
         }
         return true;
     }
 
-    static function yml(string $in, $nofile = true) {
-        self::$dir = $nofile ? '???' : realpath(dirname($in));
+    static function yml(string $in, $is_file = true) {
+        self::$dir = $is_file ? realpath(dirname($in)) : '???';
+        if (defined('DEV'))
+            self::$dev = DEV;
         $yml = new Boot;
-        $yml->at = [$nofile ? false : $in, 0];
-        $yml->yml_text($nofile ? $in : file_get_contents($in));
+        $yml->at = [$is_file ? $in : false, 0];
+        $yml->yml_text($is_file ? file_get_contents($in) : $in);
         return $yml->array;
     }
 
     private function yml_text(string $in) {
         $p = ['' => &$this->array];
         $n = $this->obj();
-        if (defined('DEV'))
-            self::$dev = DEV;
         $add = function ($m) use (&$p) {
             if (is_string($m->key) && 'DEV.' == substr($m->key, 0, 4)) {
                 if (!self::$dev)
@@ -112,8 +115,10 @@ class Boot
         $v = $m->json ? json_decode($m->json, true) : self::scalar($m->mod ? $m->val : trim($m->val));
         if ($m->json && json_last_error())
             $this->halt('JSON failed');
-        if ('DEV' == $m->key)////////
+        if (self::$boot && 'DEV' == $m->key) {
+            self::$boot = false;
             self::$dev = $v;
+        }
         return $v;
     }
 
@@ -262,7 +267,7 @@ class Boot
 
     static function cfg(&$name, $ware = 'main') {
         if (null === $name) {
-            $name = is_file($ware) ? self::yml($ware, false) : [];
+            $name = is_file($ware) ? self::yml($ware) : [];
             return $name['core'] ?? [];
         } elseif (is_array($name)) {
             foreach ($name as $key => $val) {
@@ -270,13 +275,13 @@ class Boot
                     Plan::cache_s(['main', "cfg_{$ware}_$key.php"], self::auto($val));
             }
         } else {
-            $yml = self::yml(Plan::_t([$ware, 'config.yaml']), false)[$name];
+            $yml = self::yml(Plan::_t([$ware, 'config.yaml']))[$name];
             if (is_string($yml)) {
                 $ext = explode('.', $yml);
                 switch (end($ext)) {
                     case 'php': return Plan::_r([$ware, $yml]);
                     case 'yml':
-                    case 'yaml': return self::yml(Plan::_t([$ware, $yml]), false);
+                    case 'yaml': return self::yml(Plan::_t([$ware, $yml]));
                     case 'json': return json_decode(Plan::_g([$ware, $yml]), true);
                     default: return strbang(unl(Plan::_g([$ware, $yml])));
                 }
@@ -287,33 +292,33 @@ class Boot
 
     static function wares($fn, &$ctrl, &$class) {
         $ymls = [];
-        foreach (require $fn as $ware => $plan) {
+        foreach (require $fn as $ware => $ary) {
             unset($yml);
-            $cfg = self::cfg($yml, ($path = $plan['path']) . "/config.yaml");
-            $conf = $cfg['plans'];
-            if ($plan['type'] ?? false)
-                $conf['app']['type'] = 'pr-dev';
-            if ($plan['options'] ?? false)
-                $conf['app']['options'] = $plan['options'];
-            if (!self::$dev && in_array($conf['app']['type'], ['dev', 'pr-dev']))
+            $cfg = self::cfg($yml, ($path = $ary['path']) . "/config.yaml");
+            $plan = $cfg['plans'];
+            if ($ary['type'] ?? false)
+                $plan['app']['type'] = 'pr-dev';
+            if ($ary['options'] ?? false)
+                $plan['app']['options'] = $ary['options'];
+            if (!self::$dev && in_array($plan['app']['type'], ['dev', 'pr-dev']))
                 continue;
-            foreach ($plan['class'] as $cls) {
+            foreach ($ary['class'] as $cls) {
                 $df = 'default_c' == $cls;
                 if ($df || 'c_' == substr($cls, 0, 2)) {
                     $x = $df ? '*' : substr($cls, 2);
-                    $ctrl[$plan['tune'] ? "$plan[tune]/$x" : $x] = $ware;
+                    $ctrl[$ary['tune'] ? "$ary[tune]/$x" : $x] = $ware;
                 } else {
                     $class[$cls] = $ware;
                 }
             }
-            if ($plan['tune'])
-                $ctrl["$plan[tune]/*"] = $ware;
-            $app =& $conf['app'];
+            if ($ary['tune'])
+                $ctrl["$ary[tune]/*"] = $ware;
+            $app =& $plan['app'];
             unset($cfg['plans'], $app['require'], $app['class']);
             $app['cfg'] = $cfg;
             if ($yml)
                 $ymls[$ware] = $yml;
-            SKY::$plans[$ware] = ['app' => ['path' => $path] + $conf['app']] + $conf;
+            SKY::$plans[$ware] = ['app' => ['path' => realpath($path)] + $plan['app']] + $plan;
         }
         return $ymls;
     }

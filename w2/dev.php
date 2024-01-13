@@ -34,10 +34,10 @@ class DEV
             }
         }
 
-        if (!$stat = $sky->d_static)
-            return;
-
-        $stat = array_map(fn($v) => '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v, explode(',', $stat));
+        $stat = explode(',', $sky->d_static) + [-1 => realpath(DIR_S) . '/assets'];
+        foreach (array_keys(SKY::$plans) as $ware)
+            $stat[] = (Plan::_obj([$ware])->path) . '/assets';
+        $stat = array_map(fn($v) => '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v, array_unique($stat));
         $files = [];
         foreach ($stat as $one) {
             if ('' !== $one && is_dir($one)) {
@@ -211,7 +211,7 @@ class DEV
             unset($wares[$name]);
             
         } else { # Install
-            $conf = Boot::yml("$dir/config.yaml", false)['core']['plans'];
+            $conf = Boot::yml("$dir/config.yaml")['core']['plans'];
             $required = explode(' ', $conf['app']['require'] ?? '');
             $flags = explode(' ', $conf['app']['flags'] ?? '');
             if ('' == $required[0])
@@ -318,7 +318,7 @@ class DEV
                 $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
                 if (!is_dir($path) || !is_file($fn = "$path/config.yaml"))
                     return true;
-                $conf = Boot::yml("$path/config.yaml", false)['core']['plans'];
+                $conf = Boot::yml("$path/config.yaml")['core']['plans'];
                 return [
                     'name' => ucfirst($ware),
                     'type' => $conf['app']['type'],
