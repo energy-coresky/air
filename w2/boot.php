@@ -65,7 +65,7 @@ class Boot
     }
 
     static function yml(string $in, $is_file = true) {
-        self::$dir = $is_file ? realpath(dirname($in)) : '???';
+        self::$dir = $is_file ? dirname(realpath($in)) : '???';
         if (defined('DEV'))
             self::$dev = DEV;
         $yml = new Boot;
@@ -332,11 +332,8 @@ class Boot
     }
 
     static function www() {
-        foreach (['public', 'public_html', 'www', 'web'] as $dir) {
-            if (is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
-                return "$dir/";
-        }
-        foreach (glob('*') as $dir) {
+        for ($i = 4, $a = ['public', 'public_html', 'www', 'web']; $a; --$i or $a = glob('*')) {
+            $dir = array_shift($a);
             if ('_' != $dir[0] && is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
                 return "$dir/";
         }

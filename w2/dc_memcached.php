@@ -2,7 +2,7 @@
 
 function run_memcached(&$_code, $_data) {
     $_data && extract($_data->data, EXTR_REFS);
-    return eval(substr($_code, 5));
+    return eval(substr($_code, 5)) ?? 1; # simulate "require"
 }
 
 class dc_memcached implements DriverCache # 2do: https://www.php.net/manual/en/memcached.set.php

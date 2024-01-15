@@ -172,7 +172,7 @@ abstract class Controller extends MVC_BASE
 
     function __call($name, $args) {
         if (SKY::$debug)
-            Debug::not_found(get_class($this), $name);
+            Debug::not_found(substr(get_class($this), 0, -2));
         return 404;
     }
 }
@@ -516,37 +516,31 @@ class MVC extends MVC_BASE
 
     private function gate(&$class, &$action, &$gate) {
         $ctrl =& SKY::$plans['main']['ctrl'];
-        is_string($i0 = $this->_0) or $i0 = '*';
-        $x = false;
-        if (common_c::$tune) {
-            $set = isset($ctrl[$w0 = common_c::$tune . "/$i0"])
-                or $set = isset($ctrl[$w0 = $x = common_c::$tune . "/*"]); # default_c in ware
-        } else {
-            $set = isset($ctrl[$w0 = $i0]);
-        }
-        if ($set) {
-            Plan::$ware = Plan::$view = $ctrl[$w0];
-            if ($set = '*' !== $i0 && !$x) {
-                $class = 'c_' . (MVC::$tpl = $i0);
-                is_string($i0 = $this->_1) or $i0 = '*';
+        is_string($key = $this->_0) or $key = '*';
+        $func = function (&$x) use (&$ctrl, $key) {
+            $x = false;
+            if (!$y = common_c::$tune)
+                return $ctrl[$key] ?? false;
+            return $ctrl["$y/$key"] ?? $ctrl[$x = "$y/*"] ?? false;
+        };
+        $vars = DEV ? (object)DEV::gate($ctrl, $key, $func) : false;
+        if ($set = $func($x)) {
+            Plan::$ware = Plan::$view = $set;
+            if ($set = '*' !== $key && !$x) {
+                $class = 'c_' . (MVC::$tpl = $key);
+                is_string($key = $this->_1) or $key = '*';
             }
         }
         if (!$set)
             $class = (MVC::$tpl = 'default') . '_c';
-        $dst = Plan::gate_t($fn_dst = Plan::$ware . "-$class.php");
-        $recompile = false;
-        if (!$dst || DEV) {
-            if ('main' != Plan::$ware)
-                trace(Plan::$ware, 'WARE');
-            if ($recompile = !$dst || Plan::_mq("mvc/$class.php") > Plan::gate_m($fn_dst))
-                Plan::gate_p($fn_dst, Gate::instance()->parse(Plan::$ware, "mvc/$class.php", false));
+        if (!Plan::gate_rq($fn = Plan::$ware . "-$class.php", $vars)) {
+            Plan::gate_p($fn, Gate::instance()->parse(Plan::$ware, "mvc/$class.php", false));
+            Plan::gate_r($fn, $vars);
         }
         $x = $this->return ? 'j' : 'a';
-        $action = '' === $i0 ? "empty_$x" : $x . '_' . $i0;
-        Plan::gate_r($fn_dst, (object)['data' => ['recompile' => $recompile]]);
+        $action = '' === $key ? "empty_$x" : $x . '_' . $key;
         $cls_g = $class . '_G';
-        if (!method_exists($gate = new $cls_g, $action))
-            $action = "default_$x";
+        method_exists($gate = new $cls_g, $action) or $action = "default_$x";
     }
 
     function top() {

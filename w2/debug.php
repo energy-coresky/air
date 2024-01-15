@@ -94,19 +94,20 @@ class Debug
         return [$types, array_diff($all, array_keys($ary)), []];
     }
 
-    static function not_found($class, $name) {
+    static function not_found($class) {
         global $sky;
-        $msg = "Method `{$class}::$name()` not exist";
-        if ('default_c_R' == $class) {
-            is_string($i0 = $sky->_0) or $i0 = '*';
-            if (DEV && Plan::_t([Plan::$ware, "mvc/c_$i0.php"])) {
-                Plan::cache_d(['main', 'sky_plan.php']);
-                $sky->fly or jump(URI);
-            }
-            $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
-            $msg = preg_match("/^\w+$/", $i0)
-                ? "Controller `c_$i0.php` or method `default_c::{$x}_$i0()` not exist"
-                : "Method `default_c::default_$x()` not exist";
+
+        $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
+        if ('default_c' == $class) {
+            is_string($k = $sky->_0) or $k = '';
+            $msg = preg_match("/^\w+$/", $k)
+                ? "Controller `c_$k.php` or method `$class::{$x}_$k()` not exist"
+                : "Method `$class::default_$x()` not exist";
+        } else {
+            is_string($v = $sky->_1) or $v = '';
+            $msg = preg_match("/^\w+$/", $v)
+                ? "Methods `$class::{$x}_$v()` or `$class::default_$x()` not exist"
+                : "Method `$class::default_$x()` not exist";
         }
         trace($msg, (bool)DEV);
     }

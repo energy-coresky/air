@@ -2,7 +2,7 @@
 
 function run_redis(&$_code, $_data) {
     $_data && extract($_data->data, EXTR_REFS);
-    return eval(substr($_code, 5));
+    return eval(substr($_code, 5)) ?? 1; # simulate "require"
 }
 
 class dc_redis implements DriverCache
@@ -62,7 +62,7 @@ class dc_redis implements DriverCache
     }
 
     function set($key, $data) {
-        return $this->conn->set($this->path . $key, $data);
+        return $this->conn->set($this->path . $key, $data); // what retun?
     }
 
     function glob($mask = '*') {

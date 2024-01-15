@@ -74,7 +74,7 @@ class Plan
             $old_obj = $obj;
         }
         if ($obj->dc->setup($obj, 'q' === ($op[1] ?? 0) ? $a0 : false))
-            return $arg[1] ?? ('rq' == $op ? [] : ('gq' == $op ? '' : 0));
+            return $arg['rq' == $op ? 2 : 1] ?? ('rq' == $op ? [] : ('gq' == $op ? '' : 0));
 
         switch ($op) {
             case 'obj':

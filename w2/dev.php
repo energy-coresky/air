@@ -13,6 +13,33 @@ class DEV
         trace(["Gate error in $top->hnd", 'Gate error'], true, 2);
     }
 
+    static function gate(&$ctrl, $key, $func) {
+        $ware = ($set = $func($x)) ?: 'main';
+        $class = $set && '*' !== $key && !$x ? "c_$key" : 'default_c';
+        $msrc = Plan::app_mq([$ware, "mvc/$class.php"]);
+        if ('main' == $ware) {
+            //common_c::$tune = false;
+            if (!$set && ($mt = Plan::app_mq("mvc/c_$key.php"))) {
+                $msrc = $mt;
+                $ctrl[$key] = 'main'; # added new Controller
+                $class = "c_$key";
+                Plan::cache_d('sky_plan.php');
+            } elseif (!$msrc) {
+                if ('default_c' == $class)
+                    throw new Error('Controller `main::default_c` is mandatory');
+                unset($ctrl[$key]); # Controller deleted
+                $msrc = Plan::app_m('mvc/' . ($class = 'default_c') . '.php');
+                Plan::cache_d('sky_plan.php');
+            }
+        } else {
+            trace($ware, 'WARE');
+        }
+        $mdst = Plan::gate_mq("$ware-$class.php");
+        if ($drop = $mdst && $msrc > $mdst)
+            Plan::gate_d("$ware-$class.php"); # delete before recompile
+        return ['data' => ['recompile' => !$mdst || $drop]];
+    }
+
     static function init() {
         global $sky;
 
