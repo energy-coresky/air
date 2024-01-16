@@ -22,12 +22,12 @@ function view($in, $return = false, &$param = null) {
     trace("$mvc->no $mvc->hnd $layout^$mvc->body", $mvc->no ? 'SUB-VIEW' : 'TOP-VIEW', 1);
 
     if ($layout || $mvc->body)
-        $mvc->ob = Plan::jet_r(MVC::jet($mvc, $layout, $vars), $vars);
+        $mvc->ob = MVC::jet($mvc, $layout);
     if ($mvc->no)
         return $mvc->return ? $mvc->ob : null;
     global $sky;
-    if ($sky->fly || !$layout)
-        method_exists($sky, 'tail_x') ? $sky->tail_x(0, $mvc->ob) : Console::tail_x(0, $mvc->ob);
+    if ($sky instanceof HEAVEN && ($sky->fly || !$layout))
+        $sky->tail_x(0, $mvc->ob);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -371,37 +371,6 @@ class MVC extends MVC_BASE
         });
     }
 
-    static function jet($mvc, $layout, &$vars) {
-        global $sky;
-        $vars = new stdClass;
-        $vars->data['_vars'] = SKY::$vars;
-        $_vars =& $vars->data['_vars'];
-        if (is_string($mvc)) { # for __std.crash
-            $name = $mvc;
-            $_vars['sky'] = $sky;
-        } else {
-            $name = "_$mvc->body";
-            $mvc->no or MVC::vars($_vars, MVC::$_y, 'y_');
-            MVC::vars($_vars, $mvc->_v);
-            $_vars['sky'] = $mvc;
-        }
-        $fn = MVC::fn_parsed($layout, $name);
-        $ok = Plan::jet_t($fn) && (!DEV || $sky->d_jet_cache);
-        if ($ok && DEV) {
-            $mtime = Plan::jet_m($fn);
-            $jet = Plan::jet_g($fn);
-            $line = substr($jet, $n = strpos($jet, "\n"), strpos($jet, "\n", 2 + $n) - $n);
-            $files = explode(' ', trim($line, " \r\n#"));
-            foreach ($files as $one) {
-                if (!$ok = Plan::view_('m', "$one.jet") < $mtime)
-                    break; # recompilation required
-            }
-        }
-        $ok or new Jet($name, $layout, $fn, is_string($mvc) ? false : $mvc->return);
-        trace("JET: $fn, " . ($ok ? 'used cached' : 'recompiled'));
-        return $fn;
-    }
-
     static function last_modified($time, $use_site_ts = true, $func = null) {
         global $sky;
 
@@ -514,21 +483,41 @@ class MVC extends MVC_BASE
         }
     }
 
+    static function jet($mvc, $layout, $vars = []) {
+        $vars += SKY::$vars;
+        if (is_string($mvc)) { # for __std.crash
+            $fn = MVC::fn_parsed('', $name = $mvc);
+            $vars['sky'] = $GLOBALS['sky'];
+        } else {
+            $fn = MVC::fn_parsed($layout, $name = "_$mvc->body");
+            $mvc->no or MVC::vars($vars, MVC::$_y, 'y_');
+            MVC::vars($vars, $mvc->_v);
+            $vars['sky'] = $mvc;
+        }
+        DEV && DEV::jet($fn);
+        $vars = (object)['data' => ['_vars' => $vars]];
+        if (false !== ($str = Plan::jet_rq($fn, $vars, false)))
+            return $str;
+        new Jet($name, $layout, $fn, is_string($mvc) ? false : $mvc->return);
+        return Plan::jet_r($fn, $vars);
+    }
+
     private function gate(&$class, &$action, &$gate) {
         $ctrl =& SKY::$plans['main']['ctrl'];
-        is_string($key = $this->_0) or $key = '*';
-        $func = function (&$x) use (&$ctrl, $key) {
+        is_string($in = $this->_0) or $in = '*';
+        $func = function (&$x) use (&$ctrl, $in) {
             $x = false;
             if (!$y = common_c::$tune)
-                return $ctrl[$key] ?? false;
-            return $ctrl["$y/$key"] ?? $ctrl[$x = "$y/*"] ?? false;
+                return $ctrl[$in] ?? false;
+            return $ctrl["$y/$in"] ?? $ctrl[$x = "$y/*"] ?? false;
         };
-        $vars = DEV ? (object)DEV::gate($ctrl, $key, $func) : false;
+
+        $vars = DEV ? (object)DEV::gate($ctrl, $in, $func) : false;
         if ($set = $func($x)) {
             Plan::$ware = Plan::$view = $set;
-            if ($set = '*' !== $key && !$x) {
-                $class = 'c_' . (MVC::$tpl = $key);
-                is_string($key = $this->_1) or $key = '*';
+            if ($set = '*' !== $in && !$x) {
+                $class = 'c_' . (MVC::$tpl = $in);
+                is_string($in = $this->_1) or $in = '*';
             }
         }
         if (!$set)
@@ -538,7 +527,7 @@ class MVC extends MVC_BASE
             Plan::gate_r($fn, $vars);
         }
         $x = $this->return ? 'j' : 'a';
-        $action = '' === $key ? "empty_$x" : $x . '_' . $key;
+        $action = '' === $in ? "empty_$x" : $x . '_' . $in;
         $cls_g = $class . '_G';
         method_exists($gate = new $cls_g, $action) or $action = "default_$x";
     }

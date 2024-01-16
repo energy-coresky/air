@@ -181,10 +181,6 @@ class Console
         echo SKY::CORE . ' path:' . realpath(DIR_S);
     }
 
-    static function tail_x($exit, $stdout = '') {
-        //
-    }
-
     static function test($m1 = 5, $m2 = 100) {
         echo rand(0, $m2);
         sleep(rand(1, $m1));

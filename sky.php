@@ -549,13 +549,11 @@ class HEAVEN extends SKY
                     $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
                 }
                 $this->_static = false; # skip app css and js files
-                $fn = MVC::jet('__std.crash', '', $vars);
-                $vars->data['_vars'] += [
+                MVC::jet('__std.crash', '', [
                     'redirect' => $redirect,
                     'no' => $http_code,
                     'tracing' => $toggle ? $tracing : '',
-                ];
-                Plan::jet_r($fn, $vars);
+                ]);
             }
         });
         SQL::close();

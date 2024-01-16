@@ -13,26 +13,38 @@ class DEV
         trace(["Gate error in $top->hnd", 'Gate error'], true, 2);
     }
 
-    static function gate(&$ctrl, $key, $func) {
-        $ware = ($set = $func($x)) ?: 'main';
-        $class = $set && '*' !== $key && !$x ? "c_$key" : 'default_c';
-        $msrc = Plan::app_mq([$ware, "mvc/$class.php"]);
-        if ('main' == $ware) {
-            //common_c::$tune = false;
-            if (!$set && ($mt = Plan::app_mq("mvc/c_$key.php"))) {
-                $msrc = $mt;
-                $ctrl[$key] = 'main'; # added new Controller
-                $class = "c_$key";
-                Plan::cache_d('sky_plan.php');
-            } elseif (!$msrc) {
-                if ('default_c' == $class)
-                    throw new Error('Controller `main::default_c` is mandatory');
-                unset($ctrl[$key]); # Controller deleted
-                $msrc = Plan::app_m('mvc/' . ($class = 'default_c') . '.php');
-                Plan::cache_d('sky_plan.php');
+    static function jet($fn) {
+        if (!$php = Plan::jet_gq($fn))
+            return trace("$fn, recompiled", 'JET');
+        $fmt = Plan::jet_m($fn);
+        $line = substr($php, $n = strpos($php, "\n"), strpos($php, "\n", 2 + $n) - $n);
+        $files = explode(' ', trim($line, " \r\n#"));
+        foreach ($files as $one) {
+            if (Plan::view_('m', "$one.jet") > $fmt) {
+                Plan::jet_d($fn);
+                return trace("$fn, recompiled", 'JET');
             }
-        } else {
+        }
+        trace("$fn, used cached", 'JET');
+    }
+
+    static function gate(&$ctrl, $in, $func) {
+        $ware = ($set = $func($x)) ?: 'main';
+        $class = $set && '*' !== $in && !$x ? "c_$in" : 'default_c';
+        $msrc = Plan::app_mq([$ware, "mvc/$class.php"]);
+        if ('main' != $ware) {
             trace($ware, 'WARE');
+        } elseif (!$set && ($mt = Plan::app_mq("mvc/c_$in.php"))) {
+            $msrc = $mt;
+            $ctrl[$in] = 'main'; # added new Controller
+            $class = "c_$in";
+            Plan::cache_d('sky_plan.php');
+        } elseif (!$msrc) {
+            if ('default_c' == $class)
+                throw new Error('Controller `main::default_c` is mandatory');
+            unset($ctrl[$in]); # Controller deleted
+            $msrc = Plan::app_m('mvc/' . ($class = 'default_c') . '.php');
+            Plan::cache_d('sky_plan.php');
         }
         $mdst = Plan::gate_mq("$ware-$class.php");
         if ($drop = $mdst && $msrc > $mdst)
@@ -231,7 +243,7 @@ class DEV
         $name = basename($dir);
         if ($class = is_file($fn = "$dir/w3/ware.php") ? "$name\\ware" : false)
             require $fn;
-        $wares = (array)Plan::_rq('wares.php');
+        $wares = Plan::_rq('wares.php');
         if ('un' == ($mode = $_POST['mode'])) { # UnInstall
             if ($class)
                 return $this->j_ware($class, 'uninstall');
@@ -520,7 +532,6 @@ class DEV
                 'static' => ['', '', 'size="50"'],
                 'etc'  => ['Turn ON tracing for default_c::a_etc()', 'chk'],
                 'red_label' => ['Red label', 'radio', ['Off', 'On']],
-                'jet_cache' => ['Jet cache', 'radio', ['Off', 'On']],
                 ['Save', 'submit'],
             ]),
         ];
