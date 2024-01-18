@@ -25,12 +25,12 @@ class Console
         $this->__call("c_$argv[1]", array_slice($argv, 2));
     }
 
-    static function dd_h($dd, $name) {
-        if ('core' === $name) {
+    static function dd_h($dd, $name, $ware) {
+        if ('core' == $name && 'main' == $ware) {
             require DIR_S . '/w2/mvc.php';
             Plan::app_r('mvc/common_c.php');
         }
-        common_c::dd_h($dd, $name);
+        common_c::dd_h($dd, $name, $ware);
     }
 
     function __call($name, $args) {

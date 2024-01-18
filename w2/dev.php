@@ -34,22 +34,22 @@ class DEV
         $msrc = Plan::app_mq([$ware, "mvc/$class.php"]);
         if ('main' != $ware) {
             trace($ware, 'WARE');
-        } elseif ($x && ($_m = Plan::app_mq("mvc/c_$in.php"))) {
+        } elseif ($x && ($_m = Plan::app_mq("mvc/c_$in.php"))) { # added new Controller
             $msrc = $_m;
-            $p[$in] = 'main'; # added new Controller
+            $p[$in] = 'main';
             $class = "c_$in";
             Plan::cache_d('sky_plan.php');
-        } elseif (!$msrc) {
+        } elseif (!$msrc) { # Controller deleted
             if ('default_c' == $class)
                 throw new Error('Controller `main::default_c` is mandatory');
-            unset($p[$in]); # Controller deleted
+            unset($p[$in]);
             $msrc = Plan::app_m('mvc/' . ($class = 'default_c') . '.php');
             Plan::cache_d('sky_plan.php');
         }
         $mdst = Plan::gate_mq("$ware-$class.php");
         if ($drop = $mdst && $msrc > $mdst)
             Plan::gate_d("$ware-$class.php"); # delete before recompile
-        return ['data' => ['recompile' => !$mdst || $drop]];
+        return (object)['data' => ['recompile' => !$mdst || $drop]];
     }
 
     static function init() {
@@ -272,7 +272,7 @@ class DEV
                     'opt' => $class ? (new $class) : false,
                     'classes' => Globals::def($dir),
                     'name' => $name,
-                    'dir' => str_replace('\\', '/', $dir),
+                    'dir' => $dir,
                     'flags' => $flags,
                     'md' => $doc,
                 ];
@@ -282,7 +282,7 @@ class DEV
                     return $this->error('Must select at least one class');
             }
             $wares[$name] = [
-                'path' => str_replace('\\', '/', $dir),
+                'path' => $dir,
                 'class' => $cls,
                 'tune' => $_POST['tune'] ?? '',
             ];
@@ -347,7 +347,7 @@ class DEV
                     'class' => $wares[$name]['class'],
                     'cnt' => count($wares[$name]['class']),
                     'desc' => $this->desc($path = Plan::_obj([$name])->path),
-                    'path' => str_replace('\\', '/', $path),
+                    'path' => $path,
                 ];
             },
             'e_dir' => function ($row) use (&$dir) {
@@ -361,7 +361,7 @@ class DEV
                 return [
                     'name' => ucfirst($ware),
                     'type' => $conf['app']['type'],
-                    'path' => str_replace('\\', '/', $path),
+                    'path' => $path,
                     'desc' => $this->desc($path),
                 ];
             },
@@ -421,7 +421,7 @@ class DEV
         $html = is_file($fn = "$dir/README.md") ? Display::md(file_get_contents($fn)) : '';
         if (is_file($fn = "$dir/LICENSE"))
             $html .= Display::bash(file_get_contents($fn));
-        return ['html' => $html, 'dir' => str_replace('\\', '/', $dir)];
+        return ['html' => $html, 'dir' => $dir];
     }
 
     function j_inet() {

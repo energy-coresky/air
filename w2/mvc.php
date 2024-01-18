@@ -200,7 +200,7 @@ trait HOOK_C
         return new USER;
     }
 
-    static function dd_h($dd, $name = '') {
+    static function dd_h($dd, $name = 'core', $ware = 'main') {
         $dd->init();
     }
 
@@ -486,7 +486,7 @@ class MVC extends MVC_BASE
             }
             return $p[$in] ?? ($x = 'main');
         };
-        $vars = DEV ? (object)DEV::gate($p, $in, $ware) : false;
+        $vars = DEV ? DEV::gate($p, $in, $ware) : false;
         Plan::$view = Plan::$ware = $ware = $ware($x);
         $class = $x ? (MVC::$tpl = 'default') . '_c' : 'c_' . (MVC::$tpl = $in);
         $x or is_string($in = $this->_1) or $in = '*';

@@ -237,11 +237,11 @@ class Plan
     }
 
     static function echoTail($plus = '') {
-        if (self::$tail[2])
+        if (self::$tail[2] ?? false)
             $plus .= css(self::$tail[2]); # css
-        if (self::$tail[1])
+        if (self::$tail[1] ?? false)
             $plus .= js(self::$tail[1]);  # js
-        echo $plus . implode('', self::$tail[0]); # raw
+        echo $plus . implode('', self::$tail[0] ?? []); # raw
         HEAVEN::tail_t();
     }
 

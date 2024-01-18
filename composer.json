@@ -12,9 +12,7 @@
   "require": {
     "php": ">=7.4.0"
   },
-  "bin": [
-    "sky"
-  ],
+  "bin": ["sky"],
   "authors": [
     {
       "name": "Energy",

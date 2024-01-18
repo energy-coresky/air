@@ -92,7 +92,7 @@ final class SQL
             $dd->cname = $name;
             SQL::$connections[$ware][$name] = $dd;
             unset($cfg['dsn']);
-            call_user_func(SQL::$dd_h, $dd, $name);
+            call_user_func(SQL::$dd_h, $dd, $name, $ware);
         }
         return $p2 || !SQL::$dd ? (SQL::$dd = $dd) : $dd;
     }
