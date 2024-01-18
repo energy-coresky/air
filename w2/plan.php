@@ -8,6 +8,8 @@ class Plan
     static $see_also = [];
     static $var_path = ['', '?', [], '']; # var_name, property, array's-path
     static $pngdir = ''; # for DEV
+    static $head = [[], [], []];
+    static $tail = [[], [], []];
 
     static function set($ware, $func = false) {
         $prev = self::$ware;
@@ -126,7 +128,7 @@ class Plan
                 $fn = DIR_S . '/w2/' . $low . '.php';
                 return is_file($fn) ? require $fn : self::_rq("w3/$low.php") || self::vendor($a0);
             default:
-                throw new Error("self::$func(..) - method not exists");
+                throw new Error("Plan::$func(..) - method not exists");
         }
     }
 
@@ -206,6 +208,53 @@ class Plan
             }
         }
         return $p;
+    }
+
+    static function echoHead($plus = '') {
+        global $sky;
+
+        if (!$sky->_title) {
+            $v =& MVC::instance()->_v;
+            if (isset($v['y_h1']))
+                $sky->_title = $v['y_h1'];
+        }
+        if (!$sky->_tkd)
+            $sky->_tkd = [$sky->s_title, $sky->s_keywords, $sky->s_description];
+        $sky->_title = html($sky->_title ? "$sky->_title - {$sky->_tkd[0]}" : $sky->_tkd[0]);
+        if ($sky->_refresh) {
+            list($secs, $link) = explode('!', $sky->_refresh);
+            $sky->_head = $sky->_head . sprintf('<meta http-equiv="refresh" content="%d%s">', $secs, $link ? ";url=$link" : '');
+        }
+        self::$head or self::$head = [[], [], []];
+        echo "<title>$sky->_title</title>$plus";
+        echo tag(['csrf-token' => $sky->csrf, 'sky-home' => HOME, 'sky-tune' => common_c::$tune ?: '']); # meta tags
+        echo js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + self::$head[1]);
+        echo css(self::$head[2] + [-1 => '~/m/sky.css']);
+        if (!$sky->eview && 'crash' != $sky->_0)
+            echo js(common_c::head_h());
+        $sky->_head .= implode('', self::$head[0]);
+        echo '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->_head;
+    }
+
+    static function echoTail($plus = '') {
+        if (self::$tail[2])
+            $plus .= css(self::$tail[2]); # css
+        if (self::$tail[1])
+            $plus .= js(self::$tail[1]);  # js
+        echo $plus . implode('', self::$tail[0]); # raw
+        HEAVEN::tail_t();
+    }
+
+    static function head(...$in) { # $raw, $js = false, $css = false
+        for ($i = 0, $cnt = count($in); $i < $cnt; $i++) {
+            $in[$i] && array_splice(self::$head[$i], array_key_last(self::$head[$i]) ?? 0, 0, $in[$i]);
+        }
+    }
+
+    static function tail(...$in) { # $raw, $js = false, $css = false
+        for ($i = 0, $cnt = count($in); $i < $cnt; $i++) {
+            $in[$i] && array_splice(self::$tail[$i], array_key_last(self::$tail[$i]) ?? 0, 0, $in[$i]);
+        }
     }
 
     static function check_other() {
@@ -452,6 +501,11 @@ class Plan
             return $obj ? "$out\n}" : pre("$out\n}", '');
         }
     }
+}
+
+function e() {
+    $top = MVC::instance();
+    DEV && !SKY::s('gate_404') ? DEV::e($top) : $top->set(404);
 }
 
 class L {

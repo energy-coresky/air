@@ -2,8 +2,9 @@
 var sky = {
     id: 0,
     tz: null,
-    home: '/',
-    scrf: '',
+    home: '',
+    tune: '',
+    csrf: '',
     err: function(s) {
         alert(s);
     },
@@ -32,7 +33,6 @@ var sky = {
     },
     a: { // ajax
         body: null,
-        div: 'main',
         _0: 'main',
         _1: '',
         x_el: false,
@@ -57,17 +57,17 @@ var sky = {
     toggle: function(el) {
         $(el).html('&gt;&gt;&gt;' == $(el).html() ? '<<<' : '>>>').next().slideToggle();
     },
-    json: function(j_, obj, func, c_, jact) {
-        ajax(j_, JSON.stringify(obj), func, c_, jact, 'application/json; charset=UTF-8');
+    json: function(j_, obj, func, c_, tune) {
+        ajax(j_, JSON.stringify(obj), func, c_, tune, 'application/json; charset=UTF-8');
     },
-    post: function(url, data, func, jact, contentType) {
+    post: function(url, data, func, tune, contentType) {
         $.ajax({
             type: "POST",
             url: url,
             data: data,
             success: func,
             contentType: contentType || sky.a.contentType,
-            headers: {'X-Action-J': jact || 'main'}
+            headers: {'X-Action-J': tune || sky.tune}
         });
     },
     f: { // forms
@@ -200,15 +200,15 @@ function box(html) {
     sky.show();
 }
 
-function ajax(j_, postfields, func, c_, jact, contentType) {
+function ajax(j_, postfields, func, c_, tune, contentType) {
     if ('function' == typeof postfields) {
-        jact = c_;
+        tune = c_;
         c_ = func;
         func = postfields;
         postfields = '';
     }
     if ($.isArray(j_)) {
-        c_ = sky.a._0 = sky.a.div = j_[0];
+        c_ = sky.a._0 = j_[0];
         j_ = sky.a._1 = 1 == j_.length ? '' : j_[1];
     }
     var mem_x, to, ctrl = c_ || sky.a._0;//, ctrl0 = c_ || sky.a.div
@@ -241,20 +241,23 @@ function ajax(j_, postfields, func, c_, jact, contentType) {
             case 'object':   return func ? func.html(r) : null; // null is object
             default:         return r ? sky.err(r) : null;
         }
-    }, jact, contentType);
+    }, tune, contentType);
 }
 
 (function($) {
-    sky.home = $('meta[name="sky.home"]').attr('content');
-    sky.scrf = $('meta[name="csrf-token"]').attr('content');
+    sky.home = $('meta[name="sky-home"]').attr('content');
+    sky.tune = $('meta[name="sky-tune"]').attr('content');
+    sky.csrf = $('meta[name="csrf-token"]').attr('content');
 
-    var path = sky.home.replace(/\//g, "\\/");
-    var m = location.href.match(new RegExp('^.+?' + path + '(\\w*)[^\\?]*(\\?(\\w+).*?)?(#.*)?$', ''));
-    sky.a.div = m && m[1] ? m[1] : 'main';
-    sky.a._0  = 'adm' == sky.a.div && m[3] ? m[3] : sky.a.div;
+    let s0, qs = location.href.substr(sky.home.length), p = qs.split('?', 2);
+    '' === sky.tune || (p[0] = p[0].substr(1 + sky.tune.length));
+    s0 = p[0].split('/')[0];
+    sky.a._0 = '' === s0 ? (p.length == 2 ? p[1].split('#')[0].split('=')[0] : 'main') : s0;
+    p = sky.tune.split('/');
+    sky.tune = p[p.length - 1];
 
     $.ajaxSetup({
-        headers: {'X-Csrf-Token': sky.scrf}
+        headers: {'X-Csrf-Token': sky.csrf}
     });
 })(jQuery);
 

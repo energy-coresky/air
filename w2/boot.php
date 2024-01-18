@@ -11,7 +11,7 @@ class Boot
     private static $dir;
 
     private $at;
-    private $array = [];
+    private $array;
 
     static function auto($v, $more = '', $func = false) {
         $array = var_export($v, true);
@@ -20,6 +20,7 @@ class Boot
     }
 
     function __construct($dc = false) {
+        $this->array = [];
         if (!$dc)
             return;
         self::$boot = true;
@@ -66,8 +67,7 @@ class Boot
 
     static function yml(string $in, $is_file = true) {
         self::$dir = $is_file ? dirname(realpath($in)) : '???';
-        if (defined('DEV'))
-            self::$dev = DEV;
+        defined('DEV') && (self::$dev = DEV);
         $yml = new Boot;
         $yml->at = [$is_file ? $in : false, 0];
         $yml->yml_text($is_file ? file_get_contents($in) : $in);
@@ -311,8 +311,6 @@ class Boot
                     $class[$cls] = $ware;
                 }
             }
-            if ($ary['tune'])
-                $ctrl["$ary[tune]/*"] = $ware;
             $app =& $plan['app'];
             unset($cfg['plans'], $app['require'], $app['class']);
             $app['cfg'] = $cfg;

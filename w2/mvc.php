@@ -230,7 +230,7 @@ trait HOOK_D
     function a_crash() {
         global $sky;
         $sky->open();
-        SKY::$debug = $this->_static = 0;
+        SKY::$debug = Plan::$head = 0;
         $tracing = '';
         if (DEV) {
             $x = (int)('_' != $sky->_0[0] && SKY::d('tracing_toggle'));
@@ -388,36 +388,6 @@ class MVC extends MVC_BASE
         header('Last-Modified: ' . substr(gmdate('r', $time), 0, -5) . 'GMT');
     }
 
-    static function head($plus = '') {
-        global $sky;
-
-        if (!$sky->_title) {
-            $v =& MVC::instance()->_v;
-            if (isset($v['y_h1']))
-                $sky->_title = $v['y_h1'];
-        }
-        if (!$sky->_tkd)
-            $sky->_tkd = [$sky->s_title, $sky->s_keywords, $sky->s_description];
-        $sky->_title = html($sky->_title ? "$sky->_title - {$sky->_tkd[0]}" : $sky->_tkd[0]);
-        if ($sky->_refresh) {
-            list($secs, $link) = explode('!', $sky->_refresh);
-            $sky->_head = $sky->_head . sprintf('<meta http-equiv="refresh" content="%d%s">', $secs, $link ? ";url=$link" : '');
-        }
-        if ('' === $sky->_static) {
-            $fn = $sky->is_mobile ? 'mobile' : 'desktop';
-            $sky->_static = [[], ["~/m/$fn.js"], ["~/m/$fn.css"]]; # default app meta_tags, js, css files
-        } elseif (!$sky->_static) {
-            $sky->_static = [[], [], []];
-        }
-        echo "<title>$sky->_title</title>$plus";
-        echo tag($sky->_static[0] + ['csrf-token' => $sky->csrf, 'sky.home' => LINK]); # meta tags
-        echo js([-2 => '~/m/jquery.min.js', -1 => '~/m/sky.js'] + $sky->_static[1]);
-        echo css($sky->_static[2] + [-1 => '~/m/sky.css']);
-        if (!$sky->eview && 'crash' != $sky->_0)
-            echo js(common_c::head_h());
-        echo '<link href="' . PATH . 'm/etc/favicon.ico" rel="shortcut icon" type="image/x-icon" />' . $sky->_head;
-    }
-
     static function handle($method, &$param = null, $mandatory = false) {
         if (MVC::$ctrl = method_exists(MVC::$mc, $method) ? get_class(MVC::$mc) : false)
             return MVC::$mc->$method($param);
@@ -502,34 +472,32 @@ class MVC extends MVC_BASE
         return Plan::jet_r($fn, $vars);
     }
 
-    private function gate(&$class, &$action, &$gate) {
-        $ctrl =& SKY::$plans['main']['ctrl'];
+    private function gate(&$class, &$a, &$g) {
+        $p =& SKY::$plans['main']['ctrl'];
         is_string($in = $this->_0) or $in = '*';
-        $func = function (&$x) use (&$ctrl, $in) {
+        $ware = function (&$x) use (&$p, &$in) {
             $x = false;
-            if (!$y = common_c::$tune)
-                return $ctrl[$in] ?? false;
-            return $ctrl["$y/$in"] ?? $ctrl[$x = "$y/*"] ?? false;
-        };
-
-        $vars = DEV ? (object)DEV::gate($ctrl, $in, $func) : false;
-        if ($set = $func($x)) {
-            Plan::$ware = Plan::$view = $set;
-            if ($set = '*' !== $in && !$x) {
-                $class = 'c_' . (MVC::$tpl = $in);
-                is_string($in = $this->_1) or $in = '*';
+            if ($tune = common_c::$tune) {
+                if ($ware = $p["$tune/$in"] ?? $p[$x = "$tune/*"] ?? false)
+                    return $ware;
+                global $sky;
+                array_unshift($sky->surl, $in = $tune);
+                common_c::$tune = $x = false;
             }
-        }
-        if (!$set)
-            $class = (MVC::$tpl = 'default') . '_c';
-        if (!Plan::gate_rq($fn = Plan::$ware . "-$class.php", $vars)) {
-            Plan::gate_p($fn, Gate::instance()->parse(Plan::$ware, "mvc/$class.php", false));
+            return $p[$in] ?? ($x = 'main');
+        };
+        $vars = DEV ? (object)DEV::gate($p, $in, $ware) : false;
+        Plan::$view = Plan::$ware = $ware = $ware($x);
+        $class = $x ? (MVC::$tpl = 'default') . '_c' : 'c_' . (MVC::$tpl = $in);
+        $x or is_string($in = $this->_1) or $in = '*';
+
+        if (!Plan::gate_rq($fn = "$ware-$class.php", $vars, false)) {
+            Plan::gate_p($fn, Gate::instance()->parse($ware, "mvc/$class.php", false));
             Plan::gate_r($fn, $vars);
         }
         $x = $this->return ? 'j' : 'a';
-        $action = '' === $in ? "empty_$x" : $x . '_' . $in;
-        $cls_g = $class . '_G';
-        method_exists($gate = new $cls_g, $action) or $action = "default_$x";
+        $gate = $class . '_G';
+        method_exists($g = new $gate, $a = '' === $in ? "empty_$x" : "{$x}_$in") or $a = "default_$x";
     }
 
     function top() {

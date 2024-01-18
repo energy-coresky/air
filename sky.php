@@ -349,7 +349,7 @@ class HEAVEN extends SKY
         define('DOMAIN', $_SERVER['SERVER_NAME']);
         define('PORT', 80 == $_SERVER['SERVER_PORT'] ? '' : ':' . $_SERVER['SERVER_PORT']);
         define('PATH', preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']));
-        define('LINK', PROTO . '://' . DOMAIN . PORT . PATH);
+        define('HOME', PROTO . '://' . DOMAIN . PORT . PATH);
         define('URI', (string)substr($_SERVER['REQUEST_URI'], strlen(PATH))); # (string) required!
         header('Content-Type: text/html; charset=UTF-8');
 
@@ -398,8 +398,8 @@ class HEAVEN extends SKY
             if (1 == $cnt && '' === $this->surl[0]) {
                 $cnt = 0;
                 $this->surl = [];
-                if (0 == $this->method && ($jact = $_SERVER['HTTP_X_ACTION_J'] ?? false)) { // INPUT_POST 2do: delete the checks from gate
-                    'main' == $jact or common_c::$tune = $jact;
+                if (0 == $this->method && isset($_SERVER['HTTP_X_ACTION_J'])) { // INPUT_POST 2do: delete the checks from gate
+                    common_c::$tune = $_SERVER['HTTP_X_ACTION_J'];
                     $mvc->return = $this->fly = HEAVEN::J_FLY;
                 }
             }

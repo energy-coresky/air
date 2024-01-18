@@ -368,7 +368,7 @@ $(function() {
 @if($y_ware_dir)@use(`Ware` as bottom)~if
 <!doctype html><html>
 <head>@head<script>
-    sky.a._0 = sky.a.div = '{{$sky->_0}}'; sky.a._1 = '{{$sky->_1}}'; sky.a.uri = '{{URI}}'; sky.d.dev = {{(int)$sky->d_dev}};
+    sky.a._0 = '{{$sky->_0}}'; sky.a._1 = '{{$sky->_1}}'; sky.a.uri = '{{URI}}'; sky.d.dev = {{(int)$sky->d_dev}};
 </script>
 </head>
 <body>

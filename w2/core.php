@@ -1,10 +1,5 @@
 <?php
 
-function e() {
-    $top = MVC::instance();
-    DEV && !SKY::s('gate_404') ? DEV::e($top) : $top->set(404);
-}
-
 function sqlf(...$in) { # just more quick parsing, using printf syntax. No SQL injection!
     $sql = new SQL($in, 'parseF');
     return $sql->exec();
@@ -99,7 +94,7 @@ function jump($uri = '', $code = 302, $exit = true) {
         $sky->is_front or '' === $uri or '?' != $uri[0] or $uri = "adm$uri";
         if (common_c::$tune && $code)
             $uri = common_c::$tune . ('' === $uri || '?' == $uri[0] ? '' : '/') . $uri;
-        $sky->jump = LINK . $uri;
+        $sky->jump = HOME . $uri;
     }
 
     header("Location: $sky->jump", true, $code ?: 302);
@@ -345,7 +340,7 @@ function a($anchor, $href = null, $x = '') {
         $x .= ' onclick="' . $href[0] . '"';
         $href = 'javascript:;';
     }
-    $href or $href = $href === null ? "http://$anchor/" : LINK;
+    $href or $href = $href === null ? "http://$anchor/" : HOME;
     return sprintf('<a href="%s"%s>%s</a>', $href, $x ? ' ' . trim($x) : '', $anchor);
 }
 

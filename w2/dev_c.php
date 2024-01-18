@@ -27,7 +27,8 @@ class dev_c extends Controller
             return;
         if (1 == $this->method && '_trace' != $this->_0 && 'view' != $this->_1)
             $this->d_last_page = URI;
-        $this->_static = [[], ["~/m/dev.js"], ["~/m/dev.css"]];
+        Plan::$head = [[], ['~/m/dev.js'], ['~/m/dev.css']];
+
         return [
             'y_log' => $this->log_dt = SKY::$dd->sqlf('@select id, dt from $_memory where id>3 order by id limit 4'),
             'y_tx' => '_trace' == $this->_0 ? $this->_1 : 0,

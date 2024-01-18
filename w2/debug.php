@@ -226,7 +226,7 @@ class Debug
                         echo DEV ? a('P', PROTO . '://' . _PUBLIC) : L::r('P');
                     if (DEV) {
                         echo '_venus' == $sky->d_last_page
-                            ? a('V', PATH . '_venus?page=' . rawurlencode(LINK . URI))
+                            ? a('V', PATH . '_venus?page=' . rawurlencode(HOME . URI))
                             : a('D', ["dev('" . ($sky->d_last_page ?: '_dev') . "')"]);
                     }
                     echo a('A', PATH . $link);

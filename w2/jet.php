@@ -385,11 +385,11 @@ class Jet
             case 'csrf':
                 return '<?php echo hidden() ?>';
             case 'head':
-                return "<?php MVC::head($arg) ?>";
+                return "<?php Plan::echoHead($arg) ?>";
             case 'tail':
                 $vars = DEV ? ' Debug::vars(get_defined_vars(), $sky->no);' : '';
                 $this->tailed = true;
-                return "<?php$vars HEAVEN::tail_t() ?>";
+                return "<?php$vars Plan::echoTail($arg) ?>";
             case 'continue':
                 return $arg ? "<?php if ($arg): continue; endif ?>" : '<?php continue ?>';
             case 'break':
