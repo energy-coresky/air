@@ -14,18 +14,16 @@ class DEV
     }
 
     static function jet($fn) {
-        if (!$php = Plan::jet_gq($fn))
-            return trace("$fn, recompiled", 'JET');
-        $fmt = Plan::jet_m($fn);
-        $line = substr($php, $n = strpos($php, "\n"), strpos($php, "\n", 2 + $n) - $n);
-        $files = explode(' ', trim($line, " \r\n#"));
-        foreach ($files as $one) {
-            if (Plan::view_('m', "$one.jet") > $fmt) {
-                Plan::jet_d($fn);
-                return trace("$fn, recompiled", 'JET');
+        if ($php = Plan::jet_gq($fn)) {
+            $fmt = Plan::jet_m($fn);
+            $line = substr($php, $n = strpos($php, "\n"), strpos($php, "\n", 2 + $n) - $n);
+            $files = explode(' ', trim($line, " \r\n#"));
+            foreach ($files as $one) {
+                if (Plan::view_('m', "$one.jet") > $fmt)
+                    return Plan::jet_d($fn);
             }
         }
-        trace("$fn, used cached", 'JET');
+        return !$php;
     }
 
     static function gate(&$p, &$in, $ware) {

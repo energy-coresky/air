@@ -4,7 +4,7 @@ class Jet
 {
     use Processor;
 
-    const version = '1.03';
+    const version = '1.09';
 
     private $parsed = [];
     private $files = [];
@@ -33,12 +33,12 @@ class Jet
     static function inline($tpl, $_vars = []) {
         Jet::$tpl[] = [':', ''];
         $jet = new Jet([$tpl, ''], false, ':');
-        $_php = substr($jet->compile(true), 7);
+        $_php = substr($jet(true), 7);
         $_vars += ['sky' => $GLOBALS['sky']];
         return eval($_php);
     }
 
-    function __construct($name, $layout = false, $fn = false, $return = null) {
+    function __construct($name, $layout = false, $fn = false) {
         if ($fn) {
             Jet::$block = Jet::$use = Jet::$ptr = Jet::$inc = Jet::$verb = [];
             $this->parsed[Jet::$id = 1] = $this->tailed = '';
@@ -60,11 +60,9 @@ class Jet
 
         $this->parsed[++Jet::$id] = '';
         $this->parse($name, $marker ?? '');
-        if ($fn && ':' != $fn)
-            Plan::jet_p($fn, $this->compile($return));
     }
 
-    private function compile($return) {
+    function __invoke($return) { /* compile */
         uasort(Jet::$block, function ($a, $b) { # sort 0-depth blocks
             return $a[0] > $b[0] ? 1 : -1;
         });
@@ -107,7 +105,7 @@ class Jet
             Jet::$top .= "ob_start(); ";
         Jet::$top .= "extract(\$_vars, EXTR_REFS) ?>";
         if (DEV) {
-            Jet::$top .= "<?php\ntrace('TPL: $list');";
+            Jet::$top .= "<?php\ntrace(\$_recompile ? 'recompiled' : 'used cached', 'JET'); trace('TPL: $list');";
             Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || HEAVEN::J_FLY == $sky->fly && !$sky->no))';
             Jet::$top .= "\nthrow new Error('Return status do not match for file: ' . __FILE__) ?>";
         }

@@ -349,15 +349,8 @@ class MVC extends MVC_BASE
         end(MVC::$stack)->body = $body;
     }
 
-    static function fn_parsed($layout, $body) {
-        global $sky;
-        return ($sky->eview ?: Plan::$view) . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
-    }
-
     static function vars(&$all, &$new, $pref = false) {
         array_walk($new, function (&$v, string $k) use (&$all, $pref) {
-            if ('' === $k)
-                throw new Error("Cannot use empty varname");
             $p = strlen($k) > 1 && '_' == $k[1] ? $k[0] : false;
             if ('e' === $p) {
                 $all[$k] = new eVar($v);
@@ -453,22 +446,24 @@ class MVC extends MVC_BASE
         }
     }
 
+    static function fn_parsed($layout, $body) {
+        global $sky;
+        return ($sky->eview ?: Plan::$view) . '-' . ($sky->is_mobile ? 'm' : 'p') . "-{$layout}-{$body}.php";
+    }
+
     static function jet($mvc, $layout, $vars = []) {
         $vars += SKY::$vars;
-        if (is_string($mvc)) { # for __std.crash
-            $fn = MVC::fn_parsed('', $name = $mvc);
-            $vars['sky'] = $GLOBALS['sky'];
-        } else {
-            $fn = MVC::fn_parsed($layout, $name = "_$mvc->body");
+        if ($i = $mvc instanceof MVC) {
             $mvc->no or MVC::vars($vars, MVC::$_y, 'y_');
             MVC::vars($vars, $mvc->_v);
-            $vars['sky'] = $mvc;
         }
-        DEV && DEV::jet($fn);
-        $vars = (object)['data' => ['_vars' => $vars]];
+        $fn = MVC::fn_parsed($layout, $name = $i ? "_$mvc->body" : $mvc);
+        if (DEV)
+            $vars += ['_recompile' => DEV::jet($fn)];
+        $vars = (object)['data' => ['_vars' => ['sky' => $i ? $mvc : $GLOBALS['sky']] + $vars]];
         if (false !== ($str = Plan::jet_rq($fn, $vars, false)))
             return $str;
-        new Jet($name, $layout, $fn, is_string($mvc) ? false : $mvc->return);
+        Plan::jet_p($fn, (new Jet($name, $layout, $fn))($i ? $mvc->return : false));
         return Plan::jet_r($fn, $vars);
     }
 
