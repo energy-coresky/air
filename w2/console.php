@@ -341,20 +341,20 @@ class Console
         echo '2do';
     }
 
-    /** Show table structure [tbl-name] [con-name] [ware] */
-    function c_ts($tbl = '', $name = 'core', $ware = 'main') {
+    /** Show table structure [tbl-name] [ware-main] [con-name] */
+    function c_ts($tbl = '', $ware = 'main', $name = 'core') {
         if (!$tbl)
             return print 'Error: write a table name';
         if ($struct = SQL::open($name, $ware)->_struct($tbl))
             $struct = array_map(function ($ary) {
                 return $ary[2];
             }, $struct);
-        echo 'result: ' . print_r($struct, 1);
+        echo "$ware::$name.$tbl " . print_r($struct, 1);
     }
 
-    /** Show tables [con-name] [ware] */
-    function c_t($name = 'core', $ware = 'main') {
-        echo 'result: ' . print_r(SQL::open($name, $ware)->_tables(), 1);
+    /** Show tables [ware=main] [con-name] */
+    function c_t($ware = 'main', $name = 'core') {
+        print("$ware::$name " . print_r(SQL::open($name, $ware)->_tables(), 1));
     }
 
     /** Execute SQL, example: sky sql "+select 1+1" [con-name] [ware] */

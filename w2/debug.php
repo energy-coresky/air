@@ -99,15 +99,15 @@ class Debug
 
         $x = HEAVEN::J_FLY == $sky->fly ? 'j' : 'a';
         if ('default_c' == $class) {
-            is_string($k = $sky->_0) or $k = '';
+            is_string($k = $sky->_0) or $k = '*';
             $msg = preg_match("/^\w+$/", $k)
                 ? "Controller `c_$k.php` or method `$class::{$x}_$k()` not exist"
-                : "Method `$class::default_$x()` not exist";
+                : "Method " . ('' === $k ? "`$class::empty_$x()` or " : '') . "`$class::default_$x()` not exist";
         } else {
-            is_string($v = $sky->_1) or $v = '';
+            is_string($v = $sky->_1) or $v = '*';
             $msg = preg_match("/^\w+$/", $v)
-                ? "Methods `$class::{$x}_$v()` or `$class::default_$x()` not exist"
-                : "Method `$class::default_$x()` not exist";
+                ? "Method `$class::{$x}_$v()` or `$class::default_$x()` not exist"
+                : "Method " . ('' === $v ? "`$class::empty_$x()` or " : '') . "`$class::default_$x()` not exist";
         }
         trace($msg, (bool)DEV);
     }

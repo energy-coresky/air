@@ -147,7 +147,7 @@ assets/{{$name}}.js dp /*  */
     ~if
     <h2>Select classes:</h2>
     @loop($classes as $cls)
-        @continue(strpos($cls, '\\'))
+        @continue(strpos($cls, '\\') || $name == strtolower($cls))
         <dl><dt></dt>
         <dd><label><input checked type="checkbox" name="cls[]" value="{{$cls}}"> {{$cls}}</label><br></dd>
         </dl>

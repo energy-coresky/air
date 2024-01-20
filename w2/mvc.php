@@ -461,6 +461,7 @@ class MVC extends MVC_BASE
         if (DEV)
             $vars += ['_recompile' => DEV::jet($fn)];
         $vars = (object)['data' => ['_vars' => ['sky' => $i ? $mvc : $GLOBALS['sky']] + $vars]];
+
         if (false !== ($str = Plan::jet_rq($fn, $vars, false)))
             return $str;
         Plan::jet_p($fn, (new Jet($name, $layout, $fn))($i ? $mvc->return : false));
