@@ -43,34 +43,16 @@ class Install
                     throw new Error("Install: file `$orig` not exists");
             }
             $bin = file_get_contents($fn);
-            if (DIR_M . '/conf.php' == $fn) {
-                if ('SQLite3' != SKY::$dd->name) {
-                    $s = ['', '', ''];
-                    $i = 0;
-                    foreach (token_get_all($bin) as $x) {
-                        list ($lex, $x) = is_array($x) ? $x : [0, $x];
-                        if (!$i && T_VARIABLE == $lex && '$databases' == $x)
-                            $i++;
-                        if (1 == $i && ';' == $x)
-                            $i++;
-                        $s[$i] .= $x;
-                    }
-                    eval("$s[1];");
-                    $databases['pref'] = $databases['dsn']  = '';
-                    $s[1] = '$databases = ' . var_export($databases, true);
-                    $bin = implode('', $s);
-                }
+            if (DIR_M . '/config.yaml' == $fn && 'SQLite3' != SKY::$dd->name) {
+                $bin = preg_replace("/\b(pref|dsn):\s*[^,}\r\n]+/", '$1: ""', $bin);
+            } elseif ('bootstrap.php' == $fn) {
                 $bin = preg_replace("/(DIR_S')[^;]+;/", '$1, \'main\');', $bin);
-                $size = strlen($bin);
             } elseif (WWW . 'index.php' == $fn) {
                 self::$return = true;
                 if ($_ = common_c::make_h(true))
                     $bin = $_;
-                $size = strlen($bin);
-            } else {
-                $size = filesize($fn);
             }
-            fwrite($handle, "FILE: $orig $size\n");
+            fwrite($handle, "FILE: $orig " . strlen($bin) . "\n");
             fwrite($handle, $bin . "\n");
         }
         fclose($handle);

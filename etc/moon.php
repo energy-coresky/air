@@ -69,7 +69,11 @@ class Moon
             $this->mode = $_POST['mode'] % 2;
             parse_str($_POST['step'], $step);
             key($step) ? ($this->step = $step) : ($this->_fn = current($step));
-            $this->{"_$this->_func"}();
+            for ($prev = $this->_func; $prev == $this->_func; ) {
+                $this->{"_$this->_func"}();
+                if ($this->err || $this->success)
+                    break;
+            }
             exit;
         }
     }
@@ -202,24 +206,11 @@ class Moon
     }
 
     function conf(&$data, $len) {
-        $data = substr($data, 0, $len);
-        $s = ['', '', ''];
-        $i = 0;
-        foreach (token_get_all($data) as $x) {
-            list ($lex, $x) = is_array($x) ? $x : [0, $x];
-            if (!$i && T_VARIABLE == $lex && '$databases' == $x)
-                $i++;
-            if (1 == $i && ';' == $x)
-                $i++;
-            $s[$i] .= $x;
-        }
-        define('DEV', 0);
-        eval("$s[1];");
         $port = $_POST['port'] && 3306 != $_POST['port'] ? ":$_POST[port]" : '';
-        $databases['dsn']  = "$_POST[name] $_POST[host]$port $_POST[user] $_POST[password]";
-        $databases['pref'] = $_POST['prefix'];
-        $s[1] = '$databases = ' . var_export($databases, true);
-        $data = implode('', $s);
+        $dsn = "dsn: '$_POST[name] $_POST[host]$port $_POST[user] $_POST[password]'";
+        $data = substr($data, 0, $len);
+        $data = preg_replace('/\bdsn: ""/', $dsn, $data);
+        $data = preg_replace('/\bpref: ""/', 'pref: ' . ($_POST['prefix'] ?: '""'), $data);
     }
 
     function _file() {
@@ -249,7 +240,7 @@ class Moon
             if (false === ($write = @fopen($fn, 'wb')))
                 return $err("Cannot open file `$fn` for writing");
             $len = strlen($data = substr($data, $len_m0 = strlen($m[0])));
-            if ($conf = 'main/conf.php' == $m[1] && isset($_POST['name']))
+            if ($conf = 'main/config.yaml' == $m[1] && isset($_POST['name']))
                 $this->conf($data, $m[2]);
             if (false === @fwrite($write, $data, $conf ? strlen($data) : $m[2]))
                 return $err("Error writing file `$fn`", $write);
@@ -320,10 +311,10 @@ class Moon
     }
 
     function drop_dir($top) {
-        $ary = Rare::walk_dirs($top);
+        $ary = self::walk_dirs($top);
         rsort($ary);
         foreach ($ary as $dir) {
-            foreach (Rare::list_path($dir, 'is_file') as $file) {
+            foreach (self::list_path($dir, 'is_file') as $file) {
                 if (!@unlink($file))
                     return $this->err = "Cannot delete file `$file`";
                 $this->log("UNLINK: $file");
@@ -356,8 +347,8 @@ class Moon
                     return $this->err = "Cannot move `$fn` to `$dst/$fn`";
             }
         }
-        $ary = Rare::list_path("$this->dir/$src");
-        $ary = array_merge($ary, Rare::list_path("$this->dir/$src/$this->web"));
+        $ary = self::list_path("$this->dir/$src");
+        $ary = array_merge($ary, self::list_path("$this->dir/$src/$this->web"));
         sort($ary);
         foreach ($ary as $fn) { # move anew/aold to prod
             $rel = substr($fn, 6 + strlen($this->dir));
@@ -393,10 +384,10 @@ class Moon
     }
 
     function walk_parent() {
-        $ary = Rare::list_path($this->dir);
+        $ary = self::list_path($this->dir);
         in_array($dir = "$this->dir/anew", $ary) or $ary[] = $dir;
         in_array($dir = "$this->dir/aold", $ary) or $ary[] = $dir;
-        $ary = array_merge($ary, Rare::list_path("$this->dir/$this->web"));
+        $ary = array_merge($ary, self::list_path("$this->dir/$this->web"));
         sort($ary);
         $list = [];
         $t1 = '%s <i style="color:green;font-size:10px">%s</i>';
@@ -416,7 +407,7 @@ class Moon
                 if (!file_exists("../$one")) {
                     $s = '<u style="color:red">directory not exists!</u>';
                 } else {
-                    $s = ($nem = count(Rare::list_path("../$one")))
+                    $s = ($nem = count(self::list_path("../$one")))
                         ? '<u style="color:red">directory is not empty!</u>'
                         : '<u style="color:green">directory is empty</u>';
                     $s .= " <a href=\"javascript:;\" onclick=\"$$.etc('$one[1]')\">[DROP]</a>";
@@ -499,11 +490,6 @@ class Moon
             echo '<h2 style="color:red">No package files found!</h2>';
         printf('<br>PHP_VERSION: %s, shell_exec: %s', PHP_VERSION, function_exists('shell_exec') ? 'OK' : 'FAILED');
     }
-}
-
-class Rare
-{
-    static public $u_svn_skips = [];
 
     static function list_path($dir, $func = '', $skip = [], $up = false) {
         if ('/' === $dir)
@@ -517,7 +503,7 @@ class Rare
                     continue;
                 $path = $dir == '.' ? $name : "$dir/$name";
                 if (!$func || $func($path)) {
-                    if (in_array($name, self::$u_svn_skips) || in_array($path, $skip))
+                    if (in_array($path, $skip))
                         continue;
                     $list[] = $path;
                 }
@@ -560,8 +546,8 @@ $moon = new Moon;
 
 if ('cli' == PHP_SAPI):
     ob_end_flush();
-    if (version_compare(PHP_VERSION, '7.0.0') < 0) {
-        echo "\nPHP version required >= 7.0.0\n";
+    if (version_compare(PHP_VERSION, '7.4.0') <= 0) {
+        echo "\nPHP version required >= 7.4.0\n";
         exit;
     }
     if (1 == $argc) {
@@ -723,7 +709,7 @@ var $$ = {
     },
     cli: function(fn) {
         $.post('moon.php', {cli:fn}, function(r) {
-            location.href = 'index.php';
+            location.href = location.href.substr(0, location.href.length - 8);
         });
     },
     run: function(el) {

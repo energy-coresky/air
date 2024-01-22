@@ -22,7 +22,7 @@ See the [wiki section](https://github.com/energy-coresky/air/wiki) (russian only
 
 AB (absolute busy) application is product of InfoParc http://absolutebusy.com/ moved into SKY.
 AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
-After installation and using MySQL database try switch to SQLite (edit main/conf.php)
+After installation and using MySQL database try switch to SQLite (edit main/config.yaml)
 
 ### How to install
 

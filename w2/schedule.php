@@ -51,6 +51,10 @@ class Schedule
         }
     }
 
+    function http_tests() {
+        //2do
+    }
+
     function visitors() {
         $this->sql('delete from visitors where (dt_l + interval $. day < now()) and uid is null', $this->n_clear_nc);
     }

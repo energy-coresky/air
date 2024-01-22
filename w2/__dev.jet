@@ -16,29 +16,28 @@
 #._801
 
 #.files //////////////////////////////////////////////////////////////////////////////
-conf.php dpv <.php
+config.yaml dpv #initial
+core:
+  plans:
+    app:
+      type: {{$type}}
 
-return [
-    'view' => ['path' => __DIR__ . '/{{'view' == $type ? 'view' : 'mvc'}}'],
-    'app' => [
-        'type' => '{{$type}}',
-@if('prod' == $type)        'flags' => 'tune',~if
-    ],
-];
+      flags: {{'prod' == $type ? 'tune' : ''}}
+
+    view: {path: __DIR__/{{'view' == $type ? 'view' : 'mvc'}}}
 
 ~
 README.md dpv # {{ucfirst($name)}}
 
 Ware type: {{$type}}
+ app
 ~
 w3/{{$name}}.php dpv <.php
 
 class {{ucfirst($name)}} extends Console
 {
     function __construct($argv = [], $found = []) {
-        Plan::$ware = '{{$name}}';
-        parent::__construct($argv, $found);
-        Plan::$ware = 'main';
+        Plan::set('{{$name}}', fn() => parent::__construct($argv, $found));
     }
 
     /** {{ucfirst($name)}} hello world test */
@@ -96,7 +95,7 @@ class ware extends \Wares
 {
     function form() {
         return [
-            'connection' => ['Database connection', 'select', $this->databases()],
+            'connection' => ['Database connection', 'select', \DEV::databases(['main'])],
             'table' => ['Table name', '', '', '{{$name}}'],
         ];
     }
