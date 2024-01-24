@@ -160,13 +160,13 @@ DATABASES ({{count($databases)}})
     {!$x[1]!}.php @if($x[2])({{$x[2]}})~if
   </a>
 ~loop
-#.m_gate.header ------------------------------------------------------------------------------
+#.m_gate.header ------------------------------------------------------------------------------ 'v-body'
 <h4><span style="color:#4338ca">CONTROLLER</span>:
 @if($ctrl[$wc][0])
   <span style="color:#000">{{strtoupper($ctrl[$wc][1])}}.PHP</span>
 @else
   <span style="color:red">{{strtoupper($ctrl[$wc][1])}}.PHP</span> (not exists)
-  <a style="font-weight:normal" @href(ajax('{{$wc}}',{},'v-body','_delete'))>Delete</a>
+  <a style="font-weight:normal" @href(ajax('{{$wc}}',{},() => {location.href = '_gate'},'_delete'))>Delete</a>
 ~if
 <a class="@active($cshow)" style="font-weight:normal"
   @href($(this).toggleClass('active'); dev('{!$wc!}',{s:$(this).hasClass('active')?1:0}))>Show code</a>
@@ -176,7 +176,7 @@ DATABASES ({{count($databases)}})
 #use(.header)
 @use(.m_gate)
 <div id="gate">
-@if($wc) <!-- delete ??? -->
+@if($wc)
     <div style="display:none" id="c23-tpl">@view(c23_edit)</div>
     @loop($e_func)
     <fieldset>
@@ -309,9 +309,6 @@ $(function() {
     #if('_map' != :0)
     if ('{{$act}}') {
         $('#v-body div:eq(0)').prepend(`<h1 class="g-err">Gate error in "{{$ctrl[$wc][1]}}::{{$act}}()"</h1>`);
-            //'<div style="margin:0 10px;">'+
-            //window.parent.document.getElementById('trace-x').innerHTML// + '</div>'
-//        $('h1 span.gate-err').html('{{$ctrl[$wc][1]}}::{{$act}}');
         sky.d.files();
         setTimeout(function() {
             var el = false;

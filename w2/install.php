@@ -4,8 +4,10 @@ class Install
 {
     private $mem = false;
     private $fn = false;
+
     const DONE = 'Done.';
-    static $return = false;
+
+    static $cli = true;
 
     static function run($page) {
         $page or $page = 'database';
@@ -21,7 +23,7 @@ class Install
         if ($var) {
             if (is_array($default))
                 return isset($this->mem[$var]) ? explode(' ', $this->mem[$var]) : $default;
-            return $this->mem[$var] ?: $default;
+            return $this->mem[$var] ?? $default;
         }
         return $this->mem;
     }
@@ -43,14 +45,14 @@ class Install
                     throw new Error("Install: file `$orig` not exists");
             }
             $bin = file_get_contents($fn);
-            if (DIR_M . '/config.yaml' == $fn && 'SQLite3' != SKY::$dd->name) {
+            if (DIR_M . '/config.yaml' == $fn && 'SQLite3' != SKY::$dd->name && isset($_POST['sql'])) {
                 $bin = preg_replace("/\b(pref|dsn):\s*[^,}\r\n]+/", '$1: ""', $bin);
             } elseif ('bootstrap.php' == $fn) {
                 $bin = preg_replace("/(DIR_S')[^;]+;/", '$1, \'main\');', $bin);
             } elseif (WWW . 'index.php' == $fn) {
-                self::$return = true;
-                if ($_ = common_c::make_h(true))
-                    $bin = $_;
+                self::$cli = false;
+                $bin = common_c::make_h(true);
+                common_c::make_h(false);
             }
             fwrite($handle, "FILE: $orig " . strlen($bin) . "\n");
             fwrite($handle, $bin . "\n");
@@ -176,13 +178,19 @@ class Install
             $this->fn = 'var/' . $_POST['fn'] . '.sky';
             list(, $exf, $mkdir, $dirs) = $this->get_files(1);
             array_shift($mkdir); # skip `.`
-            foreach ($dirs as $one)
-                foreach ($this->filelist($one) as $fn)
-                    isset($exf[$fn]) or $this->skip_file($fn) or $max++;
+            foreach ($dirs as $one) {
+                foreach ($this->filelist($one) as $fn) {
+                    if (isset($exf[$fn]) || $this->skip_file($fn))
+                        continue;
+                    $max++;
+                    $this->filep($fn);
+                }
+            }
             $head = "type app\nmod_required $head";
             $head .= "\ndesc " . escape($_POST['desc']);
             $head .= "\nversion $_POST[vphp] $and $_POST[vphp2] $_POST[vmysql]\nwww " . WWW;
             $head .= "\ncompiled " . date_default_timezone_get() . ' ' . $sky->s_version;
+            $head .= "\nfilep " . $this->filep();
             $sql = isset($_POST['sql']) ? $this->memo('count_tr', '0.0.') : '0.0.';
             $head .= "\nftrd A^$max.$sql" . count($mkdir);
             $head .= "\n\nDIRS: " . strlen($mkdir = implode(' ', $mkdir)) . "\n$mkdir";
@@ -227,6 +235,16 @@ class Install
             'max' => $max,
             'step' => "$n\t$max\t$cf\t" . implode(' ', $dirs),
         ]);
+    }
+
+    function filep($fn = null) {
+        static $ary = [];
+        if (null === $fn)
+            return implode(' ', $ary);
+        $cnt = count($x = explode('/', $fn));
+        if ($cnt > 2 || $cnt == 2 && WWW != $x[0] . '/')
+            return;
+        $ary[] = $fn;
     }
 
     function filelist($path) {
@@ -305,13 +323,13 @@ class Install
         ];
     }
 
-    static function make($forward = true, Array $plus = []) {
+    static function make($forward = true, array $plus = []) {
         global $sky;
         static $index;
 
         $fn = WWW . 'index.php';
         if (!$forward)
-            return file_put_contents($fn, $index);
+            return self::$cli && file_put_contents($fn, $index);
         $sky->memory(11, 'i');
         $tpl = "\n    function (\$ok) {\n%s    },";
         $other = '';
@@ -322,13 +340,13 @@ class Install
             $other .= sprintf($tpl, implode('', $code));
         }
         $file = view('_inst.first_run', [
-            'vphp' => $sky->i_vphp ?: '5.0',
+            'vphp' => $sky->i_vphp ?: '7.3',
             'vph2' => $sky->i_vphp2 ?: '9.0',
             'exts' => $sky->i_modules ?: 'ctype intl mbstring tokenizer',
             'tests' => $other,
         ]);
         $index = file_get_contents($fn);
         $file = strtr($file, ['<.' => '<?', '.>' => '?>']) . $index;
-        return self::$return ? $file : file_put_contents($fn, $file);
+        return self::$cli ? file_put_contents($fn, $file) : $file;
     }
 }

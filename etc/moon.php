@@ -71,7 +71,7 @@ class Moon
             key($step) ? ($this->step = $step) : ($this->_fn = current($step));
             for ($prev = $this->_func; $prev == $this->_func; ) {
                 $this->{"_$this->_func"}();
-                if ($this->err || $this->success)
+                if ($this->err || $this->success || 'etc' == $this->_func)
                     break;
             }
             exit;
@@ -175,7 +175,7 @@ class Moon
     }
 
     function _dir() {
-        list($head, $pos, $data) = $this->head($this->_fn);
+        [$head, $pos, $data] = $this->head($this->_fn);
         preg_match("/^A\^(\d+)\.(\d+)\.(\d+)\.\d+/", $head['ftrd'], $h);
         if (!preg_match("/^DIRS: (\d+)\n([^\n]+)\n/", $data, $m) || !$h)
             return $this->err = "File `$this->_fn` is corrupted";
@@ -298,7 +298,7 @@ class Moon
             $q = $this->sql("select tmemo from {$pref}memory where id=3");
             $lines = explode("\n", str_replace(["\r\n", "\r"], "\n", mysqli_fetch_row($q)[0]));
             foreach ($lines as &$line) {
-                list($k, $v) = explode(' ', $line, 2);
+                [$k, $v] = explode(' ', $line, 2);
                 if ($flag = 'version' == $k) {
                     $line = "version $this->_ver";
                     break;
@@ -368,8 +368,8 @@ class Moon
         $this->msg = "Moved from `$src` to production successfully";
     }
 
-    function _etc() { // refresh n o move
-        $exf = explode('&', urldecode($_POST['exf']));
+    function _etc() { // _com= refresh|n|o|move
+        $exf = 'refresh' == $this->_com ? $this->preset() : explode('&', urldecode($_POST['exf']));
         if (1 == strlen($this->_com))
             $this->drop_dir($this->dir . ('o' == $this->_com ? '/aold' : '/anew'));
         if ('move' == $this->_com)
@@ -381,6 +381,18 @@ class Moon
             $this->pd .= '<div>' . sprintf($tpl, $v[1] ? ' disabled checked' : $ch, $fn);
             $this->pd .= ($v[1] ? $v[1] : $v[0]) . '</div>';
         }
+    }
+
+    function preset() {
+        [$head,, $data] = $this->head($this->_fn);
+        preg_match("/^DIRS: (\d+)\n([^\n]+)\n/", $data, $m);
+        $ln = strlen($x = $head['www']);
+        $ary = explode(' ', "$m[2] $head[filep]");
+        $www = basename(__DIR__);
+        $dirs = array_map(fn($v) => $x == substr($v, 0, $ln) ? "$www/" . substr($v, $ln) : $v, $ary);
+        $d1 = array_map(fn($v) => "$www/$v", self::list_path('.'));
+        $d2 = array_map(fn($v) => substr($v, 3), self::list_path('..'));
+        return array_diff(array_merge($d1, $d2), $dirs);
     }
 
     function walk_parent() {
@@ -427,7 +439,7 @@ class Moon
         $pos = strpos($data, "\n\n");
         $ary = false === $pos ? ['corr 1'] : explode("\n", substr($data, 0, $pos));
         foreach ($ary as $line) {
-            list ($k, $v) = explode(' ', $line, 2);
+            [$k, $v] = explode(' ', $line, 2);
             if ($k == 'mod_required')
                 $v = explode(' ', $v);
             $head[$k] = $v;
@@ -450,7 +462,7 @@ class Moon
             'ftrd' => 'Added files, tables, rows dirs (FTRD)',
         ];
         echo '<table width="100%" style="background:silver;margin-top:20px">';
-        list($head) = $this->head($fn);
+        [$head] = $this->head($fn);
         $tpl = ' - <a style="font:bold 15px monospace" href="javascript:;" onclick="$$.select(%s)">Install</a>';
         $tpl .= function_exists('shell_exec')
             ? ' or.. <a style="" href="javascript:;" onclick="$$.cli(%s)">Run in console</a>'

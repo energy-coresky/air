@@ -66,7 +66,7 @@ class Boot
     }
 
     static function yml(string $in, $is_file = true) {
-        self::$dir = $is_file ? str_replace('\\', '/', dirname(realpath($in))) : '???';
+        self::$dir = $is_file ? str_replace('\\', '/', dirname($in)) : '???';
         defined('DEV') && (self::$dev = DEV);
         $yml = new Boot;
         $yml->at = [$is_file ? $in : false, 0];
@@ -294,8 +294,9 @@ class Boot
         $ymls = [];
         foreach (require $fn as $ware => $ary) {
             unset($yml);
-            $path = str_replace('\\', '/', realpath($ary['path']));
-            $cfg = self::cfg($yml, "$path/config.yaml");
+            $path = str_replace('\\', '/', $ary['path']);
+            if (!$cfg = self::cfg($yml, "$path/config.yaml"))
+                continue; ////?
             $plan = $cfg['plans'];
             if ($ary['type'] ?? false)
                 $plan['app']['type'] = 'pr-dev';

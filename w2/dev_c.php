@@ -51,10 +51,9 @@ class dev_c extends Controller
     }
 
     function __call($func, $args) {
-        $x = explode('_', $func, 2);
-        $set = isset(SKY::$plans[$name = $x[1] ?? '']);
-        $x = $x[0];
-        if ($set && 'dev' == SKY::$plans[$name]['app']['type']) {
+        [$x, $name] = explode('_', $func, 2) + [1 => ''];
+
+        if ('dev' == (SKY::$plans[$name]['app']['type'] ?? '')) {
             trace($name, 'WARE');
             $this->eview = $this->last_ware = $this->d_last_ware = Plan::$ware = Plan::$view = $name;
             if (1 == $this->method) {
@@ -124,10 +123,10 @@ class dev_c extends Controller
     }
 
     function x_databases() {
-        #$list = ['main' => 0] + SKY::$databases;
-        #unset($list['driver'], $list['pref'], $list['dsn'], $list['']);
-        //return ['databases' => array_keys($list), 'is_merc' => 'mercury' == Plan::$ware];
-        return ['databases' => DEV::databases(), 'is_merc' => 'mercury' == Plan::$ware];
+        return [
+            'databases' => DEV::databases(),
+            'is_merc' => 'mercury' == Plan::$ware,
+        ];
     }
 
     # ---------------- j_ + a_, see self::__call(..)
@@ -176,7 +175,7 @@ class dev_c extends Controller
     function j_delete() {
         self::save($this->_w, $this->_c, $this->_a);
         $this->_a or $this->_c = '';
-        return $this->j_gate();
+        return $this->j_gate('c');
     }
 
     function j_edit() {
