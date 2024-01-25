@@ -7,8 +7,9 @@ class Boot
     const version = 0.888;
 
     private static $dev = false;
-    private static $boot = false;
+    private static $boot = 0;
     private static $dir;
+    private static $const = [];
 
     private $at;
     private $array;
@@ -23,8 +24,9 @@ class Boot
         $this->array = [];
         if (!$dc)
             return;
-        self::$boot = true;
+        self::$boot = 1;
         $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
+        self::$const = $cfg['define'];
         $plans = SKY::$plans + ($cfg['plans'] ?? []) + [
             'view' => ['path' => DIR_M . '/mvc/view'],
             'cache' => ['path' => 'var/cache'],
@@ -35,7 +37,7 @@ class Boot
 
         $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
         $more .= "define('NOW', date(DATE_DT));\n";
-        foreach ($cfg['define'] + ['WWW' => self::www()] as $key => $val)
+        foreach ($cfg['define'] as $key => $val)
             $more .= "define('$key', " . var_export($val, true) . ");\n";
         foreach ($cfg['ini_set'] as $key => $val)
             $more .= "ini_set('$key', " . var_export($val, true) . ");\n";
@@ -78,12 +80,12 @@ class Boot
         $p = ['' => &$this->array];
         $n = $this->obj();
         $add = function ($m) use (&$p) {
-            if (is_string($m->key) && 'DEV.' == substr($m->key, 0, 4)) {
+            if (is_string($m->key) && 'DEV+' == substr($m->key, 0, 4)) {
                 if (!self::$dev)
                     return;
                 $m->key = substr($m->key, 4);
             }
-            $v = $this->yml_val($m);
+            $v = $this->yml_val($m, $ptr);
             if (array_key_exists($m->pad, $p)) {
                 array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
                 $z =& $p[$m->pad];
@@ -93,6 +95,8 @@ class Boot
             }
             true === $m->key ? ($z[] = $v) : ($z[$m->key] = $v);
             $p[$m->pad] =& $z;
+            if ($ptr)
+                self::$const =& $z[$m->key];
         };
 
         foreach (explode("\n", unl($in)) as $key => $in) {
@@ -111,13 +115,23 @@ class Boot
         is_null($n->key) or $add($n);
     }
 
-    private function yml_val($m) {
-        $v = $m->json ? json_decode($m->json, true) : self::scalar($m->mod ? $m->val : trim($m->val));
-        if ($m->json && json_last_error())
-            $this->halt('JSON failed');
-        if (self::$boot && 'DEV' == $m->key) {
-            self::$boot = false;
-            self::$dev = $v;
+    private function yml_val($m, &$ptr) {
+        $ptr = false;
+        if ($m->json) {
+            $v = json_decode($m->json, true);
+            if (json_last_error())
+                $this->halt('JSON failed');
+        } else {
+            $v = $this->scalar($m->mod ? $m->val : trim($m->val));
+            if (1 == self::$boot) {
+                if ('define' == $m->key) {
+                    $v = ['WWW' => self::www()];
+                    $ptr = true;
+                } elseif ('DEV' == $m->key) {
+                    self::$boot = 2;
+                    self::$dev = $v;
+                }
+            }
         }
         return $v;
     }
@@ -139,7 +153,7 @@ class Boot
                 $t = substr($in, $j); # set rest of line
                 $x = $szl;
             } elseif ('"' == $in[$j] || "'" == $in[$j]) {
-                $x = self::str($in, $j) or $this->halt('Incorrect string');
+                $x = self::str($in, $j, $szl) or $this->halt('Incorrect string');
                 $t = substr($in, $j, $x -= $j);
             } elseif ('#' == $in[$j] && $w2 && ('|' !== $n->mod || strlen($pad) < $pad_1)) {
                 # cut comment
@@ -165,7 +179,7 @@ class Boot
                 $sps = $t;
                 $n = $this->obj([
                     'pad' => $pad_0 = $pad,
-                    'key' => $c2 ? self::scalar(substr($p, ($char ?? 0) + $szv, -1)) : true,
+                    'key' => $c2 ? $this->scalar(substr($p, ($char ?? 0) + $szv, -1)) : true,
                 ]);
                 if (null === $n->key)
                     $this->halt('Key cannot be NULL');
@@ -174,13 +188,13 @@ class Boot
                 $n->voc = $this->obj([
                     'mod' => &$n->mod,
                     'pad' => $pad_0 = $this->halt(false, $sps) . ' ' . $n->pad,
-                    'key' => self::scalar(substr($p, 0, -1)),
+                    'key' => $this->scalar(substr($p, 0, -1)),
                 ]);
                 if (null === $n->voc->key)
                     $this->halt('Key cannot be NULL');
                 $p =& $n->voc->val;
             } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
-                $n->json .= '' === ($p = trim($p)) ? $t : self::scalar($p, true, ':' != $t) . $t;
+                $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, true, ':' != $t) . $t;
                 $p = '';
             } elseif ('' === $p && ('{' == $t || '[' == $t) && !$n->mod) {
                 $n->mod = $n->json = $t;
@@ -230,23 +244,29 @@ class Boot
         return (object)$in;
     }
 
-    static function str(string &$in, $p) {
-        $quot = $in[$p++] . '\\';
-        for ($len = strlen($in); true; $p += $bs % 2) {
-            $p += strcspn($in, $quot, $p);
-            if ($p >= $len)
-                return false;
-            if ('\\' != $in[$p])
-                return ++$p;
-            $p += ($bs = strspn($in, '\\', $p));
+    private function var(string &$in) {
+        if (!preg_match("/^\\$([A-Z\d_]+)(.*)$/", $in, $m))
+            return;
+        [, $key, $rest] = $m;
+        if ($rest && ($bkt = self::bracket($rest))) {
+            $rest = substr($rest, strlen($bkt));
+            $in = self::env($key, substr($bkt, 1, -1));
+        } elseif ('SELF' == $key) {
+            $in = self::$dir;
+        } elseif (defined($key)) {
+            $in = constant($key);
+            'WWW' != $key or $in = substr($in, 0, -1);
+        } elseif (isset(self::$const[$key])) {
+            $in = self::$const[$key];
+            'WWW' != $key or $in = substr($in, 0, -1);
+        } else {
+            return;
         }
+        '' === $rest or $in = (string)$in . $rest;
     }
 
-    static function scalar(string $in, $json = false, $notkey = true) {
-        if ($in && '$' == $in[0] && preg_match("/^\\$([A-Z\d_]+)(\(.+)$/", $in, $m)) {
-            [, $key, $in] = $m;
-            $in = self::env($key, substr($in, 1, -1));
-        }
+    private function scalar(string $in, $json = false, $notkey = true) {
+        $in && '$' == $in[0] && $this->var($in);
         if ('' === $in || 'null' === $in || '~' === $in)
             return $json ? 'null' : null;
         $true = 'true' === $in;
@@ -258,8 +278,6 @@ class Boot
             return $json ? '"' . substr($in, 1, -1) . '"' : substr($in, 1, -1);
         if ($notkey && is_numeric($in))
             return $json ? $in : (is_num($in) ? (int)$in : (float)$in);
-        if ('__DIR__' == substr($in, 0, 7))
-            $in = self::$dir . substr($in, 7);
         if (!$json)
             return $in;
         return '"' . str_replace('\\', '\\\\', $in) . '"';
@@ -376,5 +394,36 @@ class Boot
             }
         }
         return $list;
+    }
+
+    static function bracket(string $in, $b = '(') {
+        if ('' === $in || $b != $in[0])
+            return '';
+        $close = ['(' => ')', '[' => ']', '{' => '}', '<' => '>'];
+        $quot = $b . $close[$b] . '\'"';
+        for ($p = $z = 1, $len = strlen($in); true; ) {
+            $p += strcspn($in, $quot, $p);
+            if ($p >= $len) {
+                return '';
+            } elseif ("'" == $in[$p] || '"' == $in[$p]) {
+                if (!$p = self::str($in, $p, $len))
+                    return '';
+            } else {
+                $b == $in[$p++] ? $z++ : $z--;
+                if (!$z)
+                    return substr($in, 0, $p);
+            }
+        }
+    }
+
+    static function str(string &$in, $p, $len) {
+        for ($quot = $in[$p++] . '\\'; true; $p += $bs % 2) {
+            $p += strcspn($in, $quot, $p);
+            if ($p >= $len)
+                return false;
+            if ('\\' != $in[$p])
+                return ++$p;
+            $p += ($bs = strspn($in, '\\', $p));
+        }
     }
 }

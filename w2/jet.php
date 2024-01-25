@@ -295,7 +295,7 @@ class Jet
                 $in = $m[4];
             } else {
                 $this->parsed[Jet::$id] .= $this->echos($m[1]);
-                $in = substr($m[4], strlen($br = Rare::bracket($m[4])));
+                $in = substr($m[4], strlen($br = Boot::bracket($m[4])));
                 $code = $this->statements($m[3], $br ? substr($br, 1, -1) : '', '~' == $m[2], $in, $br);
                 $this->parsed[Jet::$id] .= null === $code ? $m[2] . $m[3] . $br : $code;
             }
@@ -507,7 +507,7 @@ class Jet
         } else {
             if ($type = (int)is_int($arg)) { // 0 for @use, 1 for #use
                 $s1 = substr($str, $pos = 4 + $arg);
-                $arg = ($br = Rare::bracket($s1)) ? substr($br, 1, -1) : '';
+                $arg = ($br = Boot::bracket($s1)) ? substr($br, 1, -1) : '';
             }
             if (!preg_match('/^(\.()(\w+))$/', $arg, $m) && !preg_match($regexp, $arg, $m))
                 return $type ? $pos : null;

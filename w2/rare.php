@@ -47,6 +47,7 @@ class Rare
         return common_c::mail_h(trim($message), $ary, trim($subject), trim($to));
     }
 
+    //2do rewrite with Boot::str(..)
     static function split(string $in, $b = ';', $sql_comment = true) {
         $out = [];
         $s = $rest = '';
@@ -73,31 +74,6 @@ class Rare
             $out[] = $s;
         }
         return $out;
-    }
-
-    static function bracket(string $in, $b = '(') {
-        if ('' === $in || $b != $in[0])
-            return '';
-        $close = ['(' => ')', '[' => ']', '{' => '}', '<' => '>'];
-        $s = '';
-        $i = 0;
-        if ('{' == $b)
-            $in = 'function' . $in;
-        foreach (token_get_all("<?php $in") as $v) {
-            if (is_array($v)) {
-                if (!$i && in_array($v[0], [T_OPEN_TAG, T_FUNCTION]))
-                    continue;
-                $v = $v[1];
-            } elseif ($b == $v) {
-                $i++;
-            } elseif ($close[$b] == $v) {
-                $i--;
-            }
-            $s .= $v;
-            if (!$i)
-                return $s;
-        }
-        return '';
     }
 
     static function strcut($str, $n = 100) {
