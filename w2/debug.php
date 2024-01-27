@@ -217,7 +217,7 @@ class Debug
 
         if ($sky->show_pdaxt || DEV) {
             $link = $user && $user->pid
-                ? ($user->u_uri_admin ? $user->u_uri_admin : Admin::$adm['first_page'])
+                ? ($user->u_uri_admin ? $user->u_uri_admin : $sky->adm_first)
                 : 'auth';
             echo '<span class="pdaxt">';
             if (DEV || 1 == $user->pid) {
@@ -239,5 +239,37 @@ class Debug
             }
             echo "$plus</span>";
         }
+    }
+
+    static function out($out, $is_html = true, $c2 = '30%') { # check Debug::out() for XSS
+        if (is_array($out)) {
+            echo th(0 === $is_html ? ['','',''] : ['', 'NAME', 'VALUE'], 'id="table"');
+            $i = 0;
+            foreach ($out as $k => $v) {
+                is_string($v) or is_int($v) or $v = print_r($v, true);
+                if ($is_html)
+                    $v = html($v);
+                echo td([[1 + $i, 'style="width:5%"'], [$k, 'style="width:' . $c2 . '"'], $v], eval(zebra));
+            }
+            echo '</table>';
+        } else {
+            echo pre($out, 'id="pre-out"');
+        }
+    }
+
+    static function drop_all_cache() {
+        global $sky;
+        $result = 1;
+        foreach (['cache', 'gate', 'jet'] as $plan)
+            $result &= call_user_func(['Plan', "{$plan}_da"], '*');
+        if (SKY::$dd) {
+            $s = (int)substr($sky->s_statp, 0, -1) + 1;
+            $sky->s_statp = $s > 9999 ? '1000p' : $s . 'p';
+        }
+        return $result;
+    }
+
+    static function warm_all() {
+        //2do: sky_plan, gate, jet, svg, assets
     }
 }

@@ -41,17 +41,19 @@ class Console
             if (is_file(DIR_M . '/w3/app.php'))
                 $src += ['app' => new ReflectionClass('App')];
             foreach (SKY::$plans as $w => $_) {
-                if ('main' == $w || !Plan::_rq([$w, "w3/$w.php"]))
+                if ('main' == $w || !Plan::_rq([$w, "w3/app.php"]))
                     continue;
-                $r = new ReflectionClass($w);
+                $r = new ReflectionClass("$w\\app");
                 if (($pr = $r->getParentClass()) && 'Console' == $pr->name)
                     $src[$w] = $r;
             }
         }
 
         $com = substr($name, 2);
-        if ($com && isset($src[$com]) && 'c_' == substr($name, 0, 2))
-            return new $com('a_' . array_shift($args), $args);
+        if ($com && isset($src[$com]) && 'c_' == substr($name, 0, 2)) {
+            $class = $src[$com]->getName();
+            return new $class('a_' . array_shift($args), $args);
+        }
 
         $ary = [
             's' => 'Run PHP web-server',
@@ -323,7 +325,7 @@ class Console
 
     /** Drop all cache */
     function c_drop() {
-        echo Admin::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
+        echo Debug::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
     }
 
     /** Warm all cache */

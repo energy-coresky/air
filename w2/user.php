@@ -125,9 +125,6 @@ class USER
 
             $this->row['u'] = $this->id ? SKY::ghost('u', $this->row['umemo'], ['umemo' => "update \$_users set @@ where id=$this->id"]) : [];
 
-            if (2 == $this->auth && $sky->is_front && Admin::section($sky->lref))
-                $this->u_uri_admin = $sky->lref;
-
         } else {
             if (0 == $sky->method) # INPUT_POST
                 $sky->error_no = 12;

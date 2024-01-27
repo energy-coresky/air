@@ -55,9 +55,7 @@ class DEV
 
         $sky->dev = new DEV;
         $vars = Plan::mem_gq('dev_vars.txt');
-        SKY::ghost('d', $vars, function ($s) {
-            Plan::mem_p(['main', 'dev_vars.txt'], $s);
-        });
+        SKY::ghost('d', $vars, fn($s) => Plan::mem_p(['main', 'dev_vars.txt'], $s));
         if ('' === $sky->d_crash_to)
             $sky->d_crash_to = 8;
 

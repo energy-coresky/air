@@ -92,7 +92,7 @@ class dev_c extends Controller
     }
 
     function j_drop() {
-        echo Admin::drop_all_cache() ? 'OK' : 'Error';
+        echo Debug::drop_all_cache() ? 'OK' : 'Error';
     }
 
     function a_png() {

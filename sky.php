@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.532 2024-01-24T08:54:27+02:00 energy';
+    const CORE = '0.533 2024-01-27T14:38:46+02:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -192,7 +192,7 @@ class SKY implements PARADISE
         return SKY::$mem[$char][3];
     }
 
-    static function sql($char, $return = true) {
+    static function flush($char, $return = true) {
         $x =& SKY::$mem[$char];
         if ('s' == $char && !$x[1]) # protect if SQL select failed
             return;
@@ -263,7 +263,7 @@ class SKY implements PARADISE
     function tail_ghost() {
         $this->ghost = true;
         foreach (SKY::$mem as $char => &$v)
-            $v[0] && $v[2] && SKY::sql($char, false);
+            $v[0] && $v[2] && SKY::flush($char, false);
     }
 
     function shutdown($web = false) {

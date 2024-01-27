@@ -145,7 +145,7 @@ class Language
                     $ary =& $this->act($_lg, $_page, 'list');
                     foreach ($in->list as $id => $s)
                         $ary[$id] = explode(' ', $ary[$id], 2)[0] . " $s";
-                    $this->t->update(['tmemo' => SKY::sql('i')]);
+                    $this->t->update(['tmemo' => SKY::flush('i')]);
                 }
                 $pages = $this->t->all(qp('lg=$+ order by id', DEFAULT_LG), 'name');
                 foreach ($pages as $page) {
@@ -293,7 +293,7 @@ class Language
                 if ($is_sort && $this->nsort) {
                     $this->flag &= ~self::NON_SORT;
                     $this->sort($ary);
-                    $out = ['tmemo' => SKY::sql('i')];
+                    $out = ['tmemo' => SKY::flush('i')];
                 }
                 if ($this->flag != $row['flag'])
                     $this->t->update(['flag' => $this->flag] + $out);
@@ -346,7 +346,7 @@ class Language
                 }
         }
         $this->t->update([
-            'tmemo' => SKY::sql('i'),
+            'tmemo' => SKY::flush('i'),
             '.flag' => $flag ?? ($def_lg ? $row['flag'] | self::NON_SYNC : $row['flag']),
         ]);
         return $out;

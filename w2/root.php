@@ -83,7 +83,7 @@ class Root
                 $s = a('stackoverflow', sprintf($sky->d_se, urlencode("php $v site:stackoverflow.com")), 'target="_blank"');
                 return a('show', ["sky.d.reflect(this, '$t')"]) . " | $m | $s";
             }, $ary);
-            echo Admin::out(array_combine($ary, $val), false);
+            echo Debug::out(array_combine($ary, $val), false);
         };
         $add_ext = function (&$ary, &$all) {
             $ary = array_map(function ($v) use (&$all) {
@@ -99,7 +99,7 @@ class Root
                 $ltime = PHP_OS == 'WINNT' ? preg_replace("@[\r\n\t ]+@", ' ', $_exec('date /t & time /t')) : $_exec('date'); # 2do - MAC PC
                 $utime = PHP_OS == 'WINNT' ? preg_replace("@^.*?([\d /\.:]{10,}( [A|P]M)?).*$@s", '$1', (string)$_exec('net stats srv')) : $_exec('uptime');
                 $db = SKY::$dd->info();
-                echo Admin::out([
+                echo Debug::out([
                     'Default site title' => $sky->s_title,
                     'Primary configuration' => sprintf('DEV = %d, DEBUG = %d, DIR_S = %s, ENC = %s, PHPDIR = %s', DEV, DEBUG, DIR_S, ENC, PHP_BINDIR),
                     'System' => (PHP_OS == 'WINNT' ? 'WINNT' : $_exec('uname -a')),
@@ -133,7 +133,7 @@ class Root
                 $t = isset($_GET['t']) ? intval($_GET['t']) : -1;
                 $out = $ary[$types[$t]];
                 ksort($out);
-                echo Admin::out($out);
+                echo Debug::out($out);
                 $top .= sprintf($tpl, hidden(['main' => 1, 'id' => 1]), option($t, $types));
                 break;
 
@@ -158,8 +158,6 @@ class Root
                 break;
 
             case 'Classes':
-                new Admin;
-                new Display;
                 $ary = Debug::get_classes(get_declared_classes(), $ext, $t = isset($_GET['t']) ? intval($_GET['t']) : -2);
                 -1 != $t or $add_ext($ary[1], $ary[2]);
                 $echo($ary[1]);
@@ -215,13 +213,19 @@ class Root
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     static function _config($i) {
         global $sky;
-        $menu = ['System', 'Cron', 'Admin', 'Install', '/etc/'];
-        $etc = 4 == $i;
+        $menu = ['System', 'Cron', 'Install', $char = '/etc/'];
+        $ary = [['s' => 8], ['n' => 9], ['i' => 11], []];
+        foreach (SKY::$plans['main']['class'] as $class => $ware) {
+            if (!method_exists($class, 'ghost'))
+                continue;
+            $menu[] = $class;
+            $ary[] = $class::ghost();
+        }
+        $etc = 3 == $i;
         $edit = $etc ? isset($_GET['fn']) : !isset($_GET['show']);
         $show = $edit ? false : ($_GET['show'] ?? true);
         $TOP = menu($i, $menu, TPL_MENU . ($edit ? '&edit' : '&show'), ' &nbsp; ');
         if ($etc) {
-            $char = 'f';
             $path = WWW . 'm/etc';
             if ($edit) {
                 $_GET['fn'] = str_replace('/', '', $_GET['fn']);
@@ -231,12 +235,10 @@ class Root
                 array_walk($ary, function(&$v, $k) use ($path) {
                     $size = filesize($k);
                     $v = date(DATE_DT, filemtime($k)) . ' ';
-                    $v .= $size > 1024 ? "- $size bytes" : tag(a('edit &nbsp;', "?main=3&id=4&fn=" . substr($k, 1 + strlen($path))));
+                    $v .= $size > 1024 ? "- $size bytes" : tag(a('edit &nbsp;', "?main=3&id=3&fn=" . substr($k, 1 + strlen($path))));
                 });
             }
         } else {
-           new Admin;
-            $ary = [['s' => 8], ['n' => 9], ['a' => 10], ['i' => 11]];
             list ($imemo, $dt) = sqlf('-select imemo, dt from $_memory where id=%d', $id = current($ary = $ary[$i]));
             $ary = $sky->memory($id, $char = key($ary));
             $edit or array_walk($ary, function(&$v, $k) use ($i, $sky) {
@@ -245,7 +247,8 @@ class Root
             $str = 'This action can damage application. Are you sure drop variable';
             if ($show)
                 echo tag("$str `" . tag($show, 'cid="' . "$char.$id" . '"', 'span') . "`?", 'id="drop-var"');
-            $TOP .= pad() . "imemo=$imemo, dt=$dt" . pad() . a($edit ? 'Show' : 'Edit', "?main=3&id=$i&" . ($edit ? 'show' : 'edit'));
+            $pad = str_repeat(' &nbsp;', 3);
+            $TOP .= $pad . "imemo=$imemo, dt=$dt$pad" . a($edit ? 'Show' : 'Edit', "?main=3&id=$i&" . ($edit ? 'show' : 'edit'));
         }
 
         if ($_POST) {
@@ -257,34 +260,36 @@ class Root
                 ksort($ary);
                 SKY::$char($ary);
             }
-            isset($_POST['fn']) ? jump('?main=3&id=4') : jump(URI);
+            isset($_POST['fn']) ? jump('?main=3&id=3') : jump(URI);
         }
 
         if (!$edit) {
-            echo Admin::out($ary, false);
+            echo Debug::out($ary, false);
             if ($etc)
-                echo '<br>' . a('Write new file', '?main=3&id=4&fn');
+                echo '<br>' . a('Write new file', '?main=3&id=3&fn');
             return $TOP;
         }
 
-        $form = ['test' => ['test', '', '', '+2:00']];
         switch ($char) {
             case 's':
                 $form = Root::form_prod();
-                break;
+            break;
             case 'n':
-                $form = [
-                    'clear_nc' => ['Visitor\'s cleaning (no cookie), days', '', '', 2],
-                    'clear_hc' => ['Visitor\'s cleaning (has cookie), days', '', '', 10],
-                    'clear_ua' => ['Visitor\'s cleaning (authed), days', '', '', 1000],
-                ];
-                break;
-            case 'f':
+                $form = Root::form_cron();
+            break;
+            case '/etc/':
                 $form = '' === $_GET['fn'] ? ['fn' => ['New filename', '']] : ["<b>$_GET[fn]</b><br>"];
                 $form += ['etc_file' => ['', 'textarea', 'style="width:90%" rows="20"']];
+                break;
+            case 'i':
+                $form = [];
+            break;
+            default:
+                $class = $menu[$i];
+                $form = $class::ghost(true);
             break;
         }
-        echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style=""');
+        $form && print(tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style=""'));
         return $TOP;
     }
 
@@ -351,7 +356,7 @@ class Root
                     }
                     if ($files) {
                         echo '<div class="fl"><form method="post">';
-                        Admin::out($files, false, '');
+                        Debug::out($files, false, '');
                         echo '<br>' . js('var x=0;') . a('[un]check all', "javascript:$('#table input').prop('checked',x=!x)");
                         echo pad() . hidden() . '<input type="submit" value="delete checked" /></form></div>';
                     } else {
@@ -377,10 +382,10 @@ class Root
                     [$k, $v] = explode('#', $v, 2);
                     $a["<span>$k</span>"] = date(DATE_DT, $v);
                 }, ',');
-                Admin::out($files, false, '');
+                Debug::out($files, false, '');
             break;
             case 5:
-                Admin::drop_all_cache();
+                Debug::drop_all_cache();
                 jump('?main=4');
             break;
         }
@@ -425,7 +430,7 @@ class Root
             case 2: echo "\n\n\n2do - check & fix all PHP files for code: defned('STRT... or eval(\$me... or die;";
             break;
         }
-        Admin::out($out, false);
+        Debug::out($out, false);
         echo '<br>' . js('var x=0;') . a('[un] check all', "javascript:$('#table input').prop('checked',x=!x)");
         echo pad() . hidden() . '<input type="submit" value="write checked" /></form>';
 
@@ -475,7 +480,7 @@ class Root
             }
             if ($dd) {
                 $info = $dd->info();
-                Admin::out([
+                Debug::out([
                     'Server' => 'Version: ' . $info['version'] . ', Charset: ' . $info['charset'],
                     'Driver, DSN' => "$dd->name, $DSN",
                     'Table\'s prefix' => $dd->pref ?: L::g('no prefix'),
@@ -504,6 +509,14 @@ class Root
             echo '</table>';
         }
         return $TOP;
+    }
+
+    static function form_cron() {
+        return [
+            'clear_nc' => ['Visitor\'s cleaning (no cookie), days', 'number', '', 2],
+            'clear_hc' => ['Visitor\'s cleaning (has cookie), days', 'number', '', 10],
+            'clear_ua' => ['Visitor\'s cleaning (authed), days', 'number', '', 1000],
+        ];
     }
 
     static function form_prod() {
