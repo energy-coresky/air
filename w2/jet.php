@@ -106,7 +106,6 @@ class Jet
         Jet::$top .= "extract(\$_vars, EXTR_REFS) ?>";
         if (DEV) {
             Jet::$top .= "<?php\ntrace(\$_recompile ? 'recompiled' : 'used cached', 'JET'); trace('TPL: $list');";
-            //Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != ($sky->return || HEAVEN::J_FLY == $sky->fly && !$sky->no))';
             Jet::$top .= "\nif (" . ($return ? 'true' : 'false') . ' != $sky->return)';
             Jet::$top .= "\n    throw new Error('Return status do not match for file: ' . __FILE__) ?>";
         }

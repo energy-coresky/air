@@ -508,6 +508,10 @@ function e() {
     DEV && !SKY::s('gate_404') ? DEV::e($top) : $top->set(404);
 }
 
+function pad($n = 3) {
+    return str_repeat(' &nbsp;', $n);
+}
+
 class L {
     static function __callStatic($func, $arg) {
         return "<$func>$arg[0]</$func>"; # colors: RGZMY, tags:abipqsu

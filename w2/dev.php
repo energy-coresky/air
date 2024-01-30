@@ -71,7 +71,7 @@ class DEV
 
         $stat = explode(',', $sky->d_static) + [-1 => realpath(DIR_S) . '/assets'];
         foreach (array_keys(SKY::$plans) as $ware)
-            $stat[] = (Plan::_obj([$ware])->path) . '/assets';
+            $stat[] = realpath(Plan::_obj([$ware])->path) . '/assets';
         $stat = array_map(fn($v) => $v && '/' == $v[0] || strpos($v, ':') ? $v : WWW . $v, array_unique($stat));
         $files = [];
         foreach ($stat as $one) {

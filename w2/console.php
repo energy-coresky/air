@@ -330,12 +330,7 @@ class Console
 
     /** Warm all cache */
     function c_warm() {
-        foreach (SKY::$plans['main']['ctrl'] as $ctrl => $ware) {
-            $ctrl = explode('/', $ctrl);
-            echo "Controller: $ware." . ($ctrl = $ctrl[1] ?? $ctrl[0]) . "\n";
-            $ctrl = '*' == $ctrl ? 'default_c' : "c_$ctrl";
-            Plan::gate_p("$ware-$ctrl.php", Gate::instance()->parse($ware, "mvc/$ctrl.php", false));
-        }
+        echo Debug::warm_all_cache() ? 'WARM all cache: OK' : 'Error when WARM cache';
     }
 
     /** Search for errors using all possible methods */

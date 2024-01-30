@@ -249,7 +249,7 @@ class Debug
                 is_string($v) or is_int($v) or $v = print_r($v, true);
                 if ($is_html)
                     $v = html($v);
-                echo td([[1 + $i, 'style="width:5%"'], [$k, 'style="width:' . $c2 . '"'], $v], eval(zebra));
+                echo td([[1 + $i, 'style="width:5%"'], [$k, 'style="width:' . $c2 . '"'], $v], eval(zebra)); //2do delete zebra
             }
             echo '</table>';
         } else {
@@ -269,7 +269,14 @@ class Debug
         return $result;
     }
 
-    static function warm_all() {
-        //2do: sky_plan, gate, jet, svg, assets
+    static function warm_all_cache() {
+        foreach (SKY::$plans['main']['ctrl'] as $ctrl => $ware) {
+            $ctrl = explode('/', $ctrl);
+            echo "Controller: $ware." . ($ctrl = $ctrl[1] ?? $ctrl[0]) . "\n";
+            $ctrl = '*' == $ctrl ? 'default_c' : "c_$ctrl";
+            Plan::gate_p("$ware-$ctrl.php", Gate::instance()->parse($ware, "mvc/$ctrl.php", false));
+        }
+        //2do other: jet, svg, assets
+        return 1;
     }
 }

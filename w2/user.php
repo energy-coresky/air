@@ -91,7 +91,7 @@ class USER
                 $ary['uid'] = $this->row['user_id'] = 0;
             if ($this->row['id'] = $this->row['user_id'] = $this->pretty ? (int)$this->user_id : 0) {
                 $this->row['auth'] = $this->uid < 0 ? 2 : 1;
-                if (1 == $this->pid) {
+                if (1 == ($this->row['pid'] = (int)$this->pid)) {
                     $this->root = 1;
                     if ($sky->s_trace_root && 2 == $this->auth)
                         SKY::$debug = $this->root = 2;

@@ -247,7 +247,7 @@ class Root
             $str = 'This action can damage application. Are you sure drop variable';
             if ($show)
                 echo tag("$str `" . tag($show, 'cid="' . "$char.$id" . '"', 'span') . "`?", 'id="drop-var"');
-            $pad = str_repeat(' &nbsp;', 3);
+            $pad = pad();
             $TOP .= $pad . "imemo=$imemo, dt=$dt$pad" . a($edit ? 'Show' : 'Edit', "?main=3&id=$i&" . ($edit ? 'show' : 'edit'));
         }
 
