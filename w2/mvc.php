@@ -274,7 +274,7 @@ trait HOOK_D
                 case 'css': MVC::mime('text/css'); break;
                 case 'xml': MVC::mime('application/xml'); break;
                 case 'js':  MVC::mime('application/javascript'); break;
-                //case 'ico': MVC::mime('image/x-icon'); break;
+                case 'map': MVC::mime('application/json'); break;
             }
             MVC::last_modified(filemtime($file), false, function() use ($sky, $fn) {
                 $sky->log('etc', "304 $fn");
@@ -284,6 +284,10 @@ trait HOOK_D
             while (@ob_end_flush());
             readfile($file);
             throw new Stop;
+        } elseif ('map' == $ext) {
+            http_response_code($sky->error_no = 404);
+            throw new Stop;
+            # 2do: [checkbox] for logging this errors
         }
         $sky->open();
         $sky->log('etc', "404 $fn");

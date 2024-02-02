@@ -268,7 +268,7 @@ class Rare
             if ($dd->sql('+select count(1) from $_users where email=$+ $$', $data['email'], $or))
                 return 3;
             $data['access'] = strand(30);
-            if (cfg('auth')->crypt)
+            if (cfg(['main', 'auth'])->crypt)
                 $data['passw'] = self::passwd($data['passw']);
             return $data + ['id' => $dd->sql('insert into $_users @@', $data)];
 
@@ -291,7 +291,7 @@ class Rare
         }
         $r = sql('~select * from $_users where state="act" and !! = $+', $match_email ? 'email' : 'login', $login);
 
-        if ($r && (cfg('auth')->crypt ? $r['passw'] == self::passwd($paswd, $r['passw']) : $r['passw'] == $paswd)) {
+        if ($r && (cfg(['main', 'auth'])->crypt ? $r['passw'] == self::passwd($paswd, $r['passw']) : $r['passw'] == $paswd)) {
             $user->row = $r + $user->row;
             if (!$user->auth) {
                 $user->row['u'] = SKY::ghost('u', $user->row['umemo'], ['umemo' => "update \$_users set @@ where id=$user->id"]);

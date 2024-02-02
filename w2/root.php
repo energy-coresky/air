@@ -411,7 +411,7 @@ class Root
             return !DEV || '_' != $v[0];
         }));
         echo 'Exclude paths: <form method="post"><br>';
-        printf('<input name="guard_exc" value="%s" size="75%%" /><input type="submit" value="save" />%s</form>', @$adm->a_guard_exc, hidden());
+        printf('<input name="guard_exc" value="%s" size="75%%" /><input type="submit" value="save" />%s</form>', $sky->a_guard_exc, hidden());
         echo '<h1>Directories:</h1><form method="post">';
         $size = strlen($cont);
         switch ($i) {

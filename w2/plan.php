@@ -172,16 +172,17 @@ class Plan
             $cfg = $plans['cache'];
             if (isset($cfg['driver']))
                 $dc = $new_dc($cfg);
-            $dc->setup((object)$cfg);
-            if ($dc->test('sky_plan.php')) {
-                SKY::$plans = $dc->run('sky_plan.php');
+            $nx = $dc->setup((object)$cfg, 'sky_plan.php');
+            if ($plans = $nx ? false : $dc->run('sky_plan.php', (object)['data' => ['dc' => $dc]])) {
+                SKY::$plans =& $plans;
             } else {
                 require DIR_S . "/w2/processor.php";
                 require DIR_S . "/w2/boot.php";
-                new Boot($dc);
+                new Boot($dc, $nx);
             }
-            SKY::$plans['main']['cache']['dc'] = $dc;
             SKY::$debug = DEBUG;
+            SKY::$plans['main']['cache']['dc'] = $dc;
+            SKY::$profiles =& SKY::$plans['main']['app']['cfg']['profiles'];
             self::locale();
         }
         return $cfg;

@@ -29,7 +29,7 @@ class SKY implements PARADISE
     static $vars = [];
     static $dd = null;
     static $cli;
-    static $profiles = ['Anonymous', 'Root', 'Mia'];
+    static $profiles = [];
     static $states = [];
     static $debug;
     static $errors = [0]; # cnt_error
@@ -334,7 +334,6 @@ class HEAVEN extends SKY
     public $methods = ['POST', 'GET', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
     public $method;
     public $auth = false;
-    public $admins = 1; # root only has admin access or list pids in array
     public $has_public = true; # web-site or CRM
     public $pagination = 'page';
     public $show_pdaxt = false;

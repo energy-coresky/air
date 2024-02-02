@@ -187,19 +187,24 @@ $main = '' === $uri;
 if ($main || 'main' === $uri)
     return $surl = $main ? ['main'] : [];
 ~
+No-map-file 0
+file.map
+if ('.map' === substr($uri, -4))
+    return $surl = ['etc', '_.map'];
+~
 Dev-ends 1
 /_dev
 if ('_' == $sky->_0[0])
     return;
 ~
-Assets-dev 1
+Assets-coresky 1
 /m/{0}
 if ($cnt && 'etc' == $surl[0])
     return $surl[0] = '-';
 if ($cnt && 'm' == $surl[0])
     return $surl[0] = 'etc';
 ~
-Assets-prod 1
+Assets-wares 1
 /w/{1}/{0}
 if (3 == $cnt && 'w' == $surl[0]) {
     array_shift($surl);

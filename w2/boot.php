@@ -20,7 +20,7 @@ class Boot
         return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn $array;\n";
     }
 
-    function __construct($dc = false) {
+    function __construct($dc = false, $nx = null) {
         $this->array = [];
         if (!$dc)
             return;
@@ -36,6 +36,13 @@ class Boot
         ];
 
         $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
+        if (self::$dev) {
+            $more .= "global \$sky;\n";
+            $more .= "if (true === \$dc) {\n    \$sky->tracing = \"sky_plan.php: created\\n\\n\";\n} elseif (\$dc) {\n";
+            $more .= "    \$recompile = stat(DIR_M . '/config.yaml')['mtime'] > \$dc->mtime('sky_plan.php');\n";
+            $more .= "    \$sky->tracing = 'sky_plan.php: ' . (\$recompile ? 'recompiled' : 'used cached') . \"\\n\\n\";\n";
+            $more .= "    if (\$recompile)\n        return false;\n}\n";
+        }
         $more .= "define('NOW', date(DATE_DT));\n";
         foreach ($cfg['define'] as $key => $val)
             $more .= "define('$key', " . var_export($val, true) . ");\n";
@@ -55,7 +62,7 @@ class Boot
         Plan::cache_s('sky_plan.php', self::auto($plans, $more, ['Boot', 'rewrite']));
         foreach ($ymls as $ware => $yml)
             self::cfg($yml, $ware);
-        SKY::$plans = Plan::cache_r('sky_plan.php');
+        SKY::$plans = Plan::cache_r('sky_plan.php', (object)['data' => ['dc' => $nx]]);
     }
 
     static function lint(string $in, $is_file = true) : bool {
