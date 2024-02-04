@@ -27,8 +27,9 @@ class Root
     }
 
     static function run($n, $id) {
+        global $sky;
         if ($n < 7) {
-            define('TPL_MENU', "?main=$n&id=%d");
+            $sky->tpl_menu = "?main=$n&id=%d";
             $funs = array_map('strtolower', Root::$menu);
             $funs[2] = substr($funs[2], 0, 7);
             return call_user_func(['Root', '_' . $funs[$n]], $id);
@@ -224,7 +225,7 @@ class Root
         $etc = 3 == $i;
         $edit = $etc ? isset($_GET['fn']) : !isset($_GET['show']);
         $show = $edit ? false : ($_GET['show'] ?? true);
-        $TOP = menu($i, $menu, TPL_MENU . ($edit ? '&edit' : '&show'), ' &nbsp; ');
+        $TOP = menu($i, $menu, $sky->tpl_menu . ($edit ? '&edit' : '&show'), ' &nbsp; ');
         if ($etc) {
             $path = WWW . 'm/etc';
             if ($edit) {
@@ -355,10 +356,10 @@ class Root
                         $files["<span>$k</span>"] = $v;
                     }
                     if ($files) {
-                        echo '<div class="fl"><form method="post">';
+                        echo '<form method="post">';
                         Debug::out($files, false, '');
                         echo '<br>' . js('var x=0;') . a('[un]check all', "javascript:$('#table input').prop('checked',x=!x)");
-                        echo pad() . hidden() . '<input type="submit" value="delete checked" /></form></div>';
+                        echo pad() . hidden() . '<input type="submit" value="delete checked" /></form>';
                     } else {
                         echo '<h1>Cache dir is empty</h1>';
                     }

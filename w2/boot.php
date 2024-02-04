@@ -24,6 +24,7 @@ class Boot
         $this->array = [];
         if (!$dc)
             return;
+
         self::$boot = 1;
         $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
         self::$const = $cfg['define'];
@@ -37,11 +38,9 @@ class Boot
 
         $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
         if (self::$dev) {
-            $more .= "global \$sky;\n";
-            $more .= "if (true === \$dc) {\n    \$sky->tracing = \"sky_plan.php: created\\n\\n\";\n} elseif (\$dc) {\n";
-            $more .= "    \$recompile = stat(DIR_M . '/config.yaml')['mtime'] > \$dc->mtime('sky_plan.php');\n";
-            $more .= "    \$sky->tracing = 'sky_plan.php: ' . (\$recompile ? 'recompiled' : 'used cached') . \"\\n\\n\";\n";
-            $more .= "    if (\$recompile)\n        return false;\n}\n";
+            fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
+            $more = stream_get_contents($fp) . $more;
+            fclose($fp);
         }
         $more .= "define('NOW', date(DATE_DT));\n";
         foreach ($cfg['define'] as $key => $val)
@@ -63,6 +62,24 @@ class Boot
         foreach ($ymls as $ware => $yml)
             self::cfg($yml, $ware);
         SKY::$plans = Plan::cache_r('sky_plan.php', (object)['data' => ['dc' => $nx]]);
+
+        $wares = array_map(fn($v) => $v['app']['path'], SKY::$plans) + ['sky' => DIR_S];
+        foreach ($wares as $ware => $path) {
+            if (!is_dir($dir = "$path/assets"))
+                continue;
+            foreach (glob("$dir/*") as $src) {
+                [$name, $ext] = explode('.', $fn = basename($src), 2) + [1 => ''];
+                if ('dev' == $name)
+                    continue;
+                $dst = $ware == $name ? WWW . "m/$fn" : WWW . "w/$ware/$fn";
+                if (DEV && is_file($dst)) {
+                    unlink($dst);
+                } elseif (!DEV && !is_file($dst)) {
+                    is_dir($dir = dirname($dst)) or mkdir($dir, 0777, true);
+                    copy($src, $dst);
+                }
+            }
+        }
     }
 
     static function lint(string $in, $is_file = true) : bool {
@@ -433,4 +450,15 @@ class Boot
             $p += ($bs = strspn($in, '\\', $p));
         }
     }
+}
+
+__halt_compiler();
+global $sky;
+if (true === $dc) {
+    $sky->tracing = "sky_plan.php: created\n\n";
+} elseif ($dc) {
+    $recompile = stat(DIR_M . '/config.yaml')['mtime'] > $dc->mtime('sky_plan.php');
+    $sky->tracing = 'sky_plan.php: ' . ($recompile ? 'recompiled' : 'used cached') . "\n\n";
+    if ($recompile)
+        return false;
 }

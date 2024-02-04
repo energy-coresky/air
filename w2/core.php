@@ -91,7 +91,6 @@ function jump($uri = '', $code = 302, $exit = true) {
     if (strpos($uri, '://')) {
         $sky->jump = $uri;
     } else {
-        $sky->is_front or '' === $uri or '?' != $uri[0] or $uri = "adm$uri";
         if (common_c::$tune && $code)
             $uri = common_c::$tune . ('' === $uri || '?' == $uri[0] ? '' : '/') . $uri;
         $sky->jump = HOME . $uri;
@@ -143,9 +142,8 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
                 echo is_string($context) ? "Stack trace:\n$context\n" : "\n";
             }
             if ($sky->log_error) { # collect error log
-                $type = SKY::$cli ? 'console' : ($sky->is_front ? 'front' : 'admin');
                 $now = defined('NOW') ? NOW : 'Timestamp: ' . time();
-                $sky->error_prod .= L::r("<b>$now - $type</b>");
+                $sky->error_prod .= "$now " . L::r(SKY::$cli ? 'console' : (SKY::$section ?: 'front'));
                 if (!SKY::$cli)
                     $sky->error_prod .= ' ' . $sky->methods[$sky->method] . ' /' . html(URI);
                 $sky->error_prod .= "\n$mgs\n\n";
@@ -264,7 +262,7 @@ function menu($act, $ary, $tpl = '', $by = '</li><li>', $class = 'menu') {
     global $sky;
 
     if (!$tpl) {
-        $tpl = defined('TPL_MENU') ? TPL_MENU : '?%s';
+        $tpl = $sky->tpl_menu;
         $by = ' &nbsp; ';
     }
     if (count($sky->surl) > 1)

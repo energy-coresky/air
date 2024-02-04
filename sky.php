@@ -33,6 +33,7 @@ class SKY implements PARADISE
     static $states = [];
     static $debug;
     static $errors = [0]; # cnt_error
+    static $section = '';
 
     protected $ghost = false;
     protected $except = [];
@@ -336,6 +337,7 @@ class HEAVEN extends SKY
     public $auth = false;
     public $has_public = true; # web-site or CRM
     public $pagination = 'page';
+    public $tpl_menu = '?%s';
     public $show_pdaxt = false;
 
     function __construct() {
@@ -383,7 +385,6 @@ class HEAVEN extends SKY
         MVC::$cc = new common_c;
         $mvc = new MVC;
         $this->fly = 'xmlhttprequest' == strtolower($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '') ? HEAVEN::Z_FLY : 0;
-        $this->is_front = true;
         $this->orig_qstr = $_SERVER['QUERY_STRING'] ?? '';
         $this->orig_surl = '' === $this->orig_qstr ? rtrim(URI, '?') : substr(URI, 0, -1 - strlen($this->orig_qstr));
         $cnt = 0;
@@ -547,7 +548,7 @@ class HEAVEN extends SKY
                     $tracing .= "<h1>$h1</h1>" . pre($this->tracing("Fatal exit with $exit.$this->error_no\n", $is_x));
                     $tracing .= "<h1>Stdout</h1><pre>$stdout</pre>";
                 }
-                $this->_static = false; # skip app css and js files
+                Plan::$head = Plan::$tail = false; # skip app css and js files
                 MVC::jet('__std.crash', '', [
                     'redirect' => $redirect,
                     'no' => $http_code,

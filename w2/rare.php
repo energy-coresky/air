@@ -39,6 +39,11 @@ class Rare
         return $list;
     }
 
+    static function tune($ware = 'main') {
+        $ary = array_flip(SKY::$plans['main']['ctrl'])[$ware];
+        return explode('/', $ary)[0];
+    }
+
     static function mail($message, $ary = [], $subject = '', $to = '') {
         if (is_string($ary)) {
             $to = $subject;
@@ -280,9 +285,9 @@ class Rare
     }
 
     static function login($js_chk = true) {
-        global $sky, $user;
+        global $user;
 
-        !$user->auth or 1 == $user->auth && !$sky->is_front or die;
+        !$user->auth or 1 == $user->auth && SKY::$section or die;
         isset($_POST['login']) && isset($_POST['password']) or die;
         $match_email = preg_match(RE_EMAIL, $login = strtolower($_POST['login']));
         if (!$match_email && !preg_match(RE_LOGIN, $login) || !preg_match(RE_PASSW, $paswd = $_POST['password'])) {
