@@ -188,10 +188,9 @@ class Debug
     }
 
     static function mail($message, $ary, $subject, $to) {
-        global $sky;
         $ary += [
             'from' => 'nor@' . _PUBLIC,
-            'to' => $to ?: $sky->s_email,
+            'to' => $to ?: SKY::s('email'),
             'subject' => $subject ?: 'SKY-Mail from ' . _PUBLIC,
             'vars' => [],
             'files' => [],
@@ -204,12 +203,12 @@ class Debug
             # 2do
         }
         $headers = "From: $from\r\nMIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"$boundary\"";
-        //$sky->s_email_cnt = $sky->s_email_cnt + 1;
+        // SKY::s('email_cnt', SKY::s('email_cnt') + 1);
         if (!DEV)
             return mail($to, $subject, $message, $headers);
 
         $data = "to=$to\n\nsubject=$subject\n\nheaders=$headers\n\nmessage:\n\n$message";
-        $sky->log('mail', html($data));
+        SKY::log('mail', html($data));
     }
 
     static function pdaxt($plus = '') {

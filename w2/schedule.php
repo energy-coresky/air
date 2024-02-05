@@ -13,11 +13,12 @@ class Schedule
     function __construct($max_exec_minutes = 10, $debug_level = 1, $single_thread = false) {
         global $argv, $sky;
 
+        if (!$this->max_exec_sec = 60 * $max_exec_minutes)
+            return;
+        SQL::$dd_h = 'Console::dd_h';
         'WINNT' == PHP_OS or $this->script = PHP_BINDIR . '/php ';
         $this->script .= $argv[0] ?? 0;
         $this->single_thread = !function_exists('popen') || $single_thread;
-        $this->max_exec_sec = 60 * $max_exec_minutes;
-        SQL::$dd_h = 'Console::dd_h';
 
         if (isset($argv[1])) {
             if ('@' == $argv[1][0]) {
@@ -34,6 +35,15 @@ class Schedule
         $sky->shutdown[] = [$this, 'shutdown'];
         if (!$this->arg && !$this->amp)
             echo "Multy-threads: " . ($this->single_thread ? "No\n" : "Yes\n");
+    }
+
+    static function log($msg) {
+        static $cron;
+        $cron ?? ($cron = new Schedule(0));
+        $cron->database();
+        $tpl = 'update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr($cc(%s,%s,tmemo),1,10000) where id=6';
+        $section = L::r(SKY::$cli ? 'console' : (SKY::$section ?: 'front'));
+        sqlf($tpl, date(DATE_DT) . " [$section] ", html("$msg\n"));
     }
 
     function __get($name) {

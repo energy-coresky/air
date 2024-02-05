@@ -277,10 +277,10 @@ trait HOOK_D
                 case 'map': MVC::mime('application/json'); break;
             }
             MVC::last_modified(filemtime($file), false, function() use ($sky, $fn) {
-                $sky->log('etc', "304 $fn");
+                SKY::log('etc', "304 $fn");
             });
             header('Content-Length: ' . filesize($file));
-            $sky->log('etc', "200 $fn");
+            SKY::log('etc', "200 $fn");
             while (@ob_end_flush());
             readfile($file);
             throw new Stop;
@@ -290,7 +290,7 @@ trait HOOK_D
             # 2do: [checkbox] for logging this errors
         }
         $sky->open();
-        $sky->log('etc', "404 $fn");
+        SKY::log('etc', "404 $fn");
         http_response_code($sky->error_no = 404);
         throw new Hacker('etc');//return true;
     }

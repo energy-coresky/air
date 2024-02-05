@@ -69,7 +69,7 @@ class Boot
                 continue;
             foreach (glob("$dir/*") as $src) {
                 [$name, $ext] = explode('.', $fn = basename($src), 2) + [1 => ''];
-                if ('dev' == $name)
+                if ('dev' == $name) // $ext ?
                     continue;
                 $dst = $ware == $name ? WWW . "m/$fn" : WWW . "w/$ware/$fn";
                 if (DEV && is_file($dst)) {

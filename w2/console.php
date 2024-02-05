@@ -147,6 +147,7 @@ class Console
         $line = system('git status');
         if ('nothing to commit, working tree clean' == trim($line))
             return;
+
         if ($air) {
             if (!preg_match("/'(\d+\.\d+[^']+? energy)'/s", $php = file_get_contents('sky.php'), $m))
                 throw new Error('Wrong preg_match');
@@ -161,20 +162,28 @@ class Console
         }
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
-        if (self::$d[0] && !self::$d[1]) {
+        if (self::$d[0]) {
+            chdir(DIR);
             SQL::$dd_h = 'Console::dd_h';
-            global $sky;
-            $sky->open();
-            common_c::make_h(true);
+            if (!self::$d[1]) {
+                global $sky;
+                $sky->open();
+                common_c::make_h(true);
+            }
         }
+        chdir($air ? DIR_S : self::$d[2]);
         echo "\n>git add *\n";
         system('git add *');
         echo "\n>git commit -a -m \"$c\"\n";
         system("git commit -a -m \"$c\"");
         echo "\n>git push origin master\n";
         system("git push origin master");
-        if (self::$d[0] && !self::$d[1])
-            common_c::make_h(false);
+        if (self::$d[0]) {
+            self::$d[1] or common_c::make_h(false);
+            chdir(DIR);
+            if (Plan::_t('w3/master.php'))
+                new Master(self::$d[1]);
+        }
     }
 
     /** Show Coresky version */

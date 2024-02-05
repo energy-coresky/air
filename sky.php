@@ -242,8 +242,10 @@ class SKY implements PARADISE
         return date(SKY::s('date_format') ?: 'd.m.Y' . ($hm ? ' H:i' : ''), $in);
     }
 
-    function log($mode, $data) {
-        if (!SKY::$dd || !in_array($this->s_log_a, [$mode, 'all']))
+    static function log($mode, $data = null) {
+        if (null === $data)
+            return Schedule::log($mode);
+        if (!SKY::$dd || !in_array(SKY::s('log_a'), [$mode, 'all']))
             return;
         $new = date(DATE_DT) . " <r>$mode</r>\n$data\n";
         SKY::$dd->sqlf('update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr(' . SKY::$dd->f_cc('%s', 'tmemo') . ',1,15000) where id=7', $new);
