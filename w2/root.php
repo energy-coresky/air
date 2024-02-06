@@ -55,7 +55,7 @@ class Root
                 SKY::s('log_a', 'off');
                 SKY::s('log_y', implode(' ', $y));
             }
-            jump(URI);
+            jump(URI, false);
         }
         return view('_dev.skylog', ['act' => $act, 'opt' => $opt]);
     }

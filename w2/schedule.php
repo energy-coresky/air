@@ -10,6 +10,8 @@ class Schedule
     private $arg = 0;
     private $script = 'php ';
 
+    static $names = [];
+
     function __construct($max_exec_minutes = 10, $debug_level = 1, $single_thread = false) {
         global $argv, $sky;
 
@@ -128,14 +130,25 @@ class Schedule
         return $this;
     }
 
-    function ok($schedule = '') {
-        static $now = false;
+    function ok($schedule = '-') {
+        static $now = false, $ary = [];
+
         if (!$now) {
             $now = getdate();
             $now = [$now['minutes'], $now['hours'], $now['mday'], $now['mon'], $now['wday']];
         }
+        '' !== $schedule or $schedule = '-';
+        if (preg_match("/^[a-z]/i", $schedule)) {
+            self::$names[$this->task] = $schedule;
+            $ary or $ary = strbang(unl(trim(Plan::_gq('cron.times'))));
+            if (!isset($ary[$schedule])) {
+                $ary[$schedule] = '-';
+                Plan::_p('cron.times', array_join($ary));
+            }
+            $schedule = $ary[$schedule];
+        }
 
-        if ($flock = 'f' == @$schedule[0]) {
+        if ($flock = '!' == $schedule[0]) {
             $schedule = trim(substr($schedule, 1));
             if (is_file($fn = "var/cron/task_$this->task")) {
                 $sec = time() - filemtime($fn);
@@ -144,9 +157,9 @@ class Schedule
                 return false;
             }
         }
-        if ('-' == @$schedule[0])
+        if ('-' == $schedule[0])
             return false;
-        if ('+' != @$schedule[0]) {
+        if ('+' != $schedule[0]) {
             $in = preg_split("/\s+/", $schedule);
             for ($i = 0; $i < 5; $i++) {
                 if (!isset($in[$i]) || $in[$i] === '*' || $in[$i] === '')
@@ -182,6 +195,9 @@ class Schedule
 
     function write($str, $task = 0, $is_error = false) {
         $task or $task = $this->task;
+        if (isset(self::$names[$task]))
+            $task .= '.' . self::$names[$task];
+
         $date = date(DATE_DT);
         $this->database($this->amp);
         if (!SKY::$dd) {
@@ -221,7 +237,8 @@ class Schedule
             isset($stdout[$id]) or $stdout[$id] = '';
             if (false !== $str)
                 return $stdout[$id] .= $str;
-            $this->write($stdout[$id], $id);
+            if (isset($stdout[$id]) && '' !== $stdout[$id])
+                $this->write($stdout[$id], $id);
         });
     }
 }

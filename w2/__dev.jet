@@ -323,7 +323,7 @@ $(function() {
 </fieldset>
 </div>
 #.development.skylog
-<form method="post">
+<form method="post">@csrf
     <b>Active target</b>:<input type="hidden" name="m">
     &nbsp;<select name="s" onchange="skylog(this,'s')">{!option($act, $opt)!}</select>
     &nbsp;<input@disabled($act < 0) type="button" onclick="skylog(this,'d')" value="Delete target">

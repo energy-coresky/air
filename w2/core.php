@@ -50,7 +50,7 @@ function strbang($str, $via1 = ' ', $via2 = "\n") {
     foreach (explode($via2, $str) as $item) {
         if ($via1 instanceof Closure) {
             $via1($out, $item);
-        } else {
+        } elseif (strpos($item, $via1)) {
             [$k, $v] = explode($via1, $item, 2);
             $out[$k] = $v;
         }
