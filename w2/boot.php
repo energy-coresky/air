@@ -30,6 +30,7 @@ class Boot
 
     function __construct($dc = false, $nx = null) {
         $this->array = [];
+
         self::$transform = [
             'inc' => fn($v) => self::inc($v),
             'bin' => fn($v) => intval($v, 2),
@@ -45,6 +46,7 @@ class Boot
                 return $p;
             },
         ];
+
         if (!$dc) {
             if (self::$boot)
                 return;
@@ -53,6 +55,7 @@ class Boot
             self::$transform = Plan::_rq('mvc/yaml.php') + self::$transform;
             return;
         }
+
         self::$boot = 1;
         $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
         self::$const = $cfg['define'];
@@ -229,9 +232,10 @@ class Boot
             } elseif ($w && $setk && $k2 && ($reqk || !$n->mod)) { # key found
                 if (!$reqk && $cont)
                     $this->halt('Mapping disabled');
-                if ($pad > $n->pad && $pfx) {
-                    $this->stack[] = [$pfx, $n->pad, $n->pad];
-                    $pfx = false;
+                if ($pad > $n->pad) {
+                    if ($pfx)
+                        $this->stack[] = [$pfx, $n->pad, $n->pad];
+                    $pfx = 0;
                 }
                 $setk = false;
                 $sps = $t;
@@ -290,7 +294,7 @@ class Boot
             $br = self::bracket(substr($v, 1));
             $_v = trim(substr($v, 2 + strlen($br)));
             $code = "return $br;";
-        } elseif (!$code = self::$transform[$name]) {
+        } elseif (!$code = self::$transform[$name] ?? false) {
             $this->halt("Transformation `@$name` not found");
         }
         $n->voc ? ($n->voc->pfx = $code) : ($n->pfx = $code);
@@ -387,7 +391,7 @@ class Boot
             $pad = $pad->pad;
         }
         $v && '$' == $v[0] && $this->var($v);
-        if ($is_val && $this->code_run($v, $pad, $code))
+        if ($is_val && 0 !== $code && $this->code_run($v, $pad, $code))
             return $v;
         if ('' === $v || 'null' === $v || '~' === $v)
             return $json ? 'null' : null;
@@ -413,9 +417,9 @@ class Boot
         $ext = explode('.', $name);
         switch (end($ext)) {
             case 'php': return Plan::_r([$ware, $name]);
+            case 'json': return json_decode(Plan::_g([$ware, $name]), true);
             case 'yml':
             case 'yaml': return self::yml(Plan::_t([$ware, $name]));
-            case 'json': return json_decode(Plan::_g([$ware, $name]), true);
             default: return strbang(unl(Plan::_g([$ware, $name])));
         }
     }
