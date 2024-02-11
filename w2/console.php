@@ -328,7 +328,7 @@ class Console
         if (!$fn = Plan::_t([$ware, $fn])) {
             echo "not found";
         } else {
-            $list[$func](Boot::yml($fn));
+            Plan::set($ware, fn() => $list[$func](Boot::yml($fn)));
         }
     }
 

@@ -229,9 +229,13 @@
 <a class="inner-menu" href="_glob?run=def"@active($k_gr->_2 == 'def')>Report Definitions</a>
 <a class="inner-menu" href="_glob?run=user"@active($k_gr->_2 == 'user')>User Code Usage</a>
 <a class="inner-menu" href="_glob?run=ext"@active($k_gr->_2 == 'ext')>Extensions Usage</a>
-<a class="inner-menu" href="_glob?saved"@active($sky->_1 == 'saved')>Saved Reports</a>
+@if(Plan::has('venus',false))
+<a class="inner-menu" href="_glob?html_def"@active($sky->_1 == 'html_def')>Venus Definitions</a>
+<a class="inner-menu" href="_glob?html_use"@active($sky->_1 == 'html_use')>Venus Usage</a>
+~if
+<!-- a class="inner-menu" href="_glob?saved"@active($sky->_1 == 'saved')>Saved Reports</a>
 <a class="inner-menu" href="_glob?lint"@active($sky->_1 == 'lint')>Run All Lints</a>
-<a class="inner-menu" href="_glob?code"@active($sky->_1 == 'code')>Code Analysis</a>
+<a class="inner-menu" href="_glob?code"@active($sky->_1 == 'code')>Code Analysis</a -->
 #.m_glob
 
 Used CoreSky Version: {{SKY::version()['app'][1]}}, Time now: {{NOW}}

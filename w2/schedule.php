@@ -9,6 +9,7 @@ class Schedule
     private $task = 0; # run manually in the console without @ for stdout
     private $arg = 0;
     private $script = 'php ';
+    private $start = 0;
 
     static $names = [];
 
@@ -110,6 +111,7 @@ class Schedule
 
         if (!$this->arg) {
             if ($this->ok($schedule)) {
+                $this->start = microtime(true);
                 if ($this->single_thread) {
                     $this->database($sky_open);
                     $sec = time();
@@ -186,10 +188,9 @@ class Schedule
 
     function sql(...$in) {
         $this->database();
-        $start = microtime(true);
         $sql = (string)call_user_func_array('qp', $in);
         $n = sql(SQL::NO_PARSE + 1, $sql);
-        $this->write(sprintf("%01.3f sec <= %s <= %s", microtime(true) - $start, is_array($n) ? count($n) : $n, $sql));
+        $this->write(sprintf("<= %s <= %s", is_array($n) ? count($n) : $n, $sql));
         return $n;
     }
 
@@ -205,11 +206,11 @@ class Schedule
             return;
         }
         $tpl = 'update $_memory set dt=' . SKY::$dd->f_dt() . ', tmemo=substr($cc(%s,%s,tmemo),1,10000) where id=%d';
+        $time = sprintf("$date [$task] %01.3f sec", microtime(true) - $this->start);
         if ($is_error) {
-            $time = sprintf("$date %01.3fs - cron task #$task:", microtime(true) - START_TS);
-            sqlf($tpl, L::z("<b>$time</b>\n"), html("$str\n\n"), 4);
+            sqlf($tpl, "$time\n", html("$str\n\n"), 4);
         } else {
-            sqlf($tpl, "$date [$task] ", html("$str\n"), 6);
+            sqlf($tpl, "$time ", html("$str\n"), 6);
         }
     }
 

@@ -256,12 +256,15 @@ class Root
             if ($etc) {
                 $fn = "$path/" . (isset($_POST['fn']) ? $_POST['fn'] : $_GET['fn']);
                 file_put_contents($fn, $_POST['etc_file']);
+            } elseif ($_POST['-t-'] ?? false) {
+                unset($_POST['-t-']);
+                Plan::_p(['main', 'cron.times'], array_join($_POST));
             } else {
                 $ary = $_POST + $ary;
                 ksort($ary);
                 SKY::$char($ary);
             }
-            isset($_POST['fn']) ? jump('?main=3&id=3') : jump(URI);
+            isset($_POST['fn']) ? jump('?main=3&id=3') : jump(URI, false);
         }
 
         if (!$edit) {
@@ -291,6 +294,14 @@ class Root
             break;
         }
         $form && print(tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), 'style=""'));
+        if (1 == $i && ($times = Plan::_gq(['main', 'cron.times']))) {
+            echo tag('cron.times', 'style="padding-left:270px"', 'h1');
+            $form = ['-t-' => 1];
+            $ary = strbang(unl(trim($times)));
+            foreach ($ary as $k => $v)
+                $form[$k] = ["<b>$k</b>", ''];
+            echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), '');
+        }
         return $TOP;
     }
 

@@ -13,6 +13,9 @@ class Boot
 
     private $at;
     private $array;
+    private $stack = [];
+
+    static $transform;
 
     static function auto($v, $more = '', $func = false) {
         $array = var_export($v, true);
@@ -20,11 +23,33 @@ class Boot
         return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn $array;\n";
     }
 
+    static function directive($name, $func = null) {
+        $ary = is_array($name) ? $name : [$name => $func];
+        self::$transform = $ary + self::$transform;
+    }
+
     function __construct($dc = false, $nx = null) {
         $this->array = [];
-        if (!$dc)
+        self::$transform = [
+            'bin' => fn($v) => intval($v, 2),
+            'oct' => fn($v) => intval($v, 8),
+            'hex' => fn($v) => intval($v, 16),
+            'base64' => fn($v) => base64_decode($v),
+            '_' => function ($v) {
+                $p =& $this->array;
+                foreach (explode('.', $v) as $key)
+                    $p =& $p[$key];
+                return $p;
+            },
+        ];
+        if (!$dc) {
+            if (self::$boot)
+                return;
+            if (MVC::$mc) # not console!
+                MVC::handle('yml_c');
+            self::$transform = Plan::_rq('mvc/yaml.php') + self::$transform;
             return;
-
+        }
         self::$boot = 1;
         $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
         self::$const = $cfg['define'];
@@ -80,6 +105,7 @@ class Boot
                 }
             }
         }
+        self::$boot = 0;
     }
 
     static function lint(string $in, $is_file = true) : bool {
@@ -126,7 +152,7 @@ class Boot
         foreach (explode("\n", unl($in)) as $key => $in) {
             $this->at[1] = 1 + $key;
             $m = clone $n;
-            if ($this->yml_line($in . ' ', $n))
+            if ($this->yml_line($in . ' ', $n, $m->pfx))
                 continue;
 
             is_null($m->key) or $add($m);
@@ -141,12 +167,13 @@ class Boot
 
     private function yml_val($m, &$ptr) {
         $ptr = false;
+        $this->stack && $this->code_fix($m->pad);
         if ($m->json) {
             $v = json_decode($m->json, true);
             if (json_last_error())
                 $this->halt('JSON failed');
         } else {
-            $v = $this->scalar($m->mod ? $m->val : trim($m->val));
+            $v = $this->scalar($m->mod ? $m->val : trim($m->val), true, false, $m);
             if (1 == self::$boot) {
                 if ('define' == $m->key) {
                     $v = ['WWW' => self::www()];
@@ -160,7 +187,7 @@ class Boot
         return $v;
     }
 
-    private function yml_line(string $in, &$n) {
+    private function yml_line(string $in, &$n, &$pfx) {
         static $pad_0 = '', $pad_1 = 0;
 
         $pad = '';
@@ -199,6 +226,10 @@ class Boot
             } elseif ($w && $setk && $k2 && ($reqk || !$n->mod)) { # key found
                 if (!$reqk && $cont)
                     $this->halt('Mapping disabled');
+                if ($pad > $n->pad && $pfx) {
+                    $this->stack[] = [$pfx, $n->pad, $n->pad];
+                    $pfx = false;
+                }
                 $setk = false;
                 $sps = $t;
                 $n = $this->obj([
@@ -218,7 +249,7 @@ class Boot
                     $this->halt('Key cannot be NULL');
                 $p =& $n->voc->val;
             } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
-                $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, true, ':' != $t) . $t;
+                $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, ':' != $t, true, $pad_0) . $t;
                 $p = '';
             } elseif ('' === $p && ('{' == $t || '[' == $t) && !$n->mod) {
                 $n->mod = $n->json = $t;
@@ -238,7 +269,8 @@ class Boot
             if ($p && ' ' == $p[-1])
                 $p = substr($p, 0, -1);
         } else {
-            $p = rtrim($p);
+            if (preg_match("/^@(\(|\w+)\s*(.*)$/", $p = rtrim($p), $x))
+                $this->code_set($x, $n);
             if ('|' == $p || '>' == $p) {
                 $n->mod = $p;
                 $p = '';
@@ -246,6 +278,20 @@ class Boot
         }
 
         return $setk;
+    }
+
+    private function code_set($x, &$n) {
+        [,$name, $_v] = $x;
+        $n->voc ? ($v =& $n->voc->val) : ($v =& $n->val);
+        if ('(' == $name[0]) { # inline code
+            $br = self::bracket(substr($v, 1));
+            $_v = trim(substr($v, 2 + strlen($br)));
+            $code = "return $br;";
+        } else {
+            $code = self::$transform[$name];
+        }
+        $n->voc ? ($n->voc->pfx = $code) : ($n->pfx = $code);
+        $v = $_v;
     }
 
     private function halt(string $error, $space = false) {
@@ -264,6 +310,7 @@ class Boot
             'val' => '',
             'voc' => false,
             'json' => false,
+            'pfx' => false,
         ];
         return (object)$in;
     }
@@ -289,22 +336,70 @@ class Boot
         '' === $rest or $in = (string)$in . $rest;
     }
 
-    private function scalar(string $in, $json = false, $notkey = true) {
-        $in && '$' == $in[0] && $this->var($in);
-        if ('' === $in || 'null' === $in || '~' === $in)
+    static function num(string $in) {// 2delete
+        $ary = token_get_all("<?php " . trim($in));
+        array_shift($ary);
+        $cnt = count($ary);
+        if (!$cnt || $cnt > 2)
+            return false;
+        $sign = '+';
+        if ($cnt == 2 && !in_array($sign = array_shift($ary), ['-', '+'], true))
+            return false;
+        [$token, $num] = $ary[0] + [1 => 1];
+        if (T_DNUMBER === $token)
+            return floatval($sign . $num);
+        if (T_LNUMBER !== $token)
+            return false;
+        $base = ['x' => 16, 'b' => 2];
+        return intval($sign . $num, $base[$num[1] ?? 0] ?? (0 == $num[0] ? 8 : 10));
+    }
+
+    private function code_fix($pad) {
+        if (!$p =& $this->stack)
+            return;
+        $last =& $p[array_key_last($p)];
+        $last[1] != $last[2] or $last[2] = $pad;
+        foreach ($p as $i => $ary) {
+            if ($pad < $ary[2])
+                return array_splice($p, $i);
+        }
+    }
+
+    private function code_run(&$v, $pad, $code) {
+        $ary = array_reverse($this->stack);
+        if ($code)
+            array_unshift($ary, [$code, 1]);
+        $a = $this->array;
+        foreach ($ary as $p) {
+            if ($pad > $p[1] || 1 === $p[1])
+                $v = is_string($p[0]) ? eval($p[0]) : ($p[0])($v, $a);
+        }
+        return !is_string($v);
+    }
+
+    private function scalar(string $v, $is_val = false, $json = false, $pad = '') {
+        $code = false;
+        if ($pad instanceof stdClass) {
+            $code = $pad->pfx;
+            $pad = $pad->pad;
+        }
+        $v && '$' == $v[0] && $this->var($v);
+        if ($is_val && $this->code_run($v, $pad, $code))
+            return $v;
+        if ('' === $v || 'null' === $v || '~' === $v)
             return $json ? 'null' : null;
-        $true = 'true' === $in;
-        if ($true || 'false' === $in)
-            return $json ? $in : $true;
-        if ('"' == $in[0] && '"' == $in[-1])
-            return $json ? $in : substr($in, 1, -1);
-        if ("'" == $in[0] && "'" == $in[-1])
-            return $json ? '"' . substr($in, 1, -1) . '"' : substr($in, 1, -1);
-        if ($notkey && is_numeric($in))
-            return $json ? $in : (is_num($in) ? (int)$in : (float)$in);
+        $true = 'true' === $v;
+        if ($true || 'false' === $v)
+            return $json ? $v : $true;
+        if ('"' == $v[0] && '"' == $v[-1])
+            return $json ? $v : substr($v, 1, -1);
+        if ("'" == $v[0] && "'" == $v[-1])
+            return $json ? '"' . substr($v, 1, -1) . '"' : substr($v, 1, -1);
+        if ($is_val && is_numeric($v))
+            return $json ? $v : (is_num($v) ? (int)$v : (float)$v);
         if (!$json)
-            return $in;
-        return '"' . str_replace('\\', '\\\\', $in) . '"';
+            return $v;
+        return '"' . str_replace('\\', '\\\\', $v) . '"';
     }
 
     static function cfg(&$name, $ware = 'main') {

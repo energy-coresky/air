@@ -40,6 +40,14 @@ class Globals extends Usage
         return array_keys($glb->_def()[$sect]);
     }
 
+    function c_html_def() {
+        return venus\globals::def();
+    }
+
+    function c_html_use() {
+        return venus\globals::use();
+    }
+
     function c_run($name = '') {
         global $sky;
         $this->name = $name;
