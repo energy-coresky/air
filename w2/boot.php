@@ -4,7 +4,7 @@ class Boot
 {
     use Processor;#2do ?
 
-    const version = 0.888;
+    const version = 0.988;
 
     private static $dev = false;
     private static $boot = 0;
@@ -31,11 +31,14 @@ class Boot
     function __construct($dc = false, $nx = null) {
         $this->array = [];
         self::$transform = [
+            'inc' => fn($v) => self::inc($v),
             'bin' => fn($v) => intval($v, 2),
             'oct' => fn($v) => intval($v, 8),
             'hex' => fn($v) => intval($v, 16),
             'base64' => fn($v) => base64_decode($v),
-            '_' => function ($v) {
+            'split' => fn($v) => explode(' ', $v),
+            'bang' => fn($v) => strbang(trim(unl($v))),
+            'self' => function ($v) {
                 $p =& $this->array;
                 foreach (explode('.', $v) as $key)
                     $p =& $p[$key];
@@ -287,8 +290,8 @@ class Boot
             $br = self::bracket(substr($v, 1));
             $_v = trim(substr($v, 2 + strlen($br)));
             $code = "return $br;";
-        } else {
-            $code = self::$transform[$name];
+        } elseif (!$code = self::$transform[$name]) {
+            $this->halt("Transformation `@$name` not found");
         }
         $n->voc ? ($n->voc->pfx = $code) : ($n->pfx = $code);
         $v = $_v;
@@ -402,6 +405,21 @@ class Boot
         return '"' . str_replace('\\', '\\\\', $v) . '"';
     }
 
+    static function inc($name, $ware = false) {
+        if (!$ware) {
+            strpos($name, '::') or $name = Plan::$ware . '::' . $name;
+            [$ware, $name] = explode('::', $name, 2);
+        }
+        $ext = explode('.', $name);
+        switch (end($ext)) {
+            case 'php': return Plan::_r([$ware, $name]);
+            case 'yml':
+            case 'yaml': return self::yml(Plan::_t([$ware, $name]));
+            case 'json': return json_decode(Plan::_g([$ware, $name]), true);
+            default: return strbang(unl(Plan::_g([$ware, $name])));
+        }
+    }
+
     static function cfg(&$name, $ware = 'main') {
         if (null === $name) {
             $name = is_file($ware) ? self::yml($ware) : [];
@@ -413,17 +431,7 @@ class Boot
             }
         } else {
             $yml = self::yml(Plan::_t([$ware, 'config.yaml']))[$name];
-            if (is_string($yml)) {
-                $ext = explode('.', $yml);
-                switch (end($ext)) {
-                    case 'php': return Plan::_r([$ware, $yml]);
-                    case 'yml':
-                    case 'yaml': return self::yml(Plan::_t([$ware, $yml]));
-                    case 'json': return json_decode(Plan::_g([$ware, $yml]), true);
-                    default: return strbang(unl(Plan::_g([$ware, $yml])));
-                }
-            }
-            return $yml;
+            return is_string($yml) ? self::inc($yml, $ware) : $yml;
         }
     }
 
