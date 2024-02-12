@@ -343,24 +343,6 @@ class Boot
         '' === $rest or $in = (string)$in . $rest;
     }
 
-    static function num(string $in) {// 2delete
-        $ary = token_get_all("<?php " . trim($in));
-        array_shift($ary);
-        $cnt = count($ary);
-        if (!$cnt || $cnt > 2)
-            return false;
-        $sign = '+';
-        if ($cnt == 2 && !in_array($sign = array_shift($ary), ['-', '+'], true))
-            return false;
-        [$token, $num] = $ary[0] + [1 => 1];
-        if (T_DNUMBER === $token)
-            return floatval($sign . $num);
-        if (T_LNUMBER !== $token)
-            return false;
-        $base = ['x' => 16, 'b' => 2];
-        return intval($sign . $num, $base[$num[1] ?? 0] ?? (0 == $num[0] ? 8 : 10));
-    }
-
     private function code_fix($pad) {
         if (!$p =& $this->stack)
             return;
@@ -390,10 +372,11 @@ class Boot
             $code = $pad->pfx;
             $pad = $pad->pad;
         }
-        $v && '$' == $v[0] && $this->var($v);
+        if ($v && '$' == $v[0])
+            $this->var($v);
         if ($is_val && 0 !== $code && $this->code_run($v, $pad, $code))
             return $v;
-        if ('' === $v || 'null' === $v || '~' === $v)
+        if ('' === $v || 'null' === $v)
             return $json ? 'null' : null;
         $true = 'true' === $v;
         if ($true || 'false' === $v)
@@ -402,11 +385,14 @@ class Boot
             return $json ? $v : substr($v, 1, -1);
         if ("'" == $v[0] && "'" == $v[-1])
             return $json ? '"' . substr($v, 1, -1) . '"' : substr($v, 1, -1);
-        if ($is_val && is_numeric($v))
-            return $json ? $v : (is_num($v) ? (int)$v : (float)$v);
-        if (!$json)
-            return $v;
-        return '"' . str_replace('\\', '\\\\', $v) . '"';
+        if ($is_val && is_numeric($x = $v)) {
+            if ($json)
+                return $v;
+            if ('-' === $v[0] || '+' === $v[0])
+                $x = substr($v, 1);
+            return ctype_digit($x) ? intval($v) : floatval($v);
+        }
+        return $json ? '"' . str_replace('\\', '\\\\', $v) . '"' : $v;
     }
 
     static function inc($name, $ware = false) {
