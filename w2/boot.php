@@ -160,26 +160,28 @@ class Boot
             $m = clone $n;
             if ($this->yml_line($in . ' ', $n, $m->pfx))
                 continue;
-
             is_null($m->key) or $add($m);
-            if ($n->voc) {
-                $n->val = null;
-                $add($n); # vocabulary: - key: val
-                $n = $n->voc;
-            }
+            $n->voc && $add($n->voc); # vocabulary: - key: val
         }
         is_null($n->key) or $add($n);
     }
 
     private function yml_val($m, &$ptr) {
         $ptr = false;
-        $this->stack && $this->code_fix($m->pad);
+        foreach ($this->stack as $i => &$p) {
+            if ($p[2] == $p[1])
+                $p[2] =& $m->pad;
+            if ($m->pad >= $p[2])
+                continue;
+            array_splice($this->stack, $i); # drop cascade code
+            break;
+        }
         if ($m->json) {
             $v = json_decode($m->json, true);
             if (json_last_error())
                 $this->halt('JSON failed');
         } else {
-            $v = $this->scalar($m->mod ? $m->val : trim($m->val), true, false, $m);
+            $v = $this->scalar($m->mod ? $m->val : trim($m->val), true, $m);
             if (1 == self::$boot) {
                 if ('define' == $m->key) {
                     $v = ['WWW' => self::www()];
@@ -193,70 +195,84 @@ class Boot
         return $v;
     }
 
+    private function tokens(string &$in) {
+        $len = strlen($in);
+        return new eVar(function ($prev) use (&$in, $len) {
+            static $j = 0, $x = 0;
+            if (($j += $x) >= $len)
+                return false;
+            $chr = $in[$j];
+            if ($whitespace = ' ' == $chr || "\t" == $chr) {
+                $t = substr($in, $j, $x = strspn($in, "\t ", $j));
+            } elseif ($prev->rest ?? false) {
+                $x = $len;
+                $t = substr($in, $j); # set rest of line
+            } elseif ('#' == $chr && ($prev->comt ?? true)) {
+                return false; # cut comment
+            } elseif ('"' == $chr || "'" == $chr) {
+                $x = self::str($in, $j, $len) or $this->halt('Incorrect string');
+                $t = substr($in, $j, $x -= $j);
+            } elseif (strpbrk($chr, '#:-{},[]')) {
+                $x = 1;
+                $t = $chr;
+            } else { # get token anyway
+                $t = substr($in, $j, $x = strcspn($in, "\t\"' #:-{},[]", $j));
+            }
+            return [
+                'token' => $t,
+                'ws' => $whitespace,
+                'keyc' => $colon = ':' == ($pt = $prev->token ?? '') && $whitespace,
+                'key2' => $colon || '-' == $pt && $whitespace,
+            ];
+        });
+    }
+
     private function yml_line(string $in, &$n, &$pfx) {
         static $pad_0 = '', $pad_1 = 0;
 
         $pad = '';
-        $szv = strlen($n->voc ? ($p =& $n->voc->val) : ($p =& $n->val));
+        $len = strlen($p =& $n->val);
         $cont = '' !== $p;
-        $k2 = $reqk = $ne = false;
-        $w2 = $setk = true; # set key first
+        $reqk = $ne = false;
+        $setk = true; # set key first
 
-        for ($j = 0, $szl = strlen($in); $j < $szl; $j += $x) {
-            if ($w = ' ' == $in[$j] || "\t" == $in[$j]) {
-                # whitespaces
-                $t = substr($in, $j, $x = strspn($in, "\t ", $j));
-            } elseif ($pad && !$reqk && ('|' == $n->mod || '>' == $n->mod)) {
-                $t = substr($in, $j); # set rest of line
-                $x = $szl;
-            } elseif ('"' == $in[$j] || "'" == $in[$j]) {
-                $x = self::str($in, $j, $szl) or $this->halt('Incorrect string');
-                $t = substr($in, $j, $x -= $j);
-            } elseif ('#' == $in[$j] && $w2 && ('|' !== $n->mod || strlen($pad) < $pad_1)) {
-                # cut comment
-                break;
-            } elseif (strpbrk($in[$j], '#:-{},[]')) {
-                $x = 1;
-                $t = $in[$j];
-            } else {
-                # get token anyway
-                $t = substr($in, $j, $x = strcspn($in, "\t\"' #:-{},[]", $j));
-            }
-            $w2 = $w;
-
-            if (!$j) { # first step
-                $w ? ($pad = $this->halt(false, $t)) : ($ne = $p .= $t);
+        foreach ($this->tokens($in) as $_ => $el) {
+            $mul = '|' == $n->mod || '>' == $n->mod;
+            $t = $el->token;
+            if (0 == $_) { # first step
+                $el->ws ? ($pad = $this->halt(false, $t)) : ($ne = $p .= $t);
                 $reqk = $pad <= $pad_0; # require match key
-                if (!$reqk && '|' == $n->mod)
-                    '' === $p ? ($pad_1 = strlen($pad)) : ($p .= "\n" . substr($pad, $pad_1));
-            } elseif ($w && $setk && $k2 && ($reqk || !$n->mod)) { # key found
+                if (!$reqk && $mul)
+                    '' === $p ? ($pad_1 = strlen($pad)) : '|' == $n->mod && ($p .= "\n" . substr($pad, $pad_1));
+            } elseif ($el->key2 && $setk && ($reqk || !$n->mod)) { # key found
                 if (!$reqk && $cont)
                     $this->halt('Mapping disabled');
-                if ($pad > $n->pad) {
+                if ($pad > $n->pad) { # aggregate node
                     if ($pfx)
                         $this->stack[] = [$pfx, $n->pad, $n->pad];
                     $pfx = 0;
                 }
-                $setk = false;
-                $sps = $t;
                 $n = $this->obj([
                     'pad' => $pad_0 = $pad,
-                    'key' => $c2 ? $this->scalar(substr($p, ($char ?? 0) + $szv, -1)) : true,
+                    'key' => $el->keyc ? $this->scalar(substr($p, ($char ?? 0) + $len, -1)) : true,
                 ]);
                 if (null === $n->key)
                     $this->halt('Key cannot be NULL');
                 $p =& $n->val;
-            } elseif ($w && true === $n->key && $c2 && !$n->voc && !$n->json) { # vocabulary key
+                $setk = false;
+                $spaces = $t;
+            } elseif ($el->keyc && true === $n->key && !$n->json) { # vocabulary key
                 $n->voc = $this->obj([
-                    'mod' => &$n->mod,
-                    'pad' => $pad_0 = $this->halt(false, $sps) . ' ' . $n->pad,
-                    'key' => $this->scalar(substr($p, 0, -1)),
+                    'pad' => $n->pad,
+                    'key' => true,
                 ]);
-                if (null === $n->voc->key)
+                $pad_0 = $n->pad .= ' ' . $this->halt(false, $spaces);
+                $n->key = $this->scalar(substr($p, 0, -1));
+                if (null === $n->key)
                     $this->halt('Key cannot be NULL');
-                $p =& $n->voc->val;
+                $p = '';
             } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
-                $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, ':' != $t, true, $pad_0) . $t;
+                $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, ':' != $t, $n, true) . $t;
                 $p = '';
             } elseif ('' === $p && ('{' == $t || '[' == $t) && !$n->mod) {
                 $n->mod = $n->json = $t;
@@ -267,7 +283,8 @@ class Boot
                 $p .= $rule ? " $t" : $t;
                 $ne = true;
             }
-            $k2 = ($c2 = ':' == $t) || '-' == $t;
+            $el->rest = $pad && $mul && !$reqk;
+            $el->comt = $el->ws && (!$mul || strlen($pad) < $pad_1);
         }
 
         if ($setk) {
@@ -287,18 +304,16 @@ class Boot
         return $setk;
     }
 
-    private function code_set($x, &$n) {
-        [,$name, $_v] = $x;
-        $n->voc ? ($v =& $n->voc->val) : ($v =& $n->val);
+    private function code_set($match, &$n) {
+        [, $name, $_v] = $match;
         if ('(' == $name[0]) { # inline code
-            $br = self::bracket(substr($v, 1));
-            $_v = trim(substr($v, 2 + strlen($br)));
-            $code = "return $br;";
-        } elseif (!$code = self::$transform[$name] ?? false) {
+            $br = self::bracket(substr($n->val, 1));
+            $_v = trim(substr($n->val, 2 + strlen($br)));
+            $n->pfx = "return $br;";
+        } elseif (!$n->pfx = self::$transform[$name] ?? false) {
             $this->halt("Transformation `@$name` not found");
         }
-        $n->voc ? ($n->voc->pfx = $code) : ($n->pfx = $code);
-        $v = $_v;
+        $n->val = $_v;
     }
 
     private function halt(string $error, $space = false) {
@@ -343,38 +358,23 @@ class Boot
         '' === $rest or $in = (string)$in . $rest;
     }
 
-    private function code_fix($pad) {
-        if (!$p =& $this->stack)
-            return;
-        $last =& $p[array_key_last($p)];
-        $last[1] != $last[2] or $last[2] = $pad;
-        foreach ($p as $i => $ary) {
-            if ($pad < $ary[2])
-                return array_splice($p, $i);
-        }
-    }
-
-    private function code_run(&$v, $pad, $code) {
+    private function code_run(&$v, $n) {
         $ary = array_reverse($this->stack);
-        if ($code)
-            array_unshift($ary, [$code, 1]);
-        $a = $this->array;
-        foreach ($ary as $p) {
-            if ($pad > $p[1] || 1 === $p[1])
-                $v = is_string($p[0]) ? eval($p[0]) : ($p[0])($v, $a);
+        if ($n->pfx)
+            array_unshift($ary, [$n->pfx, 1]); # ' ' > 1 is false
+        $a =& $this->array;
+        foreach ($ary as $one) {
+            [$code, $pad] = $one;
+            if ($n->pad > $pad || 1 === $pad)
+                $v = is_string($code) ? eval($code) : ($code)($v, $a);
         }
         return !is_string($v);
     }
 
-    private function scalar(string $v, $is_val = false, $json = false, $pad = '') {
-        $code = false;
-        if ($pad instanceof stdClass) {
-            $code = $pad->pfx;
-            $pad = $pad->pad;
-        }
+    private function scalar(string $v, $is_val = false, $n = 0, $json = false) {
         if ($v && '$' == $v[0])
             $this->var($v);
-        if ($is_val && 0 !== $code && $this->code_run($v, $pad, $code))
+        if ($is_val && 0 !== $n->pfx && $this->code_run($v, $n))
             return $v;
         if ('' === $v || 'null' === $v)
             return $json ? 'null' : null;
