@@ -4,9 +4,8 @@ class Boot
 {
     use Processor;#2do ?
 
-    const version = 0.988;
+    const version = 0.901;
 
-    private static $dev = false;
     private static $boot = 0;
     private static $dir;
     private static $const = [];
@@ -14,8 +13,15 @@ class Boot
     private $at;
     private $array;
     private $stack = [];
+    private $mode = [
+        'em' => '',
+        'val' => '{[',
+        'json' => '{[,]}',
+    ];
 
     static $transform;
+    static $eval;
+    static $dev = false;
 
     static function auto($v, $more = '', $func = false) {
         $array = var_export($v, true);
@@ -30,20 +36,27 @@ class Boot
 
     function __construct($dc = false, $nx = null) {
         $this->array = [];
+        self::$eval = fn($v) => $v;
 
         self::$transform = [
             'inc' => fn($v) => self::inc($v),
+            'eval' => self::$eval,
             'bin' => fn($v) => intval($v, 2),
             'oct' => fn($v) => intval($v, 8),
             'hex' => fn($v) => intval($v, 16),
             'base64' => fn($v) => base64_decode($v),
-            'split' => fn($v) => explode(' ', $v),
+            'split' => fn($v) => preg_split("/\s+/", $v),
             'bang' => fn($v) => strbang(trim(unl($v))),
-            'self' => function ($v) {
+            'self' => function ($path, &$a, $unset = false) {
                 $p =& $this->array;
-                foreach (explode('.', $v) as $key)
+                foreach (explode('.', $path) as $key) {
+                    $prev =& $p;
                     $p =& $p[$key];
-                return $p;
+                }
+                $return = $p;
+                if ($unset)
+                    unset($prev[$key]);
+                return $return;
             },
         ];
 
@@ -85,9 +98,9 @@ class Boot
         SKY::$plans['main'] = ['rewrite' => '', 'class' => [], 'app' => $app] + $plans;
         $ymls = ['main' => $ymls];
         if (is_file($fn = DIR_M . '/wares.php'))
-            $ymls += self::wares($fn, $ctrl, SKY::$plans['main']['class']);
+            $ymls += Rare::wares($fn, $ctrl, SKY::$plans['main']['class']);
         $plans = SKY::$plans;
-        $plans['main'] += ['ctrl' => $ctrl + self::controllers('main')];
+        $plans['main'] += ['ctrl' => $ctrl + Rare::controllers('main')];
         SKY::$plans['main']['cache']['dc'] = $dc;
         Plan::cache_s('sky_plan.php', self::auto($plans, $more, ['Boot', 'rewrite']));
         foreach ($ymls as $ware => $yml)
@@ -123,7 +136,7 @@ class Boot
         return true;
     }
 
-    static function yml(string $in, $is_file = true) {
+    static function yml(string $in, $is_file = true, $try = false) {
         self::$dir = $is_file ? str_replace('\\', '/', dirname($in)) : '???';
         defined('DEV') && (self::$dev = DEV);
         $yml = new Boot;
@@ -134,14 +147,13 @@ class Boot
 
     private function yml_text(string $in) {
         $p = ['' => &$this->array];
-        $n = $this->obj();
         $add = function ($m) use (&$p) {
             if (is_string($m->key) && 'DEV+' == substr($m->key, 0, 4)) {
                 if (!self::$dev)
                     return;
                 $m->key = substr($m->key, 4);
             }
-            $v = $this->yml_val($m, $ptr);
+            $v = $this->yml_val($m, $define);
             if (array_key_exists($m->pad, $p)) {
                 array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
                 $z =& $p[$m->pad];
@@ -151,14 +163,15 @@ class Boot
             }
             true === $m->key ? ($z[] = $v) : ($z[$m->key] = $v);
             $p[$m->pad] =& $z;
-            if ($ptr)
+            if ($define)
                 self::$const =& $z[$m->key];
         };
 
+        $n = $this->obj();
         foreach (explode("\n", unl($in)) as $key => $in) {
             $this->at[1] = 1 + $key;
             $m = clone $n;
-            if ($this->yml_line($in . ' ', $n, $m->pfx))
+            if ($this->yml_line($in . ' ', $n, $m->code))
                 continue;
             is_null($m->key) or $add($m);
             $n->voc && $add($n->voc); # vocabulary: - key: val
@@ -166,8 +179,8 @@ class Boot
         is_null($n->key) or $add($n);
     }
 
-    private function yml_val($m, &$ptr) {
-        $ptr = false;
+    private function yml_val($m, &$define) {
+        $define = false;
         foreach ($this->stack as $i => &$p) {
             if ($p[2] == $p[1])
                 $p[2] =& $m->pad;
@@ -184,8 +197,8 @@ class Boot
             $v = $this->scalar($m->mod ? $m->val : trim($m->val), true, $m);
             if (1 == self::$boot) {
                 if ('define' == $m->key) {
-                    $v = ['WWW' => self::www()];
-                    $ptr = true;
+                    $v = ['WWW' => Rare::www()];
+                    $define = true;
                 } elseif ('DEV' == $m->key) {
                     self::$boot = 2;
                     self::$dev = $v;
@@ -195,81 +208,86 @@ class Boot
         return $v;
     }
 
-    private function tokens(string &$in) {
+    private function tokens(string &$in, $json) {
         $len = strlen($in);
-        return new eVar(function ($prev) use (&$in, $len) {
-            static $j = 0, $x = 0;
-            if (($j += $x) >= $len)
+        return new eVar(function ($prev) use (&$in, $json, $len) {
+            static $j = 0;
+            $j += strlen($pt = $prev->token ?? '');
+            if ($j >= $len)
                 return false;
-            $chr = $in[$j];
-            if ($whitespace = ' ' == $chr || "\t" == $chr) {
-                $t = substr($in, $j, $x = strspn($in, "\t ", $j));
-            } elseif ($prev->rest ?? false) {
-                $x = $len;
-                $t = substr($in, $j); # set rest of line
-            } elseif ('#' == $chr && ($prev->comt ?? true)) {
+            $x = $in[$j];
+            $mode = $wt = $prev->mode ?? ($json ? 'json' : 'em');
+            if ($whitespace = ' ' == $x || "\t" == $x) {
+                $t = substr($in, $j, strspn($in, "\t ", $j));
+                $pt && ($wt = $pt);
+            } elseif ('rest' == $mode) { # return rest of line
+                $t = substr($in, $j);
+            } elseif ('#' == $x && ($prev->ws ?? true)) {
                 return false; # cut comment
-            } elseif ('"' == $chr || "'" == $chr) {
-                $x = self::str($in, $j, $len) or $this->halt('Incorrect string');
-                $t = substr($in, $j, $x -= $j);
-            } elseif (strpbrk($chr, '#:-{},[]')) {
-                $x = 1;
-                $t = $chr;
-            } else { # get token anyway
-                $t = substr($in, $j, $x = strcspn($in, "\t\"' #:-{},[]", $j));
+            } elseif ('"' == $x || "'" == $x) {
+                $sz = self::str($in, $j, $len) or $this->halt('Incorrect string');
+                $t = substr($in, $j, $sz -= $j);
+            } else {
+                $cl = $this->mode[$mode];
+                $t = strpbrk($x, ":-$cl") ? $x : substr($in, $j, strcspn($in, "\t\"' :-$cl", $j));
             }
             return [
                 'token' => $t,
                 'ws' => $whitespace,
-                'keyc' => $colon = ':' == ($pt = $prev->token ?? '') && $whitespace,
-                'key2' => $colon || '-' == $pt && $whitespace,
+                'keyc' => $colon = ':' == $wt,
+                'key2' => $colon || '-' == $wt,
+                'code' => 'val' == $mode && '@' == $wt[0],
+                'mode' => $mode,
             ];
         });
     }
 
-    private function yml_line(string $in, &$n, &$pfx) {
+    private function yml_line(string $in, &$n, &$code) {
         static $pad_0 = '', $pad_1 = 0;
 
         $pad = '';
         $len = strlen($p =& $n->val);
-        $cont = '' !== $p;
-        $reqk = $ne = false;
         $setk = true; # set key first
+        $reqk = false;
 
-        foreach ($this->tokens($in) as $_ => $el) {
-            $mul = '|' == $n->mod || '>' == $n->mod;
+        foreach ($this->tokens($in, $n->json) as $_ => $el) {
             $t = $el->token;
             if (0 == $_) { # first step
-                $el->ws ? ($pad = $this->halt(false, $t)) : ($ne = $p .= $t);
+                ($has_t = !$el->ws) ? ($p .= $t) : ($pad = $this->halt(false, $t));
                 $reqk = $pad <= $pad_0; # require match key
-                if (!$reqk && $mul)
-                    '' === $p ? ($pad_1 = strlen($pad)) : '|' == $n->mod && ($p .= "\n" . substr($pad, $pad_1));
-            } elseif ($el->key2 && $setk && ($reqk || !$n->mod)) { # key found
-                if (!$reqk && $cont)
-                    $this->halt('Mapping disabled');
-                if ($pad > $n->pad) { # aggregate node
-                    if ($pfx)
-                        $this->stack[] = [$pfx, $n->pad, $n->pad];
-                    $pfx = 0;
+                $mult = ('|' == $n->mod || '>' == $n->mod) && (!$reqk || '' === trim($in));
+                if ($mult) {
+                    $el->mode = 'rest'; # multiline mode
+                    if (!$len) {
+                        $pad_1 = strlen($pad);
+                    } elseif ('|' == $n->mod) {
+                        $p .= "\n" . substr($pad, $pad_1);
+                    }
                 }
-                $n = $this->obj([
-                    'pad' => $pad_0 = $pad,
-                    'key' => $el->keyc ? $this->scalar(substr($p, ($char ?? 0) + $len, -1)) : true,
-                ]);
-                if (null === $n->key)
-                    $this->halt('Key cannot be NULL');
+            } elseif ($el->key2 && $setk && ($reqk || !$n->mod)) { # key found
+                if ($pad > $n->pad) { # aggregate node
+                    $len && $this->halt('Mapping disabled');
+                    if ($code)
+                        $this->stack[] = [$code, $n->pad, $n->pad];
+                    $code = 0;
+                }
+                $key = $el->keyc ? $this->scalar(substr($p, $len, -1)) : true;
+                null !== $key or $this->halt('Key cannot be NULL');
+                $n = $this->obj(['key' => $key, 'pad' => $pad_0 = $pad]);
                 $p =& $n->val;
                 $setk = false;
                 $spaces = $t;
+                $el->mode = 'val';
             } elseif ($el->keyc && true === $n->key && !$n->json) { # vocabulary key
-                $n->voc = $this->obj([
-                    'pad' => $n->pad,
-                    'key' => true,
-                ]);
+                $n->voc = $this->obj(['key' => true, 'pad' => $n->pad, 'code' => 0]);
                 $pad_0 = $n->pad .= ' ' . $this->halt(false, $spaces);
                 $n->key = $this->scalar(substr($p, 0, -1));
-                if (null === $n->key)
-                    $this->halt('Key cannot be NULL');
+                null !== $n->key or $this->halt('Key cannot be NULL');
+                $el->mode = 'val';
+                $p = '';
+            } elseif ($el->code) {
+                if (!$n->code = self::$transform[substr($p, 1)] ?? false)
+                    $this->halt("Transformation `$p` not found");
                 $p = '';
             } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
                 $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, ':' != $t, $n, true) . $t;
@@ -277,43 +295,28 @@ class Boot
             } elseif ('' === $p && ('{' == $t || '[' == $t) && !$n->mod) {
                 $n->mod = $n->json = $t;
                 $reqk = false;
+                $el->mode = 'json';
             } else {
-                if ($rule = !$reqk && '' !== $p && !$ne && '|' != $n->mod)
-                    $char = 1;
-                $p .= $rule ? " $t" : $t;
-                $ne = true;
+                if ($xmul = $len && !$has_t && '|' != $n->mod)
+                    $len++;
+                if ('' !== $p && 'val' == $el->mode)
+                    $el->mode = 'em';
+                $p .= $xmul ? " $t" : $t;
+                $has_t = true;
             }
-            $el->rest = $pad && $mul && !$reqk;
-            $el->comt = $el->ws && (!$mul || strlen($pad) < $pad_1);
         }
 
         if ($setk) {
-            if ($reqk && $ne)
+            if ($reqk && $has_t)
                 $this->halt('Cannot match key');
             if ($p && ' ' == $p[-1])
                 $p = substr($p, 0, -1);
-        } else {
-            if (preg_match("/^@(\(|\w+)\s*(.*)$/", $p = rtrim($p), $x))
-                $this->code_set($x, $n);
-            if ('|' == $p || '>' == $p) {
-                $n->mod = $p;
-                $p = '';
-            }
+        } elseif ('|' == ($p = rtrim($p)) || '>' == $p) {
+            $n->mod = $p;
+            $p = '';
         }
 
         return $setk;
-    }
-
-    private function code_set($match, &$n) {
-        [, $name, $_v] = $match;
-        if ('(' == $name[0]) { # inline code
-            $br = self::bracket(substr($n->val, 1));
-            $_v = trim(substr($n->val, 2 + strlen($br)));
-            $n->pfx = "return $br;";
-        } elseif (!$n->pfx = self::$transform[$name] ?? false) {
-            $this->halt("Transformation `@$name` not found");
-        }
-        $n->val = $_v;
     }
 
     private function halt(string $error, $space = false) {
@@ -332,7 +335,7 @@ class Boot
             'val' => '',
             'voc' => false,
             'json' => false,
-            'pfx' => false,
+            'code' => false,
         ];
         return (object)$in;
     }
@@ -358,15 +361,14 @@ class Boot
         '' === $rest or $in = (string)$in . $rest;
     }
 
-    private function code_run(&$v, $n) {
+    private function transform(&$v, $n) {
         $ary = array_reverse($this->stack);
-        if ($n->pfx)
-            array_unshift($ary, [$n->pfx, 1]); # ' ' > 1 is false
-        $a =& $this->array;
+        if ($n->code)
+            array_unshift($ary, [$n->code, 1]); # ' ' > 1 is false
         foreach ($ary as $one) {
             [$code, $pad] = $one;
             if ($n->pad > $pad || 1 === $pad)
-                $v = is_string($code) ? eval($code) : ($code)($v, $a);
+                $v = run_transform($code, $v, $this->array);
         }
         return !is_string($v);
     }
@@ -374,7 +376,7 @@ class Boot
     private function scalar(string $v, $is_val = false, $n = 0, $json = false) {
         if ($v && '$' == $v[0])
             $this->var($v);
-        if ($is_val && 0 !== $n->pfx && $this->code_run($v, $n))
+        if ($is_val && 0 !== $n->code && $this->transform($v, $n))
             return $v;
         if ('' === $v || 'null' === $v)
             return $json ? 'null' : null;
@@ -400,13 +402,14 @@ class Boot
             strpos($name, '::') or $name = Plan::$ware . '::' . $name;
             [$ware, $name] = explode('::', $name, 2);
         }
+        $addr = [$ware, $name];
         $ext = explode('.', $name);
         switch (end($ext)) {
-            case 'php': return Plan::_r([$ware, $name]);
-            case 'json': return json_decode(Plan::_g([$ware, $name]), true);
+            case 'php': return Plan::app_r($addr);
+            case 'json': return json_decode(Plan::app_g($addr), true);
             case 'yml':
-            case 'yaml': return self::yml(Plan::_t([$ware, $name]));
-            default: return strbang(unl(Plan::_g([$ware, $name])));
+            case 'yaml': return self::yml(Plan::app_t($addr));
+            default: return strbang(unl(Plan::app_g($addr)));
         }
     }
 
@@ -425,54 +428,12 @@ class Boot
         }
     }
 
-    static function wares($fn, &$ctrl, &$class) {
-        $ymls = [];
-        foreach (require $fn as $ware => $ary) {
-            unset($yml);
-            $path = str_replace('\\', '/', $ary['path']);
-            if (!$cfg = self::cfg($yml, "$path/config.yaml"))
-                continue; ////?
-            $plan = $cfg['plans'];
-            if ($ary['type'] ?? false)
-                $plan['app']['type'] = 'pr-dev';
-            if ($ary['options'] ?? false)
-                $plan['app']['options'] = $ary['options'];
-            if (!self::$dev && in_array($plan['app']['type'], ['dev', 'pr-dev']))
-                continue;
-            foreach ($ary['class'] as $cls) {
-                $df = 'default_c' == $cls;
-                if ($df || 'c_' == substr($cls, 0, 2)) {
-                    $x = $df ? '*' : substr($cls, 2);
-                    $ctrl[$ary['tune'] ? "$ary[tune]/$x" : $x] = $ware;
-                } else {
-                    $class[$cls] = $ware;
-                }
-            }
-            $app =& $plan['app'];
-            unset($cfg['plans'], $app['require'], $app['class']);
-            $app['cfg'] = $cfg;
-            if ($yml)
-                $ymls[$ware] = $yml;
-            SKY::$plans[$ware] = ['app' => ['path' => $path] + $plan['app']] + $plan;
-        }
-        return $ymls;
-    }
-
     static function rewrite(&$in) {
         $code = "\n";
         foreach (Plan::_rq('rewrite.php') as $rw)
             !self::$dev && $rw[2] or $code .= $rw[1] . "\n";
         $in = explode("'',", $in, 2);
         $in = "$in[0]function(\$cnt, &\$surl, \$uri, \$sky) {{$code}},$in[1]";
-    }
-
-    static function www() {
-        for ($i = 4, $a = ['public', 'public_html', 'www', 'web']; $a; --$i or $a = glob('*')) {
-            $dir = array_shift($a);
-            if ('_' != $dir[0] && is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
-                return "$dir/";
-        }
-        return false;
     }
 
     static function env($key, $default = 0) {
@@ -484,33 +445,6 @@ class Boot
             }
         }
         return $val;
-    }
-
-    static function controllers($ware = false, $plus = false) {
-        $list = [];
-        if (!$ware) {
-            foreach (SKY::$plans as $ware => &$cfg) {
-                if ('main' == $ware || 'prod' == $cfg['app']['type'])
-                    $list += self::controllers($ware, true);
-            }
-            return $list;
-        }
-        $glob = Plan::_b([$ware, 'mvc/c_*.php']);
-        if ($fn = Plan::_t([$ware, 'mvc/default_c.php']))
-            array_unshift($glob, $fn);
-        $z = 'main' == $ware ? false : $ware;
-        foreach ($glob as $v) {
-            $k = basename($v, '.php');
-            $v = 'default_c' == $k ? '*' : substr($k, 2);
-            $list[$plus ? "$ware.$k" : $v] = $plus ? [1, $k, $z] : $ware;
-        };
-        if ($plus) {
-            foreach (Plan::_rq([$ware, 'gate.php']) as $k => $v) {
-                $v = 'default_c' == $k ? '*' : substr($k, 2);
-                isset($list["$ware.$k"]) or $list["$ware.$k"] = [0, $k, $z]; # deleted
-            }
-        }
-        return $list;
     }
 
     static function bracket(string $in, $b = '(') {
@@ -543,6 +477,21 @@ class Boot
             $p += ($bs = strspn($in, '\\', $p));
         }
     }
+}
+
+function yaml($path, $unset = false) {
+    return (Boot::$transform['self'])($path, $path, $unset);
+}
+
+function run_transform($__code__, $v, &$a) {
+    global $sky;
+    $__ret__ = $__code__($v, $a);
+    if ($__code__ !== Boot::$eval)
+        return $__ret__;
+    $tok = token_get_all("<? $__ret__");
+    if (!array_filter($tok, fn($v) => is_array($v) && T_RETURN == $v[0]))
+        $__ret__ = 'return ' . $__ret__;
+    return eval("$__ret__;");
 }
 
 __halt_compiler();

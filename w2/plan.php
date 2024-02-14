@@ -178,6 +178,7 @@ class Plan
             } else {
                 require DIR_S . "/w2/processor.php";
                 require DIR_S . "/w2/boot.php";
+                require DIR_S . "/w2/rare.php";
                 new Boot($dc, $nx);
             }
             SKY::$debug = DEBUG;

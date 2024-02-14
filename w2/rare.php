@@ -206,6 +206,75 @@ class Rare
         return $_51 >= $i8 ? 'cp1251' : 'koi8';
     }
 
+    static function wares($fn, &$ctrl, &$class) {
+        $ymls = [];
+        foreach (require $fn as $ware => $ary) {
+            unset($yml);
+            $path = str_replace('\\', '/', $ary['path']);
+            if (!$cfg = Boot::cfg($yml, "$path/config.yaml"))
+                continue; ////?
+            $plan = $cfg['plans'];
+            if ($ary['type'] ?? false)
+                $plan['app']['type'] = 'pr-dev';
+            if ($ary['options'] ?? false)
+                $plan['app']['options'] = $ary['options'];
+            if (!Boot::$dev && in_array($plan['app']['type'], ['dev', 'pr-dev']))
+                continue;
+            foreach ($ary['class'] as $cls) {
+                $df = 'default_c' == $cls;
+                if ($df || 'c_' == substr($cls, 0, 2)) {
+                    $x = $df ? '*' : substr($cls, 2);
+                    $ctrl[$ary['tune'] ? "$ary[tune]/$x" : $x] = $ware;
+                } else {
+                    $class[$cls] = $ware;
+                }
+            }
+            $app =& $plan['app'];
+            unset($cfg['plans'], $app['require'], $app['class']);
+            $app['cfg'] = $cfg;
+            if ($yml)
+                $ymls[$ware] = $yml;
+            SKY::$plans[$ware] = ['app' => ['path' => $path] + $plan['app']] + $plan;
+        }
+        return $ymls;
+    }
+
+    static function www() {
+        for ($i = 4, $a = ['public', 'public_html', 'www', 'web']; $a; --$i or $a = glob('*')) {
+            $dir = array_shift($a);
+            if ('_' != $dir[0] && is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
+                return "$dir/";
+        }
+        return false;
+    }
+
+    static function controllers($ware = false, $plus = false) {
+        $list = [];
+        if (!$ware) {
+            foreach (SKY::$plans as $ware => &$cfg) {
+                if ('main' == $ware || 'prod' == $cfg['app']['type'])
+                    $list += self::controllers($ware, true);
+            }
+            return $list;
+        }
+        $glob = Plan::_b([$ware, 'mvc/c_*.php']);
+        if ($fn = Plan::_t([$ware, 'mvc/default_c.php']))
+            array_unshift($glob, $fn);
+        $z = 'main' == $ware ? false : $ware;
+        foreach ($glob as $v) {
+            $k = basename($v, '.php');
+            $v = 'default_c' == $k ? '*' : substr($k, 2);
+            $list[$plus ? "$ware.$k" : $v] = $plus ? [1, $k, $z] : $ware;
+        };
+        if ($plus) {
+            foreach (Plan::_rq([$ware, 'gate.php']) as $k => $v) {
+                $v = 'default_c' == $k ? '*' : substr($k, 2);
+                isset($list["$ware.$k"]) or $list["$ware.$k"] = [0, $k, $z]; # deleted
+            }
+        }
+        return $list;
+    }
+
     static function oauth2($via, $func = false) {
         global $sky, $user;
 

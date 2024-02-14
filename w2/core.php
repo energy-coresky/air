@@ -45,23 +45,22 @@ function strand($n = 23) {
     return $ret;
 }
 
-function strbang($str, $via1 = ' ', $via2 = "\n") {
-    $out = [];
-    foreach (explode($via2, $str) as $item) {
+function strbang($str, $via1 = ' ', $via2 = "\n") : array {
+    $ary = [];
+    foreach (explode($via2, $str) as $row) {
         if ($via1 instanceof Closure) {
-            $via1($out, $item);
-        } elseif (strpos($item, $via1)) {
-            [$k, $v] = explode($via1, $item, 2);
-            $out[$k] = $v;
+            $via1($ary, $row);
+        } elseif (strpos($row, $via1)) {
+            [$k, $v] = explode($via1, $row, 2);
+            $ary[$k] = $v;
         }
     }
-    return $out;
+    return $ary;
 }
 
-function array_join($ary, $via1 = ' ', $via2 = "\n") {
-    return implode($via2, array_map(function($k, $v) use ($via1) {
-        return $via1 instanceof Closure ? $via1($k, $v) : $k . $via1 . $v;
-    }, array_keys($ary), $ary));
+function array_join($ary, $via1 = ' ', $via2 = "\n") : string {
+    $fun = $via1 instanceof Closure ? fn($k, $v) => $via1($k, $v) : fn($k, $v) => $k . $via1 . $v;
+    return implode($via2, array_map($fun, array_keys($ary), $ary));
 }
 
 function array_match($re, $ary, $re_key = false) {
