@@ -179,7 +179,7 @@ class Console
         echo "\n>git push origin master\n";
         system("git push origin master");
         if (self::$d[0]) {
-            self::$d[1] or common_c::make_h(false);
+            self::$d[1] or $air or common_c::make_h(false);
             chdir(DIR);
             if (Plan::_t('w3/master.php'))
                 new Master(self::$d[1]);
