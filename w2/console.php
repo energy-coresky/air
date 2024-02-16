@@ -10,7 +10,7 @@ class Console
         if ('Console' != get_class($this))
             return $argv && call_user_func_array([$this, $argv], $found);
 
-        self::$d = $found + [3 => $ns = $found[2] && 'air' != basename(getcwd())];
+        self::$d = $found + [3 => $ns = $found[2] && 'air' != basename($found[2])];
 
         if ('master' == $argv[1]) {
             if ($ns || is_dir(DIR_S . '/.git'))
@@ -165,7 +165,7 @@ class Console
         if (self::$d[0]) {
             chdir(DIR);
             SQL::$dd_h = 'Console::dd_h';
-            if (!self::$d[1]) {
+            if (!self::$d[1] && !$air) {
                 global $sky;
                 $sky->open();
                 common_c::make_h(true);
