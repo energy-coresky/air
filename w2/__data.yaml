@@ -1,0 +1,92 @@
+
+packagist: https://repo.packagist.org/p2/
+
+phpman:
+  en: English
+  pt_BR: Brazilian Portuguese
+  zh: Chinese (Simplified)
+  fr: French
+  de: German
+  ja: Japanese
+  ru: Russian
+  es: Spanish
+  tr: Turkish
+
+const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
+
+keywords: @space
+  __halt_compiler abstract and array as break callable case catch class clone const continue
+  declare default die do echo else elseif empty enddeclare endfor endforeach endif endswitch
+  endwhile eval exit extends final for foreach function global goto if implements include
+  include_once instanceof insteadof interface isset list namespace new or print private protected
+  public require require_once return static switch throw trait try unset use var while xor
+  match readonly fn yield # 'yield from'
+
+extension:
+  apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant
+  exif FFI* fileinfo filter ftp gd gettext gmp hash HRTime* iconv imagick imap interbase
+  intl ionCube Loader json ldap libxml mbstring mhash* mysqli mysqlnd oci8 odbc openssl pcntl*
+  pcre PDO PDO_CUBRID PDO_DBLIB PDO_FIREBIRD PDO_IBM PDO_INFORMIX pdo_mysql PDO_OCI PDO_ODBC pdo_pgsql
+  pdo_sqlite PDO_SQLSRV pgsql Phar phpdbg* posix* pspell readline Reflection session shmop
+  SimpleXML snmp soap sockets sodium SourceGuardian SPL sqlite3 standard sysvmsg* sysvsem* sysvshm*
+  tidy tokenizer wddx xml xmlreader xmlwriter xsl Zend OPcache zip zlib
+  
+languages: @bang >
+  ab.Abkhazian aa.Afar af.Afrikaans ak.Akan sq.Albanian am.Amharic ar.Arabic an.Aragonese hy.Armenian as.Assamese
+  av.Avaric ae.Avestan ay.Aymara az.Azerbaijani bm.Bambara ba.Bashkir eu.Basque be.Belarusian bn.Bengali bh.Bihari
+  bi.Bislama bs.Bosnian br.Breton bg.Bulgarian my.Burmese ca.Catalan km.Central_Khmer ch.Chamorro ce.Chechen ny.Chichewa
+  zh.Chinese cu.Church_Slavic cv.Chuvash kw.Cornish co.Corsican cr.Cree hr.Croatian cs.Czech da.Danish nl.Dutch
+  dz.Dzongkha en.English eo.Esperanto et.Estonian ee.Ewe fo.Faroese fj.Fijian fi.Finnish fr.French ff.Fulah gd.Gaelic
+  gl.Galician lg.Ganda ka.Georgian de.German el.Greek kl.Greenlandic gu.Gujarati ht.Haitian ha.Hausa he.Hebrew hz.Herero
+  hi.Hindi ho.Hiri_Motu hu.Hungarian is.Icelandic io.Ido ig.Igbo id.Indonesian ia.Interlingua ie.Interlingue iu.Inuktitut
+  ik.Inupiaq ga.Irish it.Italian ja.Japanese jv.Javanese kn.Kannada kr.Kanuri ks.Kashmiri kk.Kazakh ki.Kikuyu rw.Kinyarwanda
+  ky.Kirghiz kv.Komi kg.Kongo ko.Korean kj.Kuanyama ku.Kurdish lo.Lao la.Latin lv.Latvian li.Limburgan ln.Lingala lt.Lithuanian
+  lu.Luba-Katanga lb.Luxembourgish mk.Macedonian mg.Malagasy ms.Malay ml.Malayalam dv.Maldivian mt.Maltese gv.Manx mi.Maori
+  mr.Marathi mh.Marshallese mn.Mongolian na.Nauru nv.Navaho ng.Ndonga ne.Nepali nd.North_Ndebele se.Northern_Sami no.Norwegian
+  nb.Norwegian_Bokmål nn.Norwegian_Nynorsk ii.Nuosu oj.Ojibwa or.Oriya om.Oromo os.Ossetian pi.Pali pa.Panjabi ps.Pashto
+  fa.Persian pl.Polish pt.Portuguese qu.Quechua ro.Romanian rm.Romansh rn.Rundi ru.Russian sg.Sango sa.Sanskrit sc.Sardinian
+  sr.Serbian sn.Shona sd.Sindhi si.Sinhala sk.Slovak sl.Slovene so.Somali nr.South_Ndebele st.Southern_Sotho es.Spanish
+  su.Sundanese sw.Swahili ss.Swati sv.Swedish tl.Tagalog ty.Tahitian tg.Tajik ta.Tamil tt.Tatar te.Telugu th.Thai
+  bo.Tibetan ti.Tigrinya to.Tongan ts.Tsonga tn.Tswana tr.Turkish tk.Turkmen tw.Twi ug.Uighur uk.Ukrainian ur.Urdu
+  uz.Uzbek ve.Venda vi.Vietnamese vo.Volapük wa.Walloon cy.Welsh fy.Western_Frisian wo.Wolof xh.Xhosa yi.Yiddish
+  yo.Yoruba za.Zhuang zu.Zulu
+
+timezones: @csv(;) # @join 
+  Africa: Abidjan;Accra;Addis_Ababa;Algiers;Asmara;Bamako;Bangui;Banjul;Bissau;Blantyre;Brazzaville;Bujumbura;Cairo;Ceuta;Conakry;Dakar;Dar_es_Salaam;Djibouti;Douala;Freetown;Gaborone;Harare;Johannesburg;Juba;Kampala;Khartoum;Kigali;Kinshasa;Lagos;Libreville;Lome;Luanda;Lubumbashi;Lusaka;Malabo;Maputo;Maseru;Mbabane;Mogadishu;Monrovia;Nairobi;Ndjamena;Niamey;Nouakchott;Ouagadougou;Porto-Novo;Sao_Tome;Tripoli;Tunis;Windhoek
+  America: Adak;Anchorage;Anguilla;Antigua;Argentina/Buenos_Aires;Argentina/Catamarca;Argentina/Cordoba;Argentina/Jujuy;Argentina/La_Rioja;Argentina/Mendoza;Argentina/Rio_Gallegos;Argentina/Salta;Argentina/San_Juan;Argentina/San_Luis;Argentina/Tucuman;Argentina/Ushuaia;Aruba;Asuncion;Atikokan;Bahia_Banderas;Barbados;Belize;Blanc-Sablon;Bogota;Boise;Cambridge_Bay;Cancun;Caracas;Cayman;Chicago;Chihuahua;Costa_Rica;Creston;Curacao;Danmarkshavn;Dawson;Dawson_Creek;Denver;Detroit;Dominica;Edmonton;El_Salvador;Fort_Nelson;Glace_Bay;Goose_Bay;Grand_Turk;Grenada;Guadeloupe;Guatemala;Guayaquil;Halifax;Havana;Hermosillo;Indiana/Indianapolis;Indiana/Knox;Indiana/Marengo;Indiana/Petersburg;Indiana/Tell_City;Indiana/Vevay;Indiana/Vincennes;Indiana/Winamac;Inuvik;Iqaluit;Jamaica;Juneau;Kentucky/Louisville;Kentucky/Monticello;Kralendijk;La_Paz;Los_Angeles;Lower_Princes;Managua;Marigot;Martinique;Matamoros;Mazatlan;Menominee;Merida;Metlakatla;Mexico_City;Miquelon;Moncton;Monterrey;Montevideo;Montserrat;Nassau;New_York;Nipigon;Nome;North_Dakota/Beulah;North_Dakota/Center;North_Dakota/New_Salem;Ojinaga;Panama;Pangnirtung;Paramaribo;Phoenix;Port-au-Prince;Port_of_Spain;Puerto_Rico;Punta_Arenas;Rainy_River;Rankin_Inlet;Regina;Resolute;Santiago;Santo_Domingo;Sitka;St_Barthelemy;St_Johns;St_Kitts;St_Lucia;St_Thomas;St_Vincent;Swift_Current;Tegucigalpa;Thule;Thunder_Bay;Tijuana;Toronto;Tortola;Vancouver;Whitehorse;Winnipeg;Yakutat;Yellowknife
+  Antarctica: Macquarie;McMurdo
+  Arctic: Longyearbyen
+  Asia: Amman;Baghdad;Bangkok;Beirut;Colombo;Damascus;Dhaka;Famagusta;Gaza;Hebron;Ho_Chi_Minh;Hong_Kong;Irkutsk;Jakarta;Jayapura;Jerusalem;Karachi;Kolkata;Kuala_Lumpur;Macau;Makassar;Manila;Nicosia;Phnom_Penh;Pontianak;Pyongyang;Seoul;Shanghai;Singapore;Taipei;Tbilisi;Tehran;Tokyo;Vientiane;Yangon;Yekaterinburg
+  Atlantic: Azores;Bermuda;Canary;Faroe;Madeira;Reykjavik;St_Helena;Stanley
+  Australia: Adelaide;Brisbane;Broken_Hill;Darwin;Hobart;Lindeman;Lord_Howe;Melbourne;Perth;Sydney
+  Europe: Amsterdam;Andorra;Athens;Belgrade;Berlin;Bratislava;Brussels;Bucharest;Budapest;Busingen;Chisinau;Copenhagen;Dublin;Gibraltar;Guernsey;Helsinki;Isle_of_Man;Istanbul;Jersey;Kaliningrad;Kiev;Lisbon;Ljubljana;London;Luxembourg;Madrid;Malta;Mariehamn;Minsk;Monaco;Moscow;Oslo;Paris;Podgorica;Prague;Riga;Rome;San_Marino;Sarajevo;Simferopol;Skopje;Sofia;Stockholm;Tallinn;Tirane;Uzhgorod;Vaduz;Vatican;Vienna;Vilnius;Warsaw;Zagreb;Zaporozhye;Zurich
+  Indian: Antananarivo;Comoro;Maldives;Mayotte
+  Pacific: Auckland;Easter;Guam;Honolulu;Midway;Pago_Pago;Saipan
+
+config:
+  - <fieldset><legend>Primary settings</legend>
+  - ['', [[<b><u>Production</u></b>, li]]]
+  trace_root: [Debug mode on production for `root` profile, chk]
+  trace_cli: [Use X-tracing for CLI, chk]
+  error_403: [Use 403 code for `die`, chk]
+  empty_die: [Empty response for `die`, chk]
+  gate_404: [Gate errors as 0.404 (soft), chk] #2do: clear all cache when changed
+  log_error: [Log ERROR, radio, [Off, On]]  #crash_log prod_error quiet_eerr
+  log_crash: [Log CRASH, radio, [Off, On]]
+  - [Hard cache, {
+      cache_act: ['', radio, [Off, On]],
+      cache_sec: ['Default TTL, seconds', number, style="width:100px", 300]
+      }]
+  - </fieldset>
+  - <fieldset><legend>"Visitor's & users settings"</legend>
+  - [Cookie name, {
+      c_name: ['', '', '', sky],
+      c_upd: ['Cookie updates, minutes', number, style="width:100px", 60]
+      }]
+  visit: [One visit break after, off minutes, number, '', 5]
+  reg_req: [Users required for registrations, radio, [Both, Login, E-mail]]
+  - </fieldset>
+
+
+
+

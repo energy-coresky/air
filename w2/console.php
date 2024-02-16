@@ -321,12 +321,12 @@ class Console
         print_r($list);
     }
 
-    /** Parse Yaml [ware=main] [fn=config.yaml] [one of 0|1|2] or Inline Yaml > sky y "- @eval SKY::CORE" */
+    /** Parse Yaml [ware=main] [fn=config.yaml] [one of 0|1|2] or Inline Yaml > sky y "+ @semi $PATH()" */
     function c_y($ware = 'main', $fn = 'config.yaml', $func = 0) {
         $list = ['var_export', 'print_r', 'var_dump'];
         if (strpos($ware, ' ')) { # inline yaml
             !is_num($fn) or $func = $fn;
-            echo "Inline Yaml: ";
+            '~' == ltrim($ware)[0] or print "Inline Yaml: ";
             $list[$func](Boot::yml($ware, false));
         } elseif (!$fn = Plan::_t([$ware, $fn])) {
             echo "File `$fn`, ware=$ware is: not found";

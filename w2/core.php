@@ -10,6 +10,10 @@ function sql(...$in) {
     return $sql->exec();
 }
 
+function yml(...$in) {
+
+}
+
 function qp(...$in) { # Query Part, Query Parse
     $in or $in = [''];
     return new SQL($in, 'parseT');
