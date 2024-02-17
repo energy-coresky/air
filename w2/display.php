@@ -65,7 +65,7 @@ class Display
                 $out = '';
                 while (preg_match('/^(.*?)(~|@|#)([a-z]+)(.*)$/s', $v, $m)) {
                     $out .= $fu($m[1]);
-                    $v = substr($m[4], strlen($br = Boot::bracket($m[4])));
+                    $v = substr($m[4], strlen($br = Rare::bracket($m[4])));
                     $out .= $s($m[2] . $m[3], '#' == $m[2] ? (in_array($m[3], $pp) ? '#090' : '') : '#00f');
                     if ($br && '`' != $br[1] && in_array($m[3], ['inc', 'use', 'block']))
                         $out .= $s($br, 'red');
@@ -125,7 +125,7 @@ class Display
         $bc = '';
         if (preg_match("/^(.*?)function $method\([^\)]*\)\s*({.*)$/s", $php, $m)) {
             $n0 = substr_count($m[1], "\n");
-            $br = Boot::bracket($m[2], '{');
+            $br = Rare::bracket($m[2], '{');
             $sz = substr_count($br, "\n");
             $bc = str_repeat('=', $n0) . str_repeat('*', 1 + $sz);
         }

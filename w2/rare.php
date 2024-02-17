@@ -52,7 +52,7 @@ class Rare
         return common_c::mail_h(trim($message), $ary, trim($subject), trim($to));
     }
 
-    //2do rewrite with Boot::str(..)
+    //2do rewrite with Rare::str(..)
     static function split(string $in, $b = ';', $sql_comment = true) {
         $out = [];
         $s = $rest = '';
@@ -79,6 +79,48 @@ class Rare
             $out[] = $s;
         }
         return $out;
+    }
+
+    static function bracket(string $in, $b = '(') {
+        if ('' === $in || $b != $in[0])
+            return '';
+        $close = ['(' => ')', '[' => ']', '{' => '}', '<' => '>'];
+        $quot = $b . $close[$b] . '\'"';
+        for ($p = $z = 1, $len = strlen($in); true; ) {
+            $p += strcspn($in, $quot, $p);
+            if ($p >= $len) {
+                return '';
+            } elseif ("'" == $in[$p] || '"' == $in[$p]) {
+                if (!$p = self::str($in, $p, $len))
+                    return '';
+            } else {
+                $b == $in[$p++] ? $z++ : $z--;
+                if (!$z)
+                    return substr($in, 0, $p);
+            }
+        }
+    }
+
+    static function str(string &$in, $p, $len) {
+        for ($quot = $in[$p++] . '\\'; true; $p += $bs % 2) {
+            $p += strcspn($in, $quot, $p);
+            if ($p >= $len)
+                return false;
+            if ('\\' != $in[$p])
+                return ++$p;
+            $p += ($bs = strspn($in, '\\', $p));
+        }
+    }
+
+    static function env($key, $default = 0) {
+        if (false === ($val = getenv($key))) {
+            $val = $default;
+            if (is_file('.env')) {
+                $ary = strbang(unl(trim(file_get_contents('.env'))));
+                $val = $ary[$key] ?? $default;
+            }
+        }
+        return $val;
     }
 
     static function strcut($str, $n = 100) {
@@ -204,75 +246,6 @@ class Rare
         if ($_866 / $_r > 0.3)
             return 'cp866';
         return $_51 >= $i8 ? 'cp1251' : 'koi8';
-    }
-
-    static function wares($fn, &$ctrl, &$class) {
-        $ymls = [];
-        foreach (require $fn as $ware => $ary) {
-            unset($yml);
-            $path = str_replace('\\', '/', $ary['path']);
-            if (!$cfg = Boot::cfg($yml, "$path/config.yaml"))
-                continue; ////?
-            $plan = $cfg['plans'];
-            if ($ary['type'] ?? false)
-                $plan['app']['type'] = 'pr-dev';
-            if ($ary['options'] ?? false)
-                $plan['app']['options'] = $ary['options'];
-            if (!Boot::$dev && in_array($plan['app']['type'], ['dev', 'pr-dev']))
-                continue;
-            foreach ($ary['class'] as $cls) {
-                $df = 'default_c' == $cls;
-                if ($df || 'c_' == substr($cls, 0, 2)) {
-                    $x = $df ? '*' : substr($cls, 2);
-                    $ctrl[$ary['tune'] ? "$ary[tune]/$x" : $x] = $ware;
-                } else {
-                    $class[$cls] = $ware;
-                }
-            }
-            $app =& $plan['app'];
-            unset($cfg['plans'], $app['require'], $app['class']);
-            $app['cfg'] = $cfg;
-            if ($yml)
-                $ymls[$ware] = $yml;
-            SKY::$plans[$ware] = ['app' => ['path' => $path] + $plan['app']] + $plan;
-        }
-        return $ymls;
-    }
-
-    static function www() {
-        for ($i = 4, $a = ['public', 'public_html', 'www', 'web']; $a; --$i or $a = glob('*')) {
-            $dir = array_shift($a);
-            if ('_' != $dir[0] && is_file($fn = "$dir/index.php") && strpos(file_get_contents($fn), 'new HEAVEN'))
-                return "$dir/";
-        }
-        return false;
-    }
-
-    static function controllers($ware = false, $plus = false) {
-        $list = [];
-        if (!$ware) {
-            foreach (SKY::$plans as $ware => &$cfg) {
-                if ('main' == $ware || 'prod' == $cfg['app']['type'])
-                    $list += self::controllers($ware, true);
-            }
-            return $list;
-        }
-        $glob = Plan::_b([$ware, 'mvc/c_*.php']);
-        if ($fn = Plan::_t([$ware, 'mvc/default_c.php']))
-            array_unshift($glob, $fn);
-        $z = 'main' == $ware ? false : $ware;
-        foreach ($glob as $v) {
-            $k = basename($v, '.php');
-            $v = 'default_c' == $k ? '*' : substr($k, 2);
-            $list[$plus ? "$ware.$k" : $v] = $plus ? [1, $k, $z] : $ware;
-        };
-        if ($plus) {
-            foreach (Plan::_rq([$ware, 'gate.php']) as $k => $v) {
-                $v = 'default_c' == $k ? '*' : substr($k, 2);
-                isset($list["$ware.$k"]) or $list["$ware.$k"] = [0, $k, $z]; # deleted
-            }
-        }
-        return $list;
     }
 
     static function oauth2($via, $func = false) {

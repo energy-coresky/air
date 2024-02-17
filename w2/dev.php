@@ -246,7 +246,7 @@ class DEV
             unset($wares[$name]);
             
         } else { # Install
-            $conf = Boot::yml("$dir/config.yaml")['core']['plans'];
+            $conf = Yaml::file("$dir/config.yaml")['core']['plans'];
             $required = explode(' ', $conf['app']['require'] ?? '');
             $flags = explode(' ', $conf['app']['flags'] ?? '');
             if ('' == $required[0])
@@ -353,7 +353,7 @@ class DEV
                 $path = is_dir($d = "wares/$ware") ? $d : "$sky->d_second_wares/$ware";
                 if (!is_dir($path) || !is_file($fn = "$path/config.yaml"))
                     return true;
-                $conf = Boot::yml("$path/config.yaml")['core']['plans'];
+                $conf = Yaml::file("$path/config.yaml")['core']['plans'];
                 return [
                     'name' => ucfirst($ware),
                     'type' => $conf['app']['type'],

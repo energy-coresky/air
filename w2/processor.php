@@ -9,7 +9,7 @@ trait Processor
         $tmp = '';
         while (preg_match("/^(.*?)\#((if\(|elseif\()|(end|else)\b)(.*)$/s", $in, $m)) {
             $in = $m[5];
-            $arg = ($br = '(' == $m[2][-1]) ? Boot::bracket('(' . $m[5]) : false;
+            $arg = ($br = '(' == $m[2][-1]) ? Rare::bracket('(' . $m[5]) : false;
             $if = 'if(' == $m[2];
             if (count($d) < 2 && !$if || '()' == $arg || $br && !$arg) {
                 $tmp .= $m[1] . '#' . $m[2];

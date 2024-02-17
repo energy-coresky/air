@@ -271,7 +271,7 @@ class Console
 
     /** Show controllers */
     function c_c() {
-        echo "Rescanned:\n  " . array_join(Rare::controllers(), function($k, $v) {
+        echo "Rescanned:\n  " . array_join(Boot::controllers(), function($k, $v) {
             return "$k: " . ($v[0] ? '' : 'not ') . 'exist'; # 2do: red
         }, "\n  ");
         echo "\nFrom SKY::\$plans:\n  " . array_join(SKY::$plans['main']['ctrl'], ' => ', "\n  ");
@@ -283,7 +283,7 @@ class Console
         Rewrite::get($lib, $map, $keys);
         $max = 0;
         $out = [];
-        foreach (Rare::controllers() as $x) {
+        foreach (Boot::controllers() as $x) {
             if (!$x[0]) {
                 $max > ($len = strlen($a = "$x[1]::")) or $max = $len;
                 $out[$a] = (object)['gerr' => 'Controller not found'];
@@ -327,12 +327,12 @@ class Console
         if (strpos($ware, ' ')) { # inline yaml
             !is_num($fn) or $func = $fn;
             '~' == ltrim($ware)[0] or print "Inline Yaml: ";
-            $list[$func](Boot::yml($ware, false));
+            $list[$func](Yaml::text($ware));
         } elseif (!$fn = Plan::_t([$ware, $fn])) {
             echo "File `$fn`, ware=$ware is: not found";
         } else {
             echo "File `$fn`, ware=$ware is: ";
-            Plan::set($ware, fn() => $list[$func](Boot::yml($fn)));
+            Plan::set($ware, fn() => $list[$func](Yaml::file($fn)));
         }
     }
 

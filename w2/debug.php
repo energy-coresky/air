@@ -198,7 +198,7 @@ class Debug
         extract($ary);
         $boundary = md5(uniqid(time()));
         if ($vars)
-            $message = Jet::inline($message, $vars);
+            $message = Jet::text($message, $vars);
         if ($files) {
             # 2do
         }
