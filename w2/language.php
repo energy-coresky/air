@@ -40,10 +40,6 @@ class Language
         $me->c_sync($page);
     }
 
-    static function names() {
-        return unserialize(view('_lng.array', []));
-    }
-
     function __construct() {
         global $sky;
         common_c::langs_h();
@@ -98,7 +94,7 @@ class Language
         return [
             'obj' => $this,
             'e_list' => !$lg && $this->make_sql() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
-            'lg_names' => Language::names(),
+            'lg_names' => yml('+ @path(languages) @inc(languages)'),
         ];
     }
 

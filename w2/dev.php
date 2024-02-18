@@ -494,17 +494,6 @@ class DEV
             ['Core', 'ni', SKY::CORE],
             ['Save', 'submit'],
         ];
-        $phpman = [
-            'en' => 'English',
-            'pt_BR' => 'Brazilian Portuguese',
-            'zh' => 'Chinese (Simplified)',
-            'fr' => 'French',
-            'de' => 'German',
-            'ja' => 'Japanese',
-            'ru' => 'Russian',
-            'es' => 'Spanish',
-            'tr' => 'Turkish',
-        ];
         if (isset($_POST['app'])) {
             SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
         } elseif ($_POST) {
@@ -519,7 +508,7 @@ class DEV
                 'err' => ['Show suppressed PHP errors', 'chk'],
                 'cron'  => ['Run cron when click on DEV instance', 'chk'],
                 'lgt' => ['SkyLang table name', '', 'size="25"'],
-                'manual' => ['PHP manual language', 'select', $phpman],
+                'manual' => ['PHP manual language', 'select', yml('+ @inc(phpman)')],
                 'se' => ['Search engine tpl', '', 'size="50"'],
                 'nopopup'  => ['No dev-tools on soft 404', 'chk'],
                 'crash_to'  => ['Crash-redirect timeout, sec', 'number', '', 8],

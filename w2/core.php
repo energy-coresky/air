@@ -11,7 +11,8 @@ function sql(...$in) {
 }
 
 function yml(...$in) {
-
+    trace($in[0], 'YAML');
+    return Yaml::text($in[0]);
 }
 
 function qp(...$in) { # Query Part, Query Parse

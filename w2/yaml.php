@@ -30,12 +30,12 @@ class Yaml
     }
 
     static function text($in) {
-        $yml = new Yaml($in, false);
+        $yml = new Yaml($in . "\n", false);
         return $yml->cell ? $yml->array[0] : $yml->array;
     }
 
-    static function file($name) {
-        $yml = new Yaml($name);
+    static function file($name, $marker = '') {
+        $yml = new Yaml(file_get_contents($name) . "\n", $name, $marker);
         return $yml->cell ? $yml->array[0] : $yml->array;
     }
 
@@ -52,12 +52,22 @@ class Yaml
         return true;
     }
 
-    function __construct(string $in, $is_file = true, $try = false) {
+    function __construct(string $in, $fn, $marker = '') {
         self::$eval = fn($v) => $v;
         defined('DEV') && (self::$dev = DEV);
-        $this->dir = $is_file ? str_replace('\\', '/', dirname($in)) : '???';
-        $this->at = [$is_file ? $in : false, 0];
-        $in = trim($is_file ? file_get_contents($in) : $in) . "\n";
+        $this->dir = $fn ? str_replace('\\', '/', dirname($fn)) : '???';
+        $this->at = [$fn, 0];
+
+        if ('' !== $marker) {
+            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
+                if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
+                    $this->halt("Cannot find marker `$marker`");
+                trace("Used magic marker from $fn", 'YAML');
+            }
+            $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
+            //$this->marker = $marker;
+        }
+
         if ($this->cell = '+' == $in[0])
             $in[0] = '-';
 
@@ -107,10 +117,8 @@ class Yaml
         }
         if ($m->json) {
             $v = json_decode($m->json, true);
-            if (json_last_error()) {
-echo $m->json; // json_last_error_msg()
-                $this->halt('JSON failed');
-            }
+            if (json_last_error())
+                $this->halt('JSON ' . json_last_error_msg() . $m->json);
         } else {
             $v = $this->scalar($m->mod ? $m->val : trim($m->val), true, $m);
             if (1 == self::$boot) {
@@ -131,8 +139,8 @@ echo $m->json; // json_last_error_msg()
             return false;
         [,$name, $q, $rest] = $match;
         $ws = fn($i) => '' === trim($rest[$i]);
-        if (!$q && $ws(0))
-            return true;
+        if (!$q)
+            return $ws(0);
         $j = strlen($br = Rare::bracket("($rest"));
         if ($q = $j && $ws($j - 1))
             $t = "@$name$br";
@@ -177,7 +185,6 @@ echo $m->json; // json_last_error_msg()
 
     private function yml_line(string $in, &$n, &$code) {
         static $pad_0 = '', $pad_1 = 0;
-
         $pad = '';
         $len = strlen($p =& $n->val);
         $setk = true; # set key first
@@ -330,14 +337,19 @@ echo $m->json; // json_last_error_msg()
         return $json ? '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $v) . '"' : $v;
     }
 
-    static function inc($name, $ware = false) {
-        $inc = function ($dir, $name) {
+    static function inc($name, $ware = false, $marker = '', $yml = null) {
+        if ('' === $name) {
+            $name = '$DIR_S/w2/__data.yaml';
+            $yml->var($name);
+            $ware = true;
+        }
+        $inc = function ($dir, $name) use ($marker) {
             $ext = explode('.', $name);
             switch (end($ext)) {
                 case 'php': return $dir ? (require $name) : Plan::_r($name);
                 case 'json': return json_decode($dir ? file_get_contents($name) : Plan::_g($name), true);
                 case 'yml':
-                case 'yaml': return Yaml::file($dir ? $name : Plan::_t($name));
+                case 'yaml': return Yaml::file($dir ? $name : Plan::_t($name), $marker);
                 default: return strbang(unl($dir ? file_get_contents($name) : Plan::_g($name)));
             }
         };
@@ -353,7 +365,7 @@ echo $m->json; // json_last_error_msg()
     private function statements($tag) {
         switch ($tag) {
             case 'inc':
-                return fn($v, $x, &$a, $has_var) => self::inc($v, $has_var);
+                return fn($v, $marker, &$a, $has_var) => self::inc($v, $has_var, $marker, $this);
             //case 'php':
             case 'eval':
                 return self::$eval;

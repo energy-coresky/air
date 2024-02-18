@@ -326,7 +326,7 @@ class Console
         $list = ['var_export', 'print_r', 'var_dump'];
         if (strpos($ware, ' ')) { # inline yaml
             !is_num($fn) or $func = $fn;
-            '~' == ltrim($ware)[0] or print "Inline Yaml: ";
+            '+' == $ware[0] or print "Inline Yaml: ";
             $list[$func](Yaml::text($ware));
         } elseif (!$fn = Plan::_t([$ware, $fn])) {
             echo "File `$fn`, ware=$ware is: not found";
