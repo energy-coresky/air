@@ -50,7 +50,7 @@ function strand($n = 23) {
     return $ret;
 }
 
-function strbang($str, $via1 = ' ', $via2 = "\n") : array {
+function bang($str, $via1 = ' ', $via2 = "\n") : array {
     $ary = [];
     foreach (explode($via2, $str) as $row) {
         if ($via1 instanceof Closure) {
@@ -63,7 +63,7 @@ function strbang($str, $via1 = ' ', $via2 = "\n") : array {
     return $ary;
 }
 
-function array_join($ary, $via1 = ' ', $via2 = "\n") : string {
+function unbang($ary, $via1 = ' ', $via2 = "\n") : string {
     $fun = $via1 instanceof Closure ? fn($k, $v) => $via1($k, $v) : fn($k, $v) => $k . $via1 . $v;
     return implode($via2, array_map($fun, array_keys($ary), $ary));
 }

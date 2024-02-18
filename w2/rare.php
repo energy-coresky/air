@@ -116,7 +116,7 @@ class Rare
         if (false === ($val = getenv($key))) {
             $val = $default;
             if (is_file('.env')) {
-                $ary = strbang(unl(trim(file_get_contents('.env'))));
+                $ary = bang(unl(trim(file_get_contents('.env'))));
                 $val = $ary[$key] ?? $default;
             }
         }

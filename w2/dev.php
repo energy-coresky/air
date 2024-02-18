@@ -83,7 +83,7 @@ class DEV
             }
         }
         if ($list = $sky->d_statics) {
-            $saved = strbang($list, '#', ',');
+            $saved = bang($list, '#', ',');
             if (count($saved) != count($saved = array_intersect_key($saved, $files))) # deleted file(s)
                 $sky->static_new = true;
             $files = $saved + $files;
@@ -95,7 +95,7 @@ class DEV
             }
         }
         if ($sky->static_new)
-            SKY::d('statics', array_join($files, '#', ','));
+            SKY::d('statics', unbang($files, '#', ','));
     }
 
     static function databases($wares = []) {

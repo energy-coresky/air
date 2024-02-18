@@ -142,10 +142,10 @@ class Schedule
         '' !== $schedule or $schedule = '-';
         if (preg_match("/^[a-z]/i", $schedule)) {
             self::$names[$this->task] = $schedule;
-            $ary or $ary = strbang(unl(trim(Plan::_gq('cron.times'))));
+            $ary or $ary = bang(unl(trim(Plan::_gq('cron.times'))));
             if (!isset($ary[$schedule])) {
                 $ary[$schedule] = '-';
-                Plan::_p('cron.times', array_join($ary));
+                Plan::_p('cron.times', unbang($ary));
             }
             $schedule = $ary[$schedule];
         }

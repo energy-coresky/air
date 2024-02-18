@@ -97,12 +97,12 @@ class Form
 
     function def($row = [], $as_string = false) { # default processing
         $html = $this->draw_form($row, $this->mk); # this one should be running first then ->js()
-        $etc = array_join($this->tag, function($k, $v) {
+        $etc = unbang($this->tag, function($k, $v) {
             return !$k ? trim($v) : $k . '="' . $v . '"';
         }, ' ');
         $js = '';
         if ($this->has_js || $this->repeat) {
-            $s = '{' . array_join($this->js, function($k, $v) {
+            $s = '{' . unbang($this->js, function($k, $v) {
                 $v = is_string($v) ? "'$v'" : sprintf("['$v[0]', %s]", '/' == @$v[1][0] ? $v[1] : "'$v[1]'");
                 return "'$k':$v";
             }, ",\n") . '}';

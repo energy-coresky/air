@@ -271,10 +271,10 @@ class Console
 
     /** Show controllers */
     function c_c() {
-        echo "Rescanned:\n  " . array_join(Boot::controllers(), function($k, $v) {
+        echo "Rescanned:\n  " . unbang(Boot::controllers(), function($k, $v) {
             return "$k: " . ($v[0] ? '' : 'not ') . 'exist'; # 2do: red
         }, "\n  ");
-        echo "\nFrom SKY::\$plans:\n  " . array_join(SKY::$plans['main']['ctrl'], ' => ', "\n  ");
+        echo "\nFrom SKY::\$plans:\n  " . unbang(SKY::$plans['main']['ctrl'], ' => ', "\n  ");
     }
 
     /** Show top-view actions (routes) */
@@ -321,7 +321,7 @@ class Console
         print_r($list);
     }
 
-    /** Parse Yaml [ware=main] [fn=config.yaml] [one of 0|1|2] or Inline Yaml > sky y "+ @semi $PATH()" */
+    /** Parse Yaml [ware=main] [fn=config.yaml] [one of 0|1|2] or Inline Yaml > sky y "+ @csv(;) $PATH()" */
     function c_y($ware = 'main', $fn = 'config.yaml', $func = 0) {
         $list = ['var_export', 'print_r', 'var_dump'];
         if (strpos($ware, ' ')) { # inline yaml

@@ -31,7 +31,7 @@ class Language
         trace($ary, 'Collected new translations');
         $where = qp('lg=$+ and name=$+', DEFAULT_LG, $page = $page ?: SKY::$reg['lg_page'] ?: '*');
         $next_id = 0x7FFF & $me->t->cell($where, 'flag', true);
-        $new = array_join($ary, function($k) use (&$next_id) {
+        $new = unbang($ary, function($k) use (&$next_id) {
             return $next_id++ . '  ' . escape($k); # format: "ID CONST VAL"
         });
         // qp('$cc($+, tmemo)', "$new\n") not work !
@@ -94,7 +94,7 @@ class Language
         return [
             'obj' => $this,
             'e_list' => !$lg && $this->make_sql() ? [] : $this->listing($this->lg = $lg ?: DEFAULT_LG),
-            'lg_names' => yml('+ @path(languages) @inc(languages)'),
+            'lg_names' => yml('+ @inc(languages)'),
         ];
     }
 
@@ -103,7 +103,7 @@ class Language
             return true;
         $insert = qp('insert into $_`', $table = SKY::d('lgt'));
         if (!SKY::$dd->_tables($table) || '*' != $page) {
-            $this->sql = array_join($this->langs, function($k, $v) use ($insert, $page) {
+            $this->sql = unbang($this->langs, function($k, $v) use ($insert, $page) {
                 $flag = $v == DEFAULT_LG ? 1 + self::NON_SYNC : 0;
                 return qp('$$ values(null, $+, $+, $., "", $now);', $insert, $v, $page, $flag);
             });
@@ -114,7 +114,7 @@ class Language
         if ($diff = array_diff($list, $this->langs))
             $this->sql .= qp('delete from $_` where lg in ($@);', $table, $diff);
         if ($diff = array_diff($this->langs, $list)) {
-            $this->sql .= "\n" . array_join($diff, function($k, $v) use ($insert) {
+            $this->sql .= "\n" . unbang($diff, function($k, $v) use ($insert) {
                 $tpl = '$$ select null, $+, name, 1, tmemo, $now from $_` where lg=$+;';
                 return qp($tpl, $insert, $v, SKY::d('lgt'), DEFAULT_LG);
             });

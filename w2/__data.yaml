@@ -1,17 +1,5 @@
 
-#.phpman =========================================================================
-en: English
-pt_BR: Brazilian Portuguese
-zh: Chinese (Simplified)
-fr: French
-de: German
-ja: Japanese
-ru: Russian
-es: Spanish
-tr: Turkish
-#.phpman
-
-#.const =========================================================================
+#.glob =========================================================================
 const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
 
 keywords: @csv( )
@@ -30,12 +18,10 @@ extension: @csv( )
   pdo_sqlite PDO_SQLSRV pgsql Phar phpdbg* posix* pspell readline Reflection session shmop
   SimpleXML snmp soap sockets sodium SourceGuardian SPL sqlite3 standard sysvmsg* sysvsem* sysvshm*
   tidy tokenizer wddx xml xmlreader xmlwriter xsl Zend OPcache zip zlib
-#.const
-  
-packagist: https://repo.packagist.org/p2/
+#.glob
 
 #.languages =========================================================================
-languages: @bang(. ) >
++ @bang(. ) >
   ab.Abkhazian aa.Afar af.Afrikaans ak.Akan sq.Albanian am.Amharic ar.Arabic an.Aragonese hy.Armenian as.Assamese
   av.Avaric ae.Avestan ay.Aymara az.Azerbaijani bm.Bambara ba.Bashkir eu.Basque be.Belarusian bn.Bengali bh.Bihari
   bi.Bislama bs.Bosnian br.Breton bg.Bulgarian my.Burmese ca.Catalan km.Central_Khmer ch.Chamorro ce.Chechen ny.Chichewa
@@ -56,6 +42,10 @@ languages: @bang(. ) >
   yo.Yoruba za.Zhuang zu.Zulu
 #.languages
 
+#.core =========================================================================
+packagist: https://repo.packagist.org/p2/
+#.core
+
 #.timezones =========================================================================
 timezones: @csv(;)
   Africa: Abidjan;Accra;Addis_Ababa;Algiers;Asmara;Bamako;Bangui;Banjul;Bissau;Blantyre;Brazzaville;Bujumbura;Cairo;Ceuta;Conakry;Dakar;Dar_es_Salaam;Djibouti;Douala;Freetown;Gaborone;Harare;Johannesburg;Juba;Kampala;Khartoum;Kigali;Kinshasa;Lagos;Libreville;Lome;Luanda;Lubumbashi;Lusaka;Malabo;Maputo;Maseru;Mbabane;Mogadishu;Monrovia;Nairobi;Ndjamena;Niamey;Nouakchott;Ouagadougou;Porto-Novo;Sao_Tome;Tripoli;Tunis;Windhoek
@@ -70,27 +60,130 @@ timezones: @csv(;)
   Pacific: Auckland;Easter;Guam;Honolulu;Midway;Pago_Pago;Saipan
 #.timezones
 
-config:
-  - <fieldset><legend>Primary settings</legend>
-  - ['', [[<b><u>Production</u></b>, li]]]
-  trace_root: [Debug mode on production for `root` profile, chk]
-  trace_cli: [Use X-tracing for CLI, chk]
-  error_403: [Use 403 code for `die`, chk]
-  empty_die: [Empty response for `die`, chk]
-  gate_404: [Gate errors as 0.404 (soft), chk] #2do: clear all cache when changed
-  log_error: [Log ERROR, radio, [Off, On]]  #crash_log prod_error quiet_eerr
-  log_crash: [Log CRASH, radio, [Off, On]]
-  - [Hard cache, {
-      cache_act: ['', radio, [Off, On]],
-      cache_sec: ['Default TTL, seconds', number, style="width:100px", 300]
-      }]
-  - </fieldset>
-  - <fieldset><legend>"Visitor's & users settings"</legend>
-  - [Cookie name, {
-      c_name: ['', '', '', sky],
-      c_upd: ['Cookie updates, minutes', number, style="width:100px", 60]
-      }]
-  visit: [One visit break after, off minutes, number, '', 5]
-  reg_req: [Users required for registrations, radio, [Both, Login, E-mail]]
-  - </fieldset>
+#.system =========================================================================
+- <fieldset><legend>Primary settings</legend>
+- ['', [[<b><u>Production</u></b>, li]]]
+trace_root: [Debug mode on production for `root` profile, chk]
+trace_cli: [Use X-tracing for CLI, chk]
+error_403: [Use 403 code for `die`, chk]
+empty_die: [Empty response for `die`, chk]
+gate_404: [Gate errors as 0.404 (soft), chk] #2do: clear all cache when changed
+log_error: [Log ERROR, radio, [Off, On]]  #crash_log prod_error quiet_eerr
+log_crash: [Log CRASH, radio, [Off, On]]
+- [Hard cache, {
+    cache_act: ['', radio, [Off, On]],
+    cache_sec: ['Default TTL, seconds', number, style="width:100px", 300]
+    }]
+- </fieldset>
+- <fieldset><legend>"Visitor's & users settings"</legend>
+- [Cookie name, {
+    c_name: ['', '', '', sky],
+    c_upd: ['Cookie updates, minutes', number, style="width:100px", 60]
+    }]
+visit: [One visit break after, off minutes, number, '', 5]
+reg_req: [Users required for registrations, radio, [Both, Login, E-mail]]
+- </fieldset>
+#.system
+
+#.cron =========================================================================
+clear_nc: ["Visitor's cleaning (no cookie), days", number, '', 2]
+clear_hc: ["Visitor's cleaning (has cookie), days", number, '', 10]
+clear_ua: ["Visitor's cleaning (authed), days", number, '', 1000]
+#.cron
+
+#.phpman =========================================================================
++ {en:English, pt_BR:Brazilian Portuguese,zh:Chinese (Simplified),fr:French,de:German,ja:Japanese,ru:Russian,es:Spanish,tr:Turkish}
+#.phpman
+
+#.form_dev =========================================================================
+dev:  [Set debug=0 for DEV-tools, chk]
+err:  [Show suppressed PHP errors, chk]
+cron: [Run cron when click on DEV instance, chk]
+lgt:  [SkyLang table name, '', size="25"]
+manual:
+  - PHP manual language
+  - select
+  - @inc(phpman)
+se:   [Search engine tpl, '', size="50"]
+nopopup: [No dev-tools on soft 404, chk]
+crash_to: ['Crash-redirect timeout, sec', number, '', 8]
+- @str Form::X([], '<hr>')
+- ['Check static files for changes (file or path to *.js & *.css files), example: `m`', li]
+static: ['', '', size="50"]
+etc: ['Turn ON tracing for default_c::a_etc()', chk]
+red_label: [Red label, radio, [Off, On]]
+- [Save, submit]
+#.form_dev
+
+#.library =========================================================================
++ @trinity
+  Main-page: |
+    0 / $main = '' === $uri;
+      if ($main || 'main' === $uri)
+          return $surl = $main ? ['main'] : [];
+  No-map-file: |
+    0 file.map if ('.map' === substr($uri, -4))
+      return $surl = ['etc', '_.map'];
+  Dev-ends: |
+    1 /_dev if ('_' == $sky->_0[0])
+      return;
+  Assets-coresky: |
+    1 /m/{0} if ($cnt && 'etc' == $surl[0])
+      return $surl[0] = '-';
+      if ($cnt && 'm' == $surl[0])
+      return $surl[0] = 'etc';
+  Assets-wares: |
+    1 /w/{1}/{0} if (3 == $cnt && 'w' == $surl[0]) {
+        array_shift($surl);
+        $surl[2] = $surl[0];
+        return $surl[0] = 'etc';
+    }
+  Robots.txt: |
+    0 /robots.txt if ('robots.txt' == $uri)
+        return array_unshift($surl, 'etc');
+  Swap-1-2: |
+    0 /0/2/1 if ($cnt > 2) {
+        $tmp = $surl[1];
+        $surl[1] = $surl[2];
+        $surl[2] = $tmp;
+    }
+  Additive: |
+    0 /x if ($cnt && 'x' == $surl[0])
+        $surl[0] = 'ctrl';
+  Tune-ware: |
+    0  if ($cnt && 'u' == $surl[0]) {
+        common_c::$tune = array_shift($surl);
+        $cnt--;
+    }
+  Pagination: |
+    0 /ctrl/page-2/action if ($cnt > 2 && preg_match("/^page\-\d+$/", $surl[1])) {
+        common_c::$page = (int)substr($surl[1], 5);
+        array_splice($surl, 1, 1);
+        $cnt--;
+    }
+  Url-html: |
+    0 /c/a/page.html $ext = 'html';
+    if ($cnt) {
+        $a = explode('.', $p =& $surl[$cnt - 1]);
+        $p = 2 == count($a) && $ext == $a[1] ? $a[0] : "$p.$ext";
+    }
+  Url-lang: |
+    0 /en/c/a '# take language from semantic url'
+    common_c::langs_h();
+    if ($cnt && in_array($surl[0], $sky->langs)) {
+        common_c::$lg = array_shift($surl);
+        $cnt--;
+    }
+  Terminator: |
+    0 /crash $lst = ['adm', 'api', 'crash', 'test_crash'];
+    if ($cnt && in_array($surl[0], $lst))
+        return;
+  Reverse: |
+    0 /dash-surl/a $rw = ['dash-surl' => 'nodash',];
+    if ($cnt) {
+        $rw += array_flip($rw);
+        $p =& $surl[0];
+        empty($rw[$p]) or $p = $rw[$p];
+    }
+#.library
 

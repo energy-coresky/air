@@ -89,6 +89,10 @@ class Display
         return '<div class="php">' . $table . '</div>';
     }
 
+    static function yml($text) {
+
+    }
+
     static function bash($text) {
         return pre(preg_replace_callback("@(#.*)@m", function ($m) {
             return L::y($m[1]);

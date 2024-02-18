@@ -200,9 +200,7 @@ class SKY implements PARADISE
         $flag = $x[0];
         $x[0] = 0; # reset flags
         if ($f1 = $flag & 1) { # sky-memory
-            $new = array_join($x[3], function($k, $v) {
-                return $k . ' ' . escape($v);
-            });
+            $new = unbang($x[3], fn($k, $v) => $k . ' ' . escape($v));
             $new === $x[1] ? ($f1 = 0) : ($x[1] = $new);
             if ($x[2] instanceof Closure)
                 return $f1 ? $x[2]($new) : null;

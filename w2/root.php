@@ -258,7 +258,7 @@ class Root
                 file_put_contents($fn, $_POST['etc_file']);
             } elseif ($_POST['-t-'] ?? false) {
                 unset($_POST['-t-']);
-                Plan::_p(['main', 'cron.times'], array_join($_POST));
+                Plan::_p(['main', 'cron.times'], unbang($_POST));
             } else {
                 $ary = $_POST + $ary;
                 ksort($ary);
@@ -276,10 +276,10 @@ class Root
 
         switch ($char) {
             case 's':
-                $form = Root::form_prod();
+                $form = yml('+ @inc(system)');
             break;
             case 'n':
-                $form = Root::form_cron();
+                $form = yml('+ @inc(cron)');
             break;
             case '/etc/':
                 $form = '' === $_GET['fn'] ? ['fn' => ['New filename', '']] : ["<b>$_GET[fn]</b><br>"];
@@ -297,7 +297,7 @@ class Root
         if (1 == $i && ($times = Plan::_gq(['main', 'cron.times']))) {
             echo tag('cron.times', 'style="padding-left:270px"', 'h1');
             $form = ['-t-' => 1];
-            $ary = strbang(unl(trim($times)));
+            $ary = bang(unl(trim($times)));
             foreach ($ary as $k => $v)
                 $form[$k] = ["<b>$k</b>", ''];
             echo tag(Form::A($ary, $form + [-2 => ['Save', 'submit']]), '');
@@ -390,7 +390,7 @@ class Root
                     'pre' => ['Current prefix for static cache:<br>(increment automatically)', '', 'disabled'],
                     ['Made new prefix', 'submit', 'name=u'],
                 ]);
-                $files = strbang(SKY::d('statics'), function(&$a, $v) {
+                $files = bang(SKY::d('statics'), function(&$a, $v) {
                     [$k, $v] = explode('#', $v, 2);
                     $a["<span>$k</span>"] = date(DATE_DT, $v);
                 }, ',');
@@ -521,40 +521,5 @@ class Root
             echo '</table>';
         }
         return $TOP;
-    }
-
-    static function form_cron() {
-        return [
-            'clear_nc' => ['Visitor\'s cleaning (no cookie), days', 'number', '', 2],
-            'clear_hc' => ['Visitor\'s cleaning (has cookie), days', 'number', '', 10],
-            'clear_ua' => ['Visitor\'s cleaning (authed), days', 'number', '', 1000],
-        ];
-    }
-
-    static function form_prod() {
-        return [
-            '<fieldset><legend>Primary settings</legend>',
-                ['', [['<b><u>Production</u></b>', 'li']]],
-                'trace_root'    => ['Debug mode on production for `root` profile', 'chk'],
-                'trace_cli'     => ['Use X-tracing for CLI', 'chk'],
-                'error_403'     => ['Use 403 code for `die`', 'chk'],
-                'empty_die'     => ['Empty response for `die`', 'chk'],
-                'gate_404'      => ['Gate errors as 0.404 (soft)', 'chk'], //2do: clear all cache when changed
-                'log_error'     => ['Log ERROR', 'radio', ['Off', 'On']],//crash_log prod_error quiet_eerr
-                'log_crash'     => ['Log CRASH', 'radio', ['Off', 'On']],
-                ['Hard cache', [
-                    'cache_act' => ['', 'radio', ['Off', 'On']],
-                    'cache_sec' => ['Default TTL, seconds', 'number', 'style="width:100px"', 300],
-                ]],
-            '</fieldset>',
-            '<fieldset><legend>Visitor\'s & users settings</legend>',
-                ['Cookie name', [
-                    'c_name'    => ['', '', '', 'sky'],
-                    'c_upd'     => ['Cookie updates, minutes', 'number', 'style="width:100px"', 60],
-                ]],
-                'visit'     => ['One visit break after, off minutes', 'number', '', 5],
-                'reg_req'   => ['Users required for registrations', 'radio', ['Both', 'Login', 'E-mail']],
-            '</fieldset>',
-        ];
     }
 }

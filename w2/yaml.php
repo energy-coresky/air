@@ -16,7 +16,6 @@ class Yaml
 
     private $at;
     private $dir;
-    private $cell;
     private $stack = [];
     private $mode = [
         'em' => '',
@@ -31,12 +30,12 @@ class Yaml
 
     static function text($in) {
         $yml = new Yaml($in . "\n", false);
-        return $yml->cell ? $yml->array[0] : $yml->array;
+        return $yml->array;
     }
 
     static function file($name, $marker = '') {
         $yml = new Yaml(file_get_contents($name) . "\n", $name, $marker);
-        return $yml->cell ? $yml->array[0] : $yml->array;
+        return $yml->array;
     }
 
     static function path($path, $unset = false) {
@@ -45,7 +44,7 @@ class Yaml
 
     static function lint(string $in, $is_file = true) : bool {
         try {
-//            self::yml($in, $is_file);
+//            
         } catch (Error $e) {
             return false;
         }
@@ -65,16 +64,14 @@ class Yaml
                 trace("Used magic marker from $fn", 'YAML');
             }
             $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
-            //$this->marker = $marker;
+            unset($ary);//$this->marker = $marker;
         }
-
-        if ($this->cell = '+' == $in[0])
-            $in[0] = '-';
 
         $this->array = [];
         $p = ['' => &$this->array];
         $add = function ($m) use (&$p) {
-            if (is_string($m->key) && 'DEV+' == substr($m->key, 0, 4)) {
+            $str = !is_bool($m->key);
+            if ($str && 'DEV+' === substr($m->key, 0, 4)) {
                 if (!self::$dev)
                     return;
                 $m->key = substr($m->key, 4);
@@ -87,9 +84,21 @@ class Yaml
                 $lt = array_key_last($p);
                 $z =& $p[$lt][array_key_last($p[$lt])];
             }
-            true === $m->key ? ($z[] = $v) : ($z[$m->key] = $v);
+            if ($str) { # key:
+                $z[$m->key] = $v;
+            } elseif ($m->key) { # -
+                $z[] = $v;
+            } elseif (is_array($v)) { # other is +
+                foreach ($v as $k => $v)
+                    is_int($k) ? ($z[] = $v) : ($z[$k] = $v);
+            } elseif (count($p) > 1) {
+                $z[$v] = null;
+            } elseif (null !== ($p[''] = $v)) {
+                return true;
+            }
             $p[$m->pad] =& $z;
             $define && Boot::set_const($z[$m->key]);
+            return false;
         };
 
         $n = $this->obj();
@@ -99,8 +108,10 @@ class Yaml
             $m = clone $n;
             if ($this->yml_line($in . ' ', $n, $m->code))
                 continue;
-            is_null($m->key) or $add($m);
+            is_null($m->key) or $scalar = $add($m);
             $n->voc && $add($n->voc); # vocabulary: - key: val
+            if ($scalar ?? false)
+                return;
         }
         is_null($n->key) or $add($n);
     }
@@ -168,14 +179,14 @@ class Yaml
                 $t = substr($in, $j, $sz -= $j);
             } else {
                 $cl = $this->mode[$mode];
-                $t = strpbrk($x, ":-$cl") ? $x : substr($in, $j, strcspn($in, "\t\"' :-$cl", $j));
+                $t = strpbrk($x, "+:-$cl") ? $x : substr($in, $j, strcspn($in, "\t\"' +:-$cl", $j));
                 if ($code = '@' == $x && 'val' == $mode)
                     $code = $this->code(substr($in, $j), $t);
             }
             return 'skip' == $mode ? (bool)($prev->mode = 'val') : [
                 'token' => $t,
-                'keyc' => $colon = ':' == $wt,
-                'key2' => $colon || '-' == $wt,
+                'keyc' => ':' == $wt,
+                'key3' => in_array($wt, [':', '-', '+']) ? $wt : false,
                 'code' => $code = ($code ?? false),
                 'mode' => $code ? 'skip' : $mode,
                 'ws' => $whitespace || $code,
@@ -204,29 +215,31 @@ class Yaml
                         $p .= "\n" . substr($pad, $pad_1);
                     }
                 }
-            } elseif ($el->key2 && $setk && ($reqk || !$n->mod)) { # key found
+            } elseif ($el->key3 && $setk && ($reqk || !$n->mod)) { # key found
                 if ($pad > $n->pad) { # aggregate node
                     $len && $this->halt('Mapping disabled');
                     foreach ($code as $fun)
                         $this->stack[] = [$fun, $n->pad, $n->pad];
                     $code = 0;
                 }
-                $key = $el->keyc ? $this->scalar(substr($p, $len, -1)) : true;
+                $key = $el->keyc ? $this->scalar(substr($p, $len, -1)) : '-' === $el->key3;
                 null !== $key or $this->halt('Key cannot be NULL');
                 $n = $this->obj(['key' => $key, 'pad' => $pad_0 = $pad]);
                 $p =& $n->val;
                 $setk = false;
                 $spaces = $t;
                 $el->mode = 'val';
-            } elseif ($el->keyc && true === $n->key && !$n->json) { # vocabulary key
-                $n->voc = $this->obj(['key' => true, 'pad' => $n->pad, 'code' => 0]);
-                $pad_0 = $n->pad .= ' ' . $this->halt(false, $spaces);
+            } elseif ($el->keyc && is_bool($n->key) && !$n->json) { # vocabulary key
+                if ($n->key) {
+                    $n->voc = $this->obj(['key' => true, 'pad' => $n->pad, 'code' => 0]);
+                    $pad_0 = $n->pad .= ' ' . $this->halt(false, $spaces);
+                }
                 $n->key = $this->scalar(substr($p, 0, -1));
                 null !== $n->key or $this->halt('Key cannot be NULL');
                 $el->mode = 'val';
                 $p = '';
             } elseif ($el->code) {
-                [$name, $param] = is_array($el->code) ? $el->code : [substr($t, 1), ''];
+                [$name, $param] = is_array($el->code) ? $el->code : [substr($t, 1), null];
                 $n->code[] = [$this->statements($name), $param];
             } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
                 $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, ':' != $t, $n, true) . $t;
@@ -350,7 +363,7 @@ class Yaml
                 case 'json': return json_decode($dir ? file_get_contents($name) : Plan::_g($name), true);
                 case 'yml':
                 case 'yaml': return Yaml::file($dir ? $name : Plan::_t($name), $marker);
-                default: return strbang(unl($dir ? file_get_contents($name) : Plan::_g($name)));
+                default: return bang(unl($dir ? file_get_contents($name) : Plan::_g($name)));
             }
         };
         if (true === $ware)
@@ -390,13 +403,13 @@ class Yaml
             case 'ini_get':
                 return fn($v) => ini_get($v);
             case 'space':
-                return fn($v) => preg_split("/\s+/", $v);
+                return fn($v, $x) => preg_split("/\s+/", $v, $x ?: null);
             case 'csv':
-                return fn($v, $x) => explode('' === $x ? ',' : $x, $v);
+                return fn($v, $x) => explode($x ?: ';', $v);
             case 'join':
-                return fn($v, $x) => implode('' === $x ? ',' : $x, $v);
+                return fn($v, $x) => implode($x ?? ';', $v);
             case 'bang':
-                return fn($v, $x) => strbang(trim(unl($v)), $x[0] ?? ' ', $x[1] ?? "\n");
+                return fn($v, $x) => bang(trim(unl($v)), $x[0] ?? ' ', $x[1] ?? "\n");
             case 'url':
                 return fn($v) => parse_url($v);
             case 'time':
