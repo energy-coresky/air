@@ -34,7 +34,9 @@ class Jet
         Jet::$tpl[] = [':', ''];
         $jet = new Jet([$tpl, ''], false, ':');
         $_php = substr($jet(true), 7);
-        $_vars += ['sky' => $GLOBALS['sky']];
+        global $sky;
+        $sky->return = true;
+        $_vars += ['sky' => $sky, '_recompile' => true];
         return eval($_php);
     }
 

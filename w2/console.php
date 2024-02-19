@@ -324,15 +324,16 @@ class Console
     /** Parse Yaml [ware=main] [fn=config.yaml] [one of 0|1|2] or Inline Yaml > sky y "+ @csv(;) $PATH()" */
     function c_y($ware = 'main', $fn = 'config.yaml', $func = 0) {
         $list = ['var_export', 'print_r', 'var_dump'];
+        $out = fn($v, $func) => is_string($v) ? print($v) : $list[$func]($v);
         if (strpos($ware, ' ')) { # inline yaml
             !is_num($fn) or $func = $fn;
             '+' == $ware[0] or print "Inline Yaml: ";
-            $list[$func](Yaml::text($ware));
+            $out(Yaml::text($ware), $func);
         } elseif (!$fn = Plan::_t([$ware, $fn])) {
             echo "File `$fn`, ware=$ware is: not found";
         } else {
             echo "File `$fn`, ware=$ware is: ";
-            Plan::set($ware, fn() => $list[$func](Yaml::file($fn)));
+            Plan::set($ware, fn() => $out(Yaml::file($fn), $func));
         }
     }
 

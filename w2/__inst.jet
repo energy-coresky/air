@@ -223,15 +223,15 @@ $ok = 1;
 $list = [];
 foreach ($tests as $fun) {
     $fun = $fun($ok);
-    if ($fun[0]) {
+    if ($fun && $fun[0]) {
         $list[] = $fun;
         $ok &= (int)$fun[1];
     }
 }
-$anw = $_GET && 'anw' == key($_GET) ? $_GET['anw'] : false;
-if ($ok || $anw) {
+$anyway = $_GET && 'anw' == key($_GET) ? $_GET['anw'] : false;
+if ($ok || $anyway) {
     file_put_contents(__FILE__, index());
-    header("Location: " . ($anw ?: $uri));
+    header("Location: " . ($anyway ?: $uri));
     exit;
 }
 .><!doctype html>
@@ -255,20 +255,23 @@ dd { width: 20%; margin:0; padding: 5px; }
 </style>
 </head>
 <body style="margin:0; display:inline-block; width:100%; background:lightblue;">
+<form method="post">
 <div id="page">
     <h1>{{SKY::version()['app'][4]}} application First-Run</h1>
     <.php foreach ($list as $v): .>
     <dl>
         <dt><.php echo $v[0] .></dt>
-        <dd class="<.php echo $v[1] ? 'ok' : 'fail' .>"><.php echo $v[1] ? 'OK' : 'FAIL' .></dd>
+        <.php if($v2 = isset($v[2])): .><dd><.php echo $v[2] .></dd><.php else: .>
+        <dd class="<.php echo $v[1] ? 'ok' : 'fail' .>"><.php echo $v[1] ? 'OK' : 'FAIL' .></dd><.php endif .>
     </dl>
-    <.php endforeach .>
+    <.php endforeach; if (!$v2): .>
     <div style="background:#ffc; margin:20px 0; padding:10px; border: 1px solid gold;">
         Please fix problem & test again
     </div>
     <button style="float:right" onclick="location.href='<.php echo "$path?anw=" . urlencode($uri) .>'">Run app anyway</button>
-    Problem fixed: <button onclick="location.href='<.php echo $uri .>'">Test again</button>
+    Problem fixed: <button onclick="location.href='<.php echo $uri .>'">Test again</button><.php endif .>
 </div>
+</form>
 <div id="foo">{{SKY::version()['app'][3]}} powered by {{SKY::version()['core'][0]}}.<a href="https://coresky.net/">Coresky</a> framework</div>
 </body>
 </html><.php

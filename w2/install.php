@@ -331,14 +331,9 @@ class Install
         if (!$forward)
             return self::$cli && file_put_contents($fn, $index);
         $sky->memory(11, 'i');
-        $tpl = "\n    function (\$ok) {\n%s    },";
         $other = '';
-        foreach ($plus as $name) {
-            $rm = new ReflectionMethod($name);
-            $start = $rm->getStartLine();
-            $code = array_slice(file($rm->getFileName()), $start, $rm->getEndLine() - $start - 1);
-            $other .= sprintf($tpl, implode('', $code));
-        }
+        foreach ($plus as $name)
+            $other .= "\n    function (\$ok) {\n" . call_user_func($name) . "    },";
         $file = view('_inst.first_run', [
             'vphp' => $sky->i_vphp ?: '7.3',
             'vph2' => $sky->i_vphp2 ?: '9.0',

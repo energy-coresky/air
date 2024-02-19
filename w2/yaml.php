@@ -4,7 +4,7 @@ class Yaml
 {
     use Processor;#2do ?
 
-    const version = 0.912;
+    const version = 0.922;
 
     static $boot = 0;
     static $transform;
@@ -16,6 +16,7 @@ class Yaml
 
     private $at;
     private $dir;
+    private $php = [];
     private $stack = [];
     private $mode = [
         'em' => '',
@@ -28,14 +29,32 @@ class Yaml
         self::$transform = $ary + self::$transform;
     }
 
+    static function run($in) {
+        [$fn, $query, $vars] = $in + [1 => false, false];
+        if (!$query) {
+            trace("ON-FLY IS $fn", 'YAML');
+            return Yaml::text($fn);
+        }
+        if ($vars)
+            $vars = (object)['data' => $vars];
+        global $sky;
+        $fn = 'yml_' . ($sky->eview ?: Plan::$ware) . "_$fn.php";
+        $out = Plan::cache_rq($fn = ['main', $fn], $vars, false);
+        DEV && trace("$fn[1] IS $query # " . ($out ? 'used cached' : 'recompiled'), 'YAML');
+        if ($out)
+            return $out;
+        Plan::cache_s($fn, '<?php return ' . Yaml::text($query) . ';');
+        return Plan::cache_r($fn, $vars);
+    }
+
     static function text($in) {
         $yml = new Yaml($in . "\n", false);
-        return $yml->array;
+        return $yml->out();
     }
 
     static function file($name, $marker = '') {
         $yml = new Yaml(file_get_contents($name) . "\n", $name, $marker);
-        return $yml->array;
+        return $yml->out();
     }
 
     static function path($path, $unset = false) {
@@ -80,9 +99,10 @@ class Yaml
             if (array_key_exists($m->pad, $p)) {
                 array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
                 $z =& $p[$m->pad];
-            } else {
-                $lt = array_key_last($p);
+            } elseif (null !== $p[$lt = array_key_last($p)]) {
                 $z =& $p[$lt][array_key_last($p[$lt])];
+            } else {
+                $z =& $p[''];
             }
             if ($str) { # key:
                 $z[$m->key] = $v;
@@ -114,6 +134,13 @@ class Yaml
                 return;
         }
         is_null($n->key) or $add($n);
+    }
+
+    private function out() {
+        if (!$this->php)
+            return $this->array;
+        $this->array = var_export($this->array, true);
+        return strtr($this->array, $this->php);
     }
 
     private function yml_val($m, &$define) {
@@ -379,9 +406,16 @@ class Yaml
         switch ($tag) {
             case 'inc':
                 return fn($v, $marker, &$a, $has_var) => self::inc($v, $has_var, $marker, $this);
-            //case 'php':
+            case 'php':
+                return function ($v) {
+                    $n = "php_" . count($this->php);
+                    $this->php["'$n'"] = $v;
+                    return $n;
+                };
             case 'eval':
                 return self::$eval;
+            case 'json':
+                return fn($v) => json_encode($v);
             case 'ip':
                 return fn($v) => ip2long($v);
             case 'str':
@@ -402,12 +436,12 @@ class Yaml
                 return fn($v) => base64_decode($v);
             case 'ini_get':
                 return fn($v) => ini_get($v);
-            case 'space':
-                return fn($v, $x) => preg_split("/\s+/", $v, $x ?: null);
             case 'csv':
                 return fn($v, $x) => explode($x ?: ';', $v);
             case 'join':
                 return fn($v, $x) => implode($x ?? ';', $v);
+            case 'space':
+                return fn($v, $x) => preg_split("/\s+/", $v, $x ?: null);
             case 'bang':
                 return fn($v, $x) => bang(trim(unl($v)), $x[0] ?? ' ', $x[1] ?? "\n");
             case 'url':

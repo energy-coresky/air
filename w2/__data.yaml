@@ -1,5 +1,5 @@
 
-#.glob =========================================================================
+#.dev_tools =========================================================================
 const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
 
 keywords: @csv( )
@@ -18,7 +18,10 @@ extension: @csv( )
   pdo_sqlite PDO_SQLSRV pgsql Phar phpdbg* posix* pspell readline Reflection session shmop
   SimpleXML snmp soap sockets sodium SourceGuardian SPL sqlite3 standard sysvmsg* sysvsem* sysvshm*
   tidy tokenizer wddx xml xmlreader xmlwriter xsl Zend OPcache zip zlib
-#.glob
+
+coresky:   https://coresky.net/api
+packagist: https://repo.packagist.org/p2/
+#.dev_tools
 
 #.languages =========================================================================
 + @bang(. ) >
@@ -42,22 +45,18 @@ extension: @csv( )
   yo.Yoruba za.Zhuang zu.Zulu
 #.languages
 
-#.core =========================================================================
-packagist: https://repo.packagist.org/p2/
-#.core
-
 #.timezones =========================================================================
-timezones: @csv(;)
-  Africa: Abidjan;Accra;Addis_Ababa;Algiers;Asmara;Bamako;Bangui;Banjul;Bissau;Blantyre;Brazzaville;Bujumbura;Cairo;Ceuta;Conakry;Dakar;Dar_es_Salaam;Djibouti;Douala;Freetown;Gaborone;Harare;Johannesburg;Juba;Kampala;Khartoum;Kigali;Kinshasa;Lagos;Libreville;Lome;Luanda;Lubumbashi;Lusaka;Malabo;Maputo;Maseru;Mbabane;Mogadishu;Monrovia;Nairobi;Ndjamena;Niamey;Nouakchott;Ouagadougou;Porto-Novo;Sao_Tome;Tripoli;Tunis;Windhoek
-  America: Adak;Anchorage;Anguilla;Antigua;Argentina/Buenos_Aires;Argentina/Catamarca;Argentina/Cordoba;Argentina/Jujuy;Argentina/La_Rioja;Argentina/Mendoza;Argentina/Rio_Gallegos;Argentina/Salta;Argentina/San_Juan;Argentina/San_Luis;Argentina/Tucuman;Argentina/Ushuaia;Aruba;Asuncion;Atikokan;Bahia_Banderas;Barbados;Belize;Blanc-Sablon;Bogota;Boise;Cambridge_Bay;Cancun;Caracas;Cayman;Chicago;Chihuahua;Costa_Rica;Creston;Curacao;Danmarkshavn;Dawson;Dawson_Creek;Denver;Detroit;Dominica;Edmonton;El_Salvador;Fort_Nelson;Glace_Bay;Goose_Bay;Grand_Turk;Grenada;Guadeloupe;Guatemala;Guayaquil;Halifax;Havana;Hermosillo;Indiana/Indianapolis;Indiana/Knox;Indiana/Marengo;Indiana/Petersburg;Indiana/Tell_City;Indiana/Vevay;Indiana/Vincennes;Indiana/Winamac;Inuvik;Iqaluit;Jamaica;Juneau;Kentucky/Louisville;Kentucky/Monticello;Kralendijk;La_Paz;Los_Angeles;Lower_Princes;Managua;Marigot;Martinique;Matamoros;Mazatlan;Menominee;Merida;Metlakatla;Mexico_City;Miquelon;Moncton;Monterrey;Montevideo;Montserrat;Nassau;New_York;Nipigon;Nome;North_Dakota/Beulah;North_Dakota/Center;North_Dakota/New_Salem;Ojinaga;Panama;Pangnirtung;Paramaribo;Phoenix;Port-au-Prince;Port_of_Spain;Puerto_Rico;Punta_Arenas;Rainy_River;Rankin_Inlet;Regina;Resolute;Santiago;Santo_Domingo;Sitka;St_Barthelemy;St_Johns;St_Kitts;St_Lucia;St_Thomas;St_Vincent;Swift_Current;Tegucigalpa;Thule;Thunder_Bay;Tijuana;Toronto;Tortola;Vancouver;Whitehorse;Winnipeg;Yakutat;Yellowknife
-  Antarctica: Macquarie;McMurdo
++ @csv( )
+  Africa: Abidjan Accra Addis_Ababa Algiers Asmara Bamako Bangui Banjul Bissau Blantyre Brazzaville Bujumbura Cairo Ceuta Conakry Dakar Dar_es_Salaam Djibouti Douala Freetown Gaborone Harare Johannesburg Juba Kampala Khartoum Kigali Kinshasa Lagos Libreville Lome Luanda Lubumbashi Lusaka Malabo Maputo Maseru Mbabane Mogadishu Monrovia Nairobi Ndjamena Niamey Nouakchott Ouagadougou Porto-Novo Sao_Tome Tripoli Tunis Windhoek
+  America: Adak Anchorage Anguilla Antigua Argentina/Buenos_Aires Argentina/Catamarca Argentina/Cordoba Argentina/Jujuy Argentina/La_Rioja Argentina/Mendoza Argentina/Rio_Gallegos Argentina/Salta Argentina/San_Juan Argentina/San_Luis Argentina/Tucuman Argentina/Ushuaia Aruba Asuncion Atikokan Bahia_Banderas Barbados Belize Blanc-Sablon Bogota Boise Cambridge_Bay Cancun Caracas Cayman Chicago Chihuahua Costa_Rica Creston Curacao Danmarkshavn Dawson Dawson_Creek Denver Detroit Dominica Edmonton El_Salvador Fort_Nelson Glace_Bay Goose_Bay Grand_Turk Grenada Guadeloupe Guatemala Guayaquil Halifax Havana Hermosillo Indiana/Indianapolis Indiana/Knox Indiana/Marengo Indiana/Petersburg Indiana/Tell_City Indiana/Vevay Indiana/Vincennes Indiana/Winamac Inuvik Iqaluit Jamaica Juneau Kentucky/Louisville Kentucky/Monticello Kralendijk La_Paz Los_Angeles Lower_Princes Managua Marigot Martinique Matamoros Mazatlan Menominee Merida Metlakatla Mexico_City Miquelon Moncton Monterrey Montevideo Montserrat Nassau New_York Nipigon Nome North_Dakota/Beulah North_Dakota/Center North_Dakota/New_Salem Ojinaga Panama Pangnirtung Paramaribo Phoenix Port-au-Prince Port_of_Spain Puerto_Rico Punta_Arenas Rainy_River Rankin_Inlet Regina Resolute Santiago Santo_Domingo Sitka St_Barthelemy St_Johns St_Kitts St_Lucia St_Thomas St_Vincent Swift_Current Tegucigalpa Thule Thunder_Bay Tijuana Toronto Tortola Vancouver Whitehorse Winnipeg Yakutat Yellowknife
+  Antarctica: Macquarie McMurdo
   Arctic: Longyearbyen
-  Asia: Amman;Baghdad;Bangkok;Beirut;Colombo;Damascus;Dhaka;Famagusta;Gaza;Hebron;Ho_Chi_Minh;Hong_Kong;Irkutsk;Jakarta;Jayapura;Jerusalem;Karachi;Kolkata;Kuala_Lumpur;Macau;Makassar;Manila;Nicosia;Phnom_Penh;Pontianak;Pyongyang;Seoul;Shanghai;Singapore;Taipei;Tbilisi;Tehran;Tokyo;Vientiane;Yangon;Yekaterinburg
-  Atlantic: Azores;Bermuda;Canary;Faroe;Madeira;Reykjavik;St_Helena;Stanley
-  Australia: Adelaide;Brisbane;Broken_Hill;Darwin;Hobart;Lindeman;Lord_Howe;Melbourne;Perth;Sydney
-  Europe: Amsterdam;Andorra;Athens;Belgrade;Berlin;Bratislava;Brussels;Bucharest;Budapest;Busingen;Chisinau;Copenhagen;Dublin;Gibraltar;Guernsey;Helsinki;Isle_of_Man;Istanbul;Jersey;Kaliningrad;Kiev;Lisbon;Ljubljana;London;Luxembourg;Madrid;Malta;Mariehamn;Minsk;Monaco;Moscow;Oslo;Paris;Podgorica;Prague;Riga;Rome;San_Marino;Sarajevo;Simferopol;Skopje;Sofia;Stockholm;Tallinn;Tirane;Uzhgorod;Vaduz;Vatican;Vienna;Vilnius;Warsaw;Zagreb;Zaporozhye;Zurich
-  Indian: Antananarivo;Comoro;Maldives;Mayotte
-  Pacific: Auckland;Easter;Guam;Honolulu;Midway;Pago_Pago;Saipan
+  Asia: Amman Baghdad Bangkok Beirut Colombo Damascus Dhaka Famagusta Gaza Hebron Ho_Chi_Minh Hong_Kong Irkutsk Jakarta Jayapura Jerusalem Karachi Kolkata Kuala_Lumpur Macau Makassar Manila Nicosia Phnom_Penh Pontianak Pyongyang Seoul Shanghai Singapore Taipei Tbilisi Tehran Tokyo Vientiane Yangon Yekaterinburg
+  Atlantic: Azores Bermuda Canary Faroe Madeira Reykjavik St_Helena Stanley
+  Australia: Adelaide Brisbane Broken_Hill Darwin Hobart Lindeman Lord_Howe Melbourne Perth Sydney
+  Europe: Amsterdam Andorra Athens Belgrade Berlin Bratislava Brussels Bucharest Budapest Busingen Chisinau Copenhagen Dublin Gibraltar Guernsey Helsinki Isle_of_Man Istanbul Jersey Kaliningrad Kiev Lisbon Ljubljana London Luxembourg Madrid Malta Mariehamn Minsk Monaco Moscow Oslo Paris Podgorica Prague Riga Rome San_Marino Sarajevo Simferopol Skopje Sofia Stockholm Tallinn Tirane Uzhgorod Vaduz Vatican Vienna Vilnius Warsaw Zagreb Zaporozhye Zurich
+  Indian: Antananarivo Comoro Maldives Mayotte
+  Pacific: Auckland Easter Guam Honolulu Midway Pago_Pago Saipan
 #.timezones
 
 #.system =========================================================================
@@ -95,7 +94,7 @@ clear_ua: ["Visitor's cleaning (authed), days", number, '', 1000]
 + {en:English, pt_BR:Brazilian Portuguese,zh:Chinese (Simplified),fr:French,de:German,ja:Japanese,ru:Russian,es:Spanish,tr:Turkish}
 #.phpman
 
-#.form_dev =========================================================================
+#.dev_cfg =========================================================================
 dev:  [Set debug=0 for DEV-tools, chk]
 err:  [Show suppressed PHP errors, chk]
 cron: [Run cron when click on DEV instance, chk]
@@ -107,13 +106,34 @@ manual:
 se:   [Search engine tpl, '', size="50"]
 nopopup: [No dev-tools on soft 404, chk]
 crash_to: ['Crash-redirect timeout, sec', number, '', 8]
-- @str Form::X([], '<hr>')
+- @php Form::X([], '<hr>')
 - ['Check static files for changes (file or path to *.js & *.css files), example: `m`', li]
 static: ['', '', size="50"]
 etc: ['Turn ON tracing for default_c::a_etc()', chk]
 red_label: [Red label, radio, [Off, On]]
 - [Save, submit]
-#.form_dev
+#.dev_cfg
+
+#.dev_app =========================================================================
+-
+  - Application
+  -
+    app: ['', '', size="11"]
+    ver: ['', number, style="width:77px" step="0.0001"]
+    -
+      - @php tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0]))
+      - ni
+-
+  - Core
+  - ni
+  - @php SKY::CORE
+- [Save, submit]
+#.dev_app
+
+#.dev_form =========================================================================
+form1: @php Form::A(array_combine($key, $val), yml('dev.app', '+ @inc(dev_app)'))
+form2: @php Form::A(SKY::$mem['d'][3], yml('dev.cfg', '+ @inc(dev_cfg)'))
+#.dev_form
 
 #.library =========================================================================
 + @trinity
@@ -187,3 +207,8 @@ red_label: [Red label, radio, [Off, On]]
     }
 #.library
 
+#.first_run =========================================================================
++ |
+  <?php # Auto generated "First-Run" file by Coresky framework
+
+#.first_run

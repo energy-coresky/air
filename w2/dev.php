@@ -485,15 +485,6 @@ class DEV
         $val = explode(' ', SKY::s('version')) + ['', '', '0', 'APP'];
         $val[2] += 0.0001;
         $key = [0, 1, 'ver', 'app'];
-        $form1 = [
-            ['Application', [
-                'app' => ['', '', 'size="11"'],
-                'ver' => ['', 'number', 'style="width:77px" step="0.0001"'],
-                [tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0])), 'ni'],
-            ]],
-            ['Core', 'ni', SKY::CORE],
-            ['Save', 'submit'],
-        ];
         if (isset($_POST['app'])) {
             SKY::s('version', time() . ' ' . SKY::version()['core'][0] . " $_POST[ver] $_POST[app]");
         } elseif ($_POST) {
@@ -501,24 +492,9 @@ class DEV
             ksort($ary);
             SKY::d($ary);
         }
-        return [
-            'form1' => Form::A(array_combine($key, $val), $form1),
-            'form2' => Form::A(SKY::$mem['d'][3], [
-                'dev' => ['Set debug=0 for DEV-tools', 'chk'],
-                'err' => ['Show suppressed PHP errors', 'chk'],
-                'cron'  => ['Run cron when click on DEV instance', 'chk'],
-                'lgt' => ['SkyLang table name', '', 'size="25"'],
-                'manual' => ['PHP manual language', 'select', yml('+ @inc(phpman)')],
-                'se' => ['Search engine tpl', '', 'size="50"'],
-                'nopopup'  => ['No dev-tools on soft 404', 'chk'],
-                'crash_to'  => ['Crash-redirect timeout, sec', 'number', '', 8],
-                Form::X([], '<hr>'),
-                ['Check static files for changes (file or path to *.js & *.css files), example: `m,C:/web/air/assets`', 'li'],
-                'static' => ['', '', 'size="50"'],
-                'etc'  => ['Turn ON tracing for default_c::a_etc()', 'chk'],
-                'red_label' => ['Red label', 'radio', ['Off', 'On']],
-                ['Save', 'submit'],
-            ]),
-        ];
+        return yml('dev.form', '+ @inc(dev_form)', [
+            'key' => $key,
+            'val' => $val,
+        ]);
     }
 }
