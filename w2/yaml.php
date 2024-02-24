@@ -4,11 +4,13 @@ class Yaml
 {
     use Processor;#2do ?
 
-    const version = 0.922;
+    const version = 0.933;
+    const Jet = 1;
+    const Proc = 2;
+    const Echo = 3;
 
     static $boot = 0;
-    static $transform;
-    static $eval;
+    static $custom = [];
     static $dev = false;
 
     public $array;
@@ -18,15 +20,11 @@ class Yaml
     private $dir;
     private $php = [];
     private $stack = [];
-    private $mode = [
-        'em' => '',
-        'val' => '{[',
-        'json' => '{[,]}',
-    ];
+    private $_p;
 
     static function directive($name, $func = null) {
         $ary = is_array($name) ? $name : [$name => $func];
-        self::$transform = $ary + self::$transform;
+        self::$custom = $ary + self::$custom;
     }
 
     static function run($in) {
@@ -57,8 +55,15 @@ class Yaml
         return $yml->out();
     }
 
+    private function out() {
+        if (!$this->php)
+            return $this->array;
+        $this->array = var_export($this->array, true);
+        return strtr($this->array, $this->php);
+    }
+
     static function path($path, $unset = false) {
-        return (Yaml::$transform['path'])(0, $path, $path, 0, $unset);
+        return (Yaml::$custom['path'])(0, $path, $path, 0, $unset);
     }
 
     static function lint(string $in, $is_file = true) : bool {
@@ -70,80 +75,7 @@ class Yaml
         return true;
     }
 
-    function __construct(string $in, $fn, $marker = '') {
-        self::$eval = fn($v) => $v;
-        defined('DEV') && (self::$dev = DEV);
-        $this->dir = $fn ? str_replace('\\', '/', dirname($fn)) : '???';
-        $this->at = [$fn, 0];
-
-        if ('' !== $marker) {
-            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
-                if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
-                    $this->halt("Cannot find marker `$marker`");
-                trace("Used magic marker from $fn", 'YAML');
-            }
-            $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
-            unset($ary);//$this->marker = $marker;
-        }
-
-        $this->array = [];
-        $p = ['' => &$this->array];
-        $add = function ($m) use (&$p) {
-            $str = !is_bool($m->key);
-            if ($str && 'DEV+' === substr($m->key, 0, 4)) {
-                if (!self::$dev)
-                    return;
-                $m->key = substr($m->key, 4);
-            }
-            $v = $this->yml_val($m, $define);
-            if (array_key_exists($m->pad, $p)) {
-                array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
-                $z =& $p[$m->pad];
-            } elseif (null !== $p[$lt = array_key_last($p)]) {
-                $z =& $p[$lt][array_key_last($p[$lt])];
-            } else {
-                $z =& $p[''];
-            }
-            if ($str) { # key:
-                $z[$m->key] = $v;
-            } elseif ($m->key) { # -
-                $z[] = $v;
-            } elseif (is_array($v)) { # other is +
-                foreach ($v as $k => $v)
-                    is_int($k) ? ($z[] = $v) : ($z[$k] = $v);
-            } elseif (count($p) > 1) {
-                $z[$v] = null;
-            } elseif (null !== ($p[''] = $v)) {
-                return true;
-            }
-            $p[$m->pad] =& $z;
-            $define && Boot::set_const($z[$m->key]);
-            return false;
-        };
-
-        $n = $this->obj();
-        $this->tail = explode("\n~\n", unl($in));
-        foreach (explode("\n", $this->tail[0]) as $_ => $in) {
-            $this->at[1] = 1 + $_;
-            $m = clone $n;
-            if ($this->yml_line($in . ' ', $n, $m->code))
-                continue;
-            is_null($m->key) or $scalar = $add($m);
-            $n->voc && $add($n->voc); # vocabulary: - key: val
-            if ($scalar ?? false)
-                return;
-        }
-        is_null($n->key) or $add($n);
-    }
-
-    private function out() {
-        if (!$this->php)
-            return $this->array;
-        $this->array = var_export($this->array, true);
-        return strtr($this->array, $this->php);
-    }
-
-    private function yml_val($m, &$define) {
+    private function value($m, &$define) {
         $define = false;
         foreach ($this->stack as $i => &$p) {
             if ($p[2] == $p[1])
@@ -153,176 +85,297 @@ class Yaml
             array_splice($this->stack, $i); # drop cascade code
             break;
         }
-        if ($m->json) {
-            $v = json_decode($m->json, true);
-            if (json_last_error())
-                $this->halt('JSON ' . json_last_error_msg() . $m->json);
-        } else {
-            $v = $this->scalar($m->mod ? $m->val : trim($m->val), true, $m);
-            if (1 == self::$boot) {
-                if ('define' == $m->key) {
-                    $v = ['WWW' => Boot::www()];
-                    $define = true;
-                } elseif ('DEV' == $m->key) {
-                    self::$boot = 2;
-                    self::$dev = $v;
-                }
+        $v = [] === $m->val ? [] : $this->scalar($m->val, true, $m);//$m->opt ? $m->val : trim($m->val)
+        if (1 == self::$boot) {
+            if ('define' == $m->key) {
+                $v = ['WWW' => Boot::www()];
+                $define = true;
+            } elseif ('DEV' == $m->key) {
+                self::$boot = 2;
+                self::$dev = $v;
             }
         }
         return $v;
     }
 
-    private function code(string $str, &$t) {
-        if (!preg_match("/^@(\w+)(\(|)(.+)$/", $str, $match))
-            return false;
-        [,$name, $q, $rest] = $match;
-        $ws = fn($i) => '' === trim($rest[$i]);
-        if (!$q)
-            return $ws(0);
-        $j = strlen($br = Rare::bracket("($rest"));
-        if ($q = $j && $ws($j - 1))
-            $t = "@$name$br";
-        return $q ? [$name, substr($br, 1, -1)] : false;
+    private function push($m) {
+        $p =& $this->_p;
+        $str = !is_bool($m->key);
+        if ($str && 'DEV+' === substr($m->key, 0, 4)) {
+            if (!self::$dev)
+                return;
+            $m->key = substr($m->key, 4);
+        }
+        $v = $this->value($m, $define);
+        if (array_key_exists($m->pad, $p)) {
+            array_splice($p, 1 + array_flip(array_keys($p))[$m->pad]);
+            $z =& $p[$m->pad];
+        } elseif (null !== $p[$lt = array_key_last($p)]) {
+            $z =& $p[$lt][array_key_last($p[$lt])];
+        } else {
+            $z =& $p[''];
+        }
+        if ($str) { # key:
+            $z[$m->key] = $v;
+        } elseif ($m->key) { # -
+            $z[] = $v;
+        } elseif (is_array($v)) { # other is +
+            foreach ($v as $k => $v)
+                is_int($k) ? ($z[] = $v) : ($z[$k] = $v);
+        } elseif (count($p) > 1) {
+            $z[$v] = null;
+        } elseif (null !== ($p[''] = $v)) {
+            return true;
+        }
+        $p[$m->pad] =& $z;
+        $define && Boot::set_const($z[$m->key]);
+        return false;
     }
 
-    private function tokens(string &$in, $json) {
+    private function code(string $str, &$t) {
+        if (!preg_match("/^@(\w+)(\(|)(.*)$/s", $str, $match))
+            return false;
+        [,$name, $q, $rest] = $match;
+        if (!$q)
+            return true;
+        if ($br = Rare::bracket("($rest"))
+            $t = "@$name$br";
+        return $br ? [$name, substr($br, 1, -1)] : false;
+    }
+
+    function __construct(string $in, $fn, $marker = '') {
+        defined('DEV') && (self::$dev = DEV);
+        $this->dir = $fn ? str_replace('\\', '/', dirname($fn)) : '???';
+        $this->at = [$fn, 1];
+
+        if ('' !== $marker) {
+            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
+                if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
+                    $this->halt("Cannot find marker `$marker`");
+                trace("Used magic marker from $fn", 'YAML');
+            }
+            $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
+            unset($ary);
+        }
+        if (!self::$boot) {
+            MVC::$mc && MVC::handle('yml_c'); # not console!
+            self::$custom = Plan::_rq('mvc/yaml.php') + self::$custom;
+        }
+        $this->array = $this->stack = $this->php = [];
+        $this->tail = explode("\n~\n", unl($in));
+        $this->_p = ['' => &$this->array];
+        $this->parse();
+    }
+
+    private function tokens() {
+        $in = $this->tail[0] . "\n";
         $len = strlen($in);
-        return new eVar(function ($prev) use (&$in, $json, $len) {
-            static $j = 0;
+        $j = 0;
+        return new eVar(function ($prev, &$max_i) use (&$j, &$in, $len) {
+            static $y = [
+                'key' => '-:+',
+                'val' => ':{[', 'end' => '',
+                '[' => '{[,]', '{' => '[{:,}',
+            ];
+          $max_i = 5000;
             $j += strlen($pt = $prev->token ?? '');
             if ($j >= $len)
                 return false;
-            $x = $in[$j];
-            $mode = $wt = $prev->mode ?? ($json ? 'json' : 'em');
-            if ($whitespace = ' ' == $x || "\t" == $x) {
-                $t = $prev->token = substr($in, $j, strspn($in, "\t ", $j));
+            $wt = ' ';
+            $mode = $prev->mode ?? 'key';
+            $t = $in[$j];
+            if ($whitespace = ' ' == $t || "\t" == $t || "\n" == $t) {
+                "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
+                $prev->token = $t;
                 $pt && ($wt = $pt);
-            } elseif ('rest' == $mode) { # return rest of line
-                $t = substr($in, $j);
-            } elseif ('#' == $x && ($prev->ws ?? true)) {
-                return false; # cut comment
-            } elseif ('"' == $x || "'" == $x) {
+            } elseif ('rest' == $mode || '#' == $t && ($prev->ws ?? true)) { # return rest of line
+                $t = $prev->token = substr($in, $j, strcspn($in, "\n", $j));
+                if ('rest' !== $mode)
+                    return true; # cut comment
+                $prev->mode = 'key';
+            } elseif ('"' == $t || "'" == $t) {
                 $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
                 $t = substr($in, $j, $sz -= $j);
             } else {
-                $cl = $this->mode[$mode];
-                $t = strpbrk($x, "+:-$cl") ? $x : substr($in, $j, strcspn($in, "\t\"' +:-$cl", $j));
-                if ($code = '@' == $x && 'val' == $mode)
-                    $code = $this->code(substr($in, $j), $t);
+                $cl = $y[$mode];
+                if (!strpbrk($t, "\n$cl")) {
+                    $t = substr($in, $j, strcspn($in, "\n'\"\t $cl", $j));
+                    if ($code = '@' == $t[0] && in_array($mode, ['val', '[', '{']))
+                        $code = $this->code(substr($in, $j), $t);
+                }
             }
-            return 'skip' == $mode ? (bool)($prev->mode = 'val') : [
+            return [
                 'token' => $t,
-                'keyc' => ':' == $wt,
-                'key3' => in_array($wt, [':', '-', '+']) ? $wt : false,
-                'code' => $code = ($code ?? false),
-                'mode' => $code ? 'skip' : $mode,
-                'ws' => $whitespace || $code,
+                'k1' => ':' === $wt,
+                'k3' => in_array($wt, [':', '-', '+'], true) ? $wt : false,
+                'code' => $code ?? false,
+                'mode' => $mode,
+                'ws' => $whitespace,
+                'nl' => ("\n" == $pt || '' === $pt) && '[' != $mode && '{' != $mode,
             ];
         });
     }
 
-    private function yml_line(string $in, &$n, &$code) {
-        static $pad_0 = '', $pad_1 = 0;
-        $pad = '';
-        $len = strlen($p =& $n->val);
-        $setk = true; # set key first
-        $reqk = false;
+    private function json(&$m, $el, &$reqk) {
+        $t = $el->token;
+        $list = '[' == $t;
+        $open = $list || '{' == $t;
+        $key = fn($list) => $list ? true : null;
+        $push = function ($m) {
+            foreach ($m->code as $fun)
+                $this->stack[] = [$fun, $m->pad, $m->pad];
+            $m->val = [];
+            $m->code = 0;
+            $this->push($m);
+        };
 
-        foreach ($this->tokens($in, $n->json) as $_ => $el) {
+        if ('.' == ($m->opt[0] ?? false)) { # json continue
+            $x = '[' == $m->opt[-1];
+            if ($ret = 1 == strlen($t) && !$reqk && strpbrk($t, $x ? '[,]{' : '{,:}[')) {
+                if ('' !== ($m->val = trim($_v = $m->val))) {
+                    if (':' == $t) {
+                        $m->key = $this->scalar($m->val); # prepare {key: }
+                        $m->val = '';
+                        return true;
+                    }
+                    if ($open)
+                        $this->halt("JSON error near `$_v$t`");
+                } elseif (':' == $t) {
+                    $this->halt("JSON error near `:`");
+                }
+                if (null !== $m->key && (!empty($m->val) || $m->code || is_string($m->key)))
+                    $this->push($m);
+
+                if ($open) {
+                    $push($m);
+                    $el->mode = $t; # [ or {
+                    $m = $this->obj($key($list), " $m->pad", $m->opt . $t);
+                } elseif (',' == $t) { # comma
+                    $list = '[' == $m->opt[-1];
+                    $m = $this->obj($key($list), $m->pad, $m->opt);
+                } elseif ('}' == $t || ']' == $t) { # close
+                    $opt = substr($m->opt, 0, -1);
+                    if ('.' == $opt) {
+                        $el->mode = 'key';
+                        $m = $this->obj(); # json end
+                        $list = true;
+                    } else {
+                        $el->mode = $opt[-1];
+                        $list = '[' == $opt[-1];
+                        $m = $this->obj($key($list), substr($m->pad, 1), $opt);
+                    }
+                }
+            }
+        } elseif ($ret = null === $m->val && $open && !$m->opt) { # json init
+            $push($m);
+            $el->mode = $t; # [ or {
+            $reqk = false;
+            $m = $this->obj($key($list), false === $m->key ? $m->pad : " $m->pad", ".$t");
+        }
+        return $ret;
+    }
+
+    private function parse() {
+        $m = $this->obj();
+        $p =& $m->val;
+        $pad_0 = $pad = $reqk = $p = '';
+        foreach ($this->tokens() as $el) {
             $t = $el->token;
-            if (0 == $_) { # first step
+            if ($el->nl) { # new line start
+                $len = strlen($p);
+                $pad = '';
+                if ("\n" == $t)
+                    $t = '';
                 ($has_t = !$el->ws) ? ($p .= $t) : ($pad = $this->halt(false, $t));
-                $reqk = $pad <= $pad_0; # require match key
-                $mult = ('|' == $n->mod || '>' == $n->mod) && (!$reqk || '' === trim($in));
+                $reqM = $reqk = $pad <= $pad_0 && !in_array($el->mode, ['[', '{']); # require match key
+                $mult = ('|' == $m->opt || '>' == $m->opt) && (!$reqk); //  || '' === trim($ln->s)
                 if ($mult) {
                     $el->mode = 'rest'; # multiline mode
                     if (!$len) {
                         $pad_1 = strlen($pad);
-                    } elseif ('|' == $n->mod) {
+                    } elseif ('|' == $m->opt) {
                         $p .= "\n" . substr($pad, $pad_1);
                     }
                 }
-            } elseif ($el->key3 && $setk && ($reqk || !$n->mod)) { # key found
-                if ($pad > $n->pad) { # aggregate node
-                    $len && $this->halt('Mapping disabled');
-                    foreach ($code as $fun)
-                        $this->stack[] = [$fun, $n->pad, $n->pad];
-                    $code = 0;
+            } elseif ($el->k3 && 'key' == $el->mode && ($reqk || !$m->opt)) { # yaml key
+                $key = $el->k1 ? $this->scalar(substr($p, $len, -1)) : '-' == $el->k3;
+                if (null !== $m->key) {
+                    if ($pad > $m->pad) { # aggregate node
+                        $len && $this->halt('Mapping disabled');
+                        foreach ($m->code as $fun)
+                            $this->stack[] = [$fun, $m->pad, $m->pad];
+                        $m->code = 0;
+                    }
+                    $p = substr($p, 0, $len);
+                    if ($this->push($m))
+                        return; # + scalar - stop parsing
                 }
-                $key = $el->keyc ? $this->scalar(substr($p, $len, -1)) : '-' === $el->key3;
-                null !== $key or $this->halt('Key cannot be NULL');
-                $n = $this->obj(['key' => $key, 'pad' => $pad_0 = $pad]);
-                $p =& $n->val;
-                $setk = false;
+                $m = $this->obj($key , $pad_0 = $pad);
+                $p =& $m->val;
                 $spaces = $t;
                 $el->mode = 'val';
-            } elseif ($el->keyc && is_bool($n->key) && !$n->json) { # vocabulary key
-                if ($n->key) {
-                    $n->voc = $this->obj(['key' => true, 'pad' => $n->pad, 'code' => 0]);
-                    $pad_0 = $n->pad .= ' ' . $this->halt(false, $spaces);
+                $has_t = false;
+            } elseif ($el->k1 && is_bool($m->key) && !$m->opt) { # vocabulary key
+                if ($m->key) {
+                    $this->push($this->obj(true, $m->pad, '', 0));
+                    $pad_0 = $m->pad .= ' ' . $this->halt(false, $spaces);
                 }
-                $n->key = $this->scalar(substr($p, 0, -1));
-                null !== $n->key or $this->halt('Key cannot be NULL');
+                $m->key = $this->scalar(substr($p, 0, -1));
+                $p = '';
                 $el->mode = 'val';
-                $p = '';
             } elseif ($el->code) {
-                [$name, $param] = is_array($el->code) ? $el->code : [substr($t, 1), null];
-                $n->code[] = [$this->statements($name), $param];
-            } elseif ($n->json && 1 == strlen($t) && !$reqk && strpbrk($t, ':{},[]')) {
-                $n->json .= '' === ($p = trim($p)) ? $t : $this->scalar($p, ':' != $t, $n, true) . $t;
-                $p = '';
-            } elseif ('' === $p && ('{' == $t || '[' == $t) && !$n->mod) {
-                $n->mod = $n->json = $t;
-                $reqk = false;
-                $el->mode = 'json';
-            } else {
-                if ($xmul = $len && !$has_t && '|' != $n->mod)
+                $m->code[] = is_array($el->code) ? $el->code : [substr($t, 1), null];
+            } elseif ($this->json($m, $el, $reqk)) {
+                $p =& $m->val;
+                continue;
+            } elseif ("\n" != $t) {
+                if ($xmul = $len && !$reqM && '|' != $m->opt)
                     $len++;
+                $reqM = true;
+                if ('key' == $el->mode)
+                    $has_t = true;
                 if ('' !== $p && 'val' == $el->mode)
-                    $el->mode = 'em';
+                    $el->mode = 'end';
                 $p .= $xmul ? " $t" : $t;
-                $has_t = true;
+            }
+            if ("\n" == $t) {
+                if ('key' == $el->mode) {
+                    if ($reqk && $has_t)
+                        $this->halt('Cannot match key');
+                } elseif ('|' == ($p = trim($p)) || '>' == $p) {
+                    $m->opt = $p;
+                    $p = '';
+                }
+                if ($el->mode != '[' && $el->mode != '{')
+                    $el->mode = 'key';
+                $this->at[1]++;
             }
         }
-
-        if ($setk) {
-            if ($reqk && $has_t)
-                $this->halt('Cannot match key');
-            if ($p && ' ' == $p[-1])
-                $p = substr($p, 0, -1);
-        } elseif ('|' == ($p = rtrim($p)) || '>' == $p) {
-            $n->mod = $p;
-            $p = '';
-        }
-
-        return $setk;
+        is_null($m->key) or $this->push($m); # the last
     }
 
     private function halt(string $error, $space = false) {
-        if ($space && !strpbrk($space, "\t"))
+        if (false !== $space && !strpbrk($space, "\t"))
             return $space;
 
         $at = (false === $this->at[0] ? 'Line ' : $this->at[0] . ', Line ') . $this->at[1];
         throw new Error("Yaml, $at: " . ($error ?: 'Tabs disabled for indent'));
     }
 
-    private function obj(array $in = []) : stdClass {
-        $in += [
-            'mod' => '',
-            'pad' => '',
-            'key' => null,
-            'val' => '',
-            'voc' => false,
-            'json' => false,
-            'code' => [],
+    private function obj($key = null, $pad = '', $opt = '', $code = []) : stdClass {
+        return (object)[
+            'key' => $key,
+            'val' => null,
+            'pad' => $pad,
+            'opt' => $opt,
+            'code' => $code,
         ];
-        return (object)$in;
     }
 
     private function var(string &$in) {
-        if (!preg_match("/^\\$([A-Z\d_]+)(.*)$/", $in, $m))
+        if (!preg_match("/^\\$([A-Z\d_]+)(.*)$/", $in, $match))
             return;
-        [, $key, $rest] = $m;
+        [, $key, $rest] = $match;
         if ($rest && ($bkt = Rare::bracket($rest))) {
             $rest = substr($rest, strlen($bkt));
             $in = Rare::env($key, substr($bkt, 1, -1));
@@ -341,45 +394,53 @@ class Yaml
         '' === $rest or $in = (string)$in . $rest;
     }
 
-    private function transform(&$v, $n, $has_var) {
+    private function transform(&$v, $m, $has_var) {
         $ary = array_reverse($this->stack);
-        foreach ($n->code as $fun)
+        foreach ($m->code as $fun)
             array_unshift($ary, [$fun, 1]); # ' ' > 1 is false
         foreach ($ary as $one) {
             [$code, $pad] = $one;
-            if ($n->pad > $pad || 1 === $pad)
+            if ($m->pad > $pad || 1 === $pad) {
+                if ('deny' == $code[0])
+                    break;
+                $code += [2 => $this->statements($code[0])];
                 $v = run_transform($code, $v, $this->array, $has_var);
+            }
         }
         return !is_string($v);
     }
 
-    private function scalar(string $v, $is_val = false, $n = 0, $json = false) {
+    private function scalar(string $v, $is_val = false, $m = 0) {
         if ($has_var = $v && '$' == $v[0])
             $this->var($v);
-        if ($is_val && 0 !== $n->code && $this->transform($v, $n, $has_var))
+        if ($is_val && 0 !== $m->code && $this->transform($v, $m, $has_var))
             return $v;
         if ('' === $v || 'null' === $v)
-            return $json ? 'null' : null;
+            return $is_val ? null : $this->halt('Key cannot be NULL');
         $true = 'true' === $v;
         if ($true || 'false' === $v)
-            return $json ? $v : $true;
+            return $true;
         if ('"' == $v[0] && '"' == $v[-1])
-            return $json ? $v : substr($v, 1, -1);
+            return substr($v, 1, -1);
         if ("'" == $v[0] && "'" == $v[-1])
-            return $json ? '"' . substr($v, 1, -1) . '"' : substr($v, 1, -1);
+            return substr($v, 1, -1);
         if ($is_val && is_numeric($x = $v)) {
-            if ($json)
-                return $v;
             if ('-' === $v[0] || '+' === $v[0])
                 $x = substr($v, 1);
             return ctype_digit($x) ? intval($v) : floatval($v);
         }
-        return $json ? '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $v) . '"' : $v;
+        return $v;
     }
 
     static function inc($name, $ware = false, $marker = '', $yml = null) {
+        $default = '$DIR_S/w2/__data.yaml';
+        if (false !== strpos($marker, '.')) {
+            [$fn, $marker] = explode('.', $marker, 2);
+            if (!$fn)
+                $default = $yml->at[0];
+        }
         if ('' === $name) {
-            $name = '$DIR_S/w2/__data.yaml';
+            $name = $default;
             $yml->var($name);
             $ware = true;
         }
@@ -407,13 +468,15 @@ class Yaml
             case 'inc':
                 return fn($v, $marker, &$a, $has_var) => self::inc($v, $has_var, $marker, $this);
             case 'php':
-                return function ($v) {
-                    $n = "php_" . count($this->php);
-                    $this->php["'$n'"] = $v;
-                    return $n;
+                return function ($v, $x) {
+                    $key = md5(mt_rand());
+                    $this->php["'$key'"] = $x ?? $v;
+                    return $key;
                 };
+            case 'deny':
+                return null;
             case 'eval':
-                return self::$eval;
+                return fn($v, $x) => $x ?? $v;
             case 'json':
                 return fn($v) => json_encode($v);
             case 'ip':
@@ -450,6 +513,10 @@ class Yaml
                 return fn($v) => strtotime($v);
             case 'scan':
                 return fn($v, $x) => sscanf($v, $x);
+            case 'match':
+                return function ($v, $x) {
+                    return preg_match($x, $v, $match) ? array_slice($match, 1) : false;
+                };
             case 'object':
                 return fn($v) => (object)$v;
             case 'range':
@@ -485,8 +552,8 @@ class Yaml
 
 function run_transform($_cod, $v, &$a, $has_var) {
     global $sky;
-    $_ret = ($_cod[0])($v, $_cod[1], $a, $has_var);
-    if ($_cod[0] !== Yaml::$eval)
+    $_ret = ($_cod[2])($v, $_cod[1], $a, $has_var);
+    if ('eval' !== $_cod[0])
         return $_ret;
     $tok = token_get_all("<? $_ret");
     if (!array_filter($tok, fn($v) => is_array($v) && T_RETURN == $v[0]))

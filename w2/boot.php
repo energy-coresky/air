@@ -16,16 +16,6 @@ class Boot
         require DIR_S . "/w2/processor.php";
         require DIR_S . "/w2/rare.php";
         require DIR_S . "/w2/yaml.php";
-
-        if (!$dc) {
-            if (Yaml::$boot)
-                return;
-            if (MVC::$mc) # not console!
-                MVC::handle('yml_c');
-            self::$transform = Plan::_rq('mvc/yaml.php') + self::$transform;
-            return;
-        }
-
         Yaml::$boot = 1;
         $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
         self::$const = $cfg['define'];

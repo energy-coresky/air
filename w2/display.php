@@ -89,6 +89,10 @@ class Display
         return '<div class="php">' . $table . '</div>';
     }
 
+    static function var($in) {
+        return Plan::var($in);
+    }
+
     static function yml($text) {
 
     }

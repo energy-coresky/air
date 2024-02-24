@@ -578,7 +578,7 @@ class eVar implements Iterator
             $x = false;
             if (isset($this->e['row_c']) && $this->row) {
                 $this->row->__i = $this->i;
-                $x = call_user_func_array($this->e['row_c'], [&$this->row]);
+                $x = call_user_func_array($this->e['row_c'], [&$this->row, &$this->max_i]);
                 if (false === $x) {
                     $exit(false);
                     return;
