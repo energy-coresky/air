@@ -430,7 +430,7 @@ class DEV
         $wares = $this->wares(true);
         return [
             'bg_ware' => '#e0e7fe',
-            'e_inet' => function ($row) use (&$inet, &$wares) {
+            'e_inet' => function () use (&$inet, &$wares) {
                 $name = $inet ? key($inet) : 0;
                 if (!$ware = array_shift($inet))
                     return false;

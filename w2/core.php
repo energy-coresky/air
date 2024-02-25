@@ -474,8 +474,9 @@ class eVar implements Iterator
     private $e;
     private $dd = false;
 
-    function __construct($e) {
+    function __construct($e, $max_i = false) {
         is_array($e) or $e = [$e instanceof Closure ? 'row_c' : 'query' => $e];
+        !$max_i or $e['max_i'] = $max_i;
         $this->e = $e;
     }
 
@@ -578,7 +579,7 @@ class eVar implements Iterator
             $x = false;
             if (isset($this->e['row_c']) && $this->row) {
                 $this->row->__i = $this->i;
-                $x = call_user_func_array($this->e['row_c'], [&$this->row, &$this->max_i]);
+                $x = call_user_func_array($this->e['row_c'], [&$this->row]);
                 if (false === $x) {
                     $exit(false);
                     return;

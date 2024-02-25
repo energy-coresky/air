@@ -2,7 +2,7 @@
 
 class Boot
 {
-    const version = 0.912;
+    const version = 1.0;
 
     private static $const = [];
 

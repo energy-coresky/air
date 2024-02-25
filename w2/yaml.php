@@ -2,12 +2,7 @@
 
 class Yaml
 {
-    use Processor;#2do ?
-
     const version = 0.933;
-    const Jet = 1;
-    const Proc = 2;
-    const Echo = 3;
 
     static $boot = 0;
     static $custom = [];
@@ -21,6 +16,7 @@ class Yaml
     private $php = [];
     private $stack = [];
     private $_p;
+    private $marker = false;
 
     static function directive($name, $func = null) {
         $ary = is_array($name) ? $name : [$name => $func];
@@ -28,7 +24,7 @@ class Yaml
     }
 
     static function run($in) {
-        [$fn, $query, $vars] = $in + [1 => false, false];
+        [$fn, $query, $vars, $mode] = $in + [1 => false, false, 0];
         if (!$query) {
             trace("ON-FLY IS $fn", 'YAML');
             return Yaml::text($fn);
@@ -75,6 +71,31 @@ class Yaml
         return true;
     }
 
+    function __construct(string $in, $fn, $marker = '') {
+        defined('DEV') && (self::$dev = DEV);
+        $this->dir = $fn ? str_replace('\\', '/', dirname($fn)) : '???';
+        $this->at = [$fn, 1];
+
+        if ('' !== $marker) {
+            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
+                if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
+                    $this->halt("Cannot find marker `$marker`");
+                trace("Used magic marker from $fn", 'YAML');
+            }
+            $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
+            unset($ary);
+            $this->marker = $marker;
+        }
+        if (!self::$boot) {
+            MVC::$mc && MVC::handle('yml_c'); # not console!
+            self::$custom = Plan::_rq('mvc/yaml.php') + self::$custom;
+        }
+        $this->array = $this->stack = $this->php = [];
+        $this->tail = explode("\n~\n", unl($in));
+        $this->_p = ['' => &$this->array];
+        $this->parse();
+    }
+
     private function value($m, &$define) {
         $define = false;
         foreach ($this->stack as $i => &$p) {
@@ -85,7 +106,7 @@ class Yaml
             array_splice($this->stack, $i); # drop cascade code
             break;
         }
-        $v = [] === $m->val ? [] : $this->scalar($m->val, true, $m);//$m->opt ? $m->val : trim($m->val)
+        $v = [] === $m->val ? [] : $this->scalar($m->val, true, $m);
         if (1 == self::$boot) {
             if ('define' == $m->key) {
                 $v = ['WWW' => Boot::www()];
@@ -132,90 +153,6 @@ class Yaml
         return false;
     }
 
-    private function code(string $str, &$t) {
-        if (!preg_match("/^@(\w+)(\(|)(.*)$/s", $str, $match))
-            return false;
-        [,$name, $q, $rest] = $match;
-        if (!$q)
-            return true;
-        if ($br = Rare::bracket("($rest"))
-            $t = "@$name$br";
-        return $br ? [$name, substr($br, 1, -1)] : false;
-    }
-
-    function __construct(string $in, $fn, $marker = '') {
-        defined('DEV') && (self::$dev = DEV);
-        $this->dir = $fn ? str_replace('\\', '/', dirname($fn)) : '???';
-        $this->at = [$fn, 1];
-
-        if ('' !== $marker) {
-            if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
-                if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
-                    $this->halt("Cannot find marker `$marker`");
-                trace("Used magic marker from $fn", 'YAML');
-            }
-            $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
-            unset($ary);
-        }
-        if (!self::$boot) {
-            MVC::$mc && MVC::handle('yml_c'); # not console!
-            self::$custom = Plan::_rq('mvc/yaml.php') + self::$custom;
-        }
-        $this->array = $this->stack = $this->php = [];
-        $this->tail = explode("\n~\n", unl($in));
-        $this->_p = ['' => &$this->array];
-        $this->parse();
-    }
-
-    private function tokens() {
-        $in = $this->tail[0] . "\n";
-        $len = strlen($in);
-        $j = 0;
-        return new eVar(function ($prev, &$max_i) use (&$j, &$in, $len) {
-            static $y = [
-                'key' => '-:+',
-                'val' => ':{[', 'end' => '',
-                '[' => '{[,]', '{' => '[{:,}',
-            ];
-          $max_i = 5000;
-            $j += strlen($pt = $prev->token ?? '');
-            if ($j >= $len)
-                return false;
-            $wt = ' ';
-            $mode = $prev->mode ?? 'key';
-            $t = $in[$j];
-            if ($whitespace = ' ' == $t || "\t" == $t || "\n" == $t) {
-                "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
-                $prev->token = $t;
-                $pt && ($wt = $pt);
-            } elseif ('rest' == $mode || '#' == $t && ($prev->ws ?? true)) { # return rest of line
-                $t = $prev->token = substr($in, $j, strcspn($in, "\n", $j));
-                if ('rest' !== $mode)
-                    return true; # cut comment
-                $prev->mode = 'key';
-            } elseif ('"' == $t || "'" == $t) {
-                $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
-                $t = substr($in, $j, $sz -= $j);
-            } else {
-                $cl = $y[$mode];
-                if (!strpbrk($t, "\n$cl")) {
-                    $t = substr($in, $j, strcspn($in, "\n'\"\t $cl", $j));
-                    if ($code = '@' == $t[0] && in_array($mode, ['val', '[', '{']))
-                        $code = $this->code(substr($in, $j), $t);
-                }
-            }
-            return [
-                'token' => $t,
-                'k1' => ':' === $wt,
-                'k3' => in_array($wt, [':', '-', '+'], true) ? $wt : false,
-                'code' => $code ?? false,
-                'mode' => $mode,
-                'ws' => $whitespace,
-                'nl' => ("\n" == $pt || '' === $pt) && '[' != $mode && '{' != $mode,
-            ];
-        });
-    }
-
     private function json(&$m, $el, &$reqk) {
         $t = $el->token;
         $list = '[' == $t;
@@ -231,7 +168,7 @@ class Yaml
 
         if ('.' == ($m->opt[0] ?? false)) { # json continue
             $x = '[' == $m->opt[-1];
-            if ($ret = 1 == strlen($t) && !$reqk && strpbrk($t, $x ? '[,]{' : '{,:}[')) {
+            if ($return = 1 == strlen($t) && !$reqk && strpbrk($t, $x ? '[,]{' : '{,:}[')) {
                 if ('' !== ($m->val = trim($_v = $m->val))) {
                     if (':' == $t) {
                         $m->key = $this->scalar($m->val); # prepare {key: }
@@ -266,13 +203,72 @@ class Yaml
                     }
                 }
             }
-        } elseif ($ret = null === $m->val && $open && !$m->opt) { # json init
+        } elseif ($return = null === $m->val && $open && !$m->opt) { # json init
             $push($m);
             $el->mode = $t; # [ or {
             $reqk = false;
             $m = $this->obj($key($list), false === $m->key ? $m->pad : " $m->pad", ".$t");
         }
-        return $ret;
+        return $return;
+    }
+
+    private function code(string $str, &$t) {
+        if (!preg_match("/^@(\w+)(\(|)(.*)$/s", $str, $match))
+            return false;
+        [,$name, $q, $rest] = $match;
+        if (!$q)
+            return $t = '@' . $name;
+        if ($br = Rare::bracket("($rest"))
+            $t = "@$name$br";
+        return $br ? [$name, substr($br, 1, -1)] : false;
+    }
+
+    private function tokens() {
+        $in = $this->tail[0] . "\n";
+        $len = strlen($in);
+        $j = 0;
+        return new eVar(function ($prev) use (&$j, &$in, $len) {
+            static $list = [
+                'key' => '-:+',
+                'val' => ':{[', 'end' => '',
+                '[' => '{[,]', '{' => '[{:,}',
+            ];
+            $j += strlen($pt = $prev->token ?? '');
+            if ($j >= $len)
+                return false;
+            $wt = ' ';
+            $mode = $prev->mode ?? 'key';
+            $t = $in[$j];
+            if ($whitespace = ' ' == $t || "\t" == $t || "\n" == $t) {
+                "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
+                $prev->token = $t;
+                $pt && ($wt = $pt);
+            } elseif ('rest' == $mode || '#' == $t && ($prev->ws ?? true)) { # return rest of line
+                $t = $prev->token = substr($in, $j, strcspn($in, "\n", $j));
+                if ('rest' !== $mode)
+                    return true; # cut comment
+                $prev->mode = 'key';
+            } elseif ('"' == $t || "'" == $t) {
+                $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
+                $t = substr($in, $j, $sz -= $j);
+            } else {
+                $cl = $list[$mode];
+                if (!strpbrk($t, "\n$cl")) {
+                    $t = substr($in, $j, strcspn($in, "\n'\"\t $cl", $j));
+                    if ($code = '@' == $t[0] && in_array($mode, ['val', '[', '{']))
+                        $code = $this->code(substr($in, $j), $t);
+                }
+            }
+            return [
+                'token' => $t,
+                'k1' => ':' === $wt,
+                'k3' => in_array($wt, [':', '-', '+'], true) ? $wt : false,
+                'code' => $code ?? false,
+                'mode' => $mode,
+                'ws' => $whitespace,
+                'nl' => ("\n" == $pt || '' === $pt) && '[' != $mode && '{' != $mode,
+            ];
+        }, -1);
     }
 
     private function parse() {
@@ -284,10 +280,9 @@ class Yaml
             if ($el->nl) { # new line start
                 $len = strlen($p);
                 $pad = '';
-                if ("\n" == $t)
-                    $t = '';
+                "\n" != $t or $t = '';
                 ($has_t = !$el->ws) ? ($p .= $t) : ($pad = $this->halt(false, $t));
-                $reqM = $reqk = $pad <= $pad_0 && !in_array($el->mode, ['[', '{']); # require match key
+                $reqM = $reqk = $pad <= $pad_0; # require match key
                 $mult = ('|' == $m->opt || '>' == $m->opt) && (!$reqk); //  || '' === trim($ln->s)
                 if ($mult) {
                     $el->mode = 'rest'; # multiline mode
@@ -310,7 +305,7 @@ class Yaml
                     if ($this->push($m))
                         return; # + scalar - stop parsing
                 }
-                $m = $this->obj($key , $pad_0 = $pad);
+                $m = $this->obj($key, $pad_0 = $pad);
                 $p =& $m->val;
                 $spaces = $t;
                 $el->mode = 'val';
@@ -401,7 +396,8 @@ class Yaml
         foreach ($ary as $one) {
             [$code, $pad] = $one;
             if ($m->pad > $pad || 1 === $pad) {
-                if ('deny' == $code[0])
+                $noeval = 'eval' == $code[0] && '!' == $code[1] && !$this->marker;
+                if ('deny' == $code[0] || $noeval)
                     break;
                 $code += [2 => $this->statements($code[0])];
                 $v = run_transform($code, $v, $this->array, $has_var);
@@ -473,10 +469,8 @@ class Yaml
                     $this->php["'$key'"] = $x ?? $v;
                     return $key;
                 };
-            case 'deny':
-                return null;
             case 'eval':
-                return fn($v, $x) => $x ?? $v;
+                return fn($v, $x) => isset($x) && '!' != $x ? $x : $v;
             case 'json':
                 return fn($v) => json_encode($v);
             case 'ip':
@@ -521,8 +515,6 @@ class Yaml
                 return fn($v) => (object)$v;
             case 'range':
                 return fn($v, $x) => range($v, $x);
-            case '':
-                return ;
             case 'left':
                 return function ($v, $x) {
                     if (!is_array($v))
@@ -560,3 +552,5 @@ function run_transform($_cod, $v, &$a, $has_var) {
         $_ret = 'return ' . $_ret;
     return eval("$_ret;");
 }
+//https://nodeca.github.io/js-yaml/
+//https://yaml-online-parser.appspot.com/
