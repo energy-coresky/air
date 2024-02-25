@@ -116,7 +116,7 @@ red_label: [Red label, radio, [Off, On]]
 - [Application, {
     app: ['', '', size="11"],
     ver: ['', number, style="width:77px" step="0.0001"],
-    0: [@php(tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0]))) ?, ni]
+    0: [@php(tag(SKY::version()['app'][3] . ' from ' . date('c', SKY::version()['app'][0]))), ni]
   }]
 - [Core, ni, @php SKY::CORE]
 - [Save, submit]

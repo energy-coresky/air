@@ -157,7 +157,10 @@ class Yaml
         $t = $el->token;
         $list = '[' == $t;
         $open = $list || '{' == $t;
-        $key = fn($list) => $list ? true : null;
+        $key = function ($list) use ($el) {
+            $el->mode = $el->ss = $list ? "v[" : "k{";
+            return $list ? true : null;
+        };
         $push = function ($m) {
             foreach ($m->code as $fun)
                 $this->stack[] = [$fun, $m->pad, $m->pad];
@@ -173,6 +176,7 @@ class Yaml
                     if (':' == $t) {
                         $m->key = $this->scalar($m->val); # prepare {key: }
                         $m->val = '';
+                        $el->mode = $el->ss = 'v{';
                         return true;
                     }
                     if ($open)
@@ -183,31 +187,25 @@ class Yaml
                 if (null !== $m->key && (!empty($m->val) || $m->code || is_string($m->key)))
                     $this->push($m);
 
-                if ($open) {
+                if ($open) { # [ or {
                     $push($m);
-                    $el->mode = $t; # [ or {
                     $m = $this->obj($key($list), " $m->pad", $m->opt . $t);
                 } elseif (',' == $t) { # comma
-                    $list = '[' == $m->opt[-1];
-                    $m = $this->obj($key($list), $m->pad, $m->opt);
+                    $m = $this->obj($key('[' == $m->opt[-1]), $m->pad, $m->opt);
                 } elseif ('}' == $t || ']' == $t) { # close
                     $opt = substr($m->opt, 0, -1);
-                    if ('.' == $opt) {
+                    if ('.' == $opt) { # json end
                         $el->mode = 'key';
-                        $m = $this->obj(); # json end
-                        $list = true;
+                        $m = $this->obj();
                     } else {
-                        $el->mode = $opt[-1];
-                        $list = '[' == $opt[-1];
-                        $m = $this->obj($key($list), substr($m->pad, 1), $opt);
+                        $m = $this->obj($key('[' == $opt[-1]), substr($m->pad, 1), $opt);
                     }
                 }
             }
         } elseif ($return = null === $m->val && $open && !$m->opt) { # json init
             $push($m);
-            $el->mode = $t; # [ or {
             $reqk = false;
-            $m = $this->obj($key($list), false === $m->key ? $m->pad : " $m->pad", ".$t");
+            $m = $this->obj($key($list), false === $m->key ? $m->pad : " $m->pad", '.' . $t);
         }
         return $return;
     }
@@ -229,9 +227,9 @@ class Yaml
         $j = 0;
         return new eVar(function ($prev) use (&$j, &$in, $len) {
             static $list = [
-                'key' => '-:+',
-                'val' => ':{[', 'end' => '',
-                '[' => '{[,]', '{' => '[{:,}',
+                'key' => '-:+', 'val' => ':{[', 'end' => '',
+                'v[' => '{[,]', 'e[' => '{[,]',
+                'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
             ];
             $j += strlen($pt = $prev->token ?? '');
             if ($j >= $len)
@@ -242,7 +240,11 @@ class Yaml
             if ($whitespace = ' ' == $t || "\t" == $t || "\n" == $t) {
                 "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
                 $prev->token = $t;
+                if ("\n" != $t && ($prev->ss ?? false))
+                    return true; # SkipSpace
                 $pt && ($wt = $pt);
+                if ("\n" == $t || "\n" == $in[$j + strlen($t)])
+                    $whitespace = 1;
             } elseif ('rest' == $mode || '#' == $t && ($prev->ws ?? true)) { # return rest of line
                 $t = $prev->token = substr($in, $j, strcspn($in, "\n", $j));
                 if ('rest' !== $mode)
@@ -255,7 +257,7 @@ class Yaml
                 $cl = $list[$mode];
                 if (!strpbrk($t, "\n$cl")) {
                     $t = substr($in, $j, strcspn($in, "\n'\"\t $cl", $j));
-                    if ($code = '@' == $t[0] && in_array($mode, ['val', '[', '{']))
+                    if ($code = '@' == $t[0] && 'v' == $mode[0])
                         $code = $this->code(substr($in, $j), $t);
                 }
             }
@@ -266,9 +268,9 @@ class Yaml
                 'code' => $code ?? false,
                 'mode' => $mode,
                 'ws' => $whitespace,
-                'nl' => ("\n" == $pt || '' === $pt) && '[' != $mode && '{' != $mode,
+                'nl' => "\n" == $pt || '' === $pt,
             ];
-        }, -1);
+        }, 5000);
     }
 
     private function parse() {
@@ -277,19 +279,20 @@ class Yaml
         $pad_0 = $pad = $reqk = $p = '';
         foreach ($this->tokens() as $el) {
             $t = $el->token;
-            if ($el->nl) { # new line start
+            $json = '.' == ($m->opt[0] ?? '');
+            if ($el->nl && !$json) { # new line start
                 $len = strlen($p);
                 $pad = '';
                 "\n" != $t or $t = '';
                 ($has_t = !$el->ws) ? ($p .= $t) : ($pad = $this->halt(false, $t));
                 $reqM = $reqk = $pad <= $pad_0; # require match key
-                $mult = ('|' == $m->opt || '>' == $m->opt) && (!$reqk); //  || '' === trim($ln->s)
+                $mult = ('|' == $m->opt || '>' == $m->opt) && (!$reqk || 1 === $el->ws);
                 if ($mult) {
                     $el->mode = 'rest'; # multiline mode
                     if (!$len) {
                         $pad_1 = strlen($pad);
                     } elseif ('|' == $m->opt) {
-                        $p .= "\n" . substr($pad, $pad_1);
+                        $p .= "\n" . (string)substr($pad, $pad_1);
                     }
                 }
             } elseif ($el->k3 && 'key' == $el->mode && ($reqk || !$m->opt)) { # yaml key
@@ -320,6 +323,7 @@ class Yaml
                 $el->mode = 'val';
             } elseif ($el->code) {
                 $m->code[] = is_array($el->code) ? $el->code : [substr($t, 1), null];
+                $el->ss = true;
             } elseif ($this->json($m, $el, $reqk)) {
                 $p =& $m->val;
                 continue;
@@ -332,17 +336,20 @@ class Yaml
                 if ('' !== $p && 'val' == $el->mode)
                     $el->mode = 'end';
                 $p .= $xmul ? " $t" : $t;
+                if ($json && $el->ws && 'v' == $el->mode[0])
+                    $el->mode[0] = 'e';
             }
             if ("\n" == $t) {
                 if ('key' == $el->mode) {
                     if ($reqk && $has_t)
                         $this->halt('Cannot match key');
-                } elseif ('|' == ($p = trim($p)) || '>' == $p) {
-                    $m->opt = $p;
-                    $p = '';
+                } elseif (!$m->opt) {
+                    if (in_array($p = trim($p), ['|', '>'])) {
+                        $m->opt = $p;
+                        $p = '';
+                    }
                 }
-                if ($el->mode != '[' && $el->mode != '{')
-                    $el->mode = 'key';
+                $json or $el->mode = 'key';
                 $this->at[1]++;
             }
         }
