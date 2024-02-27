@@ -2,7 +2,7 @@
 
 class Yaml
 {
-    const version = 0.933;
+    const version = 0.935;
 
     static $boot = 0;
     static $custom = [];
@@ -37,38 +37,47 @@ class Yaml
         DEV && trace("$fn[1] IS $query # " . ($out ? 'used cached' : 'recompiled'), 'YAML');
         if ($out)
             return $out;
-        Plan::cache_s($fn, '<?php return ' . Yaml::text($query) . ';');
+        Plan::cache_s($fn, "<?php\n\n" . Yaml::text($query) . ';');
         return Plan::cache_r($fn, $vars);
     }
 
     static function text($in) {
-        $yml = new Yaml($in . "\n", false);
+        $yml = new Yaml($in, false);
         return $yml->out();
     }
 
     static function file($name, $marker = '') {
-        $yml = new Yaml(file_get_contents($name) . "\n", $name, $marker);
+        $yml = new Yaml(file_get_contents($name), $name, $marker);
         return $yml->out();
+    }
+
+    static function lint(string $in, $fn = false, $marker = '') : bool {
+        try {
+            new Yaml($fn ? file_get_contents($fn) : $in, $fn, $marker);
+        } catch (Error $e) {
+            return false;
+        }
+        return true;
     }
 
     private function out() {
         if (!$this->php)
             return $this->array;
-        $this->array = var_export($this->array, true);
+        $this->array = 'return ' . var_export($this->array, true);
+        if (isset($this->php[0])) { # preflight
+            [$param, $code] = $this->php[0];
+            unset($this->php[0]);
+            if (isset($param)) {
+                $param and $param = " use ($param)";
+                $code = "\$__return = call_user_func(function()$param {\n$code\n});";
+            }
+            $this->array = "$code\n\n" . $this->array;
+        }
         return strtr($this->array, $this->php);
     }
 
     static function path($path, $unset = false) {
         return (Yaml::$custom['path'])(0, $path, $path, 0, $unset);
-    }
-
-    static function lint(string $in, $is_file = true) : bool {
-        try {
-//            
-        } catch (Error $e) {
-            return false;
-        }
-        return true;
     }
 
     function __construct(string $in, $fn, $marker = '') {
@@ -153,12 +162,11 @@ class Yaml
         return false;
     }
 
-    private function json(&$m, $el, &$reqk) {
-        $t = $el->token;
+    private function json(&$m, $el, $t) {
         $list = '[' == $t;
         $open = $list || '{' == $t;
         $key = function ($list) use ($el) {
-            $el->mode = $el->ss = $list ? "v[" : "k{";
+            $el->mode = $list ? "v[" : "k{";
             return $list ? true : null;
         };
         $push = function ($m) {
@@ -169,14 +177,14 @@ class Yaml
             $this->push($m);
         };
 
-        if ('.' == ($m->opt[0] ?? false)) { # json continue
+        if ($el->json) { # json continue
             $x = '[' == $m->opt[-1];
-            if ($return = 1 == strlen($t) && !$reqk && strpbrk($t, $x ? '[,]{' : '{,:}[')) {
+            if ($return = strpbrk($t, $x ? '[,]{' : '{,:}[')) {
                 if ('' !== ($m->val = trim($_v = $m->val))) {
                     if (':' == $t) {
                         $m->key = $this->scalar($m->val); # prepare {key: }
                         $m->val = '';
-                        $el->mode = $el->ss = 'v{';
+                        $el->mode = 'v{';
                         return true;
                     }
                     if ($open)
@@ -195,16 +203,15 @@ class Yaml
                 } elseif ('}' == $t || ']' == $t) { # close
                     $opt = substr($m->opt, 0, -1);
                     if ('.' == $opt) { # json end
-                        $el->mode = 'key';
+                        $el->mode = 'k';
                         $m = $this->obj();
                     } else {
                         $m = $this->obj($key('[' == $opt[-1]), substr($m->pad, 1), $opt);
                     }
                 }
             }
-        } elseif ($return = null === $m->val && $open && !$m->opt) { # json init
+        } elseif ($return = '' === $m->val && $open && !$m->opt) { # json init
             $push($m);
-            $reqk = false;
             $m = $this->obj($key($list), false === $m->key ? $m->pad : " $m->pad", '.' . $t);
         }
         return $return;
@@ -218,85 +225,93 @@ class Yaml
             return $t = '@' . $name;
         if ($br = Rare::bracket("($rest"))
             $t = "@$name$br";
-        return $br ? [$name, substr($br, 1, -1)] : false;
+        return $br ? [$name, substr($br, 1, -1), $this->at[1]] : false;
     }
 
-    private function tokens() {
+    private function tokens(&$m) {
         $in = $this->tail[0] . "\n";
         $len = strlen($in);
         $j = 0;
-        return new eVar(function ($prev) use (&$j, &$in, $len) {
-            static $list = [
-                'key' => '-:+', 'val' => ':{[', 'end' => '',
-                'v[' => '{[,]', 'e[' => '{[,]',
-                'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
-            ];
+        return new eVar(function ($prev) use (&$m, &$j, &$in, $len) {
             $j += strlen($pt = $prev->token ?? '');
             if ($j >= $len)
                 return false;
-            $wt = ' ';
-            $mode = $prev->mode ?? 'key';
-            $t = $in[$j];
-            if ($whitespace = ' ' == $t || "\t" == $t || "\n" == $t) {
+            static $list = [
+                'k' => '-:+', 'v' => ':{[', 'e' => ':',
+                /* list: */   'v[' => '{[,]', 'e[' => '{[,]',
+                'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
+            ];
+            $mode = $prev->mode ?? 'k';
+            $ws = fn($_) => in_array($_, [' ', "\t", "\n"], true);
+            $wt = $code = false;
+            if ($whitespace = $ws($t = $in[$j])) {
                 "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
-                $prev->token = $t;
+                $prev->token = $prev->ws = $prev->_ws = $t;
                 if ("\n" != $t && ($prev->ss ?? false))
                     return true; # SkipSpace
-                $pt && ($wt = $pt);
-                if ("\n" == $t || "\n" == $in[$j + strlen($t)])
-                    $whitespace = 1;
             } elseif ('rest' == $mode || '#' == $t && ($prev->ws ?? true)) { # return rest of line
                 $t = $prev->token = substr($in, $j, strcspn($in, "\n", $j));
                 if ('rest' !== $mode)
                     return true; # cut comment
-                $prev->mode = 'key';
+                $prev->mode = 'k';
             } elseif ('"' == $t || "'" == $t) {
                 $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
                 $t = substr($in, $j, $sz -= $j);
+            } elseif (strpbrk($t, "\n" . ($cx = $list[$mode]))) {
+                if (in_array($t, [':', '-', '+']) && $ws($in[$j + 1])) # next is space
+                    $wt = $t;
             } else {
-                $cl = $list[$mode];
-                if (!strpbrk($t, "\n$cl")) {
-                    $t = substr($in, $j, strcspn($in, "\n'\"\t $cl", $j));
-                    if ($code = '@' == $t[0] && 'v' == $mode[0])
-                        $code = $this->code(substr($in, $j), $t);
-                }
+                $t = substr($in, $j, strcspn($in, "\n'\"\t $cx", $j));
+                if ('@' == $t[0] && 'v' == $mode[0])
+                    $code = $this->code(substr($in, $j), $t);
             }
+            $json = 2 == strlen($mode);
+            if ($json && !$code && 'v' == $mode[0])
+                $mode[0] = 'e';
             return [
                 'token' => $t,
-                'k1' => ':' === $wt,
-                'k3' => in_array($wt, [':', '-', '+'], true) ? $wt : false,
-                'code' => $code ?? false,
-                'mode' => $mode,
                 'ws' => $whitespace,
+                '_ws' => $prev->_ws ?? '',
                 'nl' => "\n" == $pt || '' === $pt,
+                'k1' => ':' == $wt,
+                'k3' => $wt && 'k' == $mode ? $wt : false,
+                'code' => $code,
+                'mode' => $mode,
+                'json' => $json,
+                'mult' => in_array($m->opt, ['|', '>']),
             ];
-        }, 5000);
+        }, -1);
     }
 
     private function parse() {
         $m = $this->obj();
         $p =& $m->val;
-        $pad_0 = $pad = $reqk = $p = '';
-        foreach ($this->tokens() as $el) {
-            $t = $el->token;
-            $json = '.' == ($m->opt[0] ?? '');
-            if ($el->nl && !$json) { # new line start
+        $pad_0 = $reqk = '';
+        foreach ($this->tokens($m) as $el) {
+            if ($el->nl) {
                 $len = strlen($p);
-                $pad = '';
-                "\n" != $t or $t = '';
-                ($has_t = !$el->ws) ? ($p .= $t) : ($pad = $this->halt(false, $t));
-                $reqM = $reqk = $pad <= $pad_0; # require match key
-                $mult = ('|' == $m->opt || '>' == $m->opt) && (!$reqk || 1 === $el->ws);
-                if ($mult) {
-                    $el->mode = 'rest'; # multiline mode
-                    if (!$len) {
-                        $pad_1 = strlen($pad);
-                    } elseif ('|' == $m->opt) {
-                        $p .= "\n" . (string)substr($pad, $pad_1);
-                    }
+                $pad = $el->ws ? $this->halt(false, $el->token) : '';
+                $reqk = $lock = $pad <= $pad_0; # require match key
+            }
+            if ("\n" == ($t = $el->token)) {
+                if ('k' == $el->mode) {
+                    if ($reqk && $has_t)
+                        $this->halt('Cannot match key');
+                } elseif (!$m->opt && in_array($p = trim($p), ['|', '>'])) {
+                    $m->opt = $p;
+                    $p = '';
                 }
-            } elseif ($el->k3 && 'key' == $el->mode && ($reqk || !$m->opt)) { # yaml key
-                $key = $el->k1 ? $this->scalar(substr($p, $len, -1)) : '-' == $el->k3;
+                $this->at[1]++; # next line
+                $el->json or $el->mode = 'k';
+                '|' != $m->opt or !$el->nl or $p .= "\n";
+            } elseif ($el->code) {
+                $m->code[] = is_array($el->code) ? $el->code : [substr($t, 1), null, $this->at[1]];
+                $el->ss = true;
+            } elseif (1 == strlen($t) && $this->json($m, $el, $t)) {
+                $p =& $m->val;
+                $el->ss = true;
+            } elseif ($el->k3 && ($reqk || !$m->opt)) { # yaml key
+                $k1 = $el->k1 ? $this->scalar(substr($p, $len)) : '-' == $el->k3;
                 if (null !== $m->key) {
                     if ($pad > $m->pad) { # aggregate node
                         $len && $this->halt('Mapping disabled');
@@ -308,66 +323,50 @@ class Yaml
                     if ($this->push($m))
                         return; # + scalar - stop parsing
                 }
-                $m = $this->obj($key, $pad_0 = $pad);
+                $m = $this->obj($k1, $pad_0 = $pad);
                 $p =& $m->val;
-                $spaces = $t;
-                $el->mode = 'val';
+                $el->mode = $el->ss = 'v';
                 $has_t = false;
             } elseif ($el->k1 && is_bool($m->key) && !$m->opt) { # vocabulary key
                 if ($m->key) {
                     $this->push($this->obj(true, $m->pad, '', 0));
-                    $pad_0 = $m->pad .= ' ' . $this->halt(false, $spaces);
+                    $pad_0 = $m->pad .= ' ' . $this->halt(false, $el->_ws);
                 }
-                $m->key = $this->scalar(substr($p, 0, -1));
+                $m->key = $this->scalar($p);
                 $p = '';
-                $el->mode = 'val';
-            } elseif ($el->code) {
-                $m->code[] = is_array($el->code) ? $el->code : [substr($t, 1), null];
-                $el->ss = true;
-            } elseif ($this->json($m, $el, $reqk)) {
-                $p =& $m->val;
-                continue;
-            } elseif ("\n" != $t) {
-                if ($xmul = $len && !$reqM && '|' != $m->opt)
-                    $len++;
-                $reqM = true;
-                if ('key' == $el->mode)
-                    $has_t = true;
-                if ('' !== $p && 'val' == $el->mode)
-                    $el->mode = 'end';
-                $p .= $xmul ? " $t" : $t;
-                if ($json && $el->ws && 'v' == $el->mode[0])
-                    $el->mode[0] = 'e';
-            }
-            if ("\n" == $t) {
-                if ('key' == $el->mode) {
-                    if ($reqk && $has_t)
-                        $this->halt('Cannot match key');
-                } elseif (!$m->opt) {
-                    if (in_array($p = trim($p), ['|', '>'])) {
-                        $m->opt = $p;
-                        $p = '';
+                $el->mode = $el->ss = 'v';
+            } elseif ($el->nl) { # new line start
+                if ($has_t = !$el->ws)
+                    $p .= $t;
+                if ($el->mult && !$reqk) {
+                    $el->mode = 'rest'; # multiline mode
+                    if (!$len) {
+                        $pad_1 = strlen($pad);
+                    } elseif ('|' == $m->opt) {
+                        $p .= "\n" . substr($pad, $pad_1);
                     }
                 }
-                $json or $el->mode = 'key';
-                $this->at[1]++;
+            } else {
+                $p .= !$lock && $len && '|' != $m->opt && ($lock = $len++) ? ' ' . $t : $t;
+                'v' != $el->mode or $el->mode = 'e';
+                'k' != $el->mode or $has_t = true;
             }
         }
         is_null($m->key) or $this->push($m); # the last
     }
 
-    private function halt(string $error, $space = false) {
+    private function halt(string $error, $space = false, $line = false) {
         if (false !== $space && !strpbrk($space, "\t"))
             return $space;
-
-        $at = (false === $this->at[0] ? 'Line ' : $this->at[0] . ', Line ') . $this->at[1];
+        $line or $line = $this->at[1];
+        $at = (false === $this->at[0] ? 'Line ' : $this->at[0] . ', Line ') . $line;
         throw new Error("Yaml, $at: " . ($error ?: 'Tabs disabled for indent'));
     }
 
     private function obj($key = null, $pad = '', $opt = '', $code = []) : stdClass {
         return (object)[
             'key' => $key,
-            'val' => null,
+            'val' => '',
             'pad' => $pad,
             'opt' => $opt,
             'code' => $code,
@@ -406,7 +405,7 @@ class Yaml
                 $noeval = 'eval' == $code[0] && '!' == $code[1] && !$this->marker;
                 if ('deny' == $code[0] || $noeval)
                     break;
-                $code += [2 => $this->statements($code[0])];
+                $code += [3 => $this->statements($code[0], $code[2])];
                 $v = run_transform($code, $v, $this->array, $has_var);
             }
         }
@@ -466,15 +465,20 @@ class Yaml
         return Plan::set($ware, fn() => $inc(false, $name));
     }
 
-    private function statements($tag) {
+    private function statements($tag, $line) {
         switch ($tag) {
             case 'inc':
                 return fn($v, $marker, &$a, $has_var) => self::inc($v, $has_var, $marker, $this);
+            case 'preflight': $tag = false;
             case 'php':
-                return function ($v, $x) {
-                    $key = md5(mt_rand());
-                    $this->php["'$key'"] = $x ?? $v;
-                    return $key;
+                return function ($v, $x) use ($tag) {
+                    if ($tag) {
+                        $key = md5(mt_rand());
+                        $this->php["'$key'"] = $x ?? $v;
+                        return $key;
+                    }
+                    $this->php[0] = [$x, $v];
+                    return '';
                 };
             case 'eval':
                 return fn($v, $x) => isset($x) && '!' != $x ? $x : $v;
@@ -544,14 +548,14 @@ class Yaml
                     return $return;
                 };
             default:
-                $this->halt("Transformation `@$tag` not found");
+                $this->halt("Transformation `@$tag` not found", false, $line);
         }
     }
 }
 
 function run_transform($_cod, $v, &$a, $has_var) {
     global $sky;
-    $_ret = ($_cod[2])($v, $_cod[1], $a, $has_var);
+    $_ret = ($_cod[3])($v, $_cod[1], $a, $has_var);
     if ('eval' !== $_cod[0])
         return $_ret;
     $tok = token_get_all("<? $_ret");

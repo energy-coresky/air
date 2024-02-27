@@ -183,36 +183,37 @@ sky.g.files = function(fn, dir) {
 #.first_run //////////////////////////////////////////////////////////////////////////////
 <.php # Auto generated "First-Run" file by Coresky framework
 
-function index(&$unlink = null) {
+function index() {
     $fp = fopen(__FILE__, 'r');
     fseek($fp, __COMPILER_HALT_OFFSET__);
     $code = stream_get_contents($fp);
     fclose($fp);
-    if ($unlink)
-        $unlink = ~@unlink(__FILE__);
     return ltrim($code);
 }
 
 $ary = {!var_export(explode(' ', $exts), true)!};
+$anyway = $_GET && 'anw' == key($_GET) ? $_GET['anw'] : false;
 $tests = [
-    function () {
+    function () use ($anyway) {
         return [
             'PHP version >= {{$vphp}}@if(SKY::i('and')) and <= {{$vph2}}~if',
-            version_compare(PHP_VERSION, '{{$vphp}}', '>=')@if(SKY::i('and')) && version_compare(PHP_VERSION, '{{$vph2}}', '<=')~if,
+            $anyway ? true : version_compare(PHP_VERSION, '{{$vphp}}', '>=')@if(SKY::i('and')) && version_compare(PHP_VERSION, '{{$vph2}}', '<=')~if,
+            $anyway ? 'Skipped' : false,
         ];
     },
-    function () use ($ary) {
+    function () use ($ary, $anyway) {
         $ext = array_intersect($ary, get_loaded_extensions());
         return [
-            $ext ? 'Extensions: ' . implode(', ', $ext) : false,
-            true,
+            $ext ? 'Extensions: <b>' . implode('</b>, <b>', $ext) . '</b>' : false,
+            true, false,
         ];
     },
-    function () use ($ary) {
+    function () use ($ary, $anyway) {
         $ext = array_diff($ary, get_loaded_extensions());
         return [
-            $ext ? 'Extensions: ' . implode(', ', $ext) : false,
-            false,
+            $ext ? 'Extensions not found: <b>' . implode('</b>, <b>', $ext) . '</b>' : false,
+            (bool)$anyway,
+            $anyway ? 'Skipped' : false,
         ];
     },{!$tests!}
 
@@ -228,8 +229,7 @@ foreach ($tests as $fun) {
         $ok &= (int)$fun[1];
     }
 }
-$anyway = $_GET && 'anw' == key($_GET) ? $_GET['anw'] : false;
-if ($ok || $anyway) {
+if ($ok) {
     file_put_contents(__FILE__, index());
     header("Location: " . ($anyway ?: $uri));
     exit;
@@ -255,23 +255,27 @@ dd { width: 20%; margin:0; padding: 5px; }
 </style>
 </head>
 <body style="margin:0; display:inline-block; width:100%; background:lightblue;">
-<form method="post">
 <div id="page">
     <h1>{{SKY::version()['app'][4]}} application First-Run</h1>
+    <form method="post">
     <.php foreach ($list as $v): .>
     <dl>
         <dt><.php echo $v[0] .></dt>
-        <.php if($v2 = isset($v[2])): .><dd><.php echo $v[2] .></dd><.php else: .>
-        <dd class="<.php echo $v[1] ? 'ok' : 'fail' .>"><.php echo $v[1] ? 'OK' : 'FAIL' .></dd><.php endif .>
+        <.php if($v[2]): .>
+        <dd><.php echo $v[2] .></dd>
+        <.php else: .>
+        <dd class="<.php echo $v[1] ? 'ok' : 'fail' .>"><.php echo $v[1] ? 'OK' : 'FAIL' .></dd>
+        <.php endif .>
     </dl>
-    <.php endforeach; if (!$v2): .>
+    <.php endforeach; .>
+    </form>
+    <.php if (!$v[2]): .>
     <div style="background:#ffc; margin:20px 0; padding:10px; border: 1px solid gold;">
         Please fix problem & test again
     </div>
     <button style="float:right" onclick="location.href='<.php echo "$path?anw=" . urlencode($uri) .>'">Run app anyway</button>
     Problem fixed: <button onclick="location.href='<.php echo $uri .>'">Test again</button><.php endif .>
 </div>
-</form>
 <div id="foo">{{SKY::version()['app'][3]}} powered by {{SKY::version()['core'][0]}}.<a href="https://coresky.net/">Coresky</a> framework</div>
 </body>
 </html><.php

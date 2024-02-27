@@ -113,6 +113,7 @@ red_label: [Red label, radio, [Off, On]]
 #.dev_cfg
 
 #.dev_app =========================================================================
++ @preflight ; # test preflight code
 - [Application, {
     app: ['', '', size="11"],
     ver: ['', number, style="width:77px" step="0.0001"],
@@ -123,179 +124,15 @@ red_label: [Red label, radio, [Off, On]]
 #.dev_app
 
 #.dev_form =========================================================================
++ @preflight($key, &$val) |
+  ; # test preflight code
 form1: @php Form::A(array_combine($key, $val), yml('dev.app', '+ @inc(dev_app)'))
 form2: @php Form::A(SKY::$mem['d'][3], yml('dev.cfg', '+ @inc(dev_cfg)'))
 #.dev_form
-
-#.library =========================================================================
-+ @match(/^(\d) (\S+) (.*)$/s) # @scan(%d %s %[^^]) # %[^;])%[ -~]
-  Main-page: |
-    0 / $main = '' === $uri;
-      if ($main || 'main' === $uri)
-          return $surl = $main ? ['main'] : [];
-  No-map-file: |
-    0 file.map if ('.map' === substr($uri, -4))
-      return $surl = ['etc', '_.map'];
-  Dev-ends: |
-    1 /_dev if ('_' == $sky->_0[0])
-      return;
-  Assets-coresky: |
-    1 /m/{0} if ($cnt && 'etc' == $surl[0])
-      return $surl[0] = '-';
-      if ($cnt && 'm' == $surl[0])
-      return $surl[0] = 'etc';
-  Assets-wares: |
-    1 /w/{1}/{0} if (3 == $cnt && 'w' == $surl[0]) {
-        array_shift($surl);
-        $surl[2] = $surl[0];
-        return $surl[0] = 'etc';
-    }
-  Robots.txt: |
-    0 /robots.txt if ('robots.txt' == $uri)
-        return array_unshift($surl, 'etc');
-  Swap-1-2: |
-    0 /0/2/1 if ($cnt > 2) {
-        $tmp = $surl[1];
-        $surl[1] = $surl[2];
-        $surl[2] = $tmp;
-    }
-  Additive: |
-    0 /x if ($cnt && 'x' == $surl[0])
-        $surl[0] = 'ctrl';
-  Tune-ware: |
-    0  if ($cnt && 'u' == $surl[0]) {
-        common_c::$tune = array_shift($surl);
-        $cnt--;
-    }
-  Pagination: |
-    0 /ctrl/page-2/action if ($cnt > 2 && preg_match("/^page\-\d+$/", $surl[1])) {
-        common_c::$page = (int)substr($surl[1], 5);
-        array_splice($surl, 1, 1);
-        $cnt--;
-    }
-  Url-html: |
-    0 /c/a/page.html $ext = 'html';
-    if ($cnt) {
-        $a = explode('.', $p =& $surl[$cnt - 1]);
-        $p = 2 == count($a) && $ext == $a[1] ? $a[0] : "$p.$ext";
-    }
-  Url-lang: |
-    0 /en/c/a # take language from semantic url
-    common_c::langs_h();
-    if ($cnt && in_array($surl[0], $sky->langs)) {
-        common_c::$lg = array_shift($surl);
-        $cnt--;
-    }
-  Terminator: |
-    0 /crash $lst = ['adm', 'api', 'crash', 'test_crash'];
-    if ($cnt && in_array($surl[0], $lst))
-        return;
-  Reverse: |
-    0 /dash-surl/a $rw = ['dash-surl' => 'nodash',];
-    if ($cnt) {
-        $rw += array_flip($rw);
-        $p =& $surl[0];
-        empty($rw[$p]) or $p = $rw[$p];
-    }
-#.library
 
 #.first_run =========================================================================
 + @php |
   <?php # Auto generated "First-Run" file by Coresky framework
   
-  function index(&$unlink = null) {
-      $fp = fopen(__FILE__, 'r');
-      fseek($fp, __COMPILER_HALT_OFFSET__);
-      $code = stream_get_contents($fp);
-      fclose($fp);
-      if ($unlink)
-          $unlink = @unlink(__FILE__);
-      return ltrim($code);
-  }
-  
-  $ary = {!var_export(explode(' ', $exts), true)!};
-  $tests = [
-      function () {
-          return [
-              'PHP version >= {{$vphp}}#if(SKY::i('and')) and <= {{$vph2}}#end',
-              version_compare(PHP_VERSION, '{{$vphp}}', '>=')#if(SKY::i('and')) && version_compare(PHP_VERSION, '{{$vph2}}', '<=')#end,
-          ];
-      },
-      function () use ($ary) {
-          $ext = array_intersect($ary, get_loaded_extensions());
-          return [
-              $ext ? 'Extensions: ' . implode(', ', $ext) : false,
-              true,
-          ];
-      },
-      function () use ($ary) {
-          $ext = array_diff($ary, get_loaded_extensions());
-          return [
-              $ext ? 'Extensions: ' . implode(', ', $ext) : false,
-              false,
-          ];
-      },{!$tests!}
-  
-  ];
-  $path = preg_replace("|[^/]*$|", '', $_SERVER['SCRIPT_NAME']);
-  $uri = $_SERVER['REQUEST_URI'];
-  $ok = 1;
-  $list = [];
-  foreach ($tests as $fun) {
-      $fun = $fun($ok);
-      if ($fun && $fun[0]) {
-          $list[] = $fun;
-          $ok &= (int)$fun[1];
-      }
-  }
-  $anyway = $_GET && 'anw' == key($_GET) ? $_GET['anw'] : false;
-  if ($ok || $anyway) {
-      file_put_contents(__FILE__, index());
-      header("Location: " . ($anyway ?: $uri));
-      exit;
-  }
-  ?><!doctype html>
-  <html>
-  <head><title>{{SKY::version()['app'][3]}} application First-Run</title>
-  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-  <link href="favicon.ico" rel="shortcut icon" type="image/x-icon" />
-  <style>
-  #page {
-      margin:8px auto 0 auto; width:600px; padding:5px 100px; border-bottom:2px solid lightblue; min-height:calc(100vh - 55px);
-      background:white; font-family:arial, verdana; font-size: 90%;
-  }
-  #foo { margin:0 auto; width:790px; font-size:14px; padding:5px; background:white; text-align:center; }
-  a, h1 { color: #3d7098; }
-  h1 { font-size: 25px; margin-top:30px; border-bottom:4px solid #3d7098; }
-  a:hover { text-decoration: none; color: white; background-color: #3d7098; }
-  dl { width: 100%; margin:0; display:flex; border-bottom: 1px solid #ccc; }
-  dt { width: 80%; margin:0; padding: 5px 0; }
-  dd { width: 20%; margin:0; padding: 5px; }
-  .fail { background:#fcc; } .ok { background:#cfc; }
-  </style>
-  </head>
-  <body style="margin:0; display:inline-block; width:100%; background:lightblue;">
-  <form method="post">
-  <div id="page">
-      <h1>{{SKY::version()['app'][4]}} application First-Run</h1>
-      <?php foreach ($list as $v): ?>
-      <dl>
-          <dt><?php echo $v[0] ?></dt>
-          <?php if($v2 = isset($v[2])): ?><dd><?php echo $v[2] ?></dd><?php else: ?>
-          <dd class="<?php echo $v[1] ? 'ok' : 'fail' ?>"><?php echo $v[1] ? 'OK' : 'FAIL' ?></dd><?php endif ?>
-      </dl>
-      <?php endforeach; if (!$v2): ?>
-      <div style="background:#ffc; margin:20px 0; padding:10px; border: 1px solid gold;">
-          Please fix problem & test again
-      </div>
-      <button style="float:right" onclick="location.href='<?php echo "$path?anw=" . urlencode($uri) ?>'">Run app anyway</button>
-      Problem fixed: <button onclick="location.href='<?php echo $uri ?>'">Test again</button><?php endif ?>
-  </div>
-  </form>
-  <div id="foo">{{SKY::version()['app'][3]}} powered by {{SKY::version()['core'][0]}}.<a href="https://coresky.net/">Coresky</a> framework</div>
-  </body>
-  </html><?php
-  
-  __halt_compiler();
 #.first_run
 

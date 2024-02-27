@@ -8,15 +8,11 @@ class Rewrite
 
     static function lib(&$map, &$list = null) {
         fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
-        $lib = explode("\n~\n", trim(unl(stream_get_contents($fp))));
+        $list = array_keys($yml = Yaml::text(stream_get_contents($fp)));
         fclose($fp);
-        $list = [];
-        array_walk($lib, function (&$v) use (&$list) {
-            list ($name, $test, $v) = explode("\n", $v, 3);
-            list ($name, $is_dev) = explode(" ", $name);
-            $list[] = $name;
-            $v = [$name, $v, $is_dev, $test];
-        });
+        $lib = [];
+        foreach ($yml as $v)
+            $lib[] = [$list[count($lib)], $v[2], $v[0], $v[1]];
         $map or $map = array_slice($lib, 0, 3);
         return $lib;
     }
@@ -181,98 +177,72 @@ class Rewrite
 
 __halt_compiler();
 
-Main-page 0
-/
-$main = '' === $uri;
-if ($main || 'main' === $uri)
-    return $surl = $main ? ['main'] : [];
-~
-No-map-file 0
-file.map
-if ('.map' === substr($uri, -4))
-    return $surl = ['etc', '_.map'];
-~
-Dev-ends 1
-/_dev
-if ('_' == $sky->_0[0])
-    return;
-~
-Assets-coresky 1
-/m/{0}
-if ($cnt && 'etc' == $surl[0])
-    return $surl[0] = '-';
-if ($cnt && 'm' == $surl[0])
-    return $surl[0] = 'etc';
-~
-Assets-wares 1
-/w/{1}/{0}
-if (3 == $cnt && 'w' == $surl[0]) {
-    array_shift($surl);
-    $surl[2] = $surl[0];
-    return $surl[0] = 'etc';
-}
-~
-Robots.txt 0
-/robots.txt
-if ('robots.txt' == $uri)
-    return array_unshift($surl, 'etc');
-~
-Swap-1-2 0
-/0/2/1
-if ($cnt > 2) {
-    $tmp = $surl[1];
-    $surl[1] = $surl[2];
-    $surl[2] = $tmp;
-}
-~
-Additive 0
-/x
-if ($cnt && 'x' == $surl[0])
-    $surl[0] = 'ctrl';
-~
-Tune-ware 0
-
-if ($cnt && 'u' == $surl[0]) {
-    common_c::$tune = array_shift($surl);
-    $cnt--;
-}
-~
-Pagination 0
-/ctrl/page-2/action
-if ($cnt > 2 && preg_match("/^page\-\d+$/", $surl[1])) {
-    common_c::$page = (int)substr($surl[1], 5);
-    array_splice($surl, 1, 1);
-    $cnt--;
-}
-~
-Url-html 0
-/c/a/page.html
-$ext = 'html';
-if ($cnt) {
-    $a = explode('.', $p =& $surl[$cnt - 1]);
-    $p = 2 == count($a) && $ext == $a[1] ? $a[0] : "$p.$ext";
-}
-~
-Url-lang 0
-/en/c/a
-# take language from semantic url
-common_c::langs_h();
-if ($cnt && in_array($surl[0], $sky->langs)) {
-    common_c::$lg = array_shift($surl);
-    $cnt--;
-}
-~
-Terminator 0
-/crash
-$lst = ['adm', 'api', 'crash', 'test_crash'];
-if ($cnt && in_array($surl[0], $lst))
-    return;
-~
-Reverse 0
-/dash-surl/a
-$rw = ['dash-surl' => 'nodash',];
-if ($cnt) {
-    $rw += array_flip($rw);
-    $p =& $surl[0];
-    empty($rw[$p]) or $p = $rw[$p];
-}
++ @match(/^(\d) (\S*) (.*)$/s) # @scan(%d %s %[^^]) # %[^;])%[ -~]
+  Main-page: |
+    0 / $main = '' === $uri;
+      if ($main || 'main' === $uri)
+          return $surl = $main ? ['main'] : [];
+  No-map-file: |
+    0 file.map if ('.map' === substr($uri, -4))
+      return $surl = ['etc', '_.map'];
+  Dev-ends: |
+    1 /_dev if ('_' == $sky->_0[0])
+      return;
+  Assets-coresky: |
+    1 /m/{0} if ($cnt && 'etc' == $surl[0])
+      return $surl[0] = '-';
+      if ($cnt && 'm' == $surl[0])
+      return $surl[0] = 'etc';
+  Assets-wares: |
+    1 /w/{1}/{0} if (3 == $cnt && 'w' == $surl[0]) {
+        array_shift($surl);
+        $surl[2] = $surl[0];
+        return $surl[0] = 'etc';
+    }
+  Robots.txt: |
+    0 /robots.txt if ('robots.txt' == $uri)
+        return array_unshift($surl, 'etc');
+  Swap-1-2: |
+    0 /0/2/1 if ($cnt > 2) {
+        $tmp = $surl[1];
+        $surl[1] = $surl[2];
+        $surl[2] = $tmp;
+    }
+  Additive: |
+    0 /x if ($cnt && 'x' == $surl[0])
+        $surl[0] = 'ctrl';
+  Tune-ware: |
+    0  if ($cnt && 'u' == $surl[0]) {
+        common_c::$tune = array_shift($surl);
+        $cnt--;
+    }
+  Pagination: |
+    0 /ctrl/page-2/action if ($cnt > 2 && preg_match("/^page\-\d+$/", $surl[1])) {
+        common_c::$page = (int)substr($surl[1], 5);
+        array_splice($surl, 1, 1);
+        $cnt--;
+    }
+  Url-html: |
+    0 /c/a/page.html $ext = 'html';
+    if ($cnt) {
+        $a = explode('.', $p =& $surl[$cnt - 1]);
+        $p = 2 == count($a) && $ext == $a[1] ? $a[0] : "$p.$ext";
+    }
+  Url-lang: |
+    0 /en/c/a # take language from semantic url
+    common_c::langs_h();
+    if ($cnt && in_array($surl[0], $sky->langs)) {
+        common_c::$lg = array_shift($surl);
+        $cnt--;
+    }
+  Terminator: |
+    0 /crash $lst = ['adm', 'api', 'crash', 'test_crash'];
+    if ($cnt && in_array($surl[0], $lst))
+        return;
+  Reverse: |
+    0 /dash-surl/a $rw = ['dash-surl' => 'nodash',];
+    if ($cnt) {
+        $rw += array_flip($rw);
+        $p =& $surl[0];
+        empty($rw[$p]) or $p = $rw[$p];
+    }
