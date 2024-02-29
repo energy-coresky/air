@@ -97,7 +97,7 @@ class Boot
             }
         } else {
             $yml = Yaml::file(Plan::_t([$ware, 'config.yaml']))[$name];
-            return is_string($yml) ? self::inc($yml, $ware) : $yml;
+            return is_string($yml) ? Yaml::inc($yml, $ware) : $yml;
         }
     }
 

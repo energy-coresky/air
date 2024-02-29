@@ -162,6 +162,8 @@ class Console
         }
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
+        if (self::$d[0] && !self::$d[1] && self::$d[2] && realpath(DIR) !== realpath(self::$d[2]))
+            self::$d[0] = false;
         if (self::$d[0]) {
             chdir(DIR);
             SQL::$dd_h = 'Console::dd_h';
@@ -330,7 +332,9 @@ class Console
             '+' == $ware[0] or print "Inline Yaml: ";
             $out(Yaml::text($ware), $func);
         } elseif (!$fn = Plan::_t([$ware, $fn])) {
-            echo "File `$fn`, ware=$ware is: not found";
+            echo isset(SKY::$plans[$ware])
+                ? "File not found in ware `$ware`"
+                : "Ware `$ware` not installed";
         } else {
             echo "File `$fn`, ware=$ware is: ";
             Plan::set($ware, fn() => $out(Yaml::file($fn), $func));

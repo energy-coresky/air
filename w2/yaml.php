@@ -2,7 +2,7 @@
 
 class Yaml
 {
-    const version = 0.935;
+    const version = 0.945;
 
     static $boot = 0;
     static $custom = [];
@@ -526,6 +526,10 @@ class Yaml
                 return fn($v) => (object)$v;
             case 'range':
                 return fn($v, $x) => range($v, $x);
+            case 'each':
+                return fn($v, $x) => null;//array_walk_recursive 
+            case 'sql':
+                return fn($v, $x) => $v ? sql($x, ...$v) : sql($x);
             case 'left':
                 return function ($v, $x) {
                     if (!is_array($v))
@@ -548,11 +552,15 @@ class Yaml
                     return $return;
                 };
             default:
+                if (isset(self::$custom[$tag]))
+                    return self::$custom[$tag];
                 $this->halt("Transformation `@$tag` not found", false, $line);
         }
     }
 }
 
+//https://nodeca.github.io/js-yaml/
+//https://yaml-online-parser.appspot.com/
 function run_transform($_cod, $v, &$a, $has_var) {
     global $sky;
     $_ret = ($_cod[3])($v, $_cod[1], $a, $has_var);
@@ -563,5 +571,3 @@ function run_transform($_cod, $v, &$a, $has_var) {
         $_ret = 'return ' . $_ret;
     return eval("$_ret;");
 }
-//https://nodeca.github.io/js-yaml/
-//https://yaml-online-parser.appspot.com/
