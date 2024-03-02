@@ -162,12 +162,12 @@ class Console
         }
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
-        if (self::$d[0] && !self::$d[1] && self::$d[2] && realpath(DIR) !== realpath(self::$d[2]))
-            self::$d[0] = false;
-        if (self::$d[0]) {
+
+        $main = realpath(DIR) === realpath(self::$d[2]);
+        if ($app = self::$d[0] && !$air && (self::$d[1] || $main)) {
             chdir(DIR);
             SQL::$dd_h = 'Console::dd_h';
-            if (!self::$d[1] && !$air) {
+            if ($main) {
                 global $sky;
                 $sky->open();
                 common_c::make_h(true);
@@ -180,10 +180,10 @@ class Console
         system("git commit -a -m \"$c\"");
         echo "\n>git push origin master\n";
         system("git push origin master");
-        if (self::$d[0]) {
-            self::$d[1] or $air or common_c::make_h(false);
+        if ($app) {
+            $main && common_c::make_h(false);
             chdir(DIR);
-            if (Plan::_t('w3/master.php'))
+            if (self::$d[1] && Plan::_t('w3/master.php'))
                 new Master(self::$d[1]);
         }
     }

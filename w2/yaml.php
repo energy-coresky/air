@@ -531,9 +531,9 @@ class Yaml
             case 'scan':
                 return fn($v, $x) => sscanf($v, $x);
             case 'match':
-                return function ($v, $x) {
-                    return preg_match($x, $v, $match) ? array_slice($match, 1) : false;
-                };
+                return fn($v, $x) => preg_match($x, $v, $match) ? array_slice($match, 1) : false;
+            case 'sar':
+                return fn($v, $x) => preg_replace('/' . explode($x[0], $x)[1] . '/', explode($x[0], $x)[2], $v);
             case 'object':
                 return fn($v) => (object)$v;
             case 'range':
@@ -541,12 +541,9 @@ class Yaml
             case 'sql':
                 return fn($v, $x) => $v ? sql($x, ...$v) : sql($x);
             case 'left':
-                return function ($v, $x) {
-                    if (!is_array($v))
-                        return $x . $v;
-                    array_walk_recursive($v, fn(&$_) => $_ = $x . $_);
-                    return $v;
-                };
+                return fn($v, $x) => $x . $v;
+            case 'right':
+                return fn($v, $x) => $v . $x;
             case 'path':
                 return function& ($v, $path, &$a = null, $_ = 0, $unset = false) {
                     '' === $v ? ($p =& $this->array) : ($p =& $v);
