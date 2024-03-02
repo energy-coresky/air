@@ -399,14 +399,23 @@ class Yaml
         $ary = array_reverse($this->stack);
         foreach ($m->code as $fun)
             array_unshift($ary, [$fun, 1]); # ' ' > 1 is false
+        $each = false;
         foreach ($ary as $one) {
             [$code, $pad] = $one;
             if ($m->pad > $pad || 1 === $pad) {
                 $noeval = 'eval' == $code[0] && '!' == $code[1] && !$this->marker;
                 if ('deny' == $code[0] || $noeval)
                     break;
+                if ('each' == $code[0] && ($each = true))
+                    continue;
                 $code += [3 => $this->statements($code[0], $code[2])];
-                $v = run_transform($code, $v, $this->array, $has_var);
+                if ($each) {
+                    array_walk_recursive($v, function (&$v) use ($code, $has_var) {
+                        $v = run_transform($code, $v, $this->array, $has_var);
+                    });
+                } else {
+                    $v = run_transform($code, $v, $this->array, $has_var);
+                }
             }
         }
         return !is_string($v);
@@ -453,7 +462,10 @@ class Yaml
                 case 'json': return json_decode($dir ? file_get_contents($name) : Plan::_g($name), true);
                 case 'yml':
                 case 'yaml': return Yaml::file($dir ? $name : Plan::_t($name), $marker);
-                default: return bang(unl($dir ? file_get_contents($name) : Plan::_g($name)));
+                default:
+                    if (strpos($name, ' '))
+                        [$name, $via1] = explode(' ', $name, 2);
+                    return bang(unl($dir ? file_get_contents($name) : Plan::_g($name)), $via1 ?? ' ');
             }
         };
         if (true === $ware)
@@ -526,8 +538,6 @@ class Yaml
                 return fn($v) => (object)$v;
             case 'range':
                 return fn($v, $x) => range($v, $x);
-            case 'each':
-                return fn($v, $x) => null;//array_walk_recursive 
             case 'sql':
                 return fn($v, $x) => $v ? sql($x, ...$v) : sql($x);
             case 'left':
