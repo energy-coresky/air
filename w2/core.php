@@ -10,13 +10,18 @@ function sql(...$in) {
     return $sql->exec();
 }
 
+function qp(...$in) { # Query Part, Query Parse
+    $in or $in = [''];
+    return new SQL($in, 'parseT');
+}
+
 function yml(...$in) {
     return Yaml::run($in);
 }
 
-function qp(...$in) { # Query Part, Query Parse
-    $in or $in = [''];
-    return new SQL($in, 'parseT');
+function cfg($name = 'core', $as_array = false) {
+    $ary =& Plan::cfg($name);
+    return $as_array ? $ary : (object)$ary;
 }
 
 function html($str, $hide_percent = false, $mode = ENT_COMPAT) {
@@ -35,11 +40,6 @@ function escape($str, $reverse = false) {
 
 function unl($str) {
     return str_replace(["\r\n", "\r"], "\n", $str);
-}
-
-function cfg($name = 'core', $as_array = false) {
-    $ary =& Plan::cfg($name);
-    return $as_array ? $ary : (object)$ary;
 }
 
 function strand($n = 23) {
@@ -407,19 +407,6 @@ function hidden($set = '_csrf', $r = 0) {
     }
     return $out;
 }
-
-define('ENC', 'UTF-8');
-define('CLI', 'cli' == PHP_SAPI);
-define('zebra', 'return @$i++ % 2 ? \'bgcolor="#eee"\' : "";');
-define('DATE_DT', 'Y-m-d H:i:s');
-define('RE_LOGIN', '/^[a-z][a-z_\d]{1,19}$/i');
-define('RE_PASSW', '/^\S{3,15}$/');
-define('RE_EMAIL', '/^([\w\-]+\.)*[\w\-]+@([\w\-]+\.)+[a-z]{2,7}$/i');
-define('RE_PHONE', '/^\+?\d{10,12}$/');
-define('TPL_FORM',   '<dl><dt>%s</dt><dd>%s</dd></dl>');
-define('TPL_CHECKBOX', '<input type="checkbox" name="id[]" value="%s"%s />');
-define('TPL_HIDDEN', '<input type="hidden" name="%s" value="%s" />');
-define('TPL_META',   '<meta name="%s" content="%s" />');
 
 //////////////////////////////////////////////////////////////////////////
 # class Error Assume as crash and error, `throw new Error` should never works!

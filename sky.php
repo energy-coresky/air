@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.538 2024-02-24T11:28:13+02:00 energy';
+    const CORE = '0.539 2024-03-03T17:12:01+02:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -46,9 +46,6 @@ class SKY implements PARADISE
         require DIR_S . '/w2/core.php';
         require DIR_S . '/w2/plan.php';
         ini_set('error_reporting', $this->log_error = -1);
-        if (SKY::$cli = CLI)
-            $this->gpc = '$argv = ' . html(var_export($argv, true));
-        mb_internal_encoding(ENC);
         srand(microtime(true) * 1e6);//srand((double)microtime() * 1e6);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
@@ -85,6 +82,9 @@ class SKY implements PARADISE
         spl_autoload_register('Plan::_autoload', true, true);
         register_shutdown_function([$this, 'shutdown']);
         Plan::open('cache'); # bootstrap for composed SKY::$plans
+        mb_internal_encoding(ENC);
+        if (SKY::$cli = CLI)
+            $this->gpc = '$argv = ' . html(var_export($argv, true));
         $this->bootstrap = true;
         CLI or DEV && DEV::init();
     }

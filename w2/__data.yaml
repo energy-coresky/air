@@ -1,16 +1,21 @@
 
-#.dev_tools =========================================================================
+#.php =========================================================================
 const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
 
-keywords: @csv( )
-  __halt_compiler abstract and array as break callable case catch class clone const continue
-  declare default die do echo else elseif empty enddeclare endfor endforeach endif endswitch
-  endwhile eval exit extends final for foreach function global goto if implements include
-  include_once instanceof insteadof interface isset list namespace new or print private protected
-  public require require_once return static switch throw trait try unset use var while xor
-  match readonly fn yield # 'yield from'
+spec: @csv( ) STDIN STDOUT STDERR __COMPILER_HALT_OFFSET__
 
-extension: @csv( )
+definitions: {
+  NAMESPACE: [], INTERFACE: [], TRAIT: [], VAR: [], FUNCTION: [], CONST: [], DEFINE: [], CLASS: [], EVAL: []
+}
+
+keywords: @sar(|~| ) @each @csv( )
+  __halt_compiler abstract and array as break callable case catch class clone const continue declare default
+  die do echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile eval exit extends
+  final finally fn for foreach function global goto if implements include include_once instanceof insteadof
+  interface isset list match namespace new or print private protected public readonly require require_once
+  return static switch throw trait try unset use var while xor yield~from yield
+
+extensions: @csv( ) # all known extensions (must)
   apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant
   exif FFI* fileinfo filter ftp gd gettext gmp hash HRTime* iconv imagick imap interbase
   intl ionCube Loader json ldap libxml mbstring mhash* mysqli mysqlnd oci8 odbc openssl pcntl*
@@ -19,9 +24,24 @@ extension: @csv( )
   SimpleXML snmp soap sockets sodium SourceGuardian SPL sqlite3 standard sysvmsg* sysvsem* sysvshm*
   tidy tokenizer wddx xml xmlreader xmlwriter xsl Zend OPcache zip zlib
 
-coresky:   https://coresky.net/api
+php:       https://www.php.net/manual/
 packagist: https://repo.packagist.org/p2/
-#.dev_tools
+coresky:   https://coresky.net/api
+#.php
+
+#.define ================== this used in the sky_plan.php ========================
+ENC:      UTF-8
+zebra:    return @$i++ % 2 ? 'bgcolor="#eee"' : "";
+DATE_DT:  Y-m-d H:i:s
+RE_LOGIN: /^[a-z][a-z_\d]{1,19}$/i
+RE_PASSW: /^\S{3,15}$/
+RE_EMAIL: /^([\w\-]+\.)*[\w\-]+@([\w\-]+\.)+[a-z]{2,7}$/i
+RE_PHONE: /^\+?\d{10,12}$/
+TPL_FORM: <dl><dt>%s</dt><dd>%s</dd></dl>
+TPL_CHECKBOX: <input type="checkbox" name="id[]" value="%s"%s />
+TPL_HIDDEN: <input type="hidden" name="%s" value="%s" />
+TPL_META: <meta name="%s" content="%s" />
+#.define
 
 #.languages =========================================================================
 + @bang(. ) >

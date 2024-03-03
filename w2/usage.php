@@ -9,6 +9,7 @@ class Usage
 
     protected $path;
     protected $json = [];
+    protected $yml;
 
     static $extns = [];
     static $cnt = [0, 0, 0, 0, 0, 0, 'tot' => [0, 0, 0], 8 => 0];
@@ -20,6 +21,7 @@ class Usage
     public $act = null;
 
     function __construct($path = '.') {
+        $this->yml = Plan::php();
         global $sky, $argv;
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $this->path = $path;
@@ -194,7 +196,7 @@ case '&':
             }, $rn->getFunctions()));
             if (isset($const[$one])) {
                 if ('Core' === $one)
-                    $const[$one] += array_flip(self::$special_const);
+                    $const[$one] += array_flip(self::$special_const); # special_const like STDIN
                 self::$constants += array_map(function() use ($one) {
                     return $one;
                 }, $const[$one]);

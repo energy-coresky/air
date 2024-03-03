@@ -27,15 +27,16 @@ class Boot
             'mem' => ['path' => 'var/mem'],
         ];
 
-        $more = "\ndate_default_timezone_set('$cfg[timezone]');\n";
+        $more = "\n\ndate_default_timezone_set('$cfg[timezone]');\n";
         if (Yaml::$dev) {
             fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
-            $more = stream_get_contents($fp) . $more;
+            $more = "\n" . trim(stream_get_contents($fp)) . $more;
             fclose($fp);
         }
-        $more .= "define('NOW', date(DATE_DT));\n";
-        foreach ($cfg['define'] as $key => $val)
+        foreach (yml('+ @inc(define)') + $cfg['define'] as $key => $val)
             $more .= "define('$key', " . var_export($val, true) . ");\n";
+        $more .= "define('NOW', date(DATE_DT));\n";
+        $more .= "define('CLI', 'cli' == PHP_SAPI);\n";
         foreach ($cfg['ini_set'] as $key => $val)
             $more .= "ini_set('$key', " . var_export($val, true) . ");\n";
 

@@ -193,6 +193,10 @@ class Plan
         return $lg ? setlocale(LC_ALL, "$lg.utf8", "$lg.UTF-8", $lg) : setlocale(LC_ALL, 0);
     }
 
+    static function php() {
+        return yml('php', '+ @object @inc(php)');
+    }
+
     static function &cfg($name) {
         static $cache = [];
 

@@ -6,15 +6,6 @@ class Root
     static $core = [ # is core: hash json ?
         'Core', 'date', 'hash', 'json', 'pcre', 'Reflection', 'SPL', 'standard',
     ];
-    static $maxext = [
-        'apache2handler', 'bcmath', 'bz2', 'calendar', 'cgi-fcgi', 'COM*', 'Core', 'ctype', 'curl', 'date', 'dba', 'dom', 'enchant',
-        'exif', 'FFI*', 'fileinfo', 'filter', 'ftp', 'gd', 'gettext', 'gmp', 'hash', 'HRTime*', 'iconv', 'imagick', 'imap', 'interbase',
-        'intl', 'ionCube Loader', 'json', 'ldap', 'libxml', 'mbstring', 'mhash*', 'mysqli', 'mysqlnd', 'oci8', 'odbc', 'openssl', 'pcntl*',
-        'pcre', 'PDO', 'PDO_CUBRID', 'PDO_DBLIB', 'PDO_FIREBIRD', 'PDO_IBM', 'PDO_INFORMIX', 'pdo_mysql', 'PDO_OCI', 'PDO_ODBC', 'pdo_pgsql',
-        'pdo_sqlite', 'PDO_SQLSRV', 'pgsql', 'Phar', 'phpdbg*', 'posix*', 'pspell', 'readline', 'Reflection', 'session', 'shmop',
-        'SimpleXML', 'snmp', 'soap', 'sockets', 'sodium', 'SourceGuardian', 'SPL', 'sqlite3', 'standard', 'sysvmsg*', 'sysvsem*', 'sysvshm*',
-        'tidy', 'tokenizer', 'wddx', 'xml', 'xmlreader', 'xmlwriter', 'xsl', 'Zend OPcache', 'zip', 'zlib',
-    ];
 
     static function menu() {
         global $sky;
@@ -191,7 +182,7 @@ class Root
                 echo tag('Not loaded extensions', '', 'h3');
                 $echo(array_map(function ($v) {
                     return tag('?') . " $v ";
-                }, array_diff(self::$maxext, $ext)), 'e');
+                }, array_diff(Plan::php()->extensions, $ext)), 'e');
                 $top .= $priv;
                 break;
             case 'License': $fn = '/LICENSE';

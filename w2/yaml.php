@@ -32,12 +32,14 @@ class Yaml
         if ($vars)
             $vars = (object)['data' => $vars];
         global $sky;
-        $fn = 'yml_' . ($sky->eview ?: Plan::$ware) . "_$fn.php";
+        //$fn = 'yml_' . ($sky->eview ?: Plan::$ware) . "_$fn.php";
+        $fn = 'yml_' . Plan::$ware . "_$fn.php";
         $out = Plan::cache_rq($fn = ['main', $fn], $vars, false);
         DEV && trace("$fn[1] IS $query # " . ($out ? 'used cached' : 'recompiled'), 'YAML');
         if ($out)
             return $out;
-        Plan::cache_s($fn, "<?php\n\n" . Yaml::text($query) . ';');
+        is_string($data = Yaml::text($query)) or $data = 'return ' . var_export($data, true);
+        Plan::cache_s($fn, "<?php\n\n$data;");
         return Plan::cache_r($fn, $vars);
     }
 
@@ -535,8 +537,8 @@ class Yaml
                 return fn($v, $x) => preg_match($x, $v, $match) ? array_slice($match, 1) : false;
             case 'sar':
                 return fn($v, $x) => preg_replace('/' . explode($x[0], $x)[1] . '/', explode($x[0], $x)[2], $v);
-            case 'object':
-                return fn($v) => (object)$v;
+            case 'object': # 2do @object(yield)
+                return fn($v, $x) => (object)$v;
             case 'range':
                 return fn($v, $x) => range($v, $x);
             case 'sql':

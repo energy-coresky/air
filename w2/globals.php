@@ -3,20 +3,6 @@
 #[\AllowDynamicProperties]
 class Globals extends Usage
 {
-    private $definitions = [
-        'NAMESPACE' => [], 'INTERFACE' => [], 'TRAIT' => [], 'VAR' => [], 'FUNCTION' => [],
-        'CONST' => [], 'DEFINE' => [], 'CLASS' => [], 'EVAL' => [],
-    ];
-    private $keywords = [
-        '__halt_compiler', 'abstract', 'and', 'array', 'as', 'break', 'callable', 'case', 'catch', 'class', 'clone', 'const', 'continue',
-        'declare', 'default', 'die', 'do', 'echo', 'else', 'elseif', 'empty', 'enddeclare', 'endfor', 'endforeach', 'endif', 'endswitch',
-        'endwhile', 'eval', 'exit', 'extends', 'final', 'for', 'foreach', 'function', 'global', 'goto', 'if', 'implements', 'include',
-        'include_once', 'instanceof', 'insteadof', 'interface', 'isset', 'list', 'namespace', 'new', 'or', 'print', 'private', 'protected',
-        'public', 'require', 'require_once', 'return', 'static', 'switch', 'throw', 'trait', 'try', 'unset', 'use', 'var', 'while', 'xor',
-        'match', 'readonly', 'fn', 'yield', // 'yield from'
-    ];
-    private $predefined_const = ['__DIR__', '__FILE__', '__LINE__', '__FUNCTION__', '__CLASS__', '__METHOD__', '__NAMESPACE__', '__TRAIT__'];
-
     private $all;
     private $all_lc;
     private $interfaces;
@@ -32,7 +18,7 @@ class Globals extends Usage
     static function file($fn, $php) {
         $glb = new Globals;
         $glb->parse_def($fn, $php);
-        return $glb->definitions;
+        return $glb->yml->definitions;
     }
 
     static function def($dir, $sect = 'CLASS') {
@@ -63,7 +49,7 @@ class Globals extends Usage
         if ($name)
             return json(['html' => $html, 'menu' => count($this->list)]);
         json(['html' => $html, 'menu' => view('_glob.xmenu', [
-            'defs' => $this->definitions,
+            'defs' => $this->yml->definitions,
             'cnt' => parent::$cnt,
             'mand' => count($mand = array_diff(explode(' ', SKY::i('gr_extns')), explode(' ', SKY::i('gr_nmand')), Root::$core)),
             'color' => function ($ext) use (&$mand) {
@@ -182,10 +168,10 @@ class Globals extends Usage
             $place[$ident][] = $this->pos[0] . ' ' . $this->pos[1] . " $mess";
         };
 
-        $place =& $this->definitions[$key];
-        if (in_array($lc = strtolower($ident), $this->keywords))
+        $place =& $this->yml->definitions[$key];
+        if (in_array($lc = strtolower($ident), $this->yml->keywords))
             return $assign($place, $ident, 'Keyword override');
-        if (in_array($lc, $this->predefined_const))
+        if (in_array($lc, $this->yml->const)) # predefined_const
             return $assign($place, $ident, 'Predefined constant override');
 
         $is_lc = isset($this->all_lc[$lc]);
@@ -365,14 +351,14 @@ class Globals extends Usage
 
         $this->walk_files([$this, 'parse_def']);
         if ('.' != $this->path)
-            return $this->definitions;
-        foreach ($this->definitions as &$definition)
+            return $this->yml->definitions;
+        foreach ($this->yml->definitions as &$definition)
             uksort($definition, 'strcasecmp');
 
         $nap = Plan::mem_rq('report.nap');
 
         return $this->c_nmand($extns) + [
-            'defs' => $this->definitions,
+            'defs' => $this->yml->definitions,
             'e_idents' => [
                 'max_i' => -1, // infinite
                 'row_c' => function($in, $evar = false) use ($nap) {
@@ -413,7 +399,7 @@ class Globals extends Usage
             ],
             'after' => function($e, &$cnt) {
                 Plan::mem_p('gr_def.json', json_encode($this->json, JSON_PRETTY_PRINT));
-                parent::$cnt[4] = array_sum(array_map('count', $this->definitions));
+                parent::$cnt[4] = array_sum(array_map('count', $this->yml->definitions));
                 $cnt = parent::$cnt;
                 parent::$cnt[5] = $cnt[4] - $cnt[2] - $cnt[3];
                 return 1 + $e->key();
