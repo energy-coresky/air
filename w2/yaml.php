@@ -2,7 +2,7 @@
 
 class Yaml
 {
-    const version = 0.955;
+    const version = 0.956;
 
     static $boot = 0;
     static $custom = [];

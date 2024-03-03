@@ -2,8 +2,6 @@
 
 class DEV
 {
-    const repository = 'https://coresky.net/api';
-
     static function e($top) {
         global $sky;
         $sky->error_no = 71;
@@ -371,7 +369,7 @@ class DEV
             echo 'class ZipArchive not exists';
             return;
         }
-        $zip = file_get_contents(DEV::repository . "?get=$name.zip");
+        $zip = file_get_contents(Plan::php()->coresky . "?get=$name.zip");
         file_put_contents($fn = "wares/$name.zip", $zip);
 
         $zip = new ZipArchive;
@@ -421,7 +419,7 @@ class DEV
     }
 
     function j_inet() {
-        $inet = @api(DEV::repository, ['search']);
+        $inet = @api(Plan::php()->coresky, ['search']);
         if ('OK' != @$inet['result']) {
             echo '<h1>Error in remote call</h1>';
             return;

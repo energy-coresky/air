@@ -33,7 +33,7 @@ class Vendor
         $return = $name or $name = $_POST['n'];
         $repo or $repo = $_POST['r'];
            //$one = file_get_contents("https://packagist.org/packages/$name.json");
-        $response = file_get_contents("https://repo.packagist.org/p2/$name.json");
+        $response = file_get_contents(Plan::php()->packagist . "$name.json");
 
         $docs = [];
         if ($repo && 'https://github.com/' == substr($repo, 0, 19)) {

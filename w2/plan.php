@@ -194,7 +194,8 @@ class Plan
     }
 
     static function php() {
-        return yml('php', '+ @object @inc(php)');
+        static $yml;
+        return $yml ?? ($yml = yml('php', '+ @object @inc(php)'));
     }
 
     static function &cfg($name) {

@@ -71,7 +71,7 @@ class Root
                 $sky->d_se or $sky->d_se = 'https://yandex.ru/search/?text=%s';
                 $vv = str_replace('_', '-', strtolower($v));
                 $q = ('f' == $t ? 'function.' : ('e' == $t ? 'book.' : 'class.')) . $vv;
-                $m = a('manual', "https://www.php.net/manual/$sky->d_manual/$q.php", 'target="_blank"');
+                $m = a('manual', Plan::php()->php . "$sky->d_manual/$q.php", 'target="_blank"');
                 $s = a('stackoverflow', sprintf($sky->d_se, urlencode("php $v site:stackoverflow.com")), 'target="_blank"');
                 return a('show', ["sky.d.reflect(this, '$t')"]) . " | $m | $s";
             }, $ary);
