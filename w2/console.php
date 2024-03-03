@@ -163,7 +163,7 @@ class Console
         echo "\nCommit text [tiny fix] ";
         $c = trim(fgets(STDIN)) or $c = 'tiny fix';
 
-        $main = realpath(DIR) === realpath(self::$d[2]);
+        $main = self::$d[0] && realpath(DIR) === realpath(self::$d[2]);
         if ($app = self::$d[0] && !$air && (self::$d[1] || $main)) {
             chdir(DIR);
             SQL::$dd_h = 'Console::dd_h';

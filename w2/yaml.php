@@ -2,7 +2,7 @@
 
 class Yaml
 {
-    const version = 0.945;
+    const version = 0.955;
 
     static $boot = 0;
     static $custom = [];
@@ -85,7 +85,7 @@ class Yaml
         $this->dir = $fn ? str_replace('\\', '/', dirname($fn)) : '???';
         $this->at = [$fn, 1];
 
-        if ('' !== $marker) {
+        if ('' !== $marker && null !== $marker) {
             if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
                 if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
                     $this->halt("Cannot find marker `$marker`");
@@ -459,6 +459,7 @@ class Yaml
             $ext = explode('.', $name);
             switch (end($ext)) {
                 case 'php': return $dir ? (require $name) : Plan::_r($name);
+                case 'txt': return $dir ? file_get_contents($name) : Plan::_g($name);
                 case 'json': return json_decode($dir ? file_get_contents($name) : Plan::_g($name), true);
                 case 'yml':
                 case 'yaml': return Yaml::file($dir ? $name : Plan::_t($name), $marker);
@@ -501,7 +502,7 @@ class Yaml
             case 'str':
                 return fn($v) => strval($v);
             case 'dec':
-                return fn($v) => str_replace([' ', '_', '-'], '', $v);
+                return fn($v) => intval(str_replace([' ', '_', '-'], '', $v));
             case 'bin':
                 return fn($v) => intval($v, 2);
             case 'oct':
