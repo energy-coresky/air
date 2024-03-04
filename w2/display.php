@@ -31,6 +31,9 @@ class Display
         return '<div class="php">' . $table . '</div>';
     }
 
+    static function html($in) {
+    }
+
     static function set($ary = []) {
         self::$color = $ary + self::$color;
         ini_set('highlight.default', self::$color['d']);

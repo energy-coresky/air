@@ -230,31 +230,28 @@ class Yaml
         return $br ? [$name, substr($br, 1, -1), $this->at[1]] : false;
     }
 
-    private function tokens(&$m) {
+    private function tokens($m) {
+        $list = [
+            'k' => '-:+', 'v' => ':{[', 'e' => ':',
+            /* list: */   'v[' => '{[,]', 'e[' => '{[,]',
+            'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
+        ];
         $in = $this->tail[0] . "\n";
         $len = strlen($in);
-        $j = 0;
-        return new eVar(function ($prev) use (&$m, &$j, &$in, $len) {
-            $j += strlen($pt = $prev->token ?? '');
-            if ($j >= $len)
-                return false;
-            static $list = [
-                'k' => '-:+', 'v' => ':{[', 'e' => ':',
-                /* list: */   'v[' => '{[,]', 'e[' => '{[,]',
-                'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
-            ];
+        $prev = new stdClass;
+        $ws = fn($_) => in_array($_, [' ', "\t", "\n"], true);
+        for ($j = 0, $pt = ''; $j < $len; $j += strlen($pt = $prev->token)) {
             $mode = $prev->mode ?? 'k';
-            $ws = fn($_) => in_array($_, [' ', "\t", "\n"], true);
             $wt = $code = false;
             if ($whitespace = $ws($t = $in[$j])) {
                 "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
                 $prev->token = $prev->ws = $prev->_ws = $t;
                 if ("\n" != $t && ($prev->ss ?? false))
-                    return true; # SkipSpace
+                    continue; # SkipSpace
             } elseif ('rest' == $mode || '#' == $t && ($prev->ws ?? true)) { # return rest of line
                 $t = $prev->token = substr($in, $j, strcspn($in, "\n", $j));
                 if ('rest' !== $mode)
-                    return true; # cut comment
+                    continue; # cut comment
                 $prev->mode = 'k';
             } elseif ('"' == $t || "'" == $t) {
                 $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
@@ -270,7 +267,7 @@ class Yaml
             $json = 2 == strlen($mode);
             if ($json && !$code && 'v' == $mode[0])
                 $mode[0] = 'e';
-            return [
+            $prev = (object)[
                 'token' => $t,
                 'ws' => $whitespace,
                 '_ws' => $prev->_ws ?? '',
@@ -282,7 +279,8 @@ class Yaml
                 'json' => $json,
                 'mult' => in_array($m->opt, ['|', '>']),
             ];
-        }, -1);
+            yield $prev;
+        }
     }
 
     private function parse() {

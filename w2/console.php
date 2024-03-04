@@ -341,6 +341,11 @@ class Console
         }
     }
 
+    /** Parse XML file */
+    function c_x($fn, $ware = 'main') {
+        var_export(XML::file(Plan::_t([$ware, $fn]))->array);
+    }
+
     /** Drop all cache */
     function c_drop() {
         echo Debug::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';
