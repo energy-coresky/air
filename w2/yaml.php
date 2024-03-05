@@ -2,7 +2,7 @@
 
 class Yaml
 {
-    const version = 0.956;
+    const version = 0.957;
 
     static $boot = 0;
     static $custom = [];
@@ -230,7 +230,7 @@ class Yaml
         return $br ? [$name, substr($br, 1, -1), $this->at[1]] : false;
     }
 
-    private function tokens($m) {
+    private function tokens() {
         $list = [
             'k' => '-:+', 'v' => ':{[', 'e' => ':',
             /* list: */   'v[' => '{[,]', 'e[' => '{[,]',
@@ -238,48 +238,41 @@ class Yaml
         ];
         $in = $this->tail[0] . "\n";
         $len = strlen($in);
-        $prev = new stdClass;
+        $el = new stdClass;
+        $pws = $el->_ws = true;
+        $el->mode = 'k';
         $ws = fn($_) => in_array($_, [' ', "\t", "\n"], true);
-        for ($j = 0, $pt = ''; $j < $len; $j += strlen($pt = $prev->token)) {
-            $mode = $prev->mode ?? 'k';
-            $wt = $code = false;
-            if ($whitespace = $ws($t = $in[$j])) {
+        for ($j = 0, $pt = ''; $j < $len; $j += strlen($pt = $t), $pws = $el->ws) {
+            $wt = $el->code = false;
+            if ($el->ws = $ws($t = $in[$j])) {
                 "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
-                $prev->token = $prev->ws = $prev->_ws = $t;
-                if ("\n" != $t && ($prev->ss ?? false))
+                $el->_ws = $t;
+                if ("\n" != $t && ($el->ss ?? false))
                     continue; # SkipSpace
-            } elseif ('rest' == $mode || '#' == $t && ($prev->ws ?? true)) { # return rest of line
-                $t = $prev->token = substr($in, $j, strcspn($in, "\n", $j));
-                if ('rest' !== $mode)
+            } elseif ('rest' == $el->mode || '#' == $t && $pws) { # return rest of line
+                $t = substr($in, $j, strcspn($in, "\n", $j));
+                if ('rest' !== $el->mode)
                     continue; # cut comment
-                $prev->mode = 'k';
+                $el->mode = 'k';
             } elseif ('"' == $t || "'" == $t) {
                 $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
                 $t = substr($in, $j, $sz -= $j);
-            } elseif (strpbrk($t, "\n" . ($cx = $list[$mode]))) {
+            } elseif (strpbrk($t, "\n" . ($cx = $list[$el->mode]))) {
                 if (in_array($t, [':', '-', '+']) && $ws($in[$j + 1])) # next is space
                     $wt = $t;
             } else {
                 $t = substr($in, $j, strcspn($in, "\n'\"\t $cx", $j));
-                if ('@' == $t[0] && 'v' == $mode[0])
-                    $code = $this->code(substr($in, $j), $t);
+                if ('@' == $t[0] && 'v' == $el->mode[0])
+                    $el->code = $this->code(substr($in, $j), $t);
             }
-            $json = 2 == strlen($mode);
-            if ($json && !$code && 'v' == $mode[0])
-                $mode[0] = 'e';
-            $prev = (object)[
-                'token' => $t,
-                'ws' => $whitespace,
-                '_ws' => $prev->_ws ?? '',
-                'nl' => "\n" == $pt || '' === $pt,
-                'k1' => ':' == $wt,
-                'k3' => $wt && 'k' == $mode ? $wt : false,
-                'code' => $code,
-                'mode' => $mode,
-                'json' => $json,
-                'mult' => in_array($m->opt, ['|', '>']),
-            ];
-            yield $prev;
+            $el->json = 2 == strlen($el->mode);
+            if ($el->json && !$el->code && 'v' == $el->mode[0])
+                $el->mode[0] = 'e';
+            $el->nl = "\n" == $pt || '' === $pt;
+            $el->k1 = ':' == $wt;
+            $el->k3 = $wt && 'k' == $el->mode ? $wt : false;
+            $el->ss = false;
+            yield $t => $el;
         }
     }
 
@@ -287,13 +280,14 @@ class Yaml
         $m = $this->obj();
         $p =& $m->val;
         $pad_0 = $reqk = '';
-        foreach ($this->tokens($m) as $el) {
+        foreach ($this->tokens() as $t => $el) {
+            $mult = in_array($m->opt, ['|', '>']);
             if ($el->nl) {
                 $len = strlen($p);
-                $pad = $el->ws ? $this->halt(false, $el->token) : '';
+                $pad = $el->ws ? $this->halt(false, $t) : '';
                 $reqk = $lock = $pad <= $pad_0; # require match key
             }
-            if ("\n" == ($t = $el->token)) {
+            if ("\n" == $t) {
                 if ('k' == $el->mode) {
                     if ($reqk && $has_t)
                         $this->halt('Cannot match key');
@@ -338,7 +332,7 @@ class Yaml
             } elseif ($el->nl) { # new line start
                 if ($has_t = !$el->ws)
                     $p .= $t;
-                if ($el->mult && !$reqk) {
+                if ($mult && !$reqk) {
                     $el->mode = 'rest'; # multiline mode
                     if (!$len) {
                         $pad_1 = strlen($pad);
