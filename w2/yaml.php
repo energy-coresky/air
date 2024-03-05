@@ -236,13 +236,11 @@ class Yaml
             /* list: */   'v[' => '{[,]', 'e[' => '{[,]',
             'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
         ];
-        $in = $this->tail[0] . "\n";
-        $len = strlen($in);
-        $el = new stdClass;
-        $pws = $el->_ws = true;
-        $el->mode = 'k';
         $ws = fn($_) => in_array($_, [' ', "\t", "\n"], true);
-        for ($j = 0, $pt = ''; $j < $len; $j += strlen($pt = $t), $pws = $el->ws) {
+        $el = (object)['mode' => $pws = 'k'];
+        $in = $this->tail[0] . ($t = "\n");
+        for ($j = 0, $len = strlen($in); $j < $len; $j += strlen($t), $pws = $el->ws) {
+            $el->nl = "\n" == $t;
             $wt = $el->code = false;
             if ($el->ws = $ws($t = $in[$j])) {
                 "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
@@ -268,7 +266,6 @@ class Yaml
             $el->json = 2 == strlen($el->mode);
             if ($el->json && !$el->code && 'v' == $el->mode[0])
                 $el->mode[0] = 'e';
-            $el->nl = "\n" == $pt || '' === $pt;
             $el->k1 = ':' == $wt;
             $el->k3 = $wt && 'k' == $el->mode ? $wt : false;
             $el->ss = false;
