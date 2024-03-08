@@ -5,7 +5,7 @@ const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAM
 spec: @csv( ) STDIN STDOUT STDERR __COMPILER_HALT_OFFSET__
 
 definitions: {
-  NAMESPACE: [], INTERFACE: [], TRAIT: [], VAR: [], FUNCTION: [], CONST: [], DEFINE: [], CLASS: [], EVAL: []
+  NAMESPACE: [], INTERFACE: [], TRAIT: [], ENUM: [], VAR: [], FUNCTION: [], CONST: [], DEFINE: [], CLASS: [], EVAL: []
 }
 
 keywords: @sar(|~| ) @each @csv( )
@@ -34,7 +34,7 @@ coresky:   https://coresky.net/api
 #.php
 
 #.html_void
-+ @csv( ) area base br col embed hr img input link meta source track wbr param
++ @csv( ) !doctype br hr img input link meta area base col embed source track wbr param
 #.html_void
 
 #.define ================== this used in the sky_plan.php ========================

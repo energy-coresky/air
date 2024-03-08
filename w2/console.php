@@ -343,7 +343,8 @@ class Console
 
     /** Parse XML file */
     function c_x($fn, $ware = 'main') {
-        var_export(XML::file(Plan::_t([$ware, $fn]))->array);
+        echo XML::file(Plan::_t([$ware, $fn]));
+        //var_export(XML::file(Plan::_t([$ware, $fn]))->array);
     }
 
     /** Drop all cache */

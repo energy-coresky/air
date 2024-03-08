@@ -407,7 +407,11 @@ function hidden($set = '_csrf', $r = 0) {
     }
     return $out;
 }
-
+if (!function_exists('enum_exists')) {
+    function enum_exists() {
+        return false;
+    }
+}
 //////////////////////////////////////////////////////////////////////////
 # class Error Assume as crash and error, `throw new Error` should never works!
 class Stop extends Exception {} # Assume as just "stop", NOT crash, NOT error

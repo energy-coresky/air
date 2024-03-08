@@ -186,6 +186,9 @@ class Globals extends Usage
             case 'TRAIT':
                 !$is_lc || trait_exists($ident, false) ? $assign($place, $ident) : $assign($place, $ident, 'Identifier in usage');
                 break;
+            case 'ENUM':
+                !$is_lc || enum_exists($ident, false) ? $assign($place, $ident) : $assign($place, $ident, 'Identifier in usage');
+                break;
             case 'CLASS':
                 !$is_lc || class_exists($ident, false) ? $assign($place, $ident) : $assign($place, $ident, 'Identifier in usage');
                 break;

@@ -237,15 +237,16 @@ class Yaml
             'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
         ];
         $ws = fn($_) => in_array($_, [' ', "\t", "\n"], true);
-        $el = (object)['mode' => $pws = 'k'];
+        $el = (object)['mode' => $pws = 'k', 'ss' => false];
         $in = $this->tail[0] . ($t = "\n");
         for ($j = 0, $len = strlen($in); $j < $len; $j += strlen($t), $pws = $el->ws) {
             $el->nl = "\n" == $t;
             $wt = $el->code = false;
+
             if ($el->ws = $ws($t = $in[$j])) {
                 "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
                 $el->_ws = $t;
-                if ("\n" != $t && ($el->ss ?? false))
+                if ("\n" != $t && $el->ss)
                     continue; # SkipSpace
             } elseif ('rest' == $el->mode || '#' == $t && $pws) { # return rest of line
                 $t = substr($in, $j, strcspn($in, "\n", $j));
@@ -254,15 +255,16 @@ class Yaml
                 $el->mode = 'k';
             } elseif ('"' == $t || "'" == $t) {
                 $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
-                $t = substr($in, $j, $sz -= $j);
-            } elseif (strpbrk($t, "\n" . ($cx = $list[$el->mode]))) {
+                $t = substr($in, $j, $sz - $j);
+            } elseif (strpbrk($t, "\n" . ($chr = $list[$el->mode]))) {
                 if (in_array($t, [':', '-', '+']) && $ws($in[$j + 1])) # next is space
                     $wt = $t;
             } else {
-                $t = substr($in, $j, strcspn($in, "\n'\"\t $cx", $j));
+                $t = substr($in, $j, strcspn($in, "\n'\"\t $chr", $j));
                 if ('@' == $t[0] && 'v' == $el->mode[0])
                     $el->code = $this->code(substr($in, $j), $t);
             }
+
             $el->json = 2 == strlen($el->mode);
             if ($el->json && !$el->code && 'v' == $el->mode[0])
                 $el->mode[0] = 'e';
