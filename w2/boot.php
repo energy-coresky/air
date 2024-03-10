@@ -15,8 +15,8 @@ class Boot
     function __construct($dc = false, $nx = null) {
         require DIR_S . "/w2/processor.php";
         require DIR_S . "/w2/rare.php";
-        require DIR_S . "/w2/yaml.php";
-        Yaml::$boot = 1;
+        require DIR_S . "/w2/yml.php";
+        YML::$boot = 1;
         $cfg = self::cfg($ymls, DIR_M . '/config.yaml');
         self::$const = $cfg['define'];
         $plans = SKY::$plans + ($cfg['plans'] ?? []) + [
@@ -28,7 +28,7 @@ class Boot
         ];
 
         $more = "\n\ndate_default_timezone_set('$cfg[timezone]');\n";
-        if (Yaml::$dev) {
+        if (YML::$dev) {
             fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
             $more = "\n" . trim(stream_get_contents($fp)) . $more;
             fclose($fp);
@@ -72,7 +72,7 @@ class Boot
                 }
             }
         }
-        Yaml::$boot = 0;
+        YML::$boot = 0;
     }
 
     static function get_const($key, &$v) {
@@ -89,7 +89,7 @@ class Boot
 
     static function cfg(&$name, $ware = 'main') {
         if (null === $name) {
-            $name = is_file($ware) ? Yaml::file($ware) : [];
+            $name = is_file($ware) ? YML::file($ware) : [];
             return $name['core'] ?? [];
         } elseif (is_array($name)) {
             foreach ($name as $key => $val) {
@@ -97,8 +97,8 @@ class Boot
                     Plan::cache_s(['main', "cfg_{$ware}_$key.php"], self::auto($val));
             }
         } else {
-            $yml = Yaml::file(Plan::_t([$ware, 'config.yaml']))[$name];
-            return is_string($yml) ? Yaml::inc($yml, $ware) : $yml;
+            $yml = YML::file(Plan::_t([$ware, 'config.yaml']))[$name];
+            return is_string($yml) ? YML::inc($yml, $ware) : $yml;
         }
     }
 
@@ -114,7 +114,7 @@ class Boot
     static function rewrite(&$in) {
         $code = "\n";
         foreach (Plan::_rq('rewrite.php') as $rw)
-            !Yaml::$dev && $rw[2] or $code .= $rw[1] . "\n";
+            !YML::$dev && $rw[2] or $code .= $rw[1] . "\n";
         $in = explode("'',", $in, 2);
         $in = "$in[0]function(\$cnt, &\$surl, \$uri, \$sky) {{$code}},$in[1]";
     }
@@ -131,7 +131,7 @@ class Boot
                 $plan['app']['type'] = 'pr-dev';
             if ($ary['options'] ?? false)
                 $plan['app']['options'] = $ary['options'];
-            if (!Yaml::$dev && in_array($plan['app']['type'], ['dev', 'pr-dev']))
+            if (!YML::$dev && in_array($plan['app']['type'], ['dev', 'pr-dev']))
                 continue;
             foreach ($ary['class'] as $cls) {
                 $df = 'default_c' == $cls;

@@ -1,6 +1,6 @@
 <?php
 
-class Yaml
+class YML
 {
     const version = 0.957;
 
@@ -27,35 +27,34 @@ class Yaml
         [$fn, $query, $vars, $mode] = $in + [1 => false, false, 0];
         if (!$query) {
             trace("ON-FLY IS $fn", 'YAML');
-            return Yaml::text($fn);
+            return YML::text($fn);
         }
         if ($vars)
             $vars = (object)['data' => $vars];
         global $sky;
-        //$fn = 'yml_' . ($sky->eview ?: Plan::$ware) . "_$fn.php";
         $fn = 'yml_' . Plan::$ware . "_$fn.php";
         $out = Plan::cache_rq($fn = ['main', $fn], $vars, false);
         DEV && trace("$fn[1] IS $query # " . ($out ? 'used cached' : 'recompiled'), 'YAML');
         if ($out)
             return $out;
-        is_string($data = Yaml::text($query)) or $data = 'return ' . var_export($data, true);
+        is_string($data = YML::text($query)) or $data = 'return ' . var_export($data, true);
         Plan::cache_s($fn, "<?php\n\n$data;");
         return Plan::cache_r($fn, $vars);
     }
 
     static function text($in) {
-        $yml = new Yaml($in, false);
+        $yml = new YML($in, false);
         return $yml->out();
     }
 
     static function file($name, $marker = '') {
-        $yml = new Yaml(file_get_contents($name), $name, $marker);
+        $yml = new YML(file_get_contents($name), $name, $marker);
         return $yml->out();
     }
 
     static function lint(string $in, $fn = false, $marker = '') : bool {
         try {
-            new Yaml($fn ? file_get_contents($fn) : $in, $fn, $marker);
+            new YML($fn ? file_get_contents($fn) : $in, $fn, $marker);
         } catch (Error $e) {
             return false;
         }
@@ -79,7 +78,7 @@ class Yaml
     }
 
     static function path($path, $unset = false) {
-        return (Yaml::$custom['path'])(0, $path, $path, 0, $unset);
+        return (YML::$custom['path'])(0, $path, $path, 0, $unset);
     }
 
     function __construct(string $in, $fn, $marker = '') {
@@ -455,7 +454,7 @@ class Yaml
                 case 'txt': return $dir ? file_get_contents($name) : Plan::_g($name);
                 case 'json': return json_decode($dir ? file_get_contents($name) : Plan::_g($name), true);
                 case 'yml':
-                case 'yaml': return Yaml::file($dir ? $name : Plan::_t($name), $marker);
+                case 'yaml': return YML::file($dir ? $name : Plan::_t($name), $marker);
                 default:
                     if (strpos($name, ' '))
                         [$name, $via1] = explode(' ', $name, 2);

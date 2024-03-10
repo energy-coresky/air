@@ -124,7 +124,7 @@ class Display
                 if ('$' == $m[2][0])
                     $out .= self::span('m', $m[2]);
                 elseif ('#' == $m[2][0])
-                    $out .= self::span('c', $m[2]); # Yaml comment
+                    $out .= self::span('c', $m[2]); # YML comment
                 else $out .= self::span('g', $m[2]);
             }
             return $out . html($v);

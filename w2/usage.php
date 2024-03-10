@@ -21,7 +21,7 @@ class Usage
     public $act = null;
 
     function __construct($path = '.') {
-        $this->yml = Plan::php();
+        $this->yml = clone Plan::php();
         global $sky, $argv;
         defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
         $this->path = $path;

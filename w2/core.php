@@ -16,7 +16,7 @@ function qp(...$in) { # Query Part, Query Parse
 }
 
 function yml(...$in) {
-    return Yaml::run($in);
+    return YML::run($in);
 }
 
 function cfg($name = 'core', $as_array = false) {

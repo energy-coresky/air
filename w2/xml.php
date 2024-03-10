@@ -38,7 +38,7 @@ class XML
             'find' => false,
         ];
         for ($j = 0, $len = strlen($in); $j < $len; $j += $sz ?: strlen($t)) {
-            $sz = $el->xfor = false;
+            $sz = $el->end = false;
             $el->j && ($j += $el->j);
             $t = $in[$j];
             if ($el->find) {
@@ -65,9 +65,12 @@ class XML
             } elseif ('<' == $t) {
                 $el->mode = 'open';
                 if ('<!--' == ($t = substr($in, $j, 4))) { # comment
-                    $el->xfor = '-->';
+                    $el->end = '-->';
                 } elseif ('<![CDATA[' == ($t = substr($in, $j, 9))) {
-                    $el->xfor = ']]>';
+                    $el->end = ']]>';
+                } elseif ('<?' == ($t = substr($in, $j, 2))) {
+                    '<?php' !== substr($in, $j, 5) or $t .= 'php';
+                    $el->end = '?>';
                 } else {
                     if ($close = '/' == $in[$j + 1])
                         $el->mode = 'close';
@@ -85,6 +88,11 @@ class XML
     }
 
     private function parse(&$in) {
+        $ends = [
+            '-->' => '#comment',
+            ']]>' => '#cdata',
+            '?>' => '#php',
+        ];
         $tag = [$str = '', [], []]; # tag, value, attr
         $push = function () use (&$str, &$tag) {
             if ('' === $tag[0])
@@ -98,18 +106,17 @@ class XML
                 $this->push(['#text', $str, false]);
             $tag = [$str = '', [], []];
         };
-        $xfor = false;
+        $end = false;
         foreach ($this->tokens($in) as $t => $el) {
-            if ($el->xfor) { # from <!-- or <![CDATA[
+            if ($el->end) { # from <!-- or <![CDATA[ or <?php
                 $push();
-                $el->find = $el->xfor;
-            } elseif ($xfor) { # --> or ]]>
-                '-->' == $xfor && $this->push(['#comment', $t, false]);
-                ']]>' == $xfor && $this->push(['#cdata', $t, false]);
-                $el->j = 3; # chars move
+                $el->find = $el->end;
+            } elseif ($end) {
+                $this->push([$ends[$end], $t, false]);
+                $el->j = strlen($end); # chars move
             } elseif ('open' == $el->mode) { # sample: <tag
                 $push();
-                $tag[0] = strtolower(substr($t, 1));
+                $tag[0] = rtrim(strtolower(substr($t, 1)), '/');
                 $el->ss = true;
                 $el->mode = 'attr';
                 continue;
@@ -138,13 +145,41 @@ class XML
                 '' !== $tag[0] or $tag[0] = '#text';
                 $str .= $t;
             }
-            $xfor = $el->xfor;
+            $end = $el->end;
             $el->mode = 'txt';
         }
         $push();
     }
 
-    private function dump($ary, $indent = '') {
+    private function dump($ary) {
+        $tpl = [
+            '#text' => '%s',
+            '#comment' => '<!--%s-->',
+            '#cdata' => '<![CDATA[%s]]>',
+            '#php' => '<?php%s?>',
+        ];
+        $out = '';
+        foreach ($ary as $one) {
+            $node = key($one);
+            $data = pos($one);
+            if ('#' == $node[0]) {
+                $out .= sprintf($tpl[$node], $data);
+                continue;
+            }
+            $out .= "<$node";
+            foreach (($one[0] ?? []) as $k => $v)
+                $out .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+            $out .= '>';
+            if (is_array($data)) {
+                $out .= $this->dump($data) . "</$node>";
+            } elseif (0 !== $data) { # not void
+                $out .= $data . "</$node>";
+            }
+        }
+        return $out;
+    }
+
+    private function __dump($ary, $indent = '') {
         $out = '';
         foreach ($ary as $one) {
             $len = strlen($out);

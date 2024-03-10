@@ -330,14 +330,14 @@ class Console
         if (strpos($ware, ' ')) { # inline yaml
             !is_num($fn) or $func = $fn;
             '+' == $ware[0] or print "Inline Yaml: ";
-            $out(Yaml::text($ware), $func);
+            $out(YML::text($ware), $func);
         } elseif (!$fn = Plan::_t([$ware, $fn])) {
             echo isset(SKY::$plans[$ware])
                 ? "File not found in ware `$ware`"
                 : "Ware `$ware` not installed";
         } else {
             echo "File `$fn`, ware=$ware is: ";
-            Plan::set($ware, fn() => $out(Yaml::file($fn), $func));
+            Plan::set($ware, fn() => $out(YML::file($fn), $func));
         }
     }
 

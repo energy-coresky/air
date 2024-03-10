@@ -8,7 +8,7 @@ class Rewrite
 
     static function lib(&$map, &$list = null) {
         fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
-        $list = array_keys($yml = Yaml::text(stream_get_contents($fp)));
+        $list = array_keys($yml = YML::text(stream_get_contents($fp)));
         fclose($fp);
         $lib = [];
         foreach ($yml as $v)
