@@ -11,13 +11,12 @@ class XML
 
     private $at;
     private $pad = '  ';
-    private $stack = [];
     private $_p;
 
     static function file($name) {
         $xml = new XML(file_get_contents($name), $name);
-//var_export($xml->array);
-        return $xml->dump($xml->array);
+var_export($xml->array);
+        //echo $xml->dump($xml->array);
     }
 
     function __construct(string $in, $fn) {

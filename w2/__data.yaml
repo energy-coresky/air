@@ -28,9 +28,22 @@ extensions: @csv( ) # all known extensions (must)
   SimpleXML snmp soap sockets sodium SourceGuardian SPL sqlite3 standard sysvmsg* sysvsem* sysvshm*
   tidy tokenizer wddx xml xmlreader xmlwriter xsl Zend OPcache zip zlib
 
+color: @left(#) @each @csv( )
+#         r   g   d   c   m    c-comment d-default
+  w_base: f77 2b3 00e b88 93c
+#         r   g   z   y   m   j
+  w_css:  f00 2b3 00f b88 93c c41
+  w_php:  d00 070 00b ff8000 000 # native php highlight_string(..) function colors
+  b_far:  ff5 fff 7ee 68a 888
+
 php:       https://www.php.net/manual/
 packagist: https://repo.packagist.org/p2/
 coresky:   https://coresky.net/api
+
+background: @left(#) @each @csv( )            # 2do: fix en error: @left(#) @each @csv( )
+  w: fff fdd dfd ffd eee
+  b: 000 511 151 551 555
+#    bg  r   g   y   empty
 #.php
 
 #.html_void

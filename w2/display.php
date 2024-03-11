@@ -1,6 +1,6 @@
 <?php
 
-class Display
+class Display # php jet yaml html bash || php_method md || var diff log
 {
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
@@ -10,6 +10,7 @@ class Display
     private $disp;
     private $lnum;
     private $cut;
+    private static $bg;
     private static $color = [ # php's highlight_string(..) default colors
         'r' => '#f77', # red (in PHP - strings) d00
         'g' => '#2b3', # green (in PHP - keywords) 070
@@ -34,13 +35,33 @@ class Display
     static function html($in) {
     }
 
-    static function set($ary = []) {
-        self::$color = $ary + self::$color;
-        ini_set('highlight.default', self::$color['d']);
-        ini_set('highlight.comment', self::$color['c']);
-        ini_set('highlight.html', self::$color['m']);
-        ini_set('highlight.keyword', self::$color['b']);
-        ini_set('highlight.string', self::$color['r']);
+    static function css($in) {
+    }
+
+    static function js($in) {
+    }
+
+    static function scheme($name) {
+        $pal = clone Plan::php();
+        $cr = $pal->color[$name];
+        $bg = $pal->background[$name[0]];
+        self::$color = [
+            'r' => $cr[0], # red (in PHP - strings) d00
+            'g' => $cr[1], # green (in PHP - keywords) 070
+            'd' => $cr[2], # default (in PHP) blue 00b
+            'c' => $cr[3], # comment color #ff8000
+            'm' => $cr[4], # magenta
+            'b' => '#000', # black (in PHP - HTML)
+            'w' => '#fff', # white
+        ];
+        self::$bg = [
+            '=' => false, # equal, NO-HIGHTLIGHT
+            '-' => $bg[1], # red DELETED
+            '+' => $bg[2], # green INSERTED
+            '*' => $bg[3], # yellow CHANGED
+            '.' => $bg[4], # gray NO-LINES when INSERT in other file
+            0 => $bg[0], # background color
+        ];
     }
 
     static function span($c, $str, $style = '') {
@@ -136,6 +157,102 @@ class Display
         return '<div class="php">' . $table . '</div>';
     }
 
+    static function diff($new, $old, $mode = false) {
+        $V = [];
+        $N = count($new = explode("\n", str_replace(["\r\n", "\r"], "\n", $new)));
+        $L = count($old = explode("\n", str_replace(["\r\n", "\r"], "\n", $old)));
+
+        for ($n = $l = 0; $n < $N && $l < $L; ) {
+            $sn = current($new);
+            $sl = current($old);
+            if ($sn === $sl) {
+                $V[$n++] = $l++;
+                array_shift($new);
+                array_shift($old);
+            } else {
+                $fn = array_keys($old, $sn);
+                $fl = array_keys($new, $sl);
+                if (!$fn && !$fl) {
+                    $V[$n++] = '*';
+                    $l++;
+                    array_shift($new);
+                    array_shift($old); # optimize?
+                } elseif (!$fn) {
+                    $V[$n++] = '?';
+                    array_shift($new);
+                } elseif (!$fl) {
+                    $l++;
+                    array_shift($old);
+                } else { # cross
+                    $tn = current($fn);
+                    $tl = current($fl);
+                    for ($in = 1; isset($new[$in]) && isset($old[$tn + $in]) && $new[$in] === $old[$tn + $in]; $in++);
+                    for ($il = 1; isset($old[$il]) && isset($new[$tl + $il]) && $old[$il] === $new[$tl + $il]; $il++);
+                    if ($in / $tn < $il / $tl) {
+                        $V[$n++] = '?';
+                        array_shift($new);
+                    } else {
+                        $l++;
+                        array_shift($old);
+                    }
+                }
+            }
+        }
+        if ($mode)
+            return $V;
+
+        for ($n = $l = 0, $rN = '', $c = count($V); $n < $N || $l < $L; ) {
+            if ($n >= $N) {
+                $rN .= '.';
+                $l++;
+            } elseif ($l >= $L) {
+                $rN .= '+';
+                $n++;
+            } elseif ($n >= $c || $V[$n] === '*') {
+                $rN .= '*';
+                $n++;
+                $l++;
+            } elseif ($V[$n] === $l) {
+                $rN .= '=';
+                $n++;
+                $l++;
+            } elseif ($V[$n] !== '?') do {
+                    $rN .= '.';
+                } while ($V[$n] > ++$l);
+            else {
+                $cp = false;
+                for ($p = 1; $n + $p < $c; $p++)
+                    if (is_int($V[$n + $p])) {
+                        $cp = true;
+                        break;
+                    }
+                if ($cp) {
+                    $q = $V[$n + $p] - $l;
+                    while ($q && $p) {
+                        $rN .= "*";
+                        $n++;
+                        $l++;
+                        $q--;
+                        $p--;
+                    }
+                    while ($p--) {
+                        $rN .= "+";
+                        $n++;
+                    }
+                    while ($q--) {
+                        $rN .= ".";
+                        $l++;
+                    }
+                } else do {
+                    $rN .= '*';
+                    $n++;
+                    $l++;
+                } while ($n < $N && $l < $L);
+            }
+        }
+        return $rN;
+    }
+
     static function var($in) {
         return Plan::var($in);
     }
@@ -185,12 +302,43 @@ class Display
         return self::php($php, $bc);
     }
 
+    static function highlight(&$val, $key, $x) {
+        $c = self::$bg[$x->diff[$key] ?? '='];
+        $x->lnum .= str_pad(1 + $key, 3, 0, STR_PAD_LEFT) . "\n";
+        $val = $c ? tag($val, 'class="code" style="background:' . $c . '"') : "$val\n";
+    }
+
+    static function _php($code, $diff = '', $no_lines = false) {
+        self::$bg ?? self::scheme('w_base');
+        ini_set('highlight.default', self::$color['d']); // #00b
+        ini_set('highlight.comment', self::$color['c']); // #ff8000
+        ini_set('highlight.html', self::$color['m']);    // #000
+        ini_set('highlight.keyword', self::$color['g']); // #070
+        ini_set('highlight.string', self::$color['r']);  // #d00
+        $code = str_replace(["\r", "\n", '<code>','</code>'], '', highlight_string($code, true));
+        $x = (object)[
+            'lnum' => '',
+            'diff' => $diff,
+        ];
+        $style = 'style="margin:0; color:' . ($hc = ini_get('highlight.html')) . '; background:' . self::$bg[0] . '"';
+        $code = substr($code, 22 + strlen($hc), -7);
+        $code = str_replace('<br /></span>', '</span><br />', $code);
+        $ary = explode('<br />', $code);
+        array_walk($ary, 'Display::highlight', $x);
+        if ($no_lines)
+            return pre(implode('', $ary), $style);
+        $table = self::lay_l . $x->lnum . self::lay_m . pre(implode('', $ary), $style) . self::lay_r;
+        return sprintf('<div class="php">%s</div>', str_replace('%', '&#37;', $table));
+    }
+
     static function php($str, $bc = '', $no_lines = false) {
+        #ini_set('highlight.default', self::$color['d']); // #00b
+        #ini_set('highlight.comment', self::$color['c']); // #ff8000
+        #ini_set('highlight.html', self::$color['m']);    // #000
+        #ini_set('highlight.keyword', self::$color['b']); // #070
+        #ini_set('highlight.string', self::$color['r']);  // #d00
         static $d;
-        self::set();
-        null !== $d or $d = new self;
-        if ($str === -1)
-            return '';
+        $d ?? ($d = new self);
         $d->cut = [-9, -9];
         if (is_array($bc)) {
             $bc[2] or $d->cut = [$bc[0] - 8, $bc[0] + 8];
@@ -215,10 +363,11 @@ class Display
     private function add_line_no(&$val, $key, $len) {
         $val = strtr($val, ['=TOP-TITLE=' => '&#61;TOP-TITLE&#61;']);
         $colors = ['' => '', '=' => '', '*' => 'ffd', '+' => 'dfd', '-' => 'fdd', '.' => 'eee'];
+        $colors = ['' => '', '=' => '', '*' => '551', '+' => '151', '-' => '511', '.' => '555'];
         $pad = $c = '';
         if (!$key) for(; $len > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++) {
             $this->lnum .= "<br>";
-            $pad .= '<div class="code" style="background:#eee">&nbsp;</div>';
+            $pad .= '<div class="code" style="background:#' . $colors['.'] . '">&nbsp;</div>';
         }
         if ($len > $key + $this->disp)
             $c = $colors[$this->back[$key + $this->disp]];
@@ -235,9 +384,9 @@ class Display
         $val = $pad . ($c ? '<div class="code" style="background:'."#$c\">$val</div>" : "$val\n");
         for (; $len > $key + $this->disp && $this->back[$key + $this->disp] == '.'; $this->disp++) { # = - + * .
             $this->lnum .= "<br>";
-            $val .= '<div class="code" style="background:#eee">&nbsp;</div>';
+            $val .= '<div class="code" style="background:#' . $colors['.'] . '">&nbsp;</div>';
         }
-        $ok or $val='';
+        $ok or $val = '';
     }
 
     static function log($html) { # 2do
