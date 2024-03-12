@@ -86,7 +86,7 @@ class dev_c extends Controller
 
     function j_file() {
         SKY::$debug = 0;
-        [$file, $line] = explode('^', $_POST['name']);
+        [$file, $line] = explode('^', $_POST['name']) + [1 => 0];
         $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
         echo Display::php($txt, [$line, 'true' == $_POST['c'], true]);
     }

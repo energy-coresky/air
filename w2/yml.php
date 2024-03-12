@@ -537,6 +537,8 @@ class YML
                 return fn($v, $x) => $x . $v;
             case 'right':
                 return fn($v, $x) => $v . $x;
+            case 'keys':
+                return fn($v, $x) => $x ? array_combine(array_keys($v), array_keys($v)) : array_keys($v);
             case 'path':
                 return function& ($v, $path, &$a = null, $_ = 0, $unset = false) {
                     '' === $v ? ($p =& $this->array) : ($p =& $v);
