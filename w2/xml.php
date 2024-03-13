@@ -2,26 +2,35 @@
 
 class XML
 {
-    const version = 0.1;
+    const version = 0.333;
 
     static $void;
+    static $spec = [
+        '#text' => '%s',
+        '#comment' => '<!--%s-->',
+        '#data' => '<![CDATA[%s]]>',
+        '#php' => '<?php%s?>',
+    ];
 
     public $array;
     public $tail;
 
-    private $at;
     private $pad = '  ';
     private $_p;
 
+    static function text($in) {
+        $xml = new XML($name, false);
+        return $xml->array;
+    }
+
     static function file($name) {
         $xml = new XML(file_get_contents($name), $name);
-var_export($xml->array);
-        //echo $xml->dump($xml->array);
+//var_export($xml->array);
+        echo $xml->dump($xml->array);
     }
 
     function __construct(string $in, $fn) {
         self::$void = yml('+ @inc(html_void)');
-        $this->at = [$fn, 1];
         $this->array = [];
         $this->_p = [&$this->array];
         $in = unl($in);
@@ -42,7 +51,7 @@ var_export($xml->array);
             $t = $in[$j];
             if ($el->find) {
                 $sx = strpos($in, $el->find, $j);
-                $t = substr($in, $j, $sx - $j);
+                $t = !$sx ? substr($in, $j) : substr($in, $j, $sx - $j);
             } elseif (in_array($t, [' ', "\t", "\n"])) {
                 $t = substr($in, $j, strspn($in, "\t \n", $j));
                 if ($el->ss)
@@ -89,7 +98,7 @@ var_export($xml->array);
     private function parse(&$in) {
         $ends = [
             '-->' => '#comment',
-            ']]>' => '#cdata',
+            ']]>' => '#data',
             '?>' => '#php',
         ];
         $tag = [$str = '', [], []]; # tag, value, attr
@@ -150,31 +159,39 @@ var_export($xml->array);
         $push();
     }
 
-    private function dump($ary) {
-        $tpl = [
-            '#text' => '%s',
-            '#comment' => '<!--%s-->',
-            '#cdata' => '<![CDATA[%s]]>',
-            '#php' => '<?php%s?>',
-        ];
-        $out = '';
-        foreach ($ary as $one) {
+    function walk($in, $fn) {
+        foreach ($in as $one) {
             $node = key($one);
             $data = pos($one);
             if ('#' == $node[0]) {
-                $out .= sprintf($tpl[$node], $data);
-                continue;
-            }
-            $out .= "<$node";
-            foreach (($one[0] ?? []) as $k => $v)
-                $out .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-            $out .= '>';
-            if (is_array($data)) {
-                $out .= $this->dump($data) . "</$node>";
-            } elseif (0 !== $data) { # not void
-                $out .= $data . "</$node>";
+                if ($fn($node, $data))
+                    return true;
+            } else {
+                if ($fn($one[0] ?? [], $node))
+                    return true;
+                if (0 !== $data) { # NOT void element
+                    if (is_array($data) ? $this->walk($data, $fn) : $fn('#text', $data))
+                        return true;
+                    $fn('/', $node);
+                }
             }
         }
+    }
+
+    function dump($in) {
+        $out = '';
+        $this->walk($in, function ($n, $m) use (&$out) {
+            if (is_array($n)) {
+                $out .= "<$m";
+                foreach ($n as $k => $v)
+                    $out .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+                $out .= '>';
+            } elseif ('/' == $n) { # close tag
+                $out .= "</$m>";
+            } else { // '#' === $n[0]
+                $out .= sprintf(self::$spec[$n], $m);
+            }
+        });
         return $out;
     }
 
@@ -193,8 +210,8 @@ var_export($xml->array);
                     $out .= trim($data);
                     continue 2;
                 case '#comment':
-                case '#cdata':
-                    $out .= '#cdata' == $node ? "<![CDATA[$data]]>\n" : "<!--$data-->\n";
+                case '#data':
+                    $out .= '#data' == $node ? "<![CDATA[$data]]>\n" : "<!--$data-->\n";
                     continue 2;
                     $out .= "<span style=\"color:#885\"><!-- $data --></span>\n";
                     continue 2;
