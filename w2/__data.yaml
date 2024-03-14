@@ -35,12 +35,20 @@ coresky:   https://coresky.net/api
 color: # r g z y m j in sky.css
 #.schemes
   w_base: {r:#f77, g:#00e, d:#000, c:#2b3, m:#93c, j:#c41} # c-comment d-default
-  w_php:  {r:#d00, g:#070, d:#00b, c:#ff8000, m:#000, j:#c41} # native php highlight_string(..) function colors
+  v_php:  {r:#d00, g:#070, d:#00b, c:#ff8000, m:#000, j:#c41} # native php highlight_string(..) function colors
   b_far:  {r:#ff5, g:#fff, d:#7ee, c:#68a, m:#888, j:#c41}
+  x_far:  {r:#ff5, g:#fff, d:#7ee, c:#68a, m:#888, j:#c41}
 #.schemes
 background: @bang(= )
-  w: 0= -=#fdd +=#dfd *=#ffd .=#eee
+  w: 0=#eee -=#fdd +=#dfd *=#ffd .=#eee
+  v: 0=#fff -=#fdd +=#dfd *=#ffd .=#eee
   b: 0=#000 -=#511 +=#151 *=#551 .=#555
+  x: 0=#115 -=#511 +=#151 *=#551 .=#555
+pairs:
+  w_base: x_far
+  v_php:  w_base
+  b_far:  x_far
+  x_far:  b_far
 #.php
 
 #.html_void
@@ -142,7 +150,7 @@ manual: [PHP manual language, select, @inc(.phpman)]
 se:   [Search engine tpl, '', size="50"]
 nopopup: [No dev-tools on soft 404, chk]
 crash_to: ['Crash-redirect timeout, sec', number, '', 8]
-php_hl: [PHP hightlight scheme, select, @keys(!) @path() @inc(.schemes)]
+php_hl: [HTML/PHP hightlight scheme, select, @keys(!) @path() @inc(.schemes)]
 - @php Form::X([], '<hr>')
 - ['Check static files for changes (file or path to *.js & *.css files), example: `m`', li]
 static: ['', '', size="50"]

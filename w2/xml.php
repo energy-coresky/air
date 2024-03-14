@@ -4,6 +4,8 @@ class XML
 {
     const version = 0.333;
 
+    public $array;
+
     static $void;
     static $spec = [
         '#text' => '%s',
@@ -12,25 +14,23 @@ class XML
         '#php' => '<?php%s?>',
     ];
 
-    public $array;
-    public $tail;
-
-    private $pad = '  ';
+    private $pad;
     private $_p;
 
     static function text($in) {
-        $xml = new XML($name, false);
+        $xml = new XML($in);
         return $xml->array;
     }
 
     static function file($name) {
-        $xml = new XML(file_get_contents($name), $name);
-//var_export($xml->array);
-        echo $xml->dump($xml->array);
+        $xml = new XML(file_get_contents($name));
+var_export($xml->array);
+        //echo $xml->dump($xml->array);
     }
 
-    function __construct(string $in, $fn) {
+    function __construct(string $in, $pad = '  ') {
         self::$void = yml('+ @inc(html_void)');
+        $this->pad = $pad;
         $this->array = [];
         $this->_p = [&$this->array];
         $in = unl($in);
@@ -159,28 +159,28 @@ class XML
         $push();
     }
 
-    function walk($in, $fn) {
+    function walk($in, $fn, $pad = '') {
         foreach ($in as $one) {
             $node = key($one);
             $data = pos($one);
             if ('#' == $node[0]) {
-                if ($fn($node, $data))
+                if ($fn($node, $data, $pad))
                     return true;
             } else {
-                if ($fn($one[0] ?? [], $node))
+                if ($fn($one[0] ?? [], $node, $pad))
                     return true;
                 if (0 !== $data) { # NOT void element
-                    if (is_array($data) ? $this->walk($data, $fn) : $fn('#text', $data))
+                    if (is_array($data) ? $this->walk($data, $fn, $pad . $this->pad) : $fn('#text', $data, $pad))
                         return true;
-                    $fn('/', $node);
+                    $fn('/', $node, $pad);
                 }
             }
         }
     }
 
-    function dump($in) {
+    function dump($in, $beauty = false) {
         $out = '';
-        $this->walk($in, function ($n, $m) use (&$out) {
+        $this->walk($in, function ($n, $m, $pad) use (&$out) {
             if (is_array($n)) {
                 $out .= "<$m";
                 foreach ($n as $k => $v)
