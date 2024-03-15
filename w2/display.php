@@ -35,7 +35,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
             'w' => '#fff', # white
         ];
         $_val = $pal->background[$pair[0]];
-        $_val['='] = $_val[0] ?: '#fff';
+        $_val['='] = $pal->background[$name[0]][0] ?: '#fff';
         $_key = array_map(fn($k) => "_$k", array_keys($_val));
         self::$bg = ['=' => false] + $pal->background[$name[0]] + array_combine($_key, $_val);
     }
@@ -276,19 +276,122 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return $code($text, "```(jet|php|html|bash|yaml|)(.*?)```");
     }
 
-    static function php_method($fn, $method) {
-        $php = unl($fn);
-        $bc = '';
-        if (preg_match("/^(.*?)function $method\([^\)]*\)\s*({.*)$/s", $php, $m)) {
-            $n0 = substr_count($m[1], "\n");
-            $br = Rare::bracket($m[2], '{');
-            $sz = substr_count($br, "\n");
-            $bc = str_repeat('=', $n0) . str_repeat('*', 1 + $sz);
+    static function highlight_html($code, $u_ = '') { # r g d c m j - gray
+        $xml = new XML($code);
+        $out = '';
+        foreach ($xml->tokens() as $t => $el) {
+            if ($el->end) { # from <!-- or <![CDATA[
+                $out .= self::span($u_ . 'c', $t);
+                $el->find = $el->end;
+            } elseif ($end) {
+                $out .= self::span($u_ . 'c', $t . ($el->sx ? $end : ''));
+                $el->j = $el->sx ? 3 : 0; # chars move
+            } elseif ('close' == $el->mode) { # sample: </tag>
+                $out .= '&lt;' . self::span($u_ . 'r', substr($t, 1, -1)) . '&gt;';
+            } elseif ('open' == $el->mode) { # sample: <tag
+                $out .= '&lt;' . self::span($u_ . 'r', $tag = substr($t, 1));
+                $el->mode = 'attr';
+                continue;
+            } elseif ($el->space || 'attr' != $el->mode) { # text
+                $out .= html($t);
+            } elseif ('>' == $t) {
+                $out .= '&gt;';
+                if (in_array($tag, ['script', 'style']))
+                    $el->find = "</$tag>";
+            } else { # attr continue
+               $out .= html($t);
+                continue;
+            }
+            $end = $el->end;
+            $el->mode = 'txt';
         }
-        return self::php($php, $bc);
+        return $out;
     }
 
     static function php($code, $option = '', $no_lines = false) {
+        $x = self::xdata($option);
+        $x->a = [];
+        if ($tag = false === $option)
+            $code = "<?php $code";
+        $out = $u = $ct = '';
+        foreach (token_get_all($code) as $i => $t) {
+            if ($tag && !$i)
+                continue;
+            $sx = 0;
+            if (is_array($t)) switch ($t[0]) { # r g d c m j - gray
+                case T_WHITESPACE: $out .= $t[1]; break;
+                case T_CLOSE_TAG:
+                    $out .= self::span('r', '?>');
+                    $ct = substr($t[1], 2);
+                    break;
+                case T_OPEN_TAG:
+                case T_OPEN_TAG_WITH_ECHO: $p1 = strlen($out);
+                case T_ENCAPSED_AND_WHITESPACE:
+                case T_CONSTANT_ENCAPSED_STRING: $out .= self::span('r', $t[1]); break;
+                case T_COMMENT:
+                case T_DOC_COMMENT: $out .= self::span('c', $t[1]); break;
+                case T_VARIABLE: $out .= self::span('d', $t[1]); break;
+                case T_STRING: $out .= self::span('j', $t[1]); break;
+                case T_INLINE_HTML:
+                    $sx = count($x->a);
+                    $out = substr($out, 0, $p1) .
+                        tag(substr($out, $p1), 'style="background:' . self::$bg[0] . '"', 'span');
+                    $out .= $ct . self::highlight_html($t[1], $u = '_');
+                    break;
+                default: $out .= self::span('g', $t[1]); break;
+            } elseif ('"' == $t) {
+                $out .= self::span('r', '"');
+            } else {
+                $out .= html($t);
+            }
+            if (false !== strpos($out, "\n")) {
+                $p1 = 0;
+                if ($sx)
+                    $x->_ = str_pad($x->_, $sx, '1');
+                $ary = explode("\n", $out);
+                $out = array_pop($ary);
+                array_splice($x->a, $sz = count($x->a), 0, $ary);
+                if ($sx)
+                    $x->_ = str_pad($x->_, $sz + count($ary), '0');
+                if (-9 != $x->cut[1] && $sz + count($ary) > $x->cut[1])
+                    break; # snippet mode, lines collected
+            }
+        }
+        if (-9 == $x->cut[1])
+            $x->a[] = '&nbsp;';//$out;
+  if ($u)
+      $x->_ = str_pad($x->_, count($x->a), '1');
+        
+        $x->len = strlen($x->diff = str_pad($x->diff, strlen($x->_), '='));
+        array_walk($x->a, 'Display::highlight_line', $x);
+        $style = 'style="margin:0; color:' . self::$clr[$u . 'm'] . '; background-color:' . self::$bg[$u . '0'] . '"';
+        if ($no_lines)
+            return pre(implode('', $x->a), $style);
+        $table = self::lay_l . $x->lnum . self::lay_m . pre(implode('', $x->a), $style) . self::lay_r;
+        return '<div class="php">' . $table . '</div>';
+    }
+
+    static function invert($y, $ary) {
+        array_walk($ary, function (&$val, $key, $y) {
+            $emt = '?&gt;</span>' != substr($val, -12);
+            if (!$key) {
+                !$emt or $emt = '' === $y->s;
+                $y->_ = str_pad($y->_, count($y->a), '0');
+            }
+            #$val = $y->prev . $val;
+            #if ($y->prev = preg_match("/(<[^\/][^>]+>)([^>]*)$/", $val, $m) ? $m[1] : '')
+            #    $val .= '</span>';
+            if ($emt) {
+                $y->_ .= '1';
+            } else {
+                $val = tag($val, 'style="background:' . self::$bg['_='] . '"', 'span');
+            }
+        }, $y);
+        $y->diff = str_pad($y->diff, strlen($y->_), '=');
+        return implode("\n", $ary);
+    }
+
+    static function _php($code, $option = '', $no_lines = false) {
         if (!$u_ = $option instanceof stdClass ? '_' : '')
             $x = self::xdata($option);
         ini_set('highlight.string', self::$clr[$u_ . 'r']);
@@ -307,7 +410,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         if (-9 != $x->cut[1])
             array_splice($ary, $x->cut[1]);
         $x->len = strlen($x->diff);
-        array_walk($ary, 'Display::highlight', $x);
+        array_walk($ary, 'Display::highlight_line', $x);
         $style = 'style="margin:0; color:' . self::$clr['m'] . '; background-color:' . self::$bg[0] . '"';
         if ($no_lines)
             return pre(implode('', $ary), $style);
@@ -315,24 +418,16 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return '<div class="php">' . $table . '</div>';
     }
 
-    static function invert($y, $ary) {
-        array_walk($ary, function (&$val, $key, $y) {
-            $emt = '?&gt;</span>' != substr($val, -12);
-            if (!$key) {
-                !$emt or $emt = '' === $y->s;
-                $y->_ = str_pad($y->_, count($y->a), '0');
-            }
-            $val = $y->prev . $val;
-            if ($y->prev = preg_match("/(<[^\/][^>]+>)([^>]*)$/", $val, $m) ? $m[1] : '')
-                $val .= '</span>';
-            if ($emt) {
-                $y->_ .= '1';
-            } else {
-                $val = tag($val, 'style="background:' . self::$bg['_='] . '"', 'span');
-            }
-        }, $y);
-        $y->diff = str_pad($y->diff, strlen($y->_), '=');
-        return implode("\n", $ary);
+    static function php_method($fn, $method) {
+        $php = unl($fn);
+        $bc = '';
+        if (preg_match("/^(.*?)function $method\([^\)]*\)\s*({.*)$/s", $php, $m)) {
+            $n0 = substr_count($m[1], "\n");
+            $br = Rare::bracket($m[2], '{');
+            $sz = substr_count($br, "\n");
+            $bc = str_repeat('=', $n0) . str_repeat('*', 1 + $sz);
+        }
+        return self::php($php, $bc);
     }
 
     static function xdata($in) {
@@ -352,7 +447,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         ];
     }
 
-    static function highlight(&$val, $key, $x) {
+    static function highlight_line(&$val, $key, $x) {
         if (-9 != $x->cut[0] && $key < $x->cut[0])
             return $val = '';
         $pad = $c = '';
@@ -365,11 +460,9 @@ class Display # php jet yaml html bash || php_method md || var diff log
             $inner = $x->_[$key] ?? false;
             $c = self::$bg[$inner ? "_$chr" : $chr]; # = - + * .
         }
-
-        $val = $x->prev . $val;
-        if ($x->prev = preg_match("/(<[^\/][^>]+>)([^>]*)$/", $val, $m) ? $m[1] : '')
-            $val .= '</span>';
-            
+#        $val = $x->prev . $val;
+#        if ($x->prev = preg_match("/(<[^\/][^>]+>)([^>]*)$/", $val, $m) ? $m[1] : '')
+#            $val .= '</span>';
         $x->lnum .= str_pad(++$key, 3, 0, STR_PAD_LEFT) . "<br>";
         $val = $c ? $pad . '<div class="code" style="background:' . "$c\">$val</div>" : "$pad$val\n";
         for (; $x->len > $key + $x->disp && $x->diff[$key + $x->disp] == '.'; $x->disp++) {
@@ -378,59 +471,16 @@ class Display # php jet yaml html bash || php_method md || var diff log
         }
     }
 
-    static function highlight_html($n, $m, $y) {
-        if (is_array($n)) { # tag params
-            $s = '&lt;' . self::span('r', substr($y->code, 1 + $y->i, $len = strlen($m)));
-            $y->i += 1 + $len;
-            foreach ($n as $k => $v) {
-                $s .= substr($y->code, $y->i, $len = strspn($y->code, "\t \n", $y->i)); # spaces
-                $y->i += $len;
-                $s .= html(substr($y->code, $y->i, $len = strlen($k))); # key
-                $y->i += $len;
-                if (0 === $v) # key is void
-                    continue;
-                $s .= substr($y->code, $y->i, $len = strspn($y->code, "\t \n", $y->i)) . '='; # spaces and =
-                $y->i += 1 + $len;
-                $s .= substr($y->code, $y->i, $len = strspn($y->code, "\t \n", $y->i)); # spaces
-                $y->i += $len;
-                $len = in_array($y->code[$y->i], ["'", '"']) ? 2 : 0;
-                $s .= html(substr($y->code, $y->i, $len += strlen($v))); # value
-                $y->i += $len;
-         //$s .= ' ' . html(0 === $v ? $k : "$k=\"$v\"");
-                $s .= substr($y->code, $y->i, $len = strspn($y->code, "\t \n", $y->i)); # spaces
-                $y->i += $len;
-            }
-            $y->i++;
-            return $s . '&gt;';
-        } elseif ('/' == $n) {
-            $s = substr($y->code, $y->i, $len = strlen("</$m>")); # close tag
-            if ($close = "</$m>" == strtolower($s))
-                $y->i += $len;
-            return $close ? '&lt;' . self::span('r', substr($s, 1, -1)) . '&gt;' : '';
-        } elseif ('#php' == $n) {
-            /* return self::php("<?php$m?>", $y);*/
-            $s = '<?php' == substr($y->code, $y->i, 5) ? '<?php' : '<?';
-            $y->i += strlen($s .= $m);
-            if ($close = '?>' == substr($y->code, $y->i, 2))
-                $y->i += 2;
-            return self::php($s . ($close ? '?>' : ''), $y);
-        } else { // #text or #data or #comment
-            $y->i += strlen($str = sprintf(XML::$spec[$n], $m));
-            return '#text' == $n ? html($str) : self::span('c', $str);
-        }
-    }
-
     static function html($code, $option = '', $no_lines = false) {
-        if ('<?' == substr($code, 0, 2) && !strpos($code, '?>'))
-            return self::php($code, $option, $no_lines);
         $y = self::xdata($option);
         $y->s = '';
         $y->a = [];
         $y->i = 0;
-        $xml = new XML($code = unl($code));
-        $y->code =& $code;
+        $xml = new XML($code);
+        $xml->parse();
+        $y->in =& $xml->in;
         $cut = $xml->walk($xml->array, function ($n, $m) use ($y) {
-            $y->s .= self::highlight_html($n, $m, $y);
+            $y->s .= self::__highlight_html($n, $m, $y);
             if (false !== strpos($y->s, "\n")) {
                 $ary = explode("\n", $y->s);
                 $y->s = array_pop($ary);
@@ -442,7 +492,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         if (true !== $cut)
             $y->a[] = $y->s;
         $y->len = strlen($y->diff);
-        array_walk($y->a, 'Display::highlight', $y);
+        array_walk($y->a, 'Display::highlight_line', $y);
         $style = 'style="margin:0; color:' . self::$clr['m'] . '; background-color:' . self::$bg[0] . '"';
         if ($no_lines)
             return pre(implode('', $y->a), $style);

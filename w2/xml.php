@@ -5,13 +5,13 @@ class XML
     const version = 0.333;
 
     public $array;
+    public $in;
 
     static $void;
     static $spec = [
         '#text' => '%s',
         '#comment' => '<!--%s-->',
         '#data' => '<![CDATA[%s]]>',
-        '#php' => '<?php%s?>',
     ];
 
     private $pad;
@@ -19,11 +19,13 @@ class XML
 
     static function text($in) {
         $xml = new XML($in);
+        $xml->parse();
         return $xml->array;
     }
 
     static function file($name) {
         $xml = new XML(file_get_contents($name));
+        $xml->parse();
 var_export($xml->array);
         //echo $xml->dump($xml->array);
     }
@@ -33,30 +35,34 @@ var_export($xml->array);
         $this->pad = $pad;
         $this->array = [];
         $this->_p = [&$this->array];
-        $in = unl($in);
-        $this->parse($in);
+        $this->in = unl($in);
     }
 
-    private function tokens(&$in) {
+    function tokens($el = false) {
     //$lr = fn($_) => $_ > 0x60 && $_ < 0x7B || $_ > 0x40 && $_ < 0x5B;
-        $el = (object)[
+        $el or $el = (object)[
             'mode' => 'txt',
             'j' => false,
-            'ss' => false,
             'find' => false,
         ];
+        $in =& $this->in;
         for ($j = 0, $len = strlen($in); $j < $len; $j += $sz ?: strlen($t)) {
             $sz = $el->end = false;
             $el->j && ($j += $el->j);
             $t = $in[$j];
             if ($el->find) {
-                $sx = strpos($in, $el->find, $j);
-                $t = !$sx ? substr($in, $j) : substr($in, $j, $sx - $j);
-            } elseif (in_array($t, [' ', "\t", "\n"])) {
-                $t = substr($in, $j, strspn($in, "\t \n", $j));
-                if ($el->ss)
-                    continue; # SkipSpace
+                $el->sx = strpos($in, $el->find, $j);
+                $t = false === $el->sx ? substr($in, $j) : substr($in, $j, $el->sx - $j);
+            } elseif ($el->space = 'attr' == $el->mode && ($sz = strspn($in, "\t \n", $j))) {
+                $t = substr($in, $j, $sz);
             } elseif ('attr' == $el->mode && '>' != $t) {
+                if ('"' == $t || "'" == $t) {
+                    $sx = Rare::str($in, $j, $len);
+                    $t = !$sx ? substr($in, $j) : substr($in, $j, $sx - $j);
+                } elseif ('=' != $t) {
+                    $t = substr($in, $j, strcspn($in, ">\t \n", $j));
+                }
+                /*
                 $el->attr = [substr($in, $j, $sz = strcspn($in, '> =', $j)), 0];
                 $sz += strspn($in, "\t \n", $j + $sz); # skip space
                 if ('=' == $in[$j + $sz]) {
@@ -69,16 +75,13 @@ var_export($xml->array);
                         $el->attr[1] = substr($in, $k, $sx = strcspn($in, ">\t \n", $k));
                     }
                     $sz += $sx;
-                }
+                }*/
             } elseif ('<' == $t) {
                 $el->mode = 'open';
                 if ('<!--' == ($t = substr($in, $j, 4))) { # comment
                     $el->end = '-->';
                 } elseif ('<![CDATA[' == ($t = substr($in, $j, 9))) {
                     $el->end = ']]>';
-                } elseif ('<?' == ($t = substr($in, $j, 2))) {
-                    '<?php' !== substr($in, $j, 5) or $t .= 'php';
-                    $el->end = '?>';
                 } else {
                     if ($close = '/' == $in[$j + 1])
                         $el->mode = 'close';
@@ -90,16 +93,15 @@ var_export($xml->array);
             } elseif ('>' != $t) {
                 $t = substr($in, $j, strcspn($in, '<', $j));
             }
-            $el->ss = $el->find = $el->j = false;
+            $el->find = $el->j = false;
             yield $t => $el;
         }
     }
 
-    private function parse(&$in) {
+    private function parse() {
         $ends = [
             '-->' => '#comment',
             ']]>' => '#data',
-            '?>' => '#php',
         ];
         $tag = [$str = '', [], []]; # tag, value, attr
         $push = function () use (&$str, &$tag) {
@@ -115,8 +117,8 @@ var_export($xml->array);
             $tag = [$str = '', [], []];
         };
         $end = false;
-        foreach ($this->tokens($in) as $t => $el) {
-            if ($el->end) { # from <!-- or <![CDATA[ or <?php
+        foreach ($this->tokens() as $t => $el) {
+            if ($el->end) { # from <!-- or <![CDATA[
                 $push();
                 $el->find = $el->end;
             } elseif ($end) {
@@ -125,7 +127,6 @@ var_export($xml->array);
             } elseif ('open' == $el->mode) { # sample: <tag
                 $push();
                 $tag[0] = rtrim(strtolower(substr($t, 1)), '/');
-                $el->ss = true;
                 $el->mode = 'attr';
                 continue;
             } elseif ('>' == $t && 'attr' == $el->mode) {
@@ -136,9 +137,10 @@ var_export($xml->array);
                     $el->find = "</$tag[0]>";
                 }
             } elseif ('attr' == $el->mode) { # attr continue
-                $tag[2][$el->attr[0]] = $el->attr[1];
-                $el->ss = true;
+                if (!$el->space) {
+                    $tag[2][$el->attr[0]] = $el->attr[1];
               $el->attr = 0;
+                }
                 continue;
             } elseif ('close' == $el->mode) { # sample: </tag>
                 $_tg = strtolower(substr($t, 2, -1));
@@ -261,8 +263,8 @@ var_export($xml->array);
             $p[] =& $p[$kl][array_key_last($p[$kl])][$tag];
     }
 }
-/* <recursiv-ary> :
-[
+/* 
+<recursiv-ary> [
   ['#text' => '.............'
   ],
   ['br' => 0 # void
