@@ -2,7 +2,7 @@
 
 class XML
 {
-    const version = 0.338;
+    const version = 0.339;
 
     public $array;
     public $in;
@@ -38,24 +38,21 @@ var_export($xml->array);
         $this->in = unl($in);
     }
 
-    function tokens($el = false) {
-        $el or $el = (object)[
-            'mode' => 'txt',
-            'find' => false, 'found' => false,
-        ];
+    function tokens($y = false) {
+        $y or $y = (object)['mode' => 'txt', 'find' => false];
         $len = strlen($in =& $this->in);
-        for ($j = 0; $j < $len; $j += $el->sz) {
-            $el->end = false;
-            if ($el->found = $el->find) {
-                if (false === ($sz = strpos($in, $el->find, $j))) {
-                    $t = substr($in, $j); //2do $el->find MUST NOT inside strings or parse JS!
+        for ($j = 0; $j < $len; $j += $y->len) {
+            $y->end = false;
+            if ($y->found = $y->find) {
+                if (false === ($sz = strpos($in, $y->find, $j))) {
+                    $t = substr($in, $j); //2do $y->find MUST NOT inside strings or parse JS!
                 } else {
                     $t = substr($in, $j, $sz - $j);
-                    $el->find = false;
+                    $y->find = false;
                 }
-            } elseif ($el->space = 'attr' == $el->mode && ($sz = strspn($in, "\t \n", $j))) {
+            } elseif ($y->space = 'attr' == $y->mode && ($sz = strspn($in, "\t \n", $j))) {
                 $t = substr($in, $j, $sz);
-            } elseif ('>' != ($t = $in[$j]) && 'attr' == $el->mode) {
+            } elseif ('>' != ($t = $in[$j]) && 'attr' == $y->mode) {
                 if ('"' == $t || "'" == $t) {
                     $sz = Rare::str($in, $j, $len);
                     $t = !$sz ? substr($in, $j) : substr($in, $j, $sz - $j);
@@ -64,19 +61,19 @@ var_export($xml->array);
                 }
             } elseif ('<' == $t && preg_match("@^(<!\-\-|<!\[CDATA\[|</?[a-z\d\-]+)(\s|>)@is", substr($in, $j, 51), $match)) {
                 [$m0, $t] = $match;
-                $el->mode = '/' == $t[1] ? 'close' : 'open';
+                $y->mode = '/' == $t[1] ? 'close' : 'open';
                 if ('<!--' == $t) { # comment
-                    $el->end = '-->';
+                    $y->end = '-->';
                 } elseif ('<![CDATA[' == $t) {
-                    $el->end = ']]>';
+                    $y->end = ']]>';
                 } elseif ('/' == $t[1] && '>' == $m0[-1]) {
                     $t = $m0;
                 }
             } elseif ('>' != $t && '<' != $t) {
                 $t = substr($in, $j, strcspn($in, '<', $j));
             }
-            $el->sz = strlen($t);
-            yield $t => $el;
+            $y->len = strlen($t);
+            yield $t => $y;
         }
     }
 
@@ -98,32 +95,32 @@ var_export($xml->array);
                 $this->push(['#text', $str, false]);
             $tag = [$str = '', [], []];
         };
-        foreach ($this->tokens() as $t => $el) {
-            if ($el->end) { # from <!-- or <![CDATA[
+        foreach ($this->tokens() as $t => $y) {
+            if ($y->end) { # from <!-- or <![CDATA[
                 $push();
-                $el->find = $el->end;
-            } elseif (in_array($el->found, ['-->', ']]>'])) {
-                $this->push([$ends[$el->found], $t, false]);
-                $el->sz += $el->find ? 0 : 3; # chars move
-            } elseif ('open' == $el->mode) { # sample: <tag
+                $y->find = $y->end;
+            } elseif (in_array($y->found, ['-->', ']]>'])) {
+                $this->push([$ends[$y->found], $t, false]);
+                $y->len += $y->find ? 0 : 3; # chars move
+            } elseif ('open' == $y->mode) { # sample: <tag
                 $push();
                 $tag[0] = rtrim(strtolower(substr($t, 1)), '/');
-                $el->mode = 'attr';
+                $y->mode = 'attr';
                 continue;
-            } elseif ('>' == $t && 'attr' == $el->mode) {
+            } elseif ('>' == $t && 'attr' == $y->mode) {
                 if (in_array($tag[0], self::$void)) {
                     $this->push([$tag[0], 0, $tag[2]]);
                     $tag = [$str = '', [], []];
                 } elseif (in_array($tag[0], ['script', 'style'])) {
-                    $el->find = "</$tag[0]>";
+                    $y->find = "</$tag[0]>";
                 }
-            } elseif ('attr' == $el->mode) { # attr continue
-                if (!$el->space) {
-                    $tag[2][$el->attr[0]] = $el->attr[1];
-              $el->attr = 0;
+            } elseif ('attr' == $y->mode) { # attr continue
+                if (!$y->space) {
+                    $tag[2][$y->attr[0]] = $y->attr[1];
+              $y->attr = 0;
                 }
                 continue;
-            } elseif ('close' == $el->mode) { # sample: </tag>
+            } elseif ('close' == $y->mode) { # sample: </tag>
                 $_tg = strtolower(substr($t, 2, -1));
                 if ($_tg == $tag[0]) {
                     $this->push([$_tg, $str, $tag[2]]);
@@ -136,7 +133,7 @@ var_export($xml->array);
                 '' !== $tag[0] or $tag[0] = '#text';
                 $str .= $t;
             }
-            $el->mode = 'txt';
+            $y->mode = 'txt';
         }
         $push();
     }

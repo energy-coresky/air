@@ -283,8 +283,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
 
     static function html($code, $option = '', $no_lines = false) {
         $x = self::xdata($option);
-        $el = false;
-        $ary = explode("\n", self::highlight_html($code, $el));
+        $y = false;
+        $ary = explode("\n", self::highlight_html($code, $y));
         $x->len = strlen($x->diff);
         array_walk($ary, 'Display::highlight_line', $x);
         $style = 'style="margin:0; color:' . self::$clr['m'] . '; background-color:' . self::$bg[0] . '"';
@@ -294,43 +294,43 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return '<div class="php">' . $table . '</div>';
     }
 
-    static function highlight_html($code, &$el, $u = '') { # r g d c m j - gray
+    static function highlight_html($code, &$y, $u = '') { # r g d c m j - gray
         $xml = new XML($code);
         $out = '';
-        foreach ($xml->tokens($el) as $t => $el) {
-            if ($el->end) { # from <!-- or <![CDATA[
+        foreach ($xml->tokens($y) as $t => $y) {
+            if ($y->end) { # from <!-- or <![CDATA[
                 $out .= self::span($u . 'c', $t);
-                $el->find = $el->end;
-            } elseif (in_array($el->found, ['-->', ']]>'])) {
-                $out .= self::span($u . 'c', $t . ($el->find ? '' : $el->found));
-                $el->sz += $el->find ? 0 : 3; # chars move
-            } elseif ('close' == $el->mode) { # sample: </tag>
+                $y->find = $y->end;
+            } elseif (in_array($y->found, ['-->', ']]>'])) {
+                $out .= self::span($u . 'c', $t . ($y->find ? '' : $y->found));
+                $y->len += $y->find ? 0 : 3; # chars move
+            } elseif ('close' == $y->mode) { # sample: </tag>
                 $out .= '&lt;' . self::span($u . 'r', substr($t, 1, -1)) . '&gt;';
-            } elseif ('open' == $el->mode) { # sample: <tag
+            } elseif ('open' == $y->mode) { # sample: <tag
                 $out .= '&lt;' . self::span($u . 'r', $tag = substr($t, 1));
-                $el->mode = 'attr';
+                $y->mode = 'attr';
                 continue;
-            } elseif ($el->space || 'attr' != $el->mode) { # text
+            } elseif ($y->space || 'attr' != $y->mode) { # text
                 $out .= html($t);
             } elseif ('>' == $t) {
                 $out .= '&gt;';
                 if (in_array($tag, ['script', 'style']))
-                    $el->find = "</$tag>";
+                    $y->find = "</$tag>";
             } else { # attr continue
                $out .= html($t);
                 continue;
             }
-            $el->mode = 'txt';
+            $y->mode = 'txt';
         }
         return $out;
     }
 
     static function php($code, $option = '', $no_lines = false) {
         $x = self::xdata($option);
-        $ary = [];
         if ($tag = false === $option)
             $code = "<?php $code";
-        $out = $u = $ct = $el = '';
+        $out = $u = $ct = '';
+        $ary = $y = [];
         foreach (token_get_all($code) as $i => $t) {
             if ($tag && !$i)
                 continue;
@@ -339,7 +339,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 case T_INLINE_HTML:
                     $sx = count($ary);
                     $out = substr($out, 0, $sq) . self::bg(substr($out, $sq), self::$bg[0]);
-                    $out .= $ct . self::highlight_html($t[1], $el, $u = '_');
+                    $out .= $ct . self::highlight_html($t[1], $y, $u = '_');
                     break;
                 case T_CLOSE_TAG:
                     $out .= self::span('r', '?>');

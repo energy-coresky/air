@@ -163,11 +163,11 @@ class YML
         return false;
     }
 
-    private function json(&$m, $el, $t) {
+    private function json(&$m, $y, $t) {
         $list = '[' == $t;
         $open = $list || '{' == $t;
-        $key = function ($list) use ($el) {
-            $el->mode = $list ? "v[" : "k{";
+        $key = function ($list) use ($y) {
+            $y->mode = $list ? "v[" : "k{";
             return $list ? true : null;
         };
         $push = function ($m) {
@@ -178,14 +178,14 @@ class YML
             $this->push($m);
         };
 
-        if ($el->json) { # json continue
+        if ($y->json) { # json continue
             $x = '[' == $m->opt[-1];
             if ($return = strpbrk($t, $x ? '[,]{' : '{,:}[')) {
                 if ('' !== ($m->val = trim($_v = $m->val))) {
                     if (':' == $t) {
                         $m->key = $this->scalar($m->val); # prepare {key: }
                         $m->val = '';
-                        $el->mode = 'v{';
+                        $y->mode = 'v{';
                         return true;
                     }
                     if ($open)
@@ -204,7 +204,7 @@ class YML
                 } elseif ('}' == $t || ']' == $t) { # close
                     $opt = substr($m->opt, 0, -1);
                     if ('.' == $opt) { # json end
-                        $el->mode = 'k';
+                        $y->mode = 'k';
                         $m = $this->obj();
                     } else {
                         $m = $this->obj($key('[' == $opt[-1]), substr($m->pad, 1), $opt);
@@ -236,41 +236,41 @@ class YML
             'k{' => ':}', 'v{' => '[{,}', 'e{' => ',}',
         ];
         $ws = fn($_) => in_array($_, [' ', "\t", "\n"], true);
-        $el = (object)['mode' => $pws = 'k', 'ss' => false];
+        $y = (object)['mode' => $pws = 'k', 'ss' => false];
         $in = $this->tail[0] . ($t = "\n");
-        for ($j = 0, $len = strlen($in); $j < $len; $j += strlen($t), $pws = $el->ws) {
-            $el->nl = "\n" == $t;
-            $wt = $el->code = false;
+        for ($j = 0, $len = strlen($in); $j < $len; $j += strlen($t), $pws = $y->ws) {
+            $y->nl = "\n" == $t;
+            $wt = $y->code = false;
 
-            if ($el->ws = $ws($t = $in[$j])) {
+            if ($y->ws = $ws($t = $in[$j])) {
                 "\n" == $t or $t = substr($in, $j, strspn($in, "\t ", $j));
-                $el->_ws = $t;
-                if ("\n" != $t && $el->ss)
+                $y->_ws = $t;
+                if ("\n" != $t && $y->ss)
                     continue; # SkipSpace
-            } elseif ('rest' == $el->mode || '#' == $t && $pws) { # return rest of line
+            } elseif ('rest' == $y->mode || '#' == $t && $pws) { # return rest of line
                 $t = substr($in, $j, strcspn($in, "\n", $j));
-                if ('rest' !== $el->mode)
+                if ('rest' !== $y->mode)
                     continue; # cut comment
-                $el->mode = 'k';
+                $y->mode = 'k';
             } elseif ('"' == $t || "'" == $t) {
                 $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
                 $t = substr($in, $j, $sz - $j);
-            } elseif (strpbrk($t, "\n" . ($chr = $list[$el->mode]))) {
+            } elseif (strpbrk($t, "\n" . ($chr = $list[$y->mode]))) {
                 if (in_array($t, [':', '-', '+']) && $ws($in[$j + 1])) # next is space
                     $wt = $t;
             } else {
                 $t = substr($in, $j, strcspn($in, "\n'\"\t $chr", $j));
-                if ('@' == $t[0] && 'v' == $el->mode[0])
-                    $el->code = $this->code(substr($in, $j), $t);
+                if ('@' == $t[0] && 'v' == $y->mode[0])
+                    $y->code = $this->code(substr($in, $j), $t);
             }
 
-            $el->json = 2 == strlen($el->mode);
-            if ($el->json && !$el->code && 'v' == $el->mode[0])
-                $el->mode[0] = 'e';
-            $el->k1 = ':' == $wt;
-            $el->k3 = $wt && 'k' == $el->mode ? $wt : false;
-            $el->ss = false;
-            yield $t => $el;
+            $y->json = 2 == strlen($y->mode);
+            if ($y->json && !$y->code && 'v' == $y->mode[0])
+                $y->mode[0] = 'e';
+            $y->k1 = ':' == $wt;
+            $y->k3 = $wt && 'k' == $y->mode ? $wt : false;
+            $y->ss = false;
+            yield $t => $y;
         }
     }
 
@@ -278,15 +278,15 @@ class YML
         $m = $this->obj();
         $p =& $m->val;
         $pad_0 = $reqk = '';
-        foreach ($this->tokens() as $t => $el) {
+        foreach ($this->tokens() as $t => $y) {
             $mult = in_array($m->opt, ['|', '>']);
-            if ($el->nl) {
+            if ($y->nl) {
                 $len = strlen($p);
-                $pad = $el->ws ? $this->halt(false, $t) : '';
+                $pad = $y->ws ? $this->halt(false, $t) : '';
                 $reqk = $lock = $pad <= $pad_0; # require match key
             }
             if ("\n" == $t) {
-                if ('k' == $el->mode) {
+                if ('k' == $y->mode) {
                     if ($reqk && $has_t)
                         $this->halt('Cannot match key');
                 } elseif (!$m->opt && in_array($p = trim($p), ['|', '>'])) {
@@ -294,16 +294,16 @@ class YML
                     $p = '';
                 }
                 $this->at[1]++; # next line
-                $el->json or $el->mode = 'k';
-                '|' != $m->opt or !$el->nl or $p .= "\n";
-            } elseif ($el->code) {
-                $m->code[] = is_array($el->code) ? $el->code : [substr($t, 1), null, $this->at[1]];
-                $el->ss = true;
-            } elseif (1 == strlen($t) && $this->json($m, $el, $t)) {
+                $y->json or $y->mode = 'k';
+                '|' != $m->opt or !$y->nl or $p .= "\n";
+            } elseif ($y->code) {
+                $m->code[] = is_array($y->code) ? $y->code : [substr($t, 1), null, $this->at[1]];
+                $y->ss = true;
+            } elseif (1 == strlen($t) && $this->json($m, $y, $t)) {
                 $p =& $m->val;
-                $el->ss = true;
-            } elseif ($el->k3 && ($reqk || !$m->opt)) { # yaml key
-                $k1 = $el->k1 ? $this->scalar(substr($p, $len)) : '-' == $el->k3;
+                $y->ss = true;
+            } elseif ($y->k3 && ($reqk || !$m->opt)) { # yaml key
+                $k1 = $y->k1 ? $this->scalar(substr($p, $len)) : '-' == $y->k3;
                 if (null !== $m->key) {
                     if ($pad > $m->pad) { # aggregate node
                         $len && $this->halt('Mapping disabled');
@@ -317,21 +317,21 @@ class YML
                 }
                 $m = $this->obj($k1, $pad_0 = $pad);
                 $p =& $m->val;
-                $el->mode = $el->ss = 'v';
+                $y->mode = $y->ss = 'v';
                 $has_t = false;
-            } elseif ($el->k1 && is_bool($m->key) && !$m->opt) { # vocabulary key
+            } elseif ($y->k1 && is_bool($m->key) && !$m->opt) { # vocabulary key
                 if ($m->key) {
                     $this->push($this->obj(true, $m->pad, '', 0));
-                    $pad_0 = $m->pad .= ' ' . $this->halt(false, $el->_ws);
+                    $pad_0 = $m->pad .= ' ' . $this->halt(false, $y->_ws);
                 }
                 $m->key = $this->scalar($p);
                 $p = '';
-                $el->mode = $el->ss = 'v';
-            } elseif ($el->nl) { # new line start
-                if ($has_t = !$el->ws)
+                $y->mode = $y->ss = 'v';
+            } elseif ($y->nl) { # new line start
+                if ($has_t = !$y->ws)
                     $p .= $t;
                 if ($mult && !$reqk) {
-                    $el->mode = 'rest'; # multiline mode
+                    $y->mode = 'rest'; # multiline mode
                     if (!$len) {
                         $pad_1 = strlen($pad);
                     } elseif ('|' == $m->opt) {
@@ -340,8 +340,8 @@ class YML
                 }
             } else {
                 $p .= !$lock && $len && '|' != $m->opt && ($lock = $len++) ? ' ' . $t : $t;
-                'v' != $el->mode or $el->mode = 'e';
-                'k' != $el->mode or $has_t = true;
+                'v' != $y->mode or $y->mode = 'e';
+                'k' != $y->mode or $has_t = true;
             }
         }
         is_null($m->key) or $this->push($m); # the last
