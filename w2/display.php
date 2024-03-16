@@ -276,16 +276,16 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return $code($text, "```(jet|php|html|bash|yaml|)(.*?)```");
     }
 
-    static function highlight_html($code, $u_ = '') { # r g d c m j - gray
+    static function highlight_html($code, &$el, $u_ = '') { # r g d c m j - gray
         $xml = new XML($code);
         $out = '';
-        foreach ($xml->tokens() as $t => $el) {
+        foreach ($xml->tokens($el) as $t => $el) {
             if ($el->end) { # from <!-- or <![CDATA[
                 $out .= self::span($u_ . 'c', $t);
                 $el->find = $el->end;
-            } elseif ($end) {
-                $out .= self::span($u_ . 'c', $t . ($el->sx ? $end : ''));
-                $el->j = $el->sx ? 3 : 0; # chars move
+            } elseif (in_array($el->found, ['-->', ']]>'])) {
+                $out .= self::span($u_ . 'c', $t . ($el->find ? '' : $el->found));
+                $el->sz += $el->find ? 0 : 3; # chars move
             } elseif ('close' == $el->mode) { # sample: </tag>
                 $out .= '&lt;' . self::span($u_ . 'r', substr($t, 1, -1)) . '&gt;';
             } elseif ('open' == $el->mode) { # sample: <tag
@@ -302,7 +302,6 @@ class Display # php jet yaml html bash || php_method md || var diff log
                $out .= html($t);
                 continue;
             }
-            $end = $el->end;
             $el->mode = 'txt';
         }
         return $out;
@@ -313,7 +312,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $x->a = [];
         if ($tag = false === $option)
             $code = "<?php $code";
-        $out = $u = $ct = '';
+        $out = $u = $ct = $el = '';
         foreach (token_get_all($code) as $i => $t) {
             if ($tag && !$i)
                 continue;
@@ -325,7 +324,9 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     $ct = substr($t[1], 2);
                     break;
                 case T_OPEN_TAG:
-                case T_OPEN_TAG_WITH_ECHO: $p1 = strlen($out);
+                case T_OPEN_TAG_WITH_ECHO:
+                    '' === $out or $out = tag($out, 'style="background:' . self::$bg['_0'] . '"', 'span');
+                    $p1 = strlen($out);
                 case T_ENCAPSED_AND_WHITESPACE:
                 case T_CONSTANT_ENCAPSED_STRING: $out .= self::span('r', $t[1]); break;
                 case T_COMMENT:
@@ -336,7 +337,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     $sx = count($x->a);
                     $out = substr($out, 0, $p1) .
                         tag(substr($out, $p1), 'style="background:' . self::$bg[0] . '"', 'span');
-                    $out .= $ct . self::highlight_html($t[1], $u = '_');
+                    $out .= $ct . self::highlight_html($t[1], $el, $u = '_');
                     break;
                 default: $out .= self::span('g', $t[1]); break;
             } elseif ('"' == $t) {
@@ -351,8 +352,10 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 $ary = explode("\n", $out);
                 $out = array_pop($ary);
                 array_splice($x->a, $sz = count($x->a), 0, $ary);
-                if ($sx)
+                if ($sx) {
                     $x->_ = str_pad($x->_, $sz + count($ary), '0');
+                    '' === $out or $out = tag($out, 'style="background:' . self::$bg['_0'] . '"', 'span');
+                }
                 if (-9 != $x->cut[1] && $sz + count($ary) > $x->cut[1])
                     break; # snippet mode, lines collected
             }
@@ -434,7 +437,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         self::$bg ?? self::scheme(SKY::d('php_hl') ?: 'w_php');///////////////////////////////
         $cut = [-9, -9];
         if (is_array($in)) {
-            $in[2] or $cut = [$in[0] - 8, $in[0] + 7];
+            $in[2] or $cut = [$in[0] - 8, $in[0] + 6];
             $in = str_pad('', $in[0] - 1, '=') . ($in[0] ? ($in[1] ? '-' : '+') : '');
         }
         return (object)[

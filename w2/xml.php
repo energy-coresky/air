@@ -39,44 +39,32 @@ var_export($xml->array);
     }
 
     function tokens($el = false) {
-    //$lr = fn($_) => $_ > 0x60 && $_ < 0x7B || $_ > 0x40 && $_ < 0x5B;
         $el or $el = (object)[
             'mode' => 'txt',
             'j' => false,
-            'find' => false,
+            'find' => false, 'found' => false,
         ];
         $in =& $this->in;
-        for ($j = 0, $len = strlen($in); $j < $len; $j += $sz ?: strlen($t)) {
-            $sz = $el->end = false;
-            $el->j && ($j += $el->j);
-            $t = $in[$j];
+        for ($j = 0, $len = strlen($in); $j < $len; $j += $el->sz) {
+            $el->end = $el->found = false;
             if ($el->find) {
-                $el->sx = strpos($in, $el->find, $j);
-                $t = false === $el->sx ? substr($in, $j) : substr($in, $j, $el->sx - $j);
+                $el->found = $el->find;
+                if (false === ($sx = strpos($in, $el->find, $j))) {
+                    $t = substr($in, $j); //2do $el->find MUST NOT inside strings or parse JS!
+                } else {
+                    $t = substr($in, $j, $sx - $j);
+                    $el->find = false;
+                }
             } elseif ($el->space = 'attr' == $el->mode && ($sz = strspn($in, "\t \n", $j))) {
                 $t = substr($in, $j, $sz);
-            } elseif ('attr' == $el->mode && '>' != $t) {
+            } elseif ('>' != ($t = $in[$j]) && 'attr' == $el->mode) {
                 if ('"' == $t || "'" == $t) {
                     $sx = Rare::str($in, $j, $len);
                     $t = !$sx ? substr($in, $j) : substr($in, $j, $sx - $j);
                 } elseif ('=' != $t) {
                     $t = substr($in, $j, strcspn($in, ">\t \n", $j));
                 }
-                /*
-                $el->attr = [substr($in, $j, $sz = strcspn($in, '> =', $j)), 0];
-                $sz += strspn($in, "\t \n", $j + $sz); # skip space
-                if ('=' == $in[$j + $sz]) {
-                    $sz += 1 + strspn($in, "\t \n", 1 + $j + $sz); # skip space
-                    $x = $in[$k = $j + $sz];
-                    if ('"' == $x || "'" == $x) {
-                        $sx = Rare::str($in, $k, $len) or $this->halt('Incorrect string');
-                        $el->attr[1] = substr($in, $k + 1, ($sx -= $k) - 2);
-                    } else {
-                        $el->attr[1] = substr($in, $k, $sx = strcspn($in, ">\t \n", $k));
-                    }
-                    $sz += $sx;
-                }*/
-            } elseif ('<' == $t) {
+            } elseif ('<' == $t) {//$lr = fn($_) => $_ > 0x60 && $_ < 0x7B || $_ > 0x40 && $_ < 0x5B;
                 $el->mode = 'open';
                 if ('<!--' == ($t = substr($in, $j, 4))) { # comment
                     $el->end = '-->';
@@ -93,7 +81,7 @@ var_export($xml->array);
             } elseif ('>' != $t) {
                 $t = substr($in, $j, strcspn($in, '<', $j));
             }
-            $el->find = $el->j = false;
+            $el->sz = strlen($t);
             yield $t => $el;
         }
     }
@@ -123,7 +111,7 @@ var_export($xml->array);
                 $el->find = $el->end;
             } elseif ($end) {
                 $this->push([$ends[$end], $t, false]);
-                $el->j = strlen($end); # chars move
+                $el->sz += strlen($end); # chars move
             } elseif ('open' == $el->mode) { # sample: <tag
                 $push();
                 $tag[0] = rtrim(strtolower(substr($t, 1)), '/');
