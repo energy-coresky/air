@@ -2,7 +2,7 @@
 
 class XML
 {
-    const version = 0.333;
+    const version = 0.338;
 
     public $array;
     public $in;
@@ -41,14 +41,12 @@ var_export($xml->array);
     function tokens($el = false) {
         $el or $el = (object)[
             'mode' => 'txt',
-            'j' => false,
             'find' => false, 'found' => false,
         ];
-        $in =& $this->in;
-        for ($j = 0, $len = strlen($in); $j < $len; $j += $el->sz) {
-            $el->end = $el->found = false;
-            if ($el->find) {
-                $el->found = $el->find;
+        $len = strlen($in =& $this->in);
+        for ($j = 0; $j < $len; $j += $el->sz) {
+            $el->end = false;
+            if ($el->found = $el->find) {
                 if (false === ($sz = strpos($in, $el->find, $j))) {
                     $t = substr($in, $j); //2do $el->find MUST NOT inside strings or parse JS!
                 } else {
@@ -64,21 +62,17 @@ var_export($xml->array);
                 } elseif ('=' != $t) {
                     $t = substr($in, $j, strcspn($in, ">\t \n", $j));
                 }
-            } elseif ('<' == $t) {//$lr = fn($_) => $_ > 0x60 && $_ < 0x7B || $_ > 0x40 && $_ < 0x5B;
-                $el->mode = 'open';
-                if ('<!--' == ($t = substr($in, $j, 4))) { # comment
+            } elseif ('<' == $t && preg_match("@^(<!\-\-|<!\[CDATA\[|</?[a-z\d\-]+)(\s|>)@is", substr($in, $j, 51), $match)) {
+                [$m0, $t] = $match;
+                $el->mode = '/' == $t[1] ? 'close' : 'open';
+                if ('<!--' == $t) { # comment
                     $el->end = '-->';
-                } elseif ('<![CDATA[' == ($t = substr($in, $j, 9))) {
+                } elseif ('<![CDATA[' == $t) {
                     $el->end = ']]>';
-                } else {
-                    if ($close = '/' == $in[$j + 1])
-                        $el->mode = 'close';
-                    $sz = $close ? 2 : 1;
-                    $t = substr($in, $j, $sz += strcspn($in, "\t \n>", $j + $sz));
-                    if ($close && '>' == $in[$j + $sz])
-                        $t .= '>';
+                } elseif ('/' == $t[1] && '>' == $m0[-1]) {
+                    $t = $m0;
                 }
-            } elseif ('>' != $t) {
+            } elseif ('>' != $t && '<' != $t) {
                 $t = substr($in, $j, strcspn($in, '<', $j));
             }
             $el->sz = strlen($t);

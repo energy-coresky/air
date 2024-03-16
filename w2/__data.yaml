@@ -34,7 +34,7 @@ coresky:   https://coresky.net/api
 
 color: # r g z y m j in sky.css
 #.schemes
-  w_base: {r:#f77, g:#00e, d:#000, c:#2b3, m:#93c, j:#c41} # c-comment d-default
+  w_base: {r:#f77, g:#00e, d:#000, c:#2b3, m:#93c, j:#000} # c-comment d-default j:#c41
   v_php:  {r:#d00, g:#070, d:#00b, c:#ff8000, m:#000, j:#c41} # native php highlight_string(..) function colors
   b_far:  {r:#ff5, g:#fff, d:#7ee, c:#68a, m:#888, j:#b84} # #c41
   x_far:  {r:#f77, g:#fff, d:#7ee, c:#68a, m:#888, j:#962}

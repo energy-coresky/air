@@ -46,9 +46,14 @@ class Display # php jet yaml html bash || php_method md || var diff log
     static function js($in) {
     }
 
+    static function bg($str, $bg) {
+        return "<span style=\"background-color:$bg\">$str</span>";
+    }
+
     static function span($c, $str, $style = '') {
         $c = self::$clr[$c] ?? $c;
-        return '<span style="color:' . "$c;$style\">" . html($str) . '</span>';
+        $style = '' === $c ? $style : "color:$c;$style";
+        return "<span style=\"$style\">" . html($str) . '</span>';
     }
 
     static function pp($txt, $marker, &$lnum, $fu = false) {
@@ -331,35 +336,38 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 continue;
             $sx = 0;
             if (is_array($t)) switch ($t[0]) { # r g d c m j - gray
-                case T_WHITESPACE: $out .= $t[1]; break;
+                case T_INLINE_HTML:
+                    $sx = count($ary);
+                    $out = substr($out, 0, $sq) . self::bg(substr($out, $sq), self::$bg[0]);
+                    $out .= $ct . self::highlight_html($t[1], $el, $u = '_');
+                    break;
                 case T_CLOSE_TAG:
                     $out .= self::span('r', '?>');
                     $ct = substr($t[1], 2);
                     break;
-                case T_OPEN_TAG:
-                case T_OPEN_TAG_WITH_ECHO:
-                    '' === $out or $out = tag($out, 'style="background:' . self::$bg['_0'] . '"', 'span');
-                    $p1 = strlen($out);
-                case T_ENCAPSED_AND_WHITESPACE:
-                case T_CONSTANT_ENCAPSED_STRING: $out .= self::span('r', $t[1]); break;
-                case T_COMMENT:
-                case T_DOC_COMMENT: $out .= self::span('c', $t[1]); break;
-                case T_VARIABLE: $out .= self::span('d', $t[1]); break;
-                case T_STRING: $out .= self::span('j', $t[1]); break;
-                case T_INLINE_HTML:
-                    $sx = count($ary);
-                    $out = substr($out, 0, $p1) .
-                        tag(substr($out, $p1), 'style="background:' . self::$bg[0] . '"', 'span');
-                    $out .= $ct . self::highlight_html($t[1], $el, $u = '_');
+                case T_OPEN_TAG: case T_OPEN_TAG_WITH_ECHO:
+                    '' === $out or $out = self::bg($out, self::$bg['_0']);
+                    $sq = strlen($out);
+                case T_ENCAPSED_AND_WHITESPACE: case T_CONSTANT_ENCAPSED_STRING:
+                    $out .= self::span('r', $t[1]);
                     break;
-                default: $out .= self::span('g', $t[1]); break;
-            } elseif ('"' == $t) {
-                $out .= self::span('r', '"');
+                case T_COMMENT: case T_DOC_COMMENT:
+                    $out .= self::span('c', $t[1]);
+                    break;
+                case T_VARIABLE:
+                    $out .= self::span('d', $t[1]);
+                    break;
+                case T_STRING:
+                    $out .= self::span('j', $t[1]);
+                    break;
+                default:
+                    $out .= $t[0] == T_WHITESPACE ? $t[1] : self::span('g', $t[1]);
+                    break;
             } else {
-                $out .= html($t);
+                $out .= '"' == $t ? self::span('r', '"') : html($t);
             }
             if (false !== strpos($out, "\n")) {
-                $p1 = 0;
+                $sq = 0;
                 if ($sx)
                     $x->_ = str_pad($x->_, $sx, '1');
                 $a = explode("\n", $out);
@@ -367,7 +375,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 array_splice($ary, $sz = count($ary), 0, $a);
                 if ($sx) {
                     $x->_ = str_pad($x->_, $sz + count($a), '0');
-                    '' === $out or $out = tag($out, 'style="background:' . self::$bg['_0'] . '"', 'span');
+                    '' === $out or $out = self::bg($out, self::$bg['_0']);
                 }
                 if (-9 != $x->cut[1] && $sz + count($a) > $x->cut[1])
                     break; # snippet mode, lines collected
@@ -375,11 +383,11 @@ class Display # php jet yaml html bash || php_method md || var diff log
         }
         if (-9 == $x->cut[1])
             $ary[] = '&nbsp;';//$out;
-  if ($u)
-      $x->_ = str_pad($x->_, count($ary), '1');
-        
+        if ($u)
+            $x->_ = str_pad($x->_, count($ary), '1');
         $x->len = strlen($x->diff = str_pad($x->diff, strlen($x->_), '='));
         array_walk($ary, 'Display::highlight_line', $x);
+
         $style = 'style="margin:0; color:' . self::$clr[$u . 'm'] . '; background-color:' . self::$bg[$u . '0'] . '"';
         if ($no_lines)
             return pre(implode('', $ary), $style);
