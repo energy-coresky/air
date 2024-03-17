@@ -297,6 +297,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
     static function highlight_html($code, &$y, $u = '') { # r g d c m j - gray
         $xml = new XML($code);
         $out = '';
+        $attr = [];
         foreach ($xml->tokens($y) as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
                 $out .= self::span($u . 'c', $t);
@@ -307,17 +308,22 @@ class Display # php jet yaml html bash || php_method md || var diff log
             } elseif ('close' == $y->mode) { # sample: </tag>
                 $out .= '&lt;' . self::span($u . 'r', substr($t, 1, -1)) . '&gt;';
             } elseif ('open' == $y->mode) { # sample: <tag
-                $out .= '&lt;' . self::span($u . 'r', $tag = substr($t, 1));
+                $out .= '&lt;' . self::span($u . 'r', $y->tag = substr($t, 1));
                 $y->mode = 'attr';
                 continue;
-            } elseif ($y->space || 'attr' != $y->mode) { # text
+            } elseif ($u && $y->space || 'attr' != $y->mode) { # text
                 $out .= html($t);
             } elseif ('>' == $t) {
                 $out .= '&gt;';
-                if (in_array($tag, ['script', 'style']))
-                    $y->find = "</$tag>";
+                if (in_array($y->tag, ['script', 'style']))
+                    $y->find = "</$y->tag>";
             } else { # attr continue
-               $out .= html($t);
+                if ($y->space) {
+                    $out .= $t;
+                } else {
+                    $v = $xml->attr($attr, $t);
+                    $out .= $v ? html($t) : self::span($u . 'j', $t);
+                }
                 continue;
             }
             $y->mode = 'txt';
@@ -382,7 +388,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
             }
         }
         if (-9 == $x->cut[1])
-            $ary[] = '&nbsp;';//$out;
+            $ary[] = '' === $out ? '&nbsp;' : $out;
         if ($u)
             $x->_ = str_pad($x->_, count($ary), '1');
         $x->len = strlen($x->diff = str_pad($x->diff, strlen($x->_), '='));

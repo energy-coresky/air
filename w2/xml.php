@@ -26,8 +26,8 @@ class XML
     static function file($name) {
         $xml = new XML(file_get_contents($name));
         $xml->parse();
-var_export($xml->array);
-        //echo $xml->dump($xml->array);
+//var_export($xml->array);
+        echo $xml->dump($xml->array);
     }
 
     function __construct(string $in, $pad = '  ') {
@@ -57,7 +57,7 @@ var_export($xml->array);
                     $sz = Rare::str($in, $j, $len);
                     $t = !$sz ? substr($in, $j) : substr($in, $j, $sz - $j);
                 } elseif ('=' != $t) {
-                    $t = substr($in, $j, strcspn($in, ">\t \n", $j));
+                    $t = substr($in, $j, strcspn($in, "=>\t \n", $j));
                 }
             } elseif ('<' == $t && preg_match("@^(<!\-\-|<!\[CDATA\[|</?[a-z\d\-]+)(\s|>)@is", substr($in, $j, 51), $match)) {
                 [$m0, $t] = $match;
@@ -77,11 +77,23 @@ var_export($xml->array);
         }
     }
 
+    function attr(&$attr, $t) {
+        static $key = '', $val = false;
+        if (in_array($t[0], ["'", '"']))
+            $t = substr($t, 1, -1);
+        if ('=' == $t) {
+            $_ = $val = true;
+            $attr[$key] = '';
+        } elseif ($_ = $val) {
+            $val = false;
+            $attr[$key] = $t;
+        } else {
+            $attr[$key = $t] = 0;
+        }
+        return $_;
+    }
+
     private function parse() {
-        $ends = [
-            '-->' => '#comment',
-            ']]>' => '#data',
-        ];
         $tag = [$str = '', [], []]; # tag, value, attr
         $push = function () use (&$str, &$tag) {
             if ('' === $tag[0])
@@ -100,34 +112,31 @@ var_export($xml->array);
                 $push();
                 $y->find = $y->end;
             } elseif (in_array($y->found, ['-->', ']]>'])) {
-                $this->push([$ends[$y->found], $t, false]);
+                $this->push(['-->' == $y->found ? '#comment' : '#data', $t, false]);
                 $y->len += $y->find ? 0 : 3; # chars move
             } elseif ('open' == $y->mode) { # sample: <tag
                 $push();
                 $tag[0] = rtrim(strtolower(substr($t, 1)), '/');
                 $y->mode = 'attr';
+                $attr =& $tag[2];
                 continue;
-            } elseif ('>' == $t && 'attr' == $y->mode) {
+            } elseif ('attr' == $y->mode) {
+                if ($y->space)
+                    continue;
+                if ('>' != $t) {
+                    $this->attr($attr, $t);
+                    continue;
+                }
                 if (in_array($tag[0], self::$void)) {
                     $this->push([$tag[0], 0, $tag[2]]);
                     $tag = [$str = '', [], []];
                 } elseif (in_array($tag[0], ['script', 'style'])) {
                     $y->find = "</$tag[0]>";
                 }
-            } elseif ('attr' == $y->mode) { # attr continue
-                if (!$y->space) {
-                    $tag[2][$y->attr[0]] = $y->attr[1];
-              $y->attr = 0;
-                }
-                continue;
             } elseif ('close' == $y->mode) { # sample: </tag>
-                $_tg = strtolower(substr($t, 2, -1));
-                if ($_tg == $tag[0]) {
-                    $this->push([$_tg, $str, $tag[2]]);
-                } else {
-                    '' === $tag[0] or $this->push([$tag[0], $str, $tag[2]]);
-                    $this->push([$_tg, 1, 1]);
-                }
+                $new = strtolower(substr($t, 2, -1));
+                '' === $tag[0] or $this->push([$tag[0], $str, $tag[2]]);
+                $new == $tag[0] or $this->push([$new, 1, 1]);
                 $tag = [$str = '', [], []];
             } else { # text
                 '' !== $tag[0] or $tag[0] = '#text';
