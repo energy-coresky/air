@@ -17,25 +17,126 @@ class XML
     private $pad;
     private $_p;
 
-    static function text($in) {
-        $xml = new XML($in);
-        $xml->parse();
-        return $xml->array;
-    }
-
     static function file($name) {
         $xml = new XML(file_get_contents($name));
-        $xml->parse();
-//var_export($xml->array);
-        echo $xml->dump($xml->array);
+        //$xml->parse(); var_export($xml->array);
+        echo $xml;
     }
 
-    function __construct(string $in, $pad = '  ') {
-        self::$void = yml('+ @inc(html_void)');
+    function __construct(string $in = '', $pad = '') {
+        self::$void or self::$void = yml('+ @inc(html_void)');
         $this->pad = $pad;
         $this->array = [];
         $this->_p = [&$this->array];
         $this->in = unl($in);
+    }
+
+    function __get($name) {
+    }
+
+    function __set($name, $value) {
+    }
+
+    function __call($name, $args) {
+    }
+
+    function __toString() {
+        $str = '';
+        $beauty = '' !== $this->pad;
+        $this->array or $this->parse();
+        $this->walk($this->array, function ($node, &$m, $pad) use (&$str) {
+            if (is_array($m)) {
+                $str .= "<$node";
+                foreach ($m as $k => $v)
+                    $str .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+                $str .= '>';
+            } elseif ('/' == $node) { # close tag
+                $str .= "</$m>";
+            } else { // '#' === $node[0]
+                $str .= sprintf(self::$spec[$node], $m);
+            }
+        });
+        return $str;
+    }
+
+    function attr($name, $val = null) {
+    }
+
+    function remove() {
+        foreach ($this->array as &$one)
+            $one = false;
+    }
+
+    function outer($xml) {
+        if (!$xml instanceof XML)
+            ($xml = new XML($xml))->parse();
+        foreach ($this->array as &$one)
+            $one = $xml->array;
+    }
+
+    function inner($xml) {
+        if (!$xml instanceof XML)
+            ($xml = new XML($xml))->parse();
+        foreach ($this->array as &$one) {
+            $key = key($one);
+            $one[$key] = $xml->array;
+        }
+    }
+
+    function query($q, $is_all = false) {
+    }
+
+    function byTag(string $name) {
+        $this->array or $this->parse();
+        $new = new XML;
+        $new->array = $this->walk($this->array, function ($node, &$m, $pad) use ($name) {
+            if (is_array($m) && $name == $node)
+                return true;
+        });
+        return $new;
+    }
+
+    function byClass(string $class) {
+    }
+
+    function byId(string $id) {
+        $this->array or $this->parse();
+        $new = new XML;
+        $new->array = $this->walk($this->array, function ($node, &$m, $pad) use ($id) {
+            if (is_array($m)) {
+                foreach ($m as $k => $v) {
+                    if ('id' == $k && $id == $v)
+                        return true;
+                }
+            }
+        });
+        return $new;
+    }
+
+    function walk(&$in, $fn, $pad = '') {
+        $list = $empty = [];
+        foreach ($in as &$one) {
+            if (!$one)
+                continue;
+            $node = key($one);
+            $data =& $one[$node];
+            if ('#' == $node[0]) {
+                $fn($node, $data, $pad);
+            } else {
+                isset($one[0]) ? ($m =& $one[0]) : ($m =& $empty);
+                if ($fn($node, $m, $pad))
+                    $list[] =& $one;
+                if (0 !== $data) { # NOT void element
+                    if (is_array($data)) {
+                        $list = array_merge($list, $this->walk($data, $fn, $pad . $this->pad));
+                    } else {
+                        $fn('#text', $data, $pad);
+                    }
+                    $fn('/', $node, $pad);
+                }
+            }
+        }
+        return $list;
     }
 
     function tokens($y = false) {
@@ -77,7 +178,7 @@ class XML
         }
     }
 
-    function attr(&$attr, $t) {
+    function _attr(&$attr, $t) {
         static $key = '', $val = false;
         if (in_array($t[0], ["'", '"']))
             $t = substr($t, 1, -1);
@@ -124,7 +225,7 @@ class XML
                 if ($y->space)
                     continue;
                 if ('>' != $t) {
-                    $this->attr($attr, $t);
+                    $this->_attr($attr, $t);
                     continue;
                 }
                 if (in_array($tag[0], self::$void)) {
@@ -145,42 +246,6 @@ class XML
             $y->mode = 'txt';
         }
         $push();
-    }
-
-    function walk($in, $fn, $pad = '') {
-        foreach ($in as $one) {
-            $node = key($one);
-            $data = pos($one);
-            if ('#' == $node[0]) {
-                if ($fn($node, $data, $pad))
-                    return true;
-            } else {
-                if ($fn($one[0] ?? [], $node, $pad))
-                    return true;
-                if (0 !== $data) { # NOT void element
-                    if (is_array($data) ? $this->walk($data, $fn, $pad . $this->pad) : $fn('#text', $data, $pad))
-                        return true;
-                    $fn('/', $node, $pad);
-                }
-            }
-        }
-    }
-
-    function dump($in, $beauty = false) {
-        $out = '';
-        $this->walk($in, function ($n, $m, $pad) use (&$out) {
-            if (is_array($n)) {
-                $out .= "<$m";
-                foreach ($n as $k => $v)
-                    $out .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-                $out .= '>';
-            } elseif ('/' == $n) { # close tag
-                $out .= "</$m>";
-            } else { // '#' === $n[0]
-                $out .= sprintf(self::$spec[$n], $m);
-            }
-        });
-        return $out;
     }
 
     private function __dump($ary, $indent = '') {
