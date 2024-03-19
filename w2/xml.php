@@ -2,10 +2,11 @@
 
 class XML
 {
-    const version = 0.339;
+    const version = 0.533;
 
 //    public $array;
-    public $in;
+    public $pad = '';
+    public $selected = [];
 
     static $void;
     static $spec = [
@@ -14,22 +15,63 @@ class XML
         '#data' => '<![CDATA[%s]]>',
     ];
 
-    private $pad;
+    private $in;
     private $ptr;
     private $root;
-    private $selected = [];
 
     static function file($name) {
-        $xml = new XML(file_get_contents($name));
-        echo $xml;
+        return new XML(file_get_contents($name));
     }
 
-    function __construct(string $in = '', $pad = '') {
+    function dump($root = false) {
+        $root or $root = $this->root->val;
+        $this->walk($root, fn($tag, $walk) => $tag->nn = $walk->nn);
+        $this->walk($root, function ($tag, $walk) {
+            echo str_pad('', 2 * $walk->depth, ' ') . "$walk->depth.$walk->n.$walk->nn [";
+            echo (isset($tag->left) ? ($tag->left->nn ?? 'X') : '?') . ' ';
+            echo (isset($tag->up) ? ($tag->up->nn ?? 'X') : '?') . ' ';
+            echo isset($tag->right) ? ($tag->right->nn ?? 'X') . "] $tag->name " : "?] $tag->name ";
+            if (is_string($tag->val)) {
+                echo strlen($tag->val) . var_export(preg_replace("/\n/s", ' ', substr($tag->val, 0, 33)), true) . "\n";
+            } elseif (0 === $tag->val) {
+                echo ".........VOID\n";
+            } else {
+                $type = gettype($tag->val);
+                echo 'object' != $type ? "$type\n" : '[' . ($tag->val->nn ?? 'X') . "]\n";
+            }
+        });
+    }
+
+    function __construct(string $in = '') {
         self::$void or self::$void = yml('+ @inc(html_void)');
-        $this->pad = $pad;
         $this->root = $this->node('#root');
-        $this->ptr = [null, &$this->root->val, $this->root]; # &prev, &place, &parent
         $this->in = unl($in);
+    }
+
+    function __toString() {
+        $beauty = '' !== $this->pad;
+        $this->root->val or $this->parse();
+        $this->in = '';
+        $this->walk($this->root->val, function ($tag, $_, $x) {
+            if (!$x) {
+                $this->in .= "<$tag->name";
+                if ($tag->attr)
+                    foreach ($tag->attr as $k => $v)
+                        $this->in .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+                $this->in .= '>';
+            } elseif ('/' == $x) { # close tag
+                $this->in .= "</$tag->name>";
+            } else { // '#' === $x[0]
+                $this->in .= sprintf(self::$spec[$x], $tag->val);
+            }
+        }, true);
+        return $this->in;
+    }
+
+    function childs($query) {
+    }
+
+    function parents($query) {
     }
 
     function attr($name, $val = null) {
@@ -79,10 +121,7 @@ class XML
     function byTag(string $name) {
         $this->root->val or $this->parse();
         $new = new XML;
-        $new->selected = $this->walk($this->root->val, function ($opt, &$m, $pad) use ($name) {
-            if (!$opt && $name == $m->name)
-                return true;
-        });
+        $this->walk(fn($tag, $_, $x) => $x or $name != $tag->name or $new->selected[] = $tag);
         return $new;
     }
 
@@ -93,74 +132,66 @@ class XML
     function byAttr(string $val, $attr = 'id', $single = false) {
         $this->root->val or $this->parse();
         $new = new XML;
-        $new->selected = $this->walk($this->root->val, function ($opt, &$m) use ($val, $attr, $single) {
-            if (!$opt && $m->attr) {
-                foreach ($m->attr as $k => $v) {
-                    if ($attr == $k && ($single ? in_array($val, preg_split("/\s+/s", $v)) : $val == $v))
-                        return true;
-                }
+        $this->walk(function ($tag, $_, $x) use ($new, $val, $attr, $single) {
+            if ($x || !$tag->attr)
+                return;
+            foreach ($tag->attr as $k => $v) {
+                if ($attr == $k && ($single ? in_array($val, preg_split("/\s+/s", $v)) : $val == $v))
+                    $new->selected[] = $tag;
             }
         });
         return $new;
     }
 
-    function __toString() {
-        $this->in = '';
-        $beauty = '' !== $this->pad;
-        if ($this->selected) {
-            $prev = null;
-            foreach ($this->selected as $i => $tag) {
-                $tag->up = $this->root;
-                $i or $this->root->val = $tag;
-                $tag->left = $prev;
-                if ($prev)
-                    $prev->right = $tag;
-                $prev = $tag;
+    function each($fn) {
+        foreach ($this->selected as $n => $one)
+            $fn($one, $n);
+    }
+
+    function clone(?array $ary = null) : XML {
+        $ary or $ary = $this->selected;
+        $prev = false;
+        foreach ($ary as $tag) $this->walk($tag, function ($tag, $walk) use (&$prev) {
+            if ($walk->depth) {
+                $this->relations(clone $tag, is_object($tag->val));
+                return null !== $tag->right or $this->relations(false);
             }
-        } else {
-            $this->root->val or $this->parse();
-        }
-        $this->walk($this->root->val, function ($opt, $m, $pad) {
-            if (!$opt) {
-                $this->in .= "<$m->name";
-                if ($m->attr)
-                    foreach ($m->attr as $k => $v)
-                        $this->in .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-                $this->in .= '>';
-            } elseif ('/' == $opt) { # close tag
-                $this->in .= "</$m>";
-            } else { // '#' === $opt[0]
-                $this->in .= sprintf(self::$spec[$opt], $m);
-            }
+            if ($walk->n)
+                return;
+            $this->ptr = $prev
+                ? [$prev, &$prev->right, $this->root]
+                : [null, &$this->root->val, $this->root];
+            $this->relations($prev = clone $tag, true);
+            $this->ptr = [$prev->right = null, &$prev->val, $prev];
         });
-        return $this->in;
+        return $this;
     }
 
-    function go($tag, $to = 'right') { # right(next) left(prev) up(parent)
+    function walk($tag, $fn = false, $draw = false, $depth = 0, $walk = false) {
+        $fn or ($fn = $tag) && ($tag = $this->root->val);
+        $walk or $walk = (object)['nn' => 0]; // , 'dir' => 'right'
+        $walk->n = 0;
         do {
-            yield $tag;
-        } while (null !== ($tag = $tag->$to));
-    }
-
-    function walk($first_child, $fn, $pad = '') {
-        $selected = [];
-        foreach ($this->go($first_child) as $tag) {
+            $walk->depth = $depth;
+            $walk->main = true;
+            $walk->nn++;
             if ('#' == $tag->name[0]) {
-                $fn($tag->name, $tag->val, $pad);
+                $fn($tag, $walk, $tag->name);
+                ++$walk->n;
             } else {
-                if ($fn(false, $tag, $pad))
-                    $selected[] = $tag;
+                $fn($tag, $walk, false);
+                $n = ++$walk->n;
                 if (0 === $tag->val) # void element
                     continue;
-                if (is_object($tag->val)) {
-                    $selected = array_merge($selected, $this->walk($tag->val, $fn, $pad . $this->pad));
-                } else {
-                    $fn('#text', $tag->val, $pad);
-                }
-                $fn('/', $tag->name, $pad);
+                $walk->main = false;
+                is_object($tag->val)
+                    ? $this->walk($tag->val, $fn, $draw, 1 + $depth, $walk)
+                    : $draw && $fn($tag, $walk, '#text');
+                $walk->n = $n;
+                $draw && $fn($tag, $walk, '/');
             }
-        }
-        return $selected;
+        } while ($tag = $tag->right);
+        return $walk;
     }
 
     function tokens($y = false) {
@@ -218,7 +249,7 @@ class XML
         return $_;
     }
 
-    private function parse() {
+    function parse() {
         $tag = $this->node($str = '');
         $push = function () use (&$str, &$tag) {
             if ('' === $tag->name)
@@ -230,6 +261,7 @@ class XML
             $tag = $this->push($tag);
             '' === $str or $tag = $this->push($tag, $str);
         };
+        $this->ptr = [null, &$this->root->val, $this->root]; # &prev, &place, &parent
         $this->selected = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
@@ -268,6 +300,7 @@ class XML
             $y->mode = 'txt';
         }
         $push();
+        return $this->root->val;
     }
 
     private function __dump($ary, $indent = '') {
@@ -317,8 +350,20 @@ class XML
         return $out;
     }
 
-    # $val: 0-void, 1=</close-tag> [..]array OR "if string -immeditly close"
-    #
+    private function relations($tag, $is_parent = false) {
+        if ($tag) {
+            $tag->left = $this->ptr[0];
+            $tag->up = $this->ptr[2];
+            $this->ptr[1] = $tag; # add node
+            $this->ptr = $is_parent
+                ? [null, &$tag->val, $tag] # childs: &prev, &place, &parent
+                : [$tag, &$tag->right, $tag->up];
+            return;
+        }
+        $parent = $this->ptr[2];
+        $this->ptr = [$parent, &$parent->right, $parent->up];
+    }
+
     private function push($tag, &$str = null) {
         if (is_array($tag))
             $tag = $this->node($tag[0], $tag[1], $tag[2] ?? null);
@@ -327,17 +372,8 @@ class XML
             $tag->val = $str;
             $str = '';
         }
-        if (1 === $tag->val) { # close-tag 2do: chk consistency
-            $parent = $this->ptr[2];
-            $this->ptr = [$parent, &$parent->right, $parent->up];
-            return $this->node();
-        }
-        $tag->left = $this->ptr[0];
-        $tag->up = $this->ptr[2];
-        $this->ptr[1] = $tag; # add node
-        $this->ptr = null === $tag->val # is parent node?
-            ? [null, &$tag->val, $tag] # can has childs: &prev, &place, &parent
-            : [$tag, &$tag->right, $tag->up];
+        # close-tag 2do: chk consistency
+        $this->relations(1 === $tag->val ? false : $tag, null === $tag->val);
         return $this->node();
     }
 
