@@ -2,7 +2,7 @@
 
 class XML
 {
-    const version = 0.533;
+    const version = 0.555;
 
 //    public $array;
     public $pad = '';
@@ -18,6 +18,12 @@ class XML
     private $in;
     private $ptr;
     private $root;
+
+    function __construct(string $in = '') {
+        self::$void or self::$void = yml('+ @inc(html_void)');
+        $this->root = $this->node('#root');
+        $this->in = unl($in);
+    }
 
     static function file($name) {
         return new XML(file_get_contents($name));
@@ -36,16 +42,9 @@ class XML
             } elseif (0 === $tag->val) {
                 echo ".........VOID\n";
             } else {
-                $type = gettype($tag->val);
-                echo 'object' != $type ? "$type\n" : '[' . ($tag->val->nn ?? 'X') . "]\n";
+                echo 'object' == ($type = gettype($tag->val)) ? '[' . ($tag->val->nn ?? 'X') . "]\n" : "$type\n";
             }
         });
-    }
-
-    function __construct(string $in = '') {
-        self::$void or self::$void = yml('+ @inc(html_void)');
-        $this->root = $this->node('#root');
-        $this->in = unl($in);
     }
 
     function __toString() {
@@ -68,54 +67,23 @@ class XML
         return $this->in;
     }
 
-    function childs($query) {
-    }
-
-    function parents($query) {
-    }
-
-    function attr($name, $val = null) {
-    }
-
-    function remove() {
-        foreach ($this->selected as &$tag) {
-            $tag;
-        }
-    }
-
-    function prev($text = false) {
-        foreach ($this->selected as &$tag) {
-            do {
-                $tag = $tag->left;
-            } while ($tag && '#' == $tag->name[0]);
-        }
+    function clone(?array $ary = null) : XML {
+        $ary or $ary = $this->selected;
+        $prev = false;
+        foreach ($ary as $tag) $this->walk($tag, function ($tag, $walk) use (&$prev) {
+            if ($walk->depth) {
+                $this->relations(clone $tag, is_object($tag->val));
+                return null !== $tag->right or $this->relations(false);
+            }
+            if ($walk->n)
+                return;
+            $this->ptr = $prev
+                ? [$prev, &$prev->right, $this->root]
+                : [null, &$this->root->val, $this->root];
+            $this->relations($prev = clone $tag, true);
+            $prev->right = null;
+        });
         return $this;
-    }
-
-    function next($text = false) {
-        foreach ($this->selected as &$tag) {
-            do {
-                $tag = $tag->right;
-            } while ($tag && '#' == $tag->name[0]);
-        }
-        return $this;
-    }
-
-    function outer($xml) {
-        if (!$xml instanceof XML)
-            ($xml = new XML($xml))->parse();
-        foreach ($this->selected as $one)
-            ;
-    }
-
-    function inner($xml) {
-        if (!$xml instanceof XML)
-            ($xml = new XML($xml))->parse();
-        foreach ($this->selected as $one)
-            $one->val = $xml->root->val;
-    }
-
-    function query($q, $is_all = false) {
     }
 
     function byTag(string $name) {
@@ -143,28 +111,81 @@ class XML
         return $new;
     }
 
+    function remove() {
+        foreach ($this->selected as $tag) {
+            $tag->right and $tag->right->left = $tag->left;
+            $tag->left ? ($tag->left->right = $tag->right) : ($tag->up->val = $tag->right ?? '');
+        }
+    }
+
+    private function left_up_right($tag, $left, $up, $right = null) {
+        $tag->left = $left;
+        do {
+            $tag->up = $up;
+            $last = $tag;
+        } while ($tag = $tag->right);
+        $last->right = $right;
+    }
+
+    function inner($xml) {
+        if (!$xml instanceof XML)
+            ($xml = new XML($xml))->parse();
+        $xml->selected or $xml->selected = [$xml->root->val];
+        foreach ($this->selected as $one) {
+            $xml->clone();
+            $one->val = $xml->root->val;
+            $this->left_up_right($xml->root->val, null, $one->val);
+        }
+    }
+
+    function outer($xml) {
+        if (!$xml instanceof XML)
+            ($xml = new XML($xml))->parse();
+        $xml->selected or $xml->selected = [$xml->root->val];
+        foreach ($this->selected as $one) {
+            $xml->clone();
+            $one->left ? ($one->left->right = $xml->root->val) : ($one->up->val = $xml->root->val);
+            $this->left_up_right($xml->root->val, $one->left, $one->up, $one->right);
+        }
+    }
+
+    function prev($text = false) {
+        foreach ($this->selected as $n => &$tag) {
+            do {
+                $tag = $tag->left;
+            } while ($tag && !$text && '#' == $tag->name[0]);
+            if (!$tag)
+                unset($this->selected[$n]);
+        }
+        return $this;
+    }
+
+    function next($text = false) {
+        foreach ($this->selected as $n => &$tag) {
+            do {
+                $tag = $tag->right;
+            } while ($tag && !$text && '#' == $tag->name[0]);
+            if (!$tag)
+                unset($this->selected[$n]);
+        }
+        return $this;
+    }
+
+    function childs($query) {
+    }
+
+    function parents($query) {
+    }
+
+    function attr($name, $val = null) {
+    }
+
+    function query($q, $is_all = false) {
+    }
+
     function each($fn) {
         foreach ($this->selected as $n => $one)
             $fn($one, $n);
-    }
-
-    function clone(?array $ary = null) : XML {
-        $ary or $ary = $this->selected;
-        $prev = false;
-        foreach ($ary as $tag) $this->walk($tag, function ($tag, $walk) use (&$prev) {
-            if ($walk->depth) {
-                $this->relations(clone $tag, is_object($tag->val));
-                return null !== $tag->right or $this->relations(false);
-            }
-            if ($walk->n)
-                return;
-            $this->ptr = $prev
-                ? [$prev, &$prev->right, $this->root]
-                : [null, &$this->root->val, $this->root];
-            $this->relations($prev = clone $tag, true);
-            $this->ptr = [$prev->right = null, &$prev->val, $prev];
-        });
-        return $this;
     }
 
     function walk($tag, $fn = false, $draw = false, $depth = 0, $walk = false) {
@@ -173,7 +194,6 @@ class XML
         $walk->n = 0;
         do {
             $walk->depth = $depth;
-            $walk->main = true;
             $walk->nn++;
             if ('#' == $tag->name[0]) {
                 $fn($tag, $walk, $tag->name);
@@ -183,7 +203,6 @@ class XML
                 $n = ++$walk->n;
                 if (0 === $tag->val) # void element
                     continue;
-                $walk->main = false;
                 is_object($tag->val)
                     ? $this->walk($tag->val, $fn, $draw, 1 + $depth, $walk)
                     : $draw && $fn($tag, $walk, '#text');
