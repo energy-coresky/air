@@ -55,20 +55,26 @@ class Console
             return new $class('a_' . array_shift($args), $args);
         }
 
-        $ary = [
+        $cls = explode('\\', strtolower(get_class($this)))[0];
+        $ext = 'console' == $cls ? '' : "$cls ";
+        $ary = $ext ? [] : [
             's' => 'Run PHP web-server',
             'd' => 'List dirs (from current dir)',
             'v' => 'Show Coresky version',
             'php' => 'Lint PHP files (from current dir)',
         ];
         $ware = self::$d[1] ? basename(self::$d[1]) : false;
-        if (self::$d[3] || is_dir(DIR_S . '/.git')) {
+        if (!$ext && (self::$d[3] || is_dir(DIR_S . '/.git'))) {
             $repo = 'new CORESKY version';
             if (self::$d[3])
                 $repo = $ware ? "ware `$ware`" : 'repository';
             $ary += ['master' => "Push $repo to remote origin master"];
         }
         foreach ($src ?? [] as $w => $rfn) {
+            if ($ext && $cls != $w || !$ext && $w) {
+                $ext or $ary += [$w => "\033[93mList `$w` commands\033[0m"];
+                continue;
+            }
             $list = $rfn->getMethods(ReflectionMethod::IS_PUBLIC);
             foreach ($list as $v) {
                 $pfx = substr($v->name, 0, 2);
@@ -76,20 +82,16 @@ class Console
                     $ary[($w ? "$w " : '') . substr($v->name, 2)] = trim($v->getDocComment(), "*/ \n\r");
             }
         }
-
-        $cls = strtolower(get_class($this));
-        $pfx = 'console' == $cls ? '' : "$cls ";
-        if (isset($ary[$pfx . $com])) {
+        if (isset($ary[$ext . $com])) {
             return call_user_func_array([$this, $name], $args);
-        } elseif ($pfx || $com) {
-            echo "\nCommand `" . trim($pfx . $com) . "` not found\n\n";
+        } elseif ($com) {
+            echo "\nCommand `" . trim($ext . $com) . "` not found\n\n";
         }
         $ary = array_filter($ary);
         ksort($ary);
-        echo "Usage: sky command [param ...]\nCommands are:\n  ";
-        echo implode("\n  ", array_map(function($k, $v) {
-            return str_pad($k, 15, ' ') . $v;
-        }, array_keys($ary), $ary));
+        echo "Usage: sky command [param ...]\n";
+        echo $ext ? ucfirst($cls) . " commands are:\n  " : "Commands are:\n  ";
+        echo implode("\n  ", array_map(fn($k, $v) => str_pad($k, 15, ' ') . $v, array_keys($ary), $ary));
         if (self::$d[0])
             echo "\nCoresky app: " . SKY::version()['app'][3] . ' (' . _PUBLIC . ')';
         if ($ware)
@@ -339,6 +341,11 @@ class Console
             echo "File `$fn`, ware=$ware is: ";
             Plan::set($ware, fn() => $out(YML::file($fn), $func));
         }
+    }
+
+    /** Parse CSS file */
+    function c_css($fn, $ware = 'main') {
+        echo CSS::file(Plan::_t([$ware, $fn]));
     }
 
     /** Parse XML file */

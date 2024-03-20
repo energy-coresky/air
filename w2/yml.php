@@ -280,12 +280,13 @@ class YML
         $pad_0 = $reqk = '';
         foreach ($this->tokens() as $t => $y) {
             $mult = in_array($m->opt, ['|', '>']);
-            if ($y->nl) {
+            if ($y->nl) { # new line start
                 $len = strlen($p);
+            $has_t=false;
                 $pad = $y->ws ? $this->halt(false, $t) : '';
                 $reqk = $lock = $pad <= $pad_0; # require match key
             }
-            if ("\n" == $t) {
+            if ("\n" == $t) { # line end
                 if ('k' == $y->mode) {
                     if ($reqk && $has_t)
                         $this->halt('Cannot match key');

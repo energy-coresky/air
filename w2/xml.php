@@ -171,16 +171,16 @@ class XML
         return $this;
     }
 
-    function childs($query) {
-    }
-
-    function parents($query) {
-    }
-
     function attr($name, $val = null) {
     }
 
     function query($q, $is_all = false) {
+    }
+
+    function childs($query) {
+    }
+
+    function parents($query) {
     }
 
     function each($fn) {
