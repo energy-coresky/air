@@ -55,8 +55,8 @@ class Console
             return new $class('a_' . array_shift($args), $args);
         }
 
-        $cls = explode('\\', strtolower(get_class($this)))[0];
-        $ext = 'console' == $cls ? '' : "$cls ";
+        $cls = explode('\\', strtolower($_cls = get_class($this)))[0];
+        $ext = 'Console' == $_cls ? '' : "$cls ";
         $ary = $ext ? [] : [
             's' => 'Run PHP web-server',
             'd' => 'List dirs (from current dir)',

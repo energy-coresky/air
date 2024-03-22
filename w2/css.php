@@ -13,94 +13,105 @@ class CSS
     }
 
     static function file($name) {
-        return new CSS(file_get_contents($name));
+        $css = new CSS(file_get_contents($name));
+        return var_export($css->parse());
+    }
+
+    function mode(&$in, $k, $len, &$mode, $chr, &$z = null) {
+        for ($cm = false; true;) {
+            $k += strcspn($in, "\\/$chr", $k);
+            if ($k >= $len)
+                return $cm ?: $k;
+            switch ($in[$k]) {
+                case '\\': # escape char
+                    $k += 2;
+                    break;
+                case '/':
+                    if ('*' != $in[$k += 1])
+                        break;
+                    false !== $cm or $cm = $k - 1; # comment
+                    $pos = strpos($in, '*/', $k + 1);
+                    $k = false === $pos ? $len : 2 + $pos;
+                    break;
+                case ':': # key-like
+                    $_cm = false;
+                    $pos = $this->mode($in, $k, $len, $mode, ',{', $_cm);
+                    if ($is_key = $this->mode($in, $k, $len, $mode, ';}', $_cm) < $pos)
+                        $mode = 'k';
+                    return $cm ?: ($is_key ? $k : ($_cm ?: $pos));
+                case ',': case '{':
+                    $x = 't';
+                case ';': case '}':
+                    $mode = $x ?? 'v';
+                    if (null === $z)
+                        return $cm ?: $k;
+                    $z = $cm;
+                    return $k;
+            }
+        };
     }
 
     function tokens($y = false) {
-        $y or $y = (object)['mode' => 'txt', 'depth' => 0];
+        $list = ['t' => "{,;", 'k' => ":}", 'v' => ';}'];
+        $y or $y = (object)['mode' => 't', 'depth' => 0, 'find' => false];
         $len = strlen($in =& $this->in);
         for ($j = 0; $j < $len; $j += strlen($t)) {
-            if ($y->space = strspn($in, "\t \n", $j)) {
+            if ($y->found = $y->find) {
+                if (false === ($sz = strpos($in, $y->find, $j))) {
+                    $t = substr($in, $j); # /* </style> */ is NOT comment inside <style>!
+                } else {
+                    $t = substr($in, $j, $sz - $j) . $y->find;
+                    $y->find = false;
+                }
+            } elseif ('/' == $in[$j] && '*' == $in[$j + 1]) {
+                $t = '/*'; # comment
+                $y->find = '*/';
+            } elseif ($y->space = strspn($in, "\t \n", $j)) {
                 $t = substr($in, $j, $y->space);
-            } elseif (!strpbrk($t = $in[$j], "{:;}")) {
-                $t = substr($in, $j, strcspn($in, "\n \t{:;}", $j));
+            } elseif (!strpbrk($t = $in[$j], $list[$y->mode])) {
+                $k = $this->mode($in, $j, $len, $y->mode, 'v' == $y->mode ? ';}' : ':,{');
+                $t = rtrim(substr($in, $j, $k - $j));
             }
             yield $t => $y;
         }
     }
 
-    function &parse_css(&$in, &$split = null, $plus = 0) {
-        $in = preg_replace("~(#+|//+)~", "$1\n", '<?php ' . unl($in));
-        $depth = $has_child = 0;
+    function parse(&$split = null, $plus = 0) {
         $sum = '';
         $ary = [];
-        foreach (token_get_all($in) as $k => $token) {
-            $id = $str = $token;
-            if (is_array($token)) {
-                list($id, $str) = $token;
-                if (!$k || T_DOC_COMMENT == $id || $space) {
-                    $space = false;
-                    continue;
-                }
-                if (T_WHITESPACE == $id) {
-                    $str = ' '; # 2do: comment between spaces
-                } elseif (T_COMMENT == $id) {
-                    if ('#' != $str && '*' == $str[1]) # //
-                        continue;
-                    if ("\n" != $str[-1] && " " != $str[-1])
-                        $space = true;
-                    $str = trim($str);
-                }
+        $ptr = [&$ary];
+        foreach ($this->tokens() as $t => $y) {
+            $p =& $ptr[$last = array_key_last($ptr)];
+            if ($y->found || $y->find) {
+                ;
+            } elseif (';' == $t) {
+                $p[] = $sum;//echo $sum;
+                $sum = '';
+                $y->mode = 'k';
+            } elseif ('{' == $t) {
+                $y->depth++;
+                $p[] = [$sum, [], 0];
+                $ptr[] =& $p[array_key_last($p)][1];
+                $sum = '';
+            } elseif ('}' == $t) {
+                $y->depth--;
+                !$sum or $p[] = $sum;
+                array_pop($ptr);
+            } elseif (':' == $t) {
+                $sum .= ':';
+                $y->mode = 'v';
+            } elseif (',' == $t) {
+                $sum .= ',';
+            } elseif (!$y->space) {
+                $sum .= $t;
             }
-            switch ($id) {
-                case '{':
-                    if (1 == ++$depth) {
-                        $key = trim($sum);
-                        $prop = [];
-                        $sum = '';
-                        continue 2;
-                    } elseif (2  == $depth) {
-                        $has_child = 1;
-                    }
-                    break;
-                case ';':
-                    if (1 == $depth) {
-                        $prop[] = trim($sum);
-                        $sum = '';
-                        continue 2;
-                    } elseif (0 == $depth) {
-                        $ary[] = [trim($sum), [], $plus];
-                        $sum = '';
-                        continue 2;
-                    }
-                    break;
-                case '}':
-                    if (0 == --$depth) {
-                        if ($has_child) {
-                            $null = null;
-                            $prop =& $this->parse_css($sum, $null, 1 + $plus);
-                        } else {
-                            '' === trim($sum) or $prop[] = trim($sum);
-                        }
-                        $ary[] = [$key, $prop, $plus + $has_child];
-                        if ($split === $key) {
-                            $split = $ary;
-                            $ary = [];
-                        }
-                        $sum = '';
-                        $has_child = 0;
-                        continue 2;
-                    }
-                    break;
-            }
-            $sum .= preg_replace("~(#+|//+)\n~", "$1", $str);
         }
         return $ary;
     }
 
     function &buildCSS(&$ary, $sort = false, $plus = 0) {
         if (is_string($ary))
-            $ary =& $this->parse_css($ary);
+            $ary =& $this->parse($ary);
         if ($sort) usort($ary, function ($a, $b) use ($plus) {
             $ma = $plus < $a[2];
             $mb = $plus < $b[2];

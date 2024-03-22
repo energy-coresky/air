@@ -220,7 +220,7 @@ class XML
             $y->end = false;
             if ($y->found = $y->find) {
                 if (false === ($sz = strpos($in, $y->find, $j))) {
-                    $t = substr($in, $j); //2do $y->find MUST NOT inside strings or parse JS!
+                    $t = substr($in, $j); # /* </style> */ is NOT comment inside <style>!
                 } else {
                     $t = substr($in, $j, $sz - $j);
                     $y->find = false;

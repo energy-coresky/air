@@ -40,9 +40,6 @@ class Display # php jet yaml html bash || php_method md || var diff log
         self::$bg = ['=' => false] + $pal->background[$name[0]] + array_combine($_key, $_val);
     }
 
-    static function css($in) {
-    }
-
     static function js($in) {
     }
 
@@ -281,6 +278,44 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return $code($text, "```(jet|php|html|bash|yaml|)(.*?)```");
     }
 
+    static function css($code, $option = '', $no_lines = false) {
+        $x = self::xdata($option);
+        $y = false;
+        $ary = explode("\n", self::highlight_css($code, $y));
+        $x->len = strlen($x->diff);
+        array_walk($ary, 'Display::highlight_line', $x);
+        $style = 'style="margin:0; color:' . self::$clr['m'] . '; background-color:' . self::$bg[0] . '"';
+        if ($no_lines)
+            return pre(implode('', $ary), $style);
+        $table = self::lay_l . $x->lnum . self::lay_m . pre(implode('', $ary), $style) . self::lay_r;
+        return '<div class="php">' . $table . '</div>';
+    }
+
+    static function highlight_css($code, &$y, $u = '') { # r g d c m j - gray
+        $css = new CSS($code);
+        $out = '';
+    $i=0;
+        foreach ($css->tokens($y) as $t => $y) {
+if ($i++ > 2500) {
+    $out .= $y->mode;
+    break;
+}
+            if ($y->found || $y->find) { /* css comment */
+                $out .= self::span($u . 'c', $t);
+            } elseif ($y->space || strpbrk($t, '{:,;}')) {
+                $out .= $t; //html($t);
+                '}' == $t and $y->mode = 't';
+                ';' == $t and $y->mode = 'k';
+                ':' == $t and $y->mode = 'v';
+            } elseif ('t' == $y->mode) {
+                $out .= self::span($u . 'g', $t);
+            } else {
+                $out .= self::span($u . ('k' == $y->mode ? 'r' : 'd'), $t);
+            }
+        }
+        return $out;
+    }
+
     static function html($code, $option = '', $no_lines = false) {
         $x = self::xdata($option);
         $y = false;
@@ -302,11 +337,15 @@ class Display # php jet yaml html bash || php_method md || var diff log
             if ($y->end) { # from <!-- or <![CDATA[
                 $out .= self::span($u . 'c', $t);
                 $y->find = $y->end;
+            } elseif ('</style>' == $y->found) {
+                isset($y->css) or $y->css = false;
+                $out .= self::highlight_css($t, $y->css, $u);
             } elseif (in_array($y->found, ['-->', ']]>'])) {
                 $out .= self::span($u . 'c', $t . ($y->find ? '' : $y->found));
                 $y->len += $y->find ? 0 : 3; # chars move
             } elseif ('close' == $y->mode) { # sample: </tag>
-                $out .= '&lt;' . self::span($u . 'r', substr($t, 1, -1)) . '&gt;';
+                '/style' != ($t = substr($t, 1, -1)) or $y->css = false;
+                $out .= '&lt;' . self::span($u . 'r', $t) . '&gt;';
             } elseif ('open' == $y->mode) { # sample: <tag
                 $out .= '&lt;' . self::span($u . 'r', $y->tag = substr($t, 1));
                 $y->mode = 'attr';
