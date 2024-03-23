@@ -294,21 +294,13 @@ class Display # php jet yaml html bash || php_method md || var diff log
     static function highlight_css($code, &$y, $u = '') { # r g d c m j - gray
         $css = new CSS($code);
         $out = '';
-    $i=0;
         foreach ($css->tokens($y) as $t => $y) {
-if ($i++ > 2500) {
-    $out .= $y->mode;
-    break;
-}
             if ($y->found || $y->find) { /* css comment */
                 $out .= self::span($u . 'c', $t);
-            } elseif ($y->space || strpbrk($t, '{:,;}')) {
-                $out .= $t; //html($t);
-                '}' == $t and $y->mode = 't';
-                ';' == $t and $y->mode = 'k';
-                ':' == $t and $y->mode = 'v';
+            } elseif ($y->space || 1 == strlen($t) && strpbrk($t, '{:,;}')) {
+                $out .= $t;
             } elseif ('t' == $y->mode) {
-                $out .= self::span($u . 'g', $t);
+                $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
             } else {
                 $out .= self::span($u . ('k' == $y->mode ? 'r' : 'd'), $t);
             }
