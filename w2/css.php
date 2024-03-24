@@ -5,73 +5,53 @@ class CSS
     const version = 0.223;
 
     public $in;
-    public $array;
-    public $tab = 2;
+    public $array = [];
+    public $pad = 2; # 0 for minified CSS
+    public $sort = false; # (compare 2 CSS)
+
+    private $end = "\n";
 
     function __construct(string $in = '') {
         $this->in = unl($in);
-        $this->array = [];
     }
 
     static function file($name) {
-        $css = new CSS(file_get_contents($name));
-        echo $css;
-        //return var_export($css->array);
+        echo new CSS(file_get_contents($name));
     }
 
     function __toString() {
-        if (!$this->array)
-            $this->parse();
-        return $this->toString($this->array);
-    }
-
-    function toString(&$ary, $sort = false, $plus = 0) {
-        if ($sort) usort($ary, function ($a, $b) use ($plus) {
-            $ma = $plus < $a[2];
-            $mb = $plus < $b[2];
-            if (!$ma && !$mb)
-                return strcmp($a[0], $b[0]);
-            return $ma && $mb ? 0 : ($ma && !$mb ? 1 : -1);
-        });
-        $pad = str_pad('', $this->tab * $plus);
-        $pad_1 = str_pad('', $this->tab);
-        $end = "\n";//'rich' == $this->opt['format'] ? "\n" : '';
-        $out = '';
-        foreach ($ary as $one) {
-            if (is_array($one[1]) && $one[1]) {
-                $out .= $pad . $this->name($one[0]) . " {\n";
+        $this->array or $this->parse();
+        $this->in = $this->pad ? '' : "/* Minified with Coresky framework, https://coresky.net */\n";
+        $x = [
+            str_pad('', $this->pad),
+            $this->pad ? "\n" : '',
+            $this->pad ? ' ' : '',
+        ];
+        $this->pad or $this->end = '';
+        $this->walk($this->array, $fn = function ($one, $pad, $depth) use (&$fn, $x) {
+            if (isset($one[1])) {
+                $this->in .= "$pad$one[0]$x[2]{" . $x[1];
                 if (is_int(key($one[1]))) {
-                    $out .= $this->toString($one[1], $sort, 1 + $plus);
+                    $this->walk($one[1], $fn, 1 + $depth);
                 } else foreach ($one[1] as $name => $value) {
-                   #if ($this->add_space)
-                   #    $prop = preg_replace("/^([\w\-]+):/", '$1: ', $prop);
-                    $out .= "$pad$pad_1$name: $value;\n";
+                    $this->in .= "$pad$x[0]$name:$x[2]$value;$x[1]";
                 }
-                $out .= "$pad}\n$end";
+                $this->in .= "$pad}$this->end";
             } else {
-                $out .= "$pad$one;\n";
+                $this->in .= "$pad$one[0];$this->end";
             }
-        }
-        if ($end)
-            $out = substr($out, 0, -1);
-        return $out;
+        });
+        return $this->in;
     }
 
-    function name($str) {
-        $ary = [];
-        $hl = 0;//$this->opt['highlight'];
-        foreach (preg_split("/\s*,\s*/", $str) as $v) {
-            if (!$hl || in_array($v[0], ['@', ':', '['])) {
-                $ary[] = $v;
-            } elseif ('.' == $v[0]) {
-                $ary[] = '.<m>' . substr($v, 1) . '</m>';
-            } elseif ('#' == $v[0]) {
-                $ary[] = '#<g>' . substr($v, 1) . '</g>';
-            } else {
-                $ary[] = '<span class="vs-tag">' . "$v</span>";
-            }
-        }
-        return implode(', ', $ary);
+    function walk(&$ary, $fn, $depth = 0) {
+        if ($this->sort) usort($ary, function ($a, $b) {
+            $_a = '@' == $a[0][0];
+            $_b = '@' == $b[0][0];
+            return $_a != $_b ? ($_a && !$_b ? 1 : -1) : strcmp($a[0], $b[0]);
+        });
+        foreach ($ary as $one)
+            $fn($one, str_pad('', $this->pad * $depth), $depth);
     }
 
     function mode(&$in, $k, $len, &$mode, $chr, $real = false) {
@@ -136,6 +116,7 @@ class CSS
 
     function parse() {
         $sum = '';
+        $this->array = [];
         $ptr = [&$this->array];
         foreach ($this->tokens() as $t => $y) {
             if ($y->found || $y->find || $y->space)
@@ -143,16 +124,14 @@ class CSS
             $p =& $ptr[$last = array_key_last($ptr)];
             if (';' == $t) {
                 if ('t' == $y->mode) {
-                    $p[] = $sum;
+                    $p[] = [$sum];
                     $sum = '';
                 }
             } elseif ('{' == $t) {
-                $y->depth++;
                 $p[] = [$sum, []];
                 $ptr[] =& $p[array_key_last($p)][1];
                 $sum = '';
             } elseif ('}' == $t) {
-                $y->depth--;
                 array_pop($ptr);
             } elseif ('v' == $y->mode) {
                 $p[$prev] = $t;
