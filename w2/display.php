@@ -299,7 +299,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 $out .= self::span($u . 'c', $t);
             } elseif ($y->space || 1 == strlen($t) && strpbrk($t, '{:,;}')) {
                 $out .= $t;
-            } elseif ('t' == $y->mode) {
+            } elseif ('d' == $y->mode) {
                 $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
             } else {
                 $out .= self::span($u . ('k' == $y->mode ? 'r' : 'd'), $t);

@@ -2,16 +2,15 @@
 
 class CSS
 {
-    const version = 0.223;
+    const version = 0.777;
 
     public $in;
     public $array = [];
     public $pad = 2; # 0 for minified CSS
     public $sort = false; # (compare 2 CSS)
 
-    private $end = "\n";
-
     function __construct(string $in = '') {
+     #$this->sort = [$this, '_sort'];
         $this->in = unl($in);
     }
 
@@ -27,37 +26,59 @@ class CSS
             $this->pad ? "\n" : '',
             $this->pad ? ' ' : '',
         ];
-        $this->pad or $this->end = '';
-        $this->walk($this->array, $fn = function ($one, $pad, $depth) use (&$fn, $x) {
+        $this->walk($this->array, $fn = function ($one, $y) use (&$fn, $x) {
             if (isset($one[1])) {
-                $this->in .= "$pad$one[0]$x[2]{" . $x[1];
-                if (is_int(key($one[1]))) {
-                    $this->walk($one[1], $fn, 1 + $depth);
+                $this->in .= $y->pad . $this->define($one[0], $x[2]) . "$x[2]{" . $x[1];
+                $last = array_key_last($one[1]);
+                if (is_int($last)) {
+                    $this->walk($one[1], $fn, 1 + $y->depth);
                 } else foreach ($one[1] as $name => $value) {
-                    $this->in .= "$pad$x[0]$name:$x[2]$value;$x[1]";
+                    $this->in .= "$y->pad$x[0]$name:$x[2]$value";
+                    $last == $name && !$this->pad or $this->in .= ";$x[1]";
                 }
-                $this->in .= "$pad}$this->end";
+                $this->in .= "$y->pad}" . $x[1];
+                $y->last or $this->in .= $x[1];
             } else {
-                $this->in .= "$pad$one[0];$this->end";
+                $this->in .= $y->pad . $this->define($one[0], $x[2]) . ";$x[1]$x[1]";
             }
         });
         return $this->in;
     }
 
+    function define($in, $x3) {
+        if (is_string($in))
+            return $in;
+        return implode(',' . $x3, $in);
+    }
+
+    function _sort($a, $b) {
+        $_a = '@' == $a[0][0];
+        $_b = '@' == $b[0][0];
+        return $_a != $_b ? ($_a && !$_b ? 1 : -1) : strcmp($a[0], $b[0]);
+    }
+
     function walk(&$ary, $fn, $depth = 0) {
-        if ($this->sort) usort($ary, function ($a, $b) {
-            $_a = '@' == $a[0][0];
-            $_b = '@' == $b[0][0];
-            return $_a != $_b ? ($_a && !$_b ? 1 : -1) : strcmp($a[0], $b[0]);
-        });
-        foreach ($ary as $one)
-            $fn($one, str_pad('', $this->pad * $depth), $depth);
+        if ($this->sort)
+            usort($ary, $this->sort);
+        $last = array_key_last($ary);
+        $y = (object)[
+            'pad' => str_pad('', $this->pad * $depth),
+            'depth' => $depth,
+        ];
+        foreach ($ary as $n => $one) {
+            $y->last = $n == $last;
+            $fn($one, $y);
+        }
+    }
+
+    function query($str) {
+        
     }
 
     function mode(&$in, $k, $len, &$mode, $chr, $real = false) {
-        if (strpbrk($t = $in[$k], 't' == $mode ? '{;,}' : '{:;,}')) {
+        if (strpbrk($t = $in[$k], 'd' == $mode ? '{;,}' : '{:;,}')) {
             if ('}' == $t) {
-                $mode = 't';
+                $mode = 'd';
             } elseif (':' == $t) {
                 $mode = 'v';
             } elseif (';' == $t && 'v' == $mode) {
@@ -65,7 +86,7 @@ class CSS
             }
             return ++$k;
         }
-        static $list = ['t' => '{:;,', 'k' => ':}', 'v' => ';}'];
+        static $list = ['d' => '{:;,', 'k' => ':}', 'v' => ';}'];
         for ($cm = false; true;) {
             $k += strcspn($in, "\\/" . ($chr ?: $list[$mode]), $k);
             if ($k < $len) switch ($in[$k]) {
@@ -80,7 +101,7 @@ class CSS
                     }
                     continue 2;
                 case ':': # key-like
-                    if ('t' == $mode) {
+                    if ('d' == $mode) {
                         $pos = $this->mode($in, $k, $len, $mode, ';}', true);
                         $pos > $this->mode($in, $k, $len, $mode, '{', true) or $mode = 'k';
                     }
@@ -91,14 +112,14 @@ class CSS
     }
 
     function tokens($y = false) {
-        $y or $y = (object)['mode' => 't', 'depth' => 0, 'find' => false];
+        $y or $y = (object)['mode' => 'd', 'find' => false];
         $len = strlen($in =& $this->in);
         for ($j = 0; $j < $len; $j += strlen($t)) {
             if ($y->found = $y->find) {
-                if (false === ($sz = strpos($in, $y->find, $j))) {
+                if (false === ($pos = strpos($in, $y->find, $j))) {
                     $t = substr($in, $j); # /* </style> */ is NOT comment inside <style>!
                 } else {
-                    $t = substr($in, $j, $sz - $j + 2);
+                    $t = substr($in, $j, $pos - $j + 2);
                     $y->find = false;
                 }
             } elseif ('/' == $in[$j] && '*' == $in[$j + 1]) {
@@ -115,62 +136,32 @@ class CSS
     }
 
     function parse() {
-        $sum = '';
+        $define = [];
+        $push = function () use (&$define) {
+            $v = 1 == count($define) ? $define[0] : $define;
+            $define = [];
+            return $v;
+        };
         $this->array = [];
         $ptr = [&$this->array];
         foreach ($this->tokens() as $t => $y) {
             if ($y->found || $y->find || $y->space)
                 continue;
-            $p =& $ptr[$last = array_key_last($ptr)];
+            $p =& $ptr[array_key_last($ptr)];
             if (';' == $t) {
-                if ('t' == $y->mode) {
-                    $p[] = [$sum];
-                    $sum = '';
-                }
+                'd' != $y->mode or $p[] = [$push()];
             } elseif ('{' == $t) {
-                $p[] = [$sum, []];
+                $p[] = [$push(), []];
                 $ptr[] =& $p[array_key_last($p)][1];
-                $sum = '';
+            } elseif ('v' == $y->mode) {
+                $p[$key] = $t;
+            } elseif ('k' == $y->mode) {
+                $p[$key = $t] = '';
             } elseif ('}' == $t) {
                 array_pop($ptr);
-            } elseif ('v' == $y->mode) {
-                $p[$prev] = $t;
-            } elseif ('k' == $y->mode) {
-                $p[$prev = $t] = '';
-            } else {
-                $sum .= $t;
+            } elseif (',' != $t) {
+                $define[] = $t;
             }
         }
     }
-
-    function test(&$css, &$s2) { # for lost chars
-        $s1 = preg_replace("/\s+/", '', $css); # may have comments
-        $s2 = preg_replace("/\s+/", '', $s2); # comments cropped
-        $diff = [];
-        for ($i = $cx = 0, $cnt = strlen($s1); $i < $cnt; $i++) {
-            if (!isset($s2[$i - $cx]))
-                exit('Failed length'); # for console
-            if ($s1[$i] === $s2[$i - $cx])
-                continue;
-            if ('}' === $s1[$i] && ';' === $s2[$i - $cx]) { # semicolon added
-                $cx--;
-                continue;
-            }
-            $pos = strpos($s1, '*/', $i);
-            if (false === $pos) {
-                $diff[] = substr($s1, $i);
-                break;
-            }
-            $diff[] = substr($s1, $i, 2 + $pos - $i);
-            $cx += 2 + $pos - $i;
-            $i = 1 + $pos;
-        }
-        $cnt = count($diff);
-        echo $i - $cx == strlen($s2)
-            ? "Test passed, found $cnt comments, first 10:\n"
-            : 'Test failed';
-        print_r(array_slice($diff, 0, 10));
-    }
-
 }
-
