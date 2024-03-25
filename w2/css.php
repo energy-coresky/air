@@ -71,8 +71,24 @@ class CSS
         }
     }
 
+    const ALL = 1; # *
+    const TAG = 2; # div
+    const ID = 4; // #id
+    const CLASS = 8; # .class
+    const ATTR = 16; # [checked]
+
+    const SPACE = 128; # any child
+    const GT = 256; # > ..1 depth childs only
+    const PLUS = 512; # + ..next sibling
+    const TILDA = 1024; # ~ ..any siblings
+    const SEMI = 2048; # : pseudoclass :first :last :eq(n) :prt :prt(n)
+    const COMMA = 4096; # , new rule
+
     function query($str) {
-        
+        $ary = [];
+        foreach (preg_split("/\s+/s", $str) as $one) {
+            
+        }
     }
 
     function mode(&$in, $k, $len, &$mode, $chr, $real = false) {
@@ -108,7 +124,7 @@ class CSS
                     return $cm ?: ('k' == $mode ? $k : $this->mode($in, $k, $len, $mode, '{,'));
             } # { or , or ; or }
             return $real ? $k : ($cm ?: $k);
-        };
+        }
     }
 
     function tokens($y = false) {

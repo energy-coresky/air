@@ -2,9 +2,8 @@
 
 class XML
 {
-    const version = 0.555;
+    const version = 0.777;
 
-//    public $array;
     public $pad = '';
     public $selected = [];
 
@@ -111,8 +110,12 @@ class XML
         return $new;
     }
 
-    function remove() {
-        foreach ($this->selected as $tag) {
+    function childs($query) {
+    }
+
+    function remove($ary = []) {
+        $ary or $ary = $this->selected;
+        foreach ($ary as $tag) {
             $tag->right and $tag->right->left = $tag->left;
             $tag->left ? ($tag->left->right = $tag->right) : ($tag->up->val = $tag->right ?? '');
         }
@@ -149,38 +152,37 @@ class XML
         }
     }
 
-    function prev($text = false) {
-        foreach ($this->selected as $n => &$tag) {
-            do {
-                $tag = $tag->left;
-            } while ($tag && !$text && '#' == $tag->name[0]);
-            if (!$tag)
-                unset($this->selected[$n]);
+    function _move(&$ary, $to, $m = 1, $text = false) {
+        $new = [];
+        foreach ($ary as $tag) {
+            for ($n = 0; $tag && $n < $m; !$text && '#' == $tag->name[0] or $n++)
+                $tag = $tag->$to;
+            if ($tag && $tag->up)
+                $new[] = $tag;
         }
+        $ary = $new;
         return $this;
     }
 
-    function next($text = false) {
-        foreach ($this->selected as $n => &$tag) {
-            do {
-                $tag = $tag->right;
-            } while ($tag && !$text && '#' == $tag->name[0]);
-            if (!$tag)
-                unset($this->selected[$n]);
-        }
-        return $this;
+    function prev($m = 1, $text = false) {
+        return $this->_move($this->selected, 'left', $m, $text);
+    }
+
+    function next($m = 1, $text = false) {
+        return $this->_move($this->selected, 'right', $m, $text);
+    }
+
+    function parent($m = 1) {
+        return $this->_move($this->selected, 'up', $m);
+    }
+
+    function parents($query) {
     }
 
     function attr($name, $val = null) {
     }
 
     function query($q, $is_all = false) {
-    }
-
-    function childs($query) {
-    }
-
-    function parents($query) {
     }
 
     function each($fn) {
