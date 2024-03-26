@@ -52,7 +52,7 @@ class CSS
     }
 
     function _sort($a, $b) {
-        $_a = '@' == $a[0][0];
+        $_a = '@' == $a[0][0];/////////////
         $_b = '@' == $b[0][0];
         return $_a != $_b ? ($_a && !$_b ? 1 : -1) : strcmp($a[0], $b[0]);
     }
@@ -74,7 +74,7 @@ class CSS
     const ALL = 1; # *
     const TAG = 2; # div
     const ID = 4; // #id
-    const CLASS = 8; # .class
+    const CLS = 8; # .class
     const ATTR = 16; # [checked]
 
     const SPACE = 128; # any child

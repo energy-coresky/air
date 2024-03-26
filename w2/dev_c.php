@@ -85,11 +85,12 @@ class dev_c extends Controller
     }
 
     function j_file() {
-//        SKY::$debug = 0;
+        SKY::$debug = 0;
         [$file, $line] = explode('^', $_POST['name']) + [1 => 0];
         $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
-        $a = explode('.', $file);
-        echo call_user_func(['Display', end($a)], $txt, [$line, 'true' == $_POST['c'], true]);
+        $ary = explode('.', $file);
+        in_array($ext = end($ary), ['php', 'css', 'html']) or $ext = 'php';
+        echo call_user_func(['Display', $ext], $txt, [$line, 'true' == $_POST['c'], true]);
     }
 
     function j_drop() {

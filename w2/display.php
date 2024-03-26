@@ -5,6 +5,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
+    const style = 'style="width:100%%; margin:0; color:%s; background-color:%s"';
 
     private static $bg;
     private static $clr;
@@ -258,6 +259,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     return self::bash(unhtml($m[2]));
                 if ('php' == $m[1])
                     return self::php(unhtml($m[2]), false, true);
+                if ('css' == $m[1])
+                    return self::css(unhtml($m[2]), '', true);
                 if ('html' == $m[1])
                     return self::html(unhtml($m[2]), '', true);
                 return 'jet' == $m[1] ? self::jet(unhtml($m[2]), '-', true) : pre(html($m[2]), '');
@@ -272,10 +275,10 @@ class Display # php jet yaml html bash || php_method md || var diff log
         if ($exist) {
             $md = new Parsedown;
             $text = preg_replace("~\"https://github.*?/([^/\.]+)[^/\"]+\"~", '"_png?$1=' . Plan::$pngdir . '"', $md->text($text));
-            return $code($text, '<pre><code class="language\-(jet|php|html|bash|yaml)">(.*?)</code></pre>');
+            return $code($text, '<pre><code class="language\-(jet|php|html|css|bash|yaml)">(.*?)</code></pre>');
         }
         $text = str_replace("\n\n", '<p>', unl($text));
-        return $code($text, "```(jet|php|html|bash|yaml|)(.*?)```");
+        return $code($text, "```(jet|php|html|css|bash|yaml|)(.*?)```");
     }
 
     static function css($code, $option = '', $no_lines = false) {
@@ -283,12 +286,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $y = false;
         $ary = explode("\n", self::highlight_css($code, $y));
         $x->len = strlen($x->diff);
-        array_walk($ary, 'Display::highlight_line', $x);
-        $style = 'style="margin:0; color:' . self::$clr['m'] . '; background-color:' . self::$bg[0] . '"';
-        if ($no_lines)
-            return pre(implode('', $ary), $style);
-        $table = self::lay_l . $x->lnum . self::lay_m . pre(implode('', $ary), $style) . self::lay_r;
-        return '<div class="php">' . $table . '</div>';
+        return self::table($ary, $x, $no_lines);
     }
 
     static function highlight_css($code, &$y, $u = '') { # r g d c m j - gray
@@ -313,12 +311,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $y = false;
         $ary = explode("\n", self::highlight_html($code, $y));
         $x->len = strlen($x->diff);
-        array_walk($ary, 'Display::highlight_line', $x);
-        $style = 'style="margin:0; color:' . self::$clr['m'] . '; background-color:' . self::$bg[0] . '"';
-        if ($no_lines)
-            return pre(implode('', $ary), $style);
-        $table = self::lay_l . $x->lnum . self::lay_m . pre(implode('', $ary), $style) . self::lay_r;
-        return '<div class="php">' . $table . '</div>';
+        return self::table($ary, $x, $no_lines);
     }
 
     static function highlight_html($code, &$y, $u = '') { # r g d c m j - gray
@@ -423,9 +416,12 @@ class Display # php jet yaml html bash || php_method md || var diff log
         if ($u)
             $x->_ = str_pad($x->_, count($ary), '1');
         $x->len = strlen($x->diff = str_pad($x->diff, strlen($x->_), '='));
-        array_walk($ary, 'Display::highlight_line', $x);
+        return self::table($ary, $x, $no_lines, $u);
+    }
 
-        $style = 'style="margin:0; color:' . self::$clr[$u . 'm'] . '; background-color:' . self::$bg[$u . '0'] . '"';
+    static function table($ary, $x, $no_lines, $u = '') {
+        array_walk($ary, 'Display::highlight_line', $x);
+        $style = sprintf(self::style, self::$clr[$u . 'm'], self::$bg[$u . '0']);
         if ($no_lines)
             return pre(implode('', $ary), $style);
         $table = self::lay_l . $x->lnum . self::lay_m . pre(implode('', $ary), $style) . self::lay_r;

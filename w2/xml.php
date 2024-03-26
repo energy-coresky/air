@@ -7,7 +7,7 @@ class XML
     public $pad = '';
     public $selected = [];
 
-    static $void;
+    static $html;
     static $spec = [
         '#text' => '%s',
         '#comment' => '<!--%s-->',
@@ -19,7 +19,7 @@ class XML
     private $root;
 
     function __construct(string $in = '') {
-        self::$void or self::$void = yml('+ @inc(html_void)');
+        self::$html or self::$html = yml('+ @object @inc(html)');
         $this->root = $this->node('#root');
         $this->in = unl($in);
     }
@@ -46,11 +46,41 @@ class XML
         });
     }
 
+    function walk($tag, $fn = false, $draw = false, $depth = 0, $walk = false) {
+        $fn or ($fn = $tag) && ($tag = $this->root->val);
+        $walk or $walk = (object)['nn' => 0]; // , 'dir' => 'right'
+        $walk->n = 0;
+        do {
+            $walk->depth = $depth;
+            $walk->nn++;
+            if ('#' == $tag->name[0]) {
+                $fn($tag, $walk, $tag->name);
+                ++$walk->n;
+            } else {
+                $fn($tag, $walk, false);
+                $n = ++$walk->n;
+                if (0 === $tag->val) # void element
+                    continue;
+                is_object($tag->val)
+                    ? $this->walk($tag->val, $fn, $draw, 1 + $depth, $walk)
+                    : $draw && $fn($tag, $walk, '#text');
+                $walk->n = $n;
+                $draw && $fn($tag, $walk, '/');
+            }
+        } while ($tag = $tag->right);
+        return $walk;
+    }
+
+    function beautifier() {
+        return function ($tag, $walk, $x) {
+            
+        };
+    }
+
     function __toString() {
-        $beauty = '' !== $this->pad;
         $this->root->val or $this->parse();
         $this->in = '';
-        $this->walk($this->root->val, function ($tag, $_, $x) {
+        $draw = '' !== $this->pad ? $this->beautifier() : function ($tag, $_, $x) {
             if (!$x) {
                 $this->in .= "<$tag->name";
                 if ($tag->attr)
@@ -62,8 +92,56 @@ class XML
             } else { // '#' === $x[0]
                 $this->in .= sprintf(self::$spec[$x], $tag->val);
             }
-        }, true);
+        };
+        $this->walk($this->root->val, $draw, true);
         return $this->in;
+    }
+
+    private function __dump($ary, $indent = '') {
+        $out = '';
+        foreach ($ary as $one) {
+            $len = strlen($out);
+            $node = key($one);
+            $data = pos($one);
+            if ('#text' == $node && '' === trim($data))
+                continue;
+            $attr = $one[0] ?? false;
+            $out .= $indent;
+            switch ($node) {
+                case '#text': # #cdata-section #document #document-fragment
+                    $out .= trim($data);
+                    continue 2;
+                case '#comment':
+                case '#data':
+                    $out .= '#data' == $node ? "<![CDATA[$data]]>\n" : "<!--$data-->\n";
+                    continue 2;
+                    $out .= "<span style=\"color:#885\"><!-- $data --></span>\n";
+                    continue 2;
+                default:
+                    $tag = $node;//"<span class=\"vs-tag\">$node</span>";
+                    if ($attr) {
+                        $join = [];
+                        foreach ($attr as $k => $v) {
+                            $join[] = 0 === $v ? $k : $k . '="' . $v . '"';
+                        }
+                        $out .= "<$tag " . implode(' ', $join) . '>';
+                    } else {
+                        $out .= "<$tag>";
+                    }
+                    if (0 === $data) {
+                        $out .= "\n"; # Void element
+                        continue 2;
+                    } elseif (is_array($data)) {
+                        $out .= "\n" . $this->dump($data, $indent . $this->pad);// . $indent;
+                        $out .= "$indent</$tag>\n";
+                  #  } elseif ('' !== $data && strlen($data . $out) > $len + 280) {
+                   #     $out .= "\n$indent$this->pad$data\n$indent";
+                    } else {
+                        $out .= trim($data) . "</$tag>\n";
+                    }
+            }
+        }
+        return $out;
     }
 
     function clone(?array $ary = null) : XML {
@@ -72,7 +150,7 @@ class XML
         foreach ($ary as $tag) $this->walk($tag, function ($tag, $walk) use (&$prev) {
             if ($walk->depth) {
                 $this->relations(clone $tag, is_object($tag->val));
-                return null !== $tag->right or $this->relations(false);
+                return null !== $tag->right or $this->close();
             }
             if ($walk->n)
                 return;
@@ -190,31 +268,6 @@ class XML
             $fn($one, $n);
     }
 
-    function walk($tag, $fn = false, $draw = false, $depth = 0, $walk = false) {
-        $fn or ($fn = $tag) && ($tag = $this->root->val);
-        $walk or $walk = (object)['nn' => 0]; // , 'dir' => 'right'
-        $walk->n = 0;
-        do {
-            $walk->depth = $depth;
-            $walk->nn++;
-            if ('#' == $tag->name[0]) {
-                $fn($tag, $walk, $tag->name);
-                ++$walk->n;
-            } else {
-                $fn($tag, $walk, false);
-                $n = ++$walk->n;
-                if (0 === $tag->val) # void element
-                    continue;
-                is_object($tag->val)
-                    ? $this->walk($tag->val, $fn, $draw, 1 + $depth, $walk)
-                    : $draw && $fn($tag, $walk, '#text');
-                $walk->n = $n;
-                $draw && $fn($tag, $walk, '/');
-            }
-        } while ($tag = $tag->right);
-        return $walk;
-    }
-
     function tokens($y = false) {
         $y or $y = (object)['mode' => 'txt', 'find' => false];
         $len = strlen($in =& $this->in);
@@ -303,7 +356,7 @@ class XML
                     $this->_attr($tag->attr, $t);
                     continue;
                 }
-                if (in_array($tag->name, self::$void)) {
+                if (in_array($tag->name, self::$html->void)) {
                     $tag = $this->push([$tag->name, 0, $tag->attr]);
                     $str = '';
                 } elseif (in_array($tag->name, ['script', 'style'])) {
@@ -324,63 +377,16 @@ class XML
         return $this->root->val;
     }
 
-    private function __dump($ary, $indent = '') {
-        $out = '';
-        foreach ($ary as $one) {
-            $len = strlen($out);
-            $node = key($one);
-            $data = pos($one);
-            if ('#text' == $node && '' === trim($data))
-                continue;
-            $attr = $one[0] ?? false;
-            $out .= $indent;
-            switch ($node) {
-                case '#text': # #cdata-section #document #document-fragment
-                    $out .= trim($data);
-                    continue 2;
-                case '#comment':
-                case '#data':
-                    $out .= '#data' == $node ? "<![CDATA[$data]]>\n" : "<!--$data-->\n";
-                    continue 2;
-                    $out .= "<span style=\"color:#885\"><!-- $data --></span>\n";
-                    continue 2;
-                default:
-                    $tag = $node;//"<span class=\"vs-tag\">$node</span>";
-                    if ($attr) {
-                        $join = [];
-                        foreach ($attr as $k => $v) {
-                            $join[] = 0 === $v ? $k : $k . '="' . $v . '"';
-                        }
-                        $out .= "<$tag " . implode(' ', $join) . '>';
-                    } else {
-                        $out .= "<$tag>";
-                    }
-                    if (0 === $data) {
-                        $out .= "\n"; # Void element
-                        continue 2;
-                    } elseif (is_array($data)) {
-                        $out .= "\n" . $this->dump($data, $indent . $this->pad);// . $indent;
-                        $out .= "$indent</$tag>\n";
-                  #  } elseif ('' !== $data && strlen($data . $out) > $len + 280) {
-                   #     $out .= "\n$indent$this->pad$data\n$indent";
-                    } else {
-                        $out .= trim($data) . "</$tag>\n";
-                    }
-            }
-        }
-        return $out;
+    private function relations($tag, $is_parent = false) {
+        $tag->left = $this->ptr[0];
+        $tag->up = $this->ptr[2];
+        $this->ptr[1] = $tag; # add node
+        $this->ptr = $is_parent
+            ? [null, &$tag->val, $tag] # childs: &prev, &place, &parent
+            : [$tag, &$tag->right, $tag->up];
     }
 
-    private function relations($tag, $is_parent = false) {
-        if ($tag) {
-            $tag->left = $this->ptr[0];
-            $tag->up = $this->ptr[2];
-            $this->ptr[1] = $tag; # add node
-            $this->ptr = $is_parent
-                ? [null, &$tag->val, $tag] # childs: &prev, &place, &parent
-                : [$tag, &$tag->right, $tag->up];
-            return;
-        }
+    private function close() {
         $parent = $this->ptr[2];
         $this->ptr = [$parent, &$parent->right, $parent->up];
     }
@@ -393,8 +399,21 @@ class XML
             $tag->val = $str;
             $str = '';
         }
-        # close-tag 2do: chk consistency
-        $this->relations(1 === $tag->val ? false : $tag, null === $tag->val);
+        //$prev = $this->ptr[0] ?? $this->ptr[2];
+        $parent = $this->ptr[2];
+        if (1 === $tag->val) { # close-tag
+            if ($tag->name == $parent->name)
+                $this->close();
+        } else {
+            if ('#' != $tag->name[0]) {
+                $om = self::$html->omission[$parent->name] ?? false;
+                if ($om && in_array($tag->name, $om))
+                    $this->close();
+                if ($parent->name == $tag->name && in_array($tag->name, self::$html->omission[0]))
+                    $this->close();
+            }
+            $this->relations($tag, null === $tag->val);
+        }
         return $this->node();
     }
 
