@@ -24,8 +24,18 @@ class XML
         $this->in = unl($in);
     }
 
+    function __toString() {
+        $this->root->val or $this->parse();
+        $this->in = '';
+        $fn = $this->pad ? 'beautifier' : 'draw';
+        $this->$fn($this->root->val, 0);
+        return $this->in;
+    }
+
     static function file($name) {
-        return new XML(file_get_contents($name));
+        $xml = new XML(file_get_contents($name));
+        $xml->pad = '  ';
+        return $xml;
     }
 
     function dump($root = false) {
@@ -46,101 +56,59 @@ class XML
         });
     }
 
-    function walk($tag, $fn = false, $draw = false, $depth = 0, $walk = false) {
+    function walk($tag, $fn = false, $depth = 0, $walk = false) {
         $fn or ($fn = $tag) && ($tag = $this->root->val);
-        $walk or $walk = (object)['nn' => 0]; // , 'dir' => 'right'
-        $walk->n = 0;
+        $walk or $walk = (object)['nn' => 0];
+        $walk->n = $n = 0;
         do {
             $walk->depth = $depth;
             $walk->nn++;
-            if ('#' == $tag->name[0]) {
-                $fn($tag, $walk, $tag->name);
-                ++$walk->n;
-            } else {
-                $fn($tag, $walk, false);
-                $n = ++$walk->n;
-                if (0 === $tag->val) # void element
-                    continue;
-                is_object($tag->val)
-                    ? $this->walk($tag->val, $fn, $draw, 1 + $depth, $walk)
-                    : $draw && $fn($tag, $walk, '#text');
-                $walk->n = $n;
-                $draw && $fn($tag, $walk, '/');
-            }
+            $fn($tag, $walk);
+            $walk->n = ++$n;
+            is_object($tag->val) && $this->walk($tag->val, $fn, 1 + $depth, $walk);
         } while ($tag = $tag->right);
+        $walk->tail && $fn(false, $walk);
         return $walk;
     }
 
-    function beautifier() {
-        return function ($tag, $walk, $x) {
-            
-        };
+    function draw($tag) {
+        $this->walk($tag, function ($tag, $walk) {
+            if (!$tag)
+                return $this->in .= array_pop($walk->tail);
+            if ('#' == $tag->name[0])
+                return $this->in .= sprintf(self::$spec[$tag->name], $tag->val);
+            $this->in .= "<$tag->name";
+            foreach ($tag->attr ?? [] as $k => $v)
+                $this->in .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+            $this->in .= '>';
+            if (!is_string($tag->val)) # childs or void
+                return $tag->val ? ($walk->tail[] = "</$tag->name>") : false;
+            $this->in .= "$tag->val</$tag->name>";
+        });
     }
 
-    function __toString() {
-        $this->root->val or $this->parse();
-        $this->in = '';
-        $draw = '' !== $this->pad ? $this->beautifier() : function ($tag, $_, $x) {
-            if (!$x) {
-                $this->in .= "<$tag->name";
-                if ($tag->attr)
-                    foreach ($tag->attr as $k => $v)
-                        $this->in .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-                $this->in .= '>';
-            } elseif ('/' == $x) { # close tag
-                $this->in .= "</$tag->name>";
-            } else { // '#' === $x[0]
-                $this->in .= sprintf(self::$spec[$x], $tag->val);
-            }
-        };
-        $this->walk($this->root->val, $draw, true);
-        return $this->in;
-    }
-
-    private function __dump($ary, $indent = '') {
+    function beautifier($tag, $depth) {
         $out = '';
-        foreach ($ary as $one) {
-            $len = strlen($out);
-            $node = key($one);
-            $data = pos($one);
-            if ('#text' == $node && '' === trim($data))
+        do {
+            if ('#' == $tag->name[0]) {
+                $out .= trim(sprintf(self::$spec[$tag->name], $tag->val));
                 continue;
-            $attr = $one[0] ?? false;
-            $out .= $indent;
-            switch ($node) {
-                case '#text': # #cdata-section #document #document-fragment
-                    $out .= trim($data);
-                    continue 2;
-                case '#comment':
-                case '#data':
-                    $out .= '#data' == $node ? "<![CDATA[$data]]>\n" : "<!--$data-->\n";
-                    continue 2;
-                    $out .= "<span style=\"color:#885\"><!-- $data --></span>\n";
-                    continue 2;
-                default:
-                    $tag = $node;//"<span class=\"vs-tag\">$node</span>";
-                    if ($attr) {
-                        $join = [];
-                        foreach ($attr as $k => $v) {
-                            $join[] = 0 === $v ? $k : $k . '="' . $v . '"';
-                        }
-                        $out .= "<$tag " . implode(' ', $join) . '>';
-                    } else {
-                        $out .= "<$tag>";
-                    }
-                    if (0 === $data) {
-                        $out .= "\n"; # Void element
-                        continue 2;
-                    } elseif (is_array($data)) {
-                        $out .= "\n" . $this->dump($data, $indent . $this->pad);// . $indent;
-                        $out .= "$indent</$tag>\n";
-                  #  } elseif ('' !== $data && strlen($data . $out) > $len + 280) {
-                   #     $out .= "\n$indent$this->pad$data\n$indent";
-                    } else {
-                        $out .= trim($data) . "</$tag>\n";
-                    }
+            } else {
+                $out .= "<$tag->name";
+                foreach ($tag->attr ?? [] as $k => $v)
+                    $out .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+                $out .= '>';
             }
-        }
+            if (0 === $tag->val) # void element
+                continue;
+            if (is_object($tag->val)) {
+                $out .= $this->beautifier($tag->val, 1 + $depth);
+            } else { # string
+                $out .= trim($tag->val);
+            }
+            $out .= "</$tag->name>";
+        } while ($tag = $tag->right);
+        $depth or $this->in = $out;
         return $out;
     }
 
@@ -166,7 +134,7 @@ class XML
     function byTag(string $name) {
         $this->root->val or $this->parse();
         $new = new XML;
-        $this->walk(fn($tag, $_, $x) => $x or $name != $tag->name or $new->selected[] = $tag);
+        $this->walk(fn($tag) => $name != $tag->name or $new->selected[] = $tag);
         return $new;
     }
 
@@ -177,8 +145,8 @@ class XML
     function byAttr(string $val, $attr = 'id', $single = false) {
         $this->root->val or $this->parse();
         $new = new XML;
-        $this->walk(function ($tag, $_, $x) use ($new, $val, $attr, $single) {
-            if ($x || !$tag->attr)
+        $this->walk(function ($tag) use ($new, $val, $attr, $single) {
+            if (!$tag->attr)
                 return;
             foreach ($tag->attr as $k => $v) {
                 if ($attr == $k && ($single ? in_array($val, preg_split("/\s+/s", $v)) : $val == $v))
