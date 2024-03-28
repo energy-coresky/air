@@ -52,8 +52,9 @@ pairs:
 #.php
 
 #.html
+spec: {'#text':%s, '#comment':<!--%s-->, '#data':<![CDATA[%s]]>}
 void: @csv( ) !doctype br hr img input link meta area base col embed source track wbr param
-omission:
+omis: # tags omission rules
   - @csv( ) li td th tr
   p: @csv( ) p address article aside blockquote div dl fieldset footer h1 h2 h3 h4 h5 h6 header hr menu nav ol ul pre section table form
 #.html

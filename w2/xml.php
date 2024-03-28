@@ -4,37 +4,36 @@ class XML
 {
     const version = 0.777;
 
+    static $html;
+
     public $pad = '';
     public $selected = [];
-
-    static $html;
-    static $spec = [
-        '#text' => '%s',
-        '#comment' => '<!--%s-->',
-        '#data' => '<![CDATA[%s]]>',
-    ];
 
     private $in;
     private $ptr;
     private $root;
 
     function __construct(string $in = '') {
-        self::$html or self::$html = yml('+ @object @inc(html)');
+        self::$html or self::$html = yml('+ @inc(html)');
         $this->root = $this->node('#root');
         $this->in = unl($in);
+    }
+
+    function __get($name) {
+        return self::$html[$name];
     }
 
     function __toString() {
         $this->root->val or $this->parse();
         $this->in = '';
         $fn = $this->pad ? 'beautifier' : 'draw';
-        $this->$fn($this->root->val, 0);
+        $this->$fn($this->root->val, '');
         return $this->in;
     }
 
-    static function file($name) {
+    static function file($name, $pad = '  ') {
         $xml = new XML(file_get_contents($name));
-        $xml->pad = '  ';
+        $xml->pad = $pad;
         return $xml;
     }
 
@@ -58,7 +57,7 @@ class XML
 
     function walk($tag, $fn = false, $depth = 0, $walk = false) {
         $fn or ($fn = $tag) && ($tag = $this->root->val);
-        $walk or $walk = (object)['nn' => 0];
+        $walk or $walk = (object)['nn' => 0, 'tail' => null];
         $walk->n = $n = 0;
         do {
             $walk->depth = $depth;
@@ -76,7 +75,7 @@ class XML
             if (!$tag)
                 return $this->in .= array_pop($walk->tail);
             if ('#' == $tag->name[0])
-                return $this->in .= sprintf(self::$spec[$tag->name], $tag->val);
+                return $this->in .= sprintf($this->spec[$tag->name], $tag->val);
             $this->in .= "<$tag->name";
             foreach ($tag->attr ?? [] as $k => $v)
                 $this->in .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
@@ -87,28 +86,32 @@ class XML
         });
     }
 
-    function beautifier($tag, $depth) {
+    function beautifier($tag, $pad) {
         $out = '';
         do {
             if ('#' == $tag->name[0]) {
-                $out .= trim(sprintf(self::$spec[$tag->name], $tag->val));
+                $out .= trim(sprintf($this->spec[$tag->name], $tag->val));
                 continue;
             } else {
-                $out .= "<$tag->name";
+                $begin = "<$tag->name";
                 foreach ($tag->attr ?? [] as $k => $v)
-                    $out .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-                $out .= '>';
+                    $begin .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+                $begin .= '>';
             }
-            if (0 === $tag->val) # void element
+            if (0 === $tag->val) { # void element
+                $out .= "\n$pad$begin";
                 continue;
-            if (is_object($tag->val)) {
-                $out .= $this->beautifier($tag->val, 1 + $depth);
-            } else { # string
-                $out .= trim($tag->val);
             }
-            $out .= "</$tag->name>";
+            if (is_object($tag->val)) {
+                $inner = $this->beautifier($tag->val, $pad . $this->pad);
+                $out .= strlen(trim($inner)) < 100
+                    ? "\n$pad$begin" . trim($inner) . "</$tag->name>"
+                    : "\n$pad$begin" . $inner . "\n$pad</$tag->name>";
+            } else { # string
+                $out .= "\n$pad$begin" . trim($tag->val) . "</$tag->name>";
+            }
         } while ($tag = $tag->right);
-        $depth or $this->in = $out;
+        $pad or $this->in = $out;
         return $out;
     }
 
@@ -201,7 +204,7 @@ class XML
     function _move(&$ary, $to, $m = 1, $text = false) {
         $new = [];
         foreach ($ary as $tag) {
-            for ($n = 0; $tag && $n < $m; !$text && '#' == $tag->name[0] or $n++)
+            for ($n = 0; $tag && $n < $m; !$text && $tag && '#' == $tag->name[0] or $n++)
                 $tag = $tag->$to;
             if ($tag && $tag->up)
                 $new[] = $tag;
@@ -324,7 +327,7 @@ class XML
                     $this->_attr($tag->attr, $t);
                     continue;
                 }
-                if (in_array($tag->name, self::$html->void)) {
+                if (in_array($tag->name, $this->void)) {
                     $tag = $this->push([$tag->name, 0, $tag->attr]);
                     $str = '';
                 } elseif (in_array($tag->name, ['script', 'style'])) {
@@ -374,10 +377,10 @@ class XML
                 $this->close();
         } else {
             if ('#' != $tag->name[0]) {
-                $om = self::$html->omission[$parent->name] ?? false;
+                $om = $this->omis[$parent->name] ?? false;
                 if ($om && in_array($tag->name, $om))
                     $this->close();
-                if ($parent->name == $tag->name && in_array($tag->name, self::$html->omission[0]))
+                if ($parent->name == $tag->name && in_array($tag->name, $this->omis[0]))
                     $this->close();
             }
             $this->relations($tag, null === $tag->val);
