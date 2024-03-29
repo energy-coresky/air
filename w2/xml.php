@@ -7,6 +7,7 @@ class XML
     static $html;
 
     public $pad = '';
+    public $draw;
     public $selected = [];
 
     private $in;
@@ -16,6 +17,15 @@ class XML
     function __construct(string $in = '') {
         self::$html or self::$html = yml('+ @inc(html)');
         $this->root = $this->node('#root');
+        $this->draw = function ($tag, &$close) {
+            if (is_string($tag))
+                return $tag;
+            $close = "</$tag->name>";
+            $open = "<$tag->name";
+            foreach ($tag->attr ?? [] as $k => $v)
+                $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+            return $open . '>';
+        };
         $this->in = unl($in);
     }
 
@@ -26,7 +36,7 @@ class XML
     function __toString() {
         $this->root->val or $this->parse();
         $this->in = '';
-        $fn = $this->pad ? 'beautifier' : 'draw';
+        $fn = $this->pad ? 'beautifier' : 'simple';
         $this->$fn($this->root->val, '');
         return $this->in;
     }
@@ -70,19 +80,16 @@ class XML
         return $walk;
     }
 
-    function draw($tag) {
+    function simple($tag) {
         $this->walk($tag, function ($tag, $walk) {
             if (!$tag)
                 return $this->in .= array_pop($walk->tail);
             if ('#' == $tag->name[0])
-                return $this->in .= sprintf($this->spec[$tag->name], $tag->val);
-            $this->in .= "<$tag->name";
-            foreach ($tag->attr ?? [] as $k => $v)
-                $this->in .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-            $this->in .= '>';
+                return $this->in .= ($this->draw)(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
+            $this->in .= ($this->draw)($tag, $close);
             if (!is_string($tag->val)) # childs or void
-                return $tag->val ? ($walk->tail[] = "</$tag->name>") : false;
-            $this->in .= "$tag->val</$tag->name>";
+                return $tag->val ? ($walk->tail[] = $close) : false;
+            $this->in .= "$tag->val$close";
         });
     }
 
@@ -90,25 +97,23 @@ class XML
         $out = '';
         do {
             if ('#' == $tag->name[0]) {
-                $out .= trim(sprintf($this->spec[$tag->name], $tag->val));
+                $str = ($this->draw)(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
+                $out .= trim($str);
                 continue;
             } else {
-                $begin = "<$tag->name";
-                foreach ($tag->attr ?? [] as $k => $v)
-                    $begin .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-                $begin .= '>';
+                $open = ($this->draw)($tag, $close);
             }
             if (0 === $tag->val) { # void element
-                $out .= "\n$pad$begin";
+                $out .= "\n$pad$open";
                 continue;
             }
             if (is_object($tag->val)) {
                 $inner = $this->beautifier($tag->val, $pad . $this->pad);
                 $out .= strlen(trim($inner)) < 100
-                    ? "\n$pad$begin" . trim($inner) . "</$tag->name>"
-                    : "\n$pad$begin" . $inner . "\n$pad</$tag->name>";
+                    ? "\n$pad$open" . trim($inner) . $close
+                    : "\n$pad$open" . $inner . "\n$pad$close";
             } else { # string
-                $out .= "\n$pad$begin" . trim($tag->val) . "</$tag->name>";
+                $out .= "\n$pad$open" . trim($tag->val) . $close;
             }
         } while ($tag = $tag->right);
         $pad or $this->in = $out;
