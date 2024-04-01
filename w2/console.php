@@ -349,8 +349,8 @@ class Console
     }
 
     /** Parse XML file */
-    function c_x($fn, $ware = 'main') {
-        echo XML::file(Plan::_t([$ware, $fn]));
+    function c_x($fn, $pad = '') {
+        echo XML::file(Plan::_t(['main', $fn]), $pad);
     }
 
     /** Drop all cache */
