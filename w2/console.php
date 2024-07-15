@@ -353,6 +353,11 @@ class Console
         echo XML::file(Plan::_t(['main', $fn]), $pad);
     }
 
+    /** Show ZML file info (.zml or .sky file extension) */
+    function c_z($fn = '', $pad = '') {
+        echo '2do';
+    }
+
     /** Drop all cache */
     function c_drop() {
         echo Debug::drop_all_cache() ? 'Drop all cache: OK' : 'Error when drop cache';

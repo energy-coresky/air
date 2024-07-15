@@ -16,16 +16,13 @@ class Install
     }
 
     function memo($var = false, $default = '') {
-        if (false === $this->mem) {
-            $tmemo = sqlf('+select tmemo from $_memory where id=11');
-            $this->mem = SKY::ghost('i', $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=11');
-        }
-        if ($var) {
-            if (is_array($default))
-                return isset($this->mem[$var]) ? explode(' ', $this->mem[$var]) : $default;
-            return $this->mem[$var] ?? $default;
-        }
-        return $this->mem;
+        global $sky;
+        false !== $this->mem or $this->mem = $sky->memory(11, 'i');
+        if (!$var)
+            return $this->mem;
+        if (is_array($default))
+            return isset($this->mem[$var]) ? explode(' ', $this->mem[$var]) : $default;
+        return $this->mem[$var] ?? $default;
     }
 
     function write_sky($fn, $head = false) {
@@ -311,11 +308,8 @@ class Install
             });
             SKY::i('files', implode(' ', $ary));
         }
-        $files = Rare::walk_dirs('.');
-        $files = array_flip($files);
-        array_walk($files, function (&$v, $k) {
-            $v = [0, Rare::list_path($k, 'is_file')];
-        });
+        $files = array_flip(Rare::walk_dirs('.'));
+        array_walk($files, fn(&$v, $k) => $v = [0, Rare::list_path($k, 'is_file')]);
         return [
             'files' => $files,
             'exd' => $saved[0],

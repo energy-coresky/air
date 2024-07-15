@@ -7,9 +7,7 @@ class Rewrite
     static $cnt = 0;
 
     static function lib(&$map, &$list = null) {
-        fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
-        $list = array_keys($yml = YML::text(stream_get_contents($fp)));
-        fclose($fp);
+        $list = array_keys($yml = YML::text(Boot::tail(__FILE__, __COMPILER_HALT_OFFSET__)));
         $lib = [];
         foreach ($yml as $v)
             $lib[] = [$list[count($lib)], $v[2], $v[0], $v[1]];

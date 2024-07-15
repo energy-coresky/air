@@ -29,10 +29,7 @@ class Gate
     private $ns;
 
     static function default() {
-        fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
-        $ary = json_decode(stream_get_contents($fp), true);
-        fclose($fp);
-        return $ary;
+        return json_decode(Boot::tail(__FILE__, __COMPILER_HALT_OFFSET__), true);
     }
 
     static function instance() {

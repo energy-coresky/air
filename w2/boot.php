@@ -12,6 +12,13 @@ class Boot
         return "<?php\n\n# this is auto generated file, do not edit\n$more\nreturn $array;\n";
     }
 
+    static function tail($file, $pos) {
+        fseek($fp = fopen($file, 'r'), $pos);
+        $tail = stream_get_contents($fp);
+        fclose($fp);
+        return trim($tail);
+    }
+
     function __construct($dc = false, $nx = null) {
         require DIR_S . "/w2/processor.php";
         require DIR_S . "/w2/rare.php";
@@ -28,11 +35,8 @@ class Boot
         ];
 
         $more = "\n\ndate_default_timezone_set('$cfg[timezone]');\n";
-        if (YML::$dev) {
-            fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
-            $more = "\n" . trim(stream_get_contents($fp)) . $more;
-            fclose($fp);
-        }
+        if (YML::$dev)
+            $more = "\n" . self::tail(__FILE__, __COMPILER_HALT_OFFSET__) . $more;
         foreach (yml('+ @inc(define)') + $cfg['define'] as $key => $val)
             $more .= "define('$key', " . var_export($val, true) . ");\n";
         $more .= "define('NOW', date(DATE_DT));\n";

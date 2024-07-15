@@ -372,11 +372,7 @@ class Language
                     $code .= sprintf("const L_$const=%s;\n", var_export($ary ? $val2 : $val, true));
                 }
             }
-            if (!$pg) {
-                fseek($fp = fopen(__FILE__, 'r'), __COMPILER_HALT_OFFSET__);
-                $code .= stream_get_contents($fp);
-                fclose($fp);
-            }
+            $pg or $code .= Boot::tail(__FILE__, __COMPILER_HALT_OFFSET__);
             Plan::_p("lng/$lg$pg.php", Boot::auto($out, $code));
         }
     }

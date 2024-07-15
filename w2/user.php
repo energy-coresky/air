@@ -127,7 +127,8 @@ class USER
 
         } else {
             if (0 == $sky->method) # INPUT_POST
-                $sky->error_no = 12;
+                #$sky->error_no = 12;
+                throw new Hacker('Disallow first POST');
             $ary = [
                 'sky'   => $this->cookize(),
                 'hash'  => $hash,

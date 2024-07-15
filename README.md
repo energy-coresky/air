@@ -2,10 +2,10 @@
 # The Coresky PHP Framework
 
 Using the framework, you can create web applications of any type. It contains a lot of new original ideas:
-"sky gate", "ghost query", "wares system" and more. By the way: the [Jet view parser][1]
-has a release-candidate status and is architecturally more powered than Blade or Twig.
+"sky gate", "ghost query", "wares system" and more.
 
-This project is my favorite "oil painting"! Not finished yet, but you can use it.
+This project is my favorite "oil painting"! Not finished yet, but you can use it. By the way: the [Jet view parser][1]
+has a release-candidate status and is architecturally more powered than Blade or Twig.
 
 Regards,
 Energy
@@ -14,39 +14,11 @@ Energy
 
 See the [wiki section](https://github.com/energy-coresky/air/wiki) (russian only).
 
-## Application examples
+### Empty Coresky application (HOLE.SKY)
 
-1. [AB.SKY][2] application
-2. [MED.CRM.SKY][3] application
-3. [HOLE.SKY][4] - empty application (preferably use composer)
+Just PHP required: will work embedded into PHP's SQLite3 database and PHP's web-server:
 
-AB (absolute busy) application is product of InfoParc http://absolutebusy.com/ moved into SKY.
-AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
-After installation and using MySQL database try switch to SQLite (edit main/config.yaml)
-
-### How to install
-
-Create an empty dir in the Apache root: `mkdir ab`, then `mkdir ab/web`.
-Extract files from ab.zip.
-Put to the last folder this two files: **ab.sky** and **moon.php**.
-Open in browser similar like `http://my-apache.local/ab/web/moon.php`, then follow the instructions.
-
-..or use console and PHP's embedded web-server:
-
-```bash
-MariaDB> create database ab;
-# from any dir:
-mkdir -p ab/public
-cd ab/public
-php moon.php ab.sky root:@localhost/ab:ab_
-# dsn syntax: user:password@databasehost:3306/databasename:tblprefix_
-```
-
-### Just PHP required
-
-Will work embedded into PHP's SQLite3 database and PHP's web-server:
-
-With composer (preferably):
+Install with composer (preferably):
 
 ```bash
 composer create-project coresky/hole
@@ -79,6 +51,34 @@ git clone https://github.com/energy-coresky/earth.git
 git clone https://github.com/energy-coresky/mercury.git
 # then run PHP's embedded web-server:
 php ../../air/sky s
+```
+
+## Other Coresky application examples
+
+1. [AB.SKY][2] application
+2. [MED.CRM.SKY][3] application
+3. [HOLE.SKY][4] - empty application (preferably use composer)
+
+AB (absolute busy) application is product of InfoParc http://absolutebusy.com/ moved into SKY.
+AB.SKY use 4 layouts: for desktop, mobile, printing and for SVG images.
+After installation and using MySQL database try switch to SQLite (edit main/config.yaml)
+
+### How to install
+
+Create an empty dir in the Apache root: `mkdir ab`, then `mkdir ab/web`.
+Extract files from ab.zip.
+Put to the last folder this two files: **ab.sky** and **moon.php**.
+Open in browser similar like `http://my-apache.local/ab/web/moon.php`, then follow the instructions.
+
+..or use console and PHP's embedded web-server:
+
+```bash
+MariaDB> create database ab;
+# from any dir:
+mkdir -p ab/public
+cd ab/public
+php moon.php ab.sky root:@localhost/ab:ab_
+# dsn syntax: user:password@databasehost:3306/databasename:tblprefix_
 ```
 
 <hr>
