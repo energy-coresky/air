@@ -69,12 +69,12 @@ if (!$found[0] && is_file(($cwd = $found[1] ?: __DIR__) . "/.coresky")) { # try 
         $found[0] = true; # attach app
 }
 
-if ($found[0]) {
+if ($found[0] && 's' != $argv[1]) {
     require "$cwd/bootstrap.php";
     new SKY;
     SKY::$debug = 1;
 } else {
-    chdir($found[1] ?: $found[2] ?: $dir_run());
+    chdir($found[0] ? $cwd : ($found[1] ?: $found[2] ?: $dir_run()));
     define('DIR_S', __DIR__);
     require DIR_S . '/w2/console.php';
 }

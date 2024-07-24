@@ -16,7 +16,7 @@ class Console
             if ($ns || is_dir(DIR_S . '/.git'))
                 return $this->master(!$ns);
         } elseif ('s' == $argv[1]) {
-            $this->s($argv[2] ?? 8000);
+            return $this->s($argv[2] ?? 8000);
         } elseif ($found[0]) {
             SQL::$dd_h = 'Console::dd_h';
             if ('_' !== ($argv[2][0] ?? '') && SKY::$plans['main']['app']['cfg']['databases'])
@@ -106,15 +106,6 @@ class Console
     function s($port) {
         global $dir_run;
 
-        $www = false;
-        if (self::$d[0]) {
-            if (!DEV)
-                return print("Cannot run php-server on production");
-            echo "\n";
-            $this->c_drop();
-            echo "\n";
-            $www = WWW;
-        }
         if (function_exists('socket_create')) {
             for ($i = 0; $i < 9; $i++, $port++) {
                 $sock = socket_create(AF_INET6, SOCK_STREAM, SOL_TCP);
@@ -124,7 +115,8 @@ class Console
                     break;
             }
         }
-        chdir($www ?: $dir_run());
+        require DIR_S . '/w2/boot.php';
+        chdir(Boot::www() ?: $dir_run());
         if (!file_exists($fn = '../s.php')) {
             echo "File `$fn` written\n\n";
             file_put_contents($fn, "<?php\n\n"

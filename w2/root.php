@@ -10,7 +10,7 @@ class Root
     static function menu() {
         global $sky;
         $a = $sky->log_dt;
-        if (preg_match("/^_dev\?main=(7|8|9|10)$/", URI, $m))
+        if (preg_match("/^\w+\?main=(7|8|9|10)$/", URI, $m))
             $a[$id = 14 - $m[1]] && sqlf('update $_memory set dt=null where id=%d', $id) && ($a[$id] = 0);
         $a = array_map(fn($v) => $v ? ' <span style="color:red">*</span>' : '', $a);
         $a[7] .= ' <span style="color:blue">(' . SKY::s('log_a') . ')</span>';
