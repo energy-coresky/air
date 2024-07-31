@@ -173,8 +173,8 @@ class Debug
     static function closure($fun) {
         $fun = new ReflectionFunction($fun);
         $file = file($fun->getFileName());
-        $line = trim($file[$fun->getStartLine()]);
-        return 'Plan::' == substr($line, 0, 6) ? $line : 'Extended Closure';
+        return trim($file[$fun->getStartLine() - 1]);
+        //return 'Plan::' != substr($line, 0, 6) ? $line : 'Extended Closure';
     }
 
     static function catch_error($func) {

@@ -41,11 +41,11 @@ color: # r g z y m j in sky.css
 #.schemes
 background: @bang(= )
   w: 0=#eee -=#fdd +=#dfd *=#ffd .=#eee
-  v: 0=#fff -=#fdd +=#dfd *=#ffd .=#eee
+  v: 0=#eee -=#fdd +=#dfd *=#ffd .=#eee
   b: 0=#000 -=#511 +=#151 *=#551 .=#555
   x: 0=#115 -=#511 +=#151 *=#551 .=#555
 pairs:
-  w_base: x_far
+  w_base: v_php
   v_php:  w_base
   b_far:  x_far
   x_far:  b_far
@@ -130,7 +130,7 @@ log_crash: [Log CRASH, radio, [Off, On]]
     c_name: ['', '', '', sky],
     c_upd: ['Cookie updates, minutes', number, style="width:100px", 60]
   }]
-visit: [One visit break after, off minutes, number, '', 5]
+visit: ['One visit break after, off minutes', number, '', 5]
 reg_req: [Users required for registrations, radio, [Both, Login, E-mail]]
 - </fieldset>
 #.system

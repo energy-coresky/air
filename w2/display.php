@@ -258,7 +258,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 if ('bash' == $m[1])
                     return self::bash(unhtml($m[2]));
                 if ('php' == $m[1])
-                    return self::php(unhtml($m[2]), false, true);
+                    //return self::php($php = ltrim(unhtml($m[2])), '<?' == substr($php, 0, 2), true);
+                    return self::php($php = unhtml($m[2]), '<?' == substr($php, 0, 2), true);
                 if ('css' == $m[1])
                     return self::css(unhtml($m[2]), '', true);
                 if ('html' == $m[1])
