@@ -35,15 +35,33 @@ class ZML # universal descriptor
         $this->head = [$pos += 2, substr($head, $pos)];
     }
 
-    function read() {
+    function match($y, &$chunk) {
+        if (!preg_match("/^!?([A-Z]+):(| ([^\n]+) (\d+)| ([^\n]+))\n/s", $chunk, $m))
+            return false;
+        $y->data = $y->arg = $y->len = '';
+        [$y->line, $y->op] = $m;
+        $chunk = substr($chunk, $size = strlen($y->line));
+        if ('' === $m[2])
+            return $size;
+        if ('!' == $y->line[0]) {
+            $y->arg = substr($m[2], 1);
+        } elseif ('' !== $m[4]) {
+            $y->arg = $m[3];
+            $y->len = (int)$m[4];
+        } else {
+            is_num($m[5]) ? ($y->len = (int)$m[5]) : ($y->arg = $m[5]);
+        }
+        return $size;
+    }
+
+    function read($y = false) {
+        $y or $y = new stdClass;
         for ([$pos, $chunk] = $this->head; true; ) {
-            if (preg_match("/^([A-Z]+:) ?(.*?) ?(\d*)\n/s", $chunk, $val)) {
-                $y = (object)array_combine(['line', 'op', 'arg', 'len'], $val);
-                if ('END:' == $y->op)
+            if ($size = $this->match($y, $chunk)) {
+                if ('END' == $y->op)
                     return;
-                $chunk = substr($chunk, $size = strlen($y->line));
                 if ('' !== $y->len) {
-                    $size += 1 + ($y->len = (int)$y->len);
+                    $size += 1 + $y->len;
                     strlen($chunk) > $y->len or $chunk .= fread($this->fh, ZML::chunk + $y->len);
                     $y->data = substr($chunk, 0, $y->len);
                     $chunk = substr($chunk, 1 + $y->len);
