@@ -2,7 +2,7 @@
 
 class ZML # universal descriptor
 {
-    const version = 0.001;
+    const version = 0.101;
     const chunk = 8192;
 
     static $zml;
@@ -35,7 +35,7 @@ class ZML # universal descriptor
         $this->head = [$pos += 2, substr($head, $pos)];
     }
 
-    function match($y, &$chunk) {
+    private function match($y, &$chunk) {
         if (!preg_match("/^!?([A-Z]+):(| ([^\n]+) (\d+)| ([^\n]+))\n/s", $chunk, $m))
             return false;
         $y->data = $y->arg = $y->len = '';
