@@ -63,7 +63,7 @@ class Vendor
             }, $authors));
         };
         $mds = function ($name) {
-            list ($vend, $pack) = explode('/', $name);
+            [$vend, $pack] = explode('/', $name);
             $mds = [];
             foreach (Rare::walk_dirs("vendor/$vend") as $dir) {
                 $mds = array_merge($mds, glob("$dir/*.md"));

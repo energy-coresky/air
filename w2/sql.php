@@ -421,7 +421,7 @@ class Func
         $s = '';
         $p = 0;
         foreach (token_get_all("<?php $m3") as $i => $x) {
-            list ($lex, $x) = is_array($x) ? $x : [0, $x];
+            [$lex, $x] = is_array($x) ? $x : [0, $x];
 
             if (!$i || 1 == $i) //  || T_WHITESPACE == $lex
                 continue;

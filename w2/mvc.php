@@ -405,7 +405,7 @@ class MVC extends MVC_BASE
                 echo tag("view($action)", 'class="red_label"'); # show red label
                 $mvc->hnd = 'red-label';
             } else {
-                list ($tpl, $action) = 2 == count($ary = explode('.', $action)) ? $ary : [MVC::$tpl, $ary[0]];
+                [$tpl, $action] = 2 == count($ary = explode('.', $action)) ? $ary : [MVC::$tpl, $ary[0]];
                 '_' == $action[1] or $action = "x_$action"; # must have prefix, `x_` is default
                 $mvc->body = "$tpl." . substr($action, 2);
                 $mvc->set($no_handle ? $param : MVC::handle($action, $param, true));

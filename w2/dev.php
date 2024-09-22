@@ -151,7 +151,7 @@ class DEV
             $php .= Display::php_method(Plan::_g([$we, $fn], $w2), substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
             $tpl = $list[$nv][3];
-            list ($lay, $bod) = explode('^', $tpl);
+            [$lay, $bod] = explode('^', $tpl);
             $fn = MVC::fn_parsed($lay, "_$bod");
             $php = '<div class="other-task" style="position:sticky; top:0px">Parsed: ';
             if (Plan::jet_t($fn)) {
@@ -163,7 +163,7 @@ class DEV
         } elseif ($list) {
             $tpl = $list[$nv][3];
             if ('^' != $tpl) {
-                list ($lay, $bod) = explode('^', $tpl);
+                [$lay, $bod] = explode('^', $tpl);
                 if ($lay) {
                     $sl = '"';
                     $lay = explode('.', $lay);
@@ -327,7 +327,7 @@ class DEV
         global $sky;
         if ('remote' == $sky->_2)
             return $this->remote();
-        list ($works, $wares, $installed) = $this->wares();
+        [$works, $wares, $installed] = $this->wares();
         $dir = array_diff($wares, $works);
         $wares = Plan::_rq('wares.php');
         return [
@@ -458,7 +458,7 @@ class DEV
         global $sky;
         if (!DEV)
             return;
-        list ($char, $id) = explode('.', $_POST['cid']);
+        [$char, $id] = explode('.', $_POST['cid']);
         $sky->memory($id, $char);
         trace("SKY:: $char $_POST[v], null");
         SKY::$char($_POST['v'], null);

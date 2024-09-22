@@ -35,7 +35,7 @@ class Usage
             if ($abs = '\\' === $name[0]) {
                 $name = substr($name, 1);
             } elseif (strpos($name, '\\') && $this->ns) {
-                list ($pfx, $name) = explode('\\', $name, 2);
+                [$pfx, $name] = explode('\\', $name, 2);
             }
             if ($ok = !$abs && isset($this->use[$x][$pfx ?? $name]))
                 $name = isset($pfx) ? $this->use[$x][$pfx] . "\\$name" : $this->use[$x][$name];
@@ -66,7 +66,7 @@ class Usage
             $id = $token;
             $this->pos = [$fn, $line];
             if (is_array($token)) {
-                list($id, $str) = $token;
+                [$id, $str] = $token;
                 $line += substr_count($str, "\n");
                 switch ($id) {
                     case T_STRING: case T_NS_SEPARATOR:  //case T_NAME_QUALIFIED:

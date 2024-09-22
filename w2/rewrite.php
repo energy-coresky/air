@@ -45,7 +45,7 @@ class Rewrite
     }
 
     static function put(&$n) {
-        list ($mode, $x, $y) = explode(' ', $_POST['mode'], 3);
+        [$mode, $x, $y] = explode(' ', $_POST['mode'], 3);
         switch ($mode) {
             case 'save':
                 self::$map[$n = $x] = [$_POST['n'], $_POST['php'], $_POST['x'], $_POST['u']];

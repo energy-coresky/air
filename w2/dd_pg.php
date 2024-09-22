@@ -14,7 +14,7 @@ class dd_pg implements DriverDatabase
     function __construct($dsn, $pref) {
         if (!function_exists('pg_connect'))
             throw new Error('Function pg_connect() not exists');
-        list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
+        [$dbname, $host, $user, $pass] = explode(' ', $dsn);
         $this->conn = pg_connect("host=$host dbname=$dbname user=$user password=$pass");
         $this->pref = $pref;
     }

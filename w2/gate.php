@@ -358,7 +358,7 @@ class Gate
             $data = substr($data, 0, -2);
         $rx = $data;
         $df = substr_count($this->ns, '+');
-        list($src, $var) = $this->get_src($is_pfs, $re, $df, $ary, $skip);
+        [$src, $var] = $this->get_src($is_pfs, $re, $df, $ary, $skip);
         $x = $this->i + ($is_pfs ? 2 + 2 * $this->addr_c : 0);
         $out = $comp = $e5 = $e7 = '';
         $e2 = 2 == $var; # key($_ARY)

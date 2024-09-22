@@ -9,7 +9,7 @@ class SKY implements PARADISE
     const ERR_DETECT = 1;
     const ERR_SHOW   = 3;
     const ERR_SUPPRESSED = 4;
-    const CORE = '0.548 2024-07-31T14:50:19+03:00 energy';
+    const CORE = '0.549 2024-09-22T09:33:54+03:00 energy';
 
     public $tracing = '';
     public $error_prod = '';
@@ -111,7 +111,7 @@ class SKY implements PARADISE
             $dd or $dd = $this->open("OK, first char is `$char`");
             if (!$dd)
                 return '';
-            list($dt, $imemo, $tmemo) = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
+            [$dt, $imemo, $tmemo] = $dd->sqlf('-select dt, imemo, tmemo from $_memory where id=' . $id);
             SKY::ghost($char, $tmemo, 'update $_memory set dt=$now, tmemo=%s where id=' . $id, 0, $dd);
         }
         return SKY::$mem[$char][3];
@@ -187,7 +187,7 @@ class SKY implements PARADISE
         if (SKY::$debug && $tpl)
             trace(is_array($tpl) ? end($tpl) : (DEV && $tpl instanceof Closure ? Debug::closure($tpl) : $tpl), 'GHOST', 1);
         if ($packed) foreach (explode("\n", unl($packed)) as $v) {
-            list($k, $v) = explode(' ', $v, 2);
+            [$k, $v] = explode(' ', $v, 2);
             SKY::$mem[$char][3][$k] = escape($v, true);
         }
         return SKY::$mem[$char][3];

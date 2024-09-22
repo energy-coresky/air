@@ -14,7 +14,7 @@ class dd_odbc implements DriverDatabase
     function __construct($dsn, $pref) {
         if (!function_exists('odbc_connect'))
             throw new Error('Function odbc_connect() not exists');
-        list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
+        [$dbname, $host, $user, $pass] = explode(' ', $dsn);
         $this->conn = odbc_connect("", $user, $pass);
         $this->pref = $pref;
     }

@@ -74,7 +74,7 @@ class Schedule
 
     function mail_error() {
         $this->database();
-        list ($dt, $err) = sqlf('-select dt, tmemo from $_memory where id=4');
+        [$dt, $err] = sqlf('-select dt, tmemo from $_memory where id=4');
         if (!$dt)
             return;
         sqlf('update $_memory set dt=null where id=4');

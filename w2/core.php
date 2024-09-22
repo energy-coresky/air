@@ -118,7 +118,7 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
     }
     if (SKY::$debug || $sky->log_error && $err) {
         if ($err && is_array($var))
-            list ($title, $var) = $var;
+            [$title, $var] = $var;
 
         $var = is_string($var) ? html($var) : Plan::var($var, '', false, '?');
 
@@ -130,9 +130,9 @@ function trace($var, $is_error = false, $line = 0, $file = '', $context = false)
         if (!$file) {
             $depth = 1 + $line;
             $db = debug_backtrace();
-            list ($file, $line) = array_values($db[$line]);
+            [$file, $line] = array_values($db[$line]);
             if (is_array($line)) { # file-line don't supported
-                list ($file, $line) = array_values($db[$depth - 2]);
+                [$file, $line] = array_values($db[$depth - 2]);
                 $fln = L::r("<span>$file^$line</span>");
             }
         }

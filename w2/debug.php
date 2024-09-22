@@ -182,7 +182,7 @@ class Debug
         $t = [$sky->was_error, SKY::$debug];
         SKY::$debug = $sky->was_error = 0;
         $r = [call_user_func($func), $e = $sky->was_error];
-        list ($sky->was_error, SKY::$debug) = $t;
+        [$sky->was_error, SKY::$debug] = $t;
         $sky->was_error |= $e;
         return $r;
     }

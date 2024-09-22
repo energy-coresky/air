@@ -43,7 +43,7 @@ class Plan
     }
 
     static function view_($op, $a0) { # g or m
-        list ($ware, $a0) = is_array($a0) ? $a0 : [self::$ware, $a0];
+        [$ware, $a0] = is_array($a0) ? $a0 : [self::$ware, $a0];
         if (!preg_match($re = "/^\w+\.jet$/", $a0))
             throw new Error("Jet: file `$a0` do not match $re");
         if ('_' == ($a0[1] ?? '') && '_' == $a0[0]) {
@@ -58,9 +58,9 @@ class Plan
     static function __callStatic($func, $arg) {
         static $old_ware = false;
         static $old_obj = false;
-        list ($pn, $op) = explode('_', $func);
+        [$pn, $op] = explode('_', $func);
         $pn or $pn = 'app';
-        list ($ware, $a0) = is_array($arg[0]) ? $arg[0] + [1 => null] : [self::$ware, $arg[0]];
+        [$ware, $a0] = is_array($arg[0]) ? $arg[0] + [1 => null] : [self::$ware, $arg[0]];
 
         if ('view' == $pn && 'main' == $ware && !is_array($arg[0]))
             $ware = self::$view;
@@ -227,7 +227,7 @@ class Plan
             $sky->_tkd = [$sky->s_title, $sky->s_keywords, $sky->s_description];
         $sky->_title = html($sky->_title ? "$sky->_title - {$sky->_tkd[0]}" : $sky->_tkd[0]);
         if ($sky->_refresh) {
-            list($secs, $link) = explode('!', $sky->_refresh);
+            [$secs, $link] = explode('!', $sky->_refresh);
             $sky->_head = $sky->_head . sprintf('<meta http-equiv="refresh" content="%d%s">', $secs, $link ? ";url=$link" : '');
         }
         self::$head or self::$head = [[], [], []];

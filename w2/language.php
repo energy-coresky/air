@@ -134,7 +134,7 @@ class Language
             } else {
                 array_shift($langs);
                 $api = unserialize(SKY::d('lg_api') ?: serialize(['i' => "{$langs[0]}.*.0"]));
-                list ($_lg, $_page, $_id) = explode('.', $api['i']);
+                [$_lg, $_page, $_id] = explode('.', $api['i']);
                 if ($ok = 'translate' == $in->tell) {
                     if ($in->i != $api['i'])
                         throw new Error('Lang API');
@@ -188,7 +188,7 @@ class Language
 
     private function id($id) {
         if (strpos($id, '.'))
-            list ($this->page, $id) = explode('.', $id, 2);
+            [$this->page, $id] = explode('.', $id, 2);
         return $id;
     }
 
@@ -247,7 +247,7 @@ class Language
             $pg = [];
             $this->all = true;
             array_walk($_POST['row'], function ($id) use (&$pg) {
-                list ($page, $id) = explode('.', $id, 2);
+                [$page, $id] = explode('.', $id, 2);
                 $pg[$page][] = $id;
             });
         } else {
@@ -320,7 +320,7 @@ class Language
             case 'bulk':
                 $new = false;
                 if (is_array($s))
-                    list($s, $val, $new) = $s;
+                    [$s, $val, $new] = $s;
                 if ($def_lg && '' !== $s && $_POST['const-prev'] != $s) {
                     foreach ($this->list_all() as $v) {
                         if (explode(' ', $v, 2)[0] === $s) {
@@ -364,7 +364,7 @@ class Language
             $ary = $i ? $this->act($lg, $page, 'list') : [];
             $code = '';
             foreach ($dary as $k => $one) {
-                list ($const, $val) = explode(' ', $one, 2);
+                [$const, $val] = explode(' ', $one, 2);
                 $val2 = $i ? explode(' ', $ary[$k], 2)[1] : 0;
                 if ('' === $const) {
                     $out[$val] = $val2;
@@ -412,7 +412,7 @@ class Language
                     continue;
                 $app[$fn] = [[0, 0], [0, $fun = 0]];
                 foreach (token_get_all(file_get_contents($fn)) as $v) {
-                    list($id, $v) = is_array($v) ? $v : [0, $v];
+                    [$id, $v] = is_array($v) ? $v : [0, $v];
                     if (T_WHITESPACE == $id)
                         continue;
                     if (T_STRING == $id) {
@@ -499,7 +499,7 @@ class Language
     private function &list_all() {
         $all = $this->t->all(qp('lg=$+', DEFAULT_LG), '$cc(name, ".", flag), tmemo');
         array_walk($all, function (&$v, $k) {
-            list ($k, $flag) = explode('.', $k);
+            [$k, $flag] = explode('.', $k);
             $this->nsync |= $flag & self::NON_SYNC;
             if ('' !== $v)
                 $v = "$k." . str_replace("\n", "\n$k.", trim($v, "\n")) . "\n";
@@ -533,7 +533,7 @@ class Language
                 next($dary);
                 if ($only && ($char = '%') && !in_array($id, $only))
                     return true;
-                list ($key, $v) = explode(' ', $v, 2);
+                [$key, $v] = explode(' ', $v, 2);
                 if ($this->all && !in_array($page = explode('.', $id, 2)[0], [$pp, '*'])) {
                     $pp = $page;
                     $color = 'cfc' == $color ? 'e0e7ff' : 'cfc';

@@ -127,7 +127,7 @@ class Globals extends Usage
 
     function c_progress() {
         SKY::$debug = 0;
-        list ($val, $max) = sqlf('-select imemo, cmemo from $_memory where id=11');
+        [$val, $max] = sqlf('-select imemo, cmemo from $_memory where id=11');
         json(['max' => (int)$max, 'val' => (int)$val]);
     }
 
@@ -227,7 +227,7 @@ class Globals extends Usage
             $this->pos = [$fn, $line];
             $line_start = $line;
             if (is_array($token)) {
-                list($id, $str) = $token;
+                [$id, $str] = $token;
                 $line += substr_count($str, "\n");
                 switch ($id) {
                     case T_WHITESPACE: case T_COMMENT:
@@ -371,7 +371,7 @@ class Globals extends Usage
                         $id = $in[1];
                         if (isset($nap[$id]))
                             parent::$cnt[3]++;
-                        list ($def, $ident) = explode('.', $id);
+                        [$def, $ident] = explode('.', $id);
                         if (!in_array($def, ['NAMESPACE', 'VAR', 'EVAL'])) {
                             $z = 'FUNCTION' == $def ? 1 : (in_array($def, ['CONST', 'DEFINE']) ? 2 : 0);
                             $this->json[$z][] = strtolower($ident);

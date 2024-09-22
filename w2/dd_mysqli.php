@@ -15,7 +15,7 @@ class dd_mysqli implements DriverDatabase
         if (!function_exists('mysqli_init'))
             throw new Error('Function mysqli_init() not exists');
         $this->conn = mysqli_init();
-        list ($dbname, $host, $user, $pass) = explode(' ', $dsn);
+        [$dbname, $host, $user, $pass] = explode(' ', $dsn);
         $this->dbname = $dbname;
         mysqli_real_connect($this->conn, $host, $user, $pass, $dbname);
         $this->pref = $pref;

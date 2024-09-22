@@ -189,7 +189,7 @@ class Rare
             
         } else { # the end place in the template
             echo $str = ob_get_clean();
-            list ($plan, $fn) = array_pop($cache);
+            [$plan, $fn] = array_pop($cache);
             ("{$plan}p")($fn, $str);
         }
     }

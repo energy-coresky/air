@@ -90,7 +90,7 @@ class Install
             $msg = 'Init..';
         } else {
             $pref = $_POST['pref'];
-            list($n, $max, $ct, $cr, $create, $rows) = explode("\t", $step);
+            [$n, $max, $ct, $cr, $create, $rows] = explode("\t", $step);
             $n++;
             if ($create) {
                 $create = explode(' ', $create);
@@ -173,7 +173,7 @@ class Install
             $sky->s_version = time() . ' ' . SKY::version()['core'][0] . ' ' . $_POST['vapp'];
             $n = $cf = $max = 0;
             $this->fn = 'var/' . $_POST['fn'] . '.sky';
-            list(, $exf, $mkdir, $dirs) = $this->get_files(1);
+            [, $exf, $mkdir, $dirs] = $this->get_files(1);
             array_shift($mkdir); # skip `.`
             foreach ($dirs as $one) {
                 foreach ($this->filelist($one) as $fn) {
@@ -194,7 +194,7 @@ class Install
             $this->write_sky(false, $head);
             $msg = 'Init..';
         } else {
-            list($n, $max, $cf, $dirs) = explode("\t", $step);
+            [$n, $max, $cf, $dirs] = explode("\t", $step);
             $dirs = explode(' ', $dirs);
             do {
                 $files = $this->filelist(current($dirs));
@@ -205,7 +205,7 @@ class Install
             } while ($dirs);
             $this->fn = 'var/' . $this->memo('fn', 'app') . '.sky';
             if ($dirs) {
-                list(, $exf) = $this->get_files();
+                [, $exf] = $this->get_files();
                 if (isset($exf[$fn = $files[$cf++]]) || $this->skip_file($fn)) {
                     $msg = "$n. " . L::r($fn) . ' (skipped)';
                 } else {

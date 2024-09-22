@@ -231,7 +231,7 @@ class Root
                 });
             }
         } else {
-            list ($imemo, $dt) = sqlf('-select imemo, dt from $_memory where id=%d', $id = current($ary = $ary[$i]));
+            [$imemo, $dt] = sqlf('-select imemo, dt from $_memory where id=%d', $id = current($ary = $ary[$i]));
             $ary = $sky->memory($id, $char = key($ary));
             $edit or array_walk($ary, function(&$v, $k) use ($i, $sky) {
                 $v = html($v) . (DEV && '_dev' == $sky->_0 ? tag(a('drop &nbsp;', "?main=3&id=$i&show=$k")) : '');
@@ -454,7 +454,7 @@ class Root
             $list = array_reverse($list);
             array_walk($list, function($v) use (&$TOP, &$sel, $tpl, $sky, &$act) {
                 static $i = 0;
-                //list($year, $month, $day) = sscanf(substr($v, -14, 10), "%d-%d-%d");
+                //[$year, $month, $day] = sscanf(substr($v, -14, 10), "%d-%d-%d");
                 $d = date('j M Y', $ts = strtotime(substr(basename($v), 10, 10)));
                 if ($i++ < 3) {
                     $TOP .= ' ' . a($d, $tpl . $ts, ($q = $ts == $sky->_6) ? 'class="active"' : '');
