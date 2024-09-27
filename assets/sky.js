@@ -272,11 +272,7 @@ $(function() {
     });
 
     sky.err_core();
-//if (window.parent != window) $('a').click(function(el) {
-    //alert();
-//    window.parent.location.href = $(this).attr('href');
-//    return false;
-//});
+
     var scr = '';
     if ('' === sky.tz) {
         try { scr = screen.width + 'x' + screen.height } catch(e) {}
