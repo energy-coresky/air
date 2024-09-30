@@ -8,8 +8,7 @@ class JS // T_COMMENT
 
     public $in;
     public $array = [];
-    public $pad = 4; # 0 for minified CSS
-    public $sort = false; # (compare 2 CSS)
+    public $pad = 4; # 0 for minified Javacsript
 
     function __construct(string $in = '') {
         defined('T_KEYWORD') or define('T_KEYWORD', 10001);
@@ -19,7 +18,7 @@ class JS // T_COMMENT
     }
 
     static function file($name) {
-        echo new CSS(file_get_contents($name));
+        echo new JS(file_get_contents($name));
     }
 
     function __toString() {
