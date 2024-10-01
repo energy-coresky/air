@@ -6,7 +6,7 @@ class SVG {
     private $name;
     private $pack;
 
-    function __construct($c, $a = false) { # new image from array
+    function __construct($c, $a = false) { /* new image from array */
         $this->name = $a ? $a : $c;
         $this->pack = 'svg_list_' . ($a ? $c : 0) . '.pack';
     }
