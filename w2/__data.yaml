@@ -23,6 +23,9 @@ rules:
   class: T_CLASS T_WHITESPACE T_STRING
   function: T_FUNCTION T_WHITESPACE T_STRING
 
+prev_space: @csv( ) ; { } ) , [ :
+after_space: ['{', '[']
+
 extensions: @csv( ) # all known extensions (must)
   apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant
   exif FFI* fileinfo filter ftp gd gettext gmp hash HRTime* iconv imagick imap interbase
