@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.202;
+    const version = 0.303;
 
     const KEYWORD = 1;
     const USAGE = 2;
@@ -12,24 +12,27 @@ class PHP
 
     static $php;
 
-    public $in;
-    public $lines = 1;
+    //public $lines = 1;
     public $pad; # 0 for minified PHP
-    public $top;
+    public $tok;
+    public $count = 0;
 
     private $ns = '';
     private $use = [];
     private $stack = [];
+    private $sz = [];
     private $oc = [
         '{' => '}',
         '(' => ')',
         '[' => ']',
     ];
 
-    function __construct(string $in = '', $pad = 4) {
+    function __construct(string $in = '', $pad = 0) {
+        defined('T_ENUM') or define('T_ENUM', 11001);
         self::$php or self::$php = yml('+ @object@inc(php)');
-        $this->in = unl($in);
-        $this->lines = substr_count($this->in, "\n");
+        $this->tok = token_get_all(unl($in), TOKEN_PARSE);
+        $this->count = count($this->tok);
+        //$this->lines = substr_count($this->in, "\n");
         $this->pad = $pad;
     }
 
@@ -46,102 +49,90 @@ class PHP
     }
 
     function __toString() {
-        $this->top or $this->parse_nice();
-        $out = $trace = '';
-        for ($el = $this->top; $el; $el = $el->next) {
-$trace .= $this->trace($el);
+        $this->parse_nice();
+        $out = $x = '';
+        for ($y = $this->tok(); $y; $y = $next) {
+            $next = $this->tok($y->i + 1);
+$x .= $this->trace($y);
             if (!$this->pad) {
-                if (T_COMMENT == $el->tok
-                    || T_WHITESPACE == $el->tok && in_array($el->prev->tok, self::$php->prev_space)
-                    || T_WHITESPACE == $el->tok && in_array($el->next->tok, self::$php->after_space)
+                $prev = $this->tok($y->i - 1);
+                if (T_COMMENT == $y->tok
+#                    || T_WHITESPACE == $y->tok && in_array($prev->str, self::$php->prev_space)
+#                    || T_WHITESPACE == $y->tok && in_array($next->str, self::$php->after_space)
                 )
                     continue;
             }
-            $out .= $el->str;
+            $out .= $y->str;
         }
-        return $out . "\nlines: $this->lines\n$trace";
+        return $out . "\nlines: ??\n$x";
     }
 
-    function tok($tok, $prev) {
+    function tok($i = 0) {
+        if ($i < 0 || $i > $this->count)
+            return false;
+        $tok =& $this->tok[$i];
+        is_array($tok) or $tok = [0, $tok];
         return (object)[
-            'tok' => ($is = is_array($tok)) ? $tok[0] : 0,
-            'str' => $str = $is ? $tok[1] : $tok,
-            'prev' => $prev,
-            'next' => null,
+            'i' => $i,
+            'tok' => $tok[0],
+            'str' => &$tok[1],
             'rank' => 0, # KEYWORD/CHARS/USAGE/DEFINITION
-            'sz' => 0,
-            'oc' => 0, # open/none/close 1/0/-1
+            'sz' => $this->sz[$i] ?? 0,
+//            'oc' => 0, # open/none/close 1/0/-1
         ];
     }
 
-    function tokens() {
-        $y = null;
-        foreach (token_get_all($this->in) as $i => $tok) {
-            $n = $this->tok($tok, $y);
-            if ($y) {
-                $y->next = $n;
-                if (T_COMMENT == $y->tok && "\n" == $y->str[-1] && T_WHITESPACE == $n->tok) {
-                    $y->str = substr($y->str, 0, -1);
-                    $n->str = "\n" . $n->str;
-                }
-                yield $i => $y;
-            } else {
-                $this->top = $n;
-            }
-            $y = $n;
-        }
-        yield ++$i => $y;
-    }
-
-    function parse_easy($func = null) {
-        iterator_apply($y = $this->tokens(), $func ?? fn() => true, [$y]);
-    }
-
     function parse_nice() {
+        $sz =& $this->sz;
         $stk =& $this->stack;
         $open = array_keys($this->oc);
         $close = array_values($this->oc);
-        foreach ($this->tokens() as $i => $y) {
-            if ($stk) {
-                $last = array_key_last($stk);
-                $stk[$last]->sz += strlen(' ' == $y->str ? ' ' : trim($y->str));
+        for ($y = $this->tok(); $y; $y = $next) {
+            $next = $this->tok($y->i + 1);
+
+            if ($next && T_COMMENT == $y->tok && "\n" == $y->str[-1] && T_WHITESPACE == $next->tok) {
+                $y->str = substr($y->str, 0, -1);
+                $next->str = "\n" . $next->str;
             }
+            
+            if ($stk)
+                $sz[end($stk)] += strlen(' ' == $y->str ? ' ' : trim($y->str));
             if (in_array($y->str, $open)) {
-                $y->oc = $y->sz = 1;
-                $stk[] = $y;
+                $stk[] = $y->i;
+                $sz[$y->i] = 1;
             } elseif (in_array($y->str, $close)) {
-                $y->oc = -1;
-                if ($y->str == $this->oc[end($stk)->str]) { // checking!!
-                    $pos = array_pop($stk);
-                    if ($stk) {
-                        $last = array_key_last($stk);
-                        $stk[$last]->sz += $pos->sz - 1;
-                    }
+                $char = $this->tok[end($stk)][1];
+                if ($y->str == $this->oc[$char]) { // checking!!
+                    $j = array_pop($stk);
+                    if ($stk)
+                        $sz[end($stk)] += $sz[$j] - 1;
                 }
             }
         }
     }
 
     function parse_rank() {
+        $line = 1;
         foreach ($this->tokens() as $i => $y) {
-            if (T_STRING == $n->tok) {
-                
-            } elseif (in_array($n->str, self::$php->keywords)) { // 2do: chk
-                $n->rank = PHP::KEYWORD;
-            } elseif (in_array($n->str, self::$php->types)) {
-                $n->rank = PHP::TYPE;
+            if (T_STRING == $y->tok) {
+                if (in_array($y->str, self::$php->types))
+                    $y->rank = PHP::TYPE;
+                    
+            } elseif (in_array($y->str, self::$php->keywords)) { // 2do: chk
+                $y->rank = PHP::KEYWORD;
             }
             switch ($y->tok) {
                 case T_NAMESPACE:
                     $this->ns = '';
                     break;
-                case T_EVAL: ;
                 case T_GLOBAL: ;
                 case T_CONST: ;
                 case T_VARIABLE: ;
                 case T_INTERFACE: ;
                 case T_TRAIT: ;
+                case T_EVAL: ;
             }
+            $line += substr_count($y->str, "\n");
         }
     }
 }
