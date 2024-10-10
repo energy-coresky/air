@@ -2,14 +2,23 @@
 
 class PHP
 {
-    const version = 0.388;
+    const version = 0.389;
 
-    const KEYWORD = 1;
-    const USAGE = 2;
-    const DEFINITION = 3;
+    const KEYWORD = 1; # ranks
+    const TYPE = 2;
+    const CHAR = 3;
     const IGNORE = 4;
-    const TYPE = 5;
-    const CHAR = 6;
+    const _NS = 10; # definitions
+    const _IF = 11; # usages: 20 + definitions
+    const _TRT = 12;
+    const _ENUM = 13;
+    const _VAR = 14;
+    const _FUN = 15;
+    const _CON = 16;
+    const _DEF = 17;
+    const _CLS = 18;
+    const _EVAL = 19;
+    const _USE_LIKE = 50;
 
     public $pad; # 0 for minified PHP
     public $tok;
@@ -36,7 +45,18 @@ class PHP
             $this->tok = [$this->syntax_fail = $e->getMessage()];
         }
         $this->count = count($this->tok);
-        $this->pad = $pad;
+        $this->pad = $pad; /*
+            switch ($y->tok) {
+                case T_NAMESPACE:
+                    $this->ns = '';
+                    break;
+                case T_GLOBAL: ;
+                case T_CONST: ;
+                case T_VARIABLE: ;
+                case T_INTERFACE: ;
+                case T_TRAIT: ;
+                case T_EVAL: ;
+            }*/
     }
 
     function __get($name) {
@@ -51,7 +71,7 @@ class PHP
  function trace($t) {
      static $i = 0; $i++;
      $s = $t->tok . ' ' . token_name($t->tok) . ' ' . $t->str;
-     if (!$t->x)
+     if ($t->x)
          $s .= " ------------------- SZ: $t->x";
      return "===================== $i\n$s\n";// . var_export($t, 1);
  }
@@ -62,7 +82,7 @@ class PHP
         for ($y = $this->tok(); $y; $y = $next) {
             $next = $this->tok($y->i + 1);
 $trc .= $this->trace($y);
-            if (!$this->pad) {
+            if ($this->pad) {
                 $prev = $this->tok($y->i - 1);
                 if (T_COMMENT == $y->tok
 #                    || T_WHITESPACE == $y->tok && in_array($prev->str, $this->_prev_space)
@@ -72,7 +92,8 @@ $trc .= $this->trace($y);
             }
             $out .= $y->str;
         }
-        return $out . "\nlines: ??\n$trc";
+       $qq = var_export($this->_def_3t,1);
+        return $out . "\nlines: $qq\n$trc";
     }
 
     function char_line($i) {
@@ -91,17 +112,19 @@ $trc .= $this->trace($y);
             'i' => $i,
             'tok' => $tok[0],
             'str' => &$tok[1],
-            'line' => $tok[0] ? $tok[2] : fn() => $this->char_line($i),
+            'line' => $tok[2] ?? fn() => $this->char_line($i),
             'x' => $this->x[$i] ?? 0,
-            'oc' => 0, # open/none/close 1/0/-1
+            'oc' => function () use (&$tok) { # open/none=0/close 1|true 0|false -1
+                if ($tok[0])
+                    return in_array($tok[0], [T_DOLLAR_OPEN_CURLY_BRACES, T_CURLY_OPEN]); # bool !
+                return array_search($tok[1], $this->oc, true) ? -1 : (int)isset($this->oc[$tok[1]]);
+            },
         ];
     }
 
     function parse_nice() {
         $x =& $this->x;
         $stk =& $this->stack;
-        $open = array_keys($this->oc);
-        $close = array_values($this->oc);
         for ($y = $this->tok(); $y; $y = $next) {
             $next = $this->tok($y->i + 1);
 
@@ -112,12 +135,13 @@ $trc .= $this->trace($y);
             
             if ($stk)
                 $x[end($stk)] += strlen(' ' == $y->str ? ' ' : trim($y->str));
-            if (in_array($y->str, $open)) {
+            $oc = ($y->oc)();
+            if (1 == $oc) {
                 $stk[] = $y->i;
                 $x[$y->i] = 1;
-            } elseif (in_array($y->str, $close)) {
+            } elseif (-1 == $oc) {
                 $char = $this->tok[end($stk)][1];
-                if ($y->str == $this->oc[$char]) { // checking!!
+                if ($y->str == $this->oc[$char[1] ?? $char[0]]) { // checking!!
                     $j = array_pop($stk);
                     if ($stk)
                         $x[end($stk)] += $x[$j] - 1;
@@ -126,36 +150,40 @@ $trc .= $this->trace($y);
         }
     }
 
+    function parse_rank($func = false) {
+        $ary = [3, 3, 3];
+        for ($y = $this->tok(); $y; $y = $next) {
+            $next = $this->tok($y->i + 1);
+            $rank =& $this->x[$y->i];
+            if (T_STRING == $y->tok) {
+                if (in_array($y->str, $this->_types)) {
+                    $rank = PHP::TYPE;
+                } elseif (T_WHITESPACE === $ary[2]) {
+                    if ($x = $this->_def_3t[$ary[1]] ?? 0)
+                        $rank = $x;
+                } elseif (T_OBJECT_OPERATOR === $ary[2]) {
+                    $rank = 'property';
+                }
+
+            } elseif (in_array($y->tok, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT])) {
+                $rank = PHP::IGNORE;
+            } elseif (in_array($y->str, $this->_keywords)) { // 2do: chk
+                $rank = PHP::KEYWORD;
+            } elseif (T_VARIABLE == $y->tok) {
+                $rank = T_DOUBLE_COLON == $ary[2] ? '_property' : PHP::_VAR;
+            } else {
+                $rank = PHP::CHAR;
+            }
+            array_shift($ary);
+            $ary[] = $y->tok ?: $y->str;
+            
+        }
+    }
+
     function match() {
     }
 
-    function parse_rank() {
+    function abs_name() {
         
-        for ($y = $this->tok(); $y; $y = $next) {
-            $next = $this->tok($y->i + 1);
-            if (T_STRING == $y->tok) {
-                if (in_array($y->str, $this->_types))
-                    $this->x[$y->i] = PHP::TYPE;
-                    
-            } elseif (in_array($y->tok, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT])) {
-                $this->x[$y->i] = PHP::IGNORE;
-            } elseif (in_array($y->str, $this->_keywords)) { // 2do: chk
-                $this->x[$y->i] = PHP::KEYWORD;
-            } else {
-                $this->x[$y->i] = PHP::CHAR;
-            }
-            switch ($y->tok) {
-                case T_NAMESPACE:
-                    $this->ns = '';
-                    break;
-                case T_GLOBAL: ;
-                case T_CONST: ;
-                case T_VARIABLE: ;
-                case T_INTERFACE: ;
-                case T_TRAIT: ;
-                case T_EVAL: ;
-            }
-            
-        }
     }
 }

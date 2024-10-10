@@ -19,17 +19,10 @@ types: @csv( ) int float bool string true false null void iterable object mixed 
 
 soft: [enum, resource, numeric] # https://www.php.net/manual/ru/reserved.other-reserved-words.php
 
-def:
-  namespace: T_NAMESPACE T_WHITESPACE T_STRING
-  interface: T_INTERFACE  T_WHITESPACE T_STRING
-  trait: T_TRAIT T_WHITESPACE T_STRING
-  enum: T_ENUM T_WHITESPACE T_STRING
-  var:
-  function: T_FUNCTION T_WHITESPACE ?& T_STRING
-  const: T_CONST T_WHITESPACE T_STRING
-  define: T_STRING=define ?T_WHITESPACE =( T_CONSTANT_ENCAPSED_STRING
-  class: T_CLASS T_WHITESPACE T_STRING
-  eval: T_EVAL ?T_WHITESPACE =(
+def_3t: @csv( ) NAMESPACE INTERFACE TRAIT ENUM FUNCTION CLASS CONST
+#  var:
+#  define: T_STRING=define ?T_WHITESPACE =( T_CONSTANT_ENCAPSED_STRING
+#  eval: T_EVAL ?T_WHITESPACE =(
 use:
   interface:
     - T_IMPLEMENTS T_WHITESPACE T_STRING
