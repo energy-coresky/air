@@ -19,6 +19,9 @@ types: @csv( ) int float bool string true false null void iterable object mixed 
 
 soft: [enum, resource, numeric] # https://www.php.net/manual/ru/reserved.other-reserved-words.php
 
+gt_74: @csv( ) >
+  T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG
+  T_ATTRIBUTE T_ENUM T_MATCH T_NAME_FULLY_QUALIFIED T_NAME_QUALIFIED T_NAME_RELATIVE T_READONLY
 def_3t: @csv( ) NAMESPACE INTERFACE TRAIT ENUM FUNCTION CLASS CONST
 #  var:
 #  define: T_STRING=define ?T_WHITESPACE =( T_CONSTANT_ENCAPSED_STRING

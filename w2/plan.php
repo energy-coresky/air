@@ -194,12 +194,9 @@ class Plan
     }
 
     static function php() {
-        static $yml;
-        if (!$yml) {
-            $yml = self::set('main', fn() => yml('php', '+ @object @inc(php)'));
-            $yml->def_3t = array_combine(array_map(fn($v) => constant("T_$v"), $yml->def_3t), $yml->def_3t);
-        }
-        return $yml;
+        static $php;
+        $php or $php = self::set('main', fn() => yml('php', '+ @object @inc(php)'));
+        return $php;
     }
 
     static function &cfg($name) {
