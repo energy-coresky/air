@@ -2,13 +2,13 @@
 
 class PHP
 {
-    const version = 0.390;
+    const version = 0.391;
 
-    const KEYWORD = 1; # ranks
+    const KEYWORD = 1;
     const TYPE = 2;
     const CHAR = 3;
     const IGNORE = 4;
-    const _USE_LIKE = 50;
+    const USE_LIKE = 50;
 
     static $php = false;
 
@@ -37,10 +37,9 @@ class PHP
             defined($const) or define($const, $i + 11001);
         $p =& PHP::$php->def_3t;
         $p = array_combine(array_map(fn($v) => constant("T_$v"), $p), $p);
-        PHP::$php->is_ignore = fn($y) => in_array($y->tok, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT]);
     }
 
-    function __construct(string $in, $pad = 1) {
+    function __construct(string $in, $pad = 4) {
         PHP::$php or $this->ini_once();
         $this->pad = $pad;
         try {
@@ -49,18 +48,6 @@ class PHP
             $this->tok = [$this->syntax_fail = $e->getMessage()];
         }
         $this->count = count($this->tok);
-        /*
-            switch ($y->tok) {
-                case T_NAMESPACE:
-                    $this->ns = '';
-                    break;
-                case T_GLOBAL: ;
-                case T_CONST: ;
-                case T_VARIABLE: ;
-                case T_INTERFACE: ;
-                case T_TRAIT: ;
-                case T_EVAL: ;
-            }*/
     }
 
     function __get($name) {
@@ -183,34 +170,24 @@ class PHP
             }
             yield [$y, $next, $ary];
 
-            if (($this->_is_ignore)($y))
+            if ($this->is_ignore($y))
                 continue;
             array_shift($ary);
             $ary[] = $y->tok ?: ord($y->str);
         }
     }
 
-    function match($t, $y, $step = 1) {
-        $step > 0 or $y = $this->tok($y->i + $step);
-        for (; ($this->_is_ignore)($y); $y = $this->tok($y->i + $step));
-        return $t === ($y->tok ?: $y->str);
-    }
-
     function abs_name() {
         
     }
+
+    function match($t, $y, $step = 1) {
+        $step > 0 or $y = $this->tok($y->i + $step);
+        for (; $this->is_ignore($y); $y = $this->tok($y->i + $step));
+        return $t === ($y->tok ?: $y->str);
+    }
+
+    function is_ignore($y) {
+        return in_array($y->tok, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT]);
+    }
 }
-/*
- elseif (T_VARIABLE == $y->tok) {
-                $rank = T_DOUBLE_COLON === $ary[2] ? '_property' : PHP::_VAR;
-            }
-else {
-                $rank = PHP::CHAR;
-            }
-            elseif (in_array($y->tok, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT])) {
-                $rank = PHP::IGNORE;
-            } elseif (in_array($y->str, $this->_keywords)) { // 2do: chk
-                $rank = PHP::KEYWORD;
-            } */
-
-
