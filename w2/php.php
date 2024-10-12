@@ -4,11 +4,12 @@ class PHP
 {
     const version = 0.391;
 
-    const KEYWORD = 1;
-    const TYPE = 2;
-    const CHAR = 3;
-    const IGNORE = 4;
-    const USE_LIKE = 50;
+    const TYPE = 1;
+    const _GLOB = 0;
+    const _NS   = 0b0001;
+    const _FUNC = 0b0010;
+    const _CLASS = 0b0100;
+    const _METH = 0b1000;
 
     static $php = false;
 
@@ -16,11 +17,12 @@ class PHP
     public $tok;
     public $count = 0;
     public $syntax_fail = false;
+    public $ns = '';
+    public $use = [];
 
-    private $ns = '';
-    private $use = [];
     private $stack = [];
     private $x = [];
+    private $pos;
     private $oc = [
         '{' => '}',
         '(' => ')',
@@ -55,7 +57,7 @@ class PHP
     }
 
     function __toString() {
-        return $this->trace();
+        return $this->debug();
         return "\nlines: $qq\n";
         $out = '';
         for ($y = $this->tok(); $y; $y = $next) {
@@ -92,7 +94,7 @@ class PHP
             'line' => $tok[2] ?? fn() => $this->char_line($i),
             'x' => $this->x[$i] ?? 0,
             'oc' => function () use (&$tok) { # open/none=0/close 1|true 0|false -1
-                if ($tok[0])
+                if ($tok[0]) # see ... T_STRING_VARNAME
                     return in_array($tok[0], [T_DOLLAR_OPEN_CURLY_BRACES, T_CURLY_OPEN]); # bool !
                 return array_search($tok[1], $this->oc, true) ? -1 : (int)isset($this->oc[$tok[1]]);
             },
@@ -127,46 +129,56 @@ class PHP
         }
     }
 
- function trace() {
-     $out = '1';
-     foreach ($this->rank() as $y) {
-         [$y, $next, $ary] = $y;
-         if (T_STRING == $y->tok) {
-             $s = $y->i . ' ' . $y->tok . ' ' . token_name($y->tok) . ' ' . $y->str;
-             if ($y->x)
-                $s .= " ------------------- SZ: $y->x";
-             $out .= "===================== \n$s\n";
-         }
-     }
-     return var_export($this->_def_3t,1) . $out;
- }
+    function debug() {
+        $out = '';
+        foreach ($this->rank() as $y) {
+            [$y, $next, $ary] = $y;
+            if (T_STRING == $y->tok) {
+                $s = $y->i . ' ' . $y->tok . ' ' . token_name($y->tok) . ' ' . $y->str;
+                if ($y->x)
+                   $s .= " ------------------- SZ: $y->x";
+                $out .= "===================== \n$s\n";
+            }
+        }
+        return var_export($this->_def_3t, true) . $out;
+    }
 
     function rank($func = false) {
         $ary = [0, 0, 0];
         $curly = 0;
+        $place = PHP::_GLOB;
         for ($y = $this->tok(); $y; $y = $next) {
             $next = $this->tok($y->i + 1);
             $rank =& $this->x[$y->i];
-            if (T_STRING == $y->tok) {
+            if ($this->is_name($y->tok)) {
                 while ($next && in_array($next->tok, [T_STRING, T_NS_SEPARATOR])) {
                     $y->str .= $next->str;
                     $next = $this->tok($next->i + 1);
                 }
                 if (in_array($y->str, $this->_types)) {
                     $y->x = $rank = PHP::TYPE;
-                } elseif ($x = $this->_def_3t[$ary[2]] ?? 0) {
+                } elseif ($x = $this->_def_3t[$ary[2]] ?? false) {
                     $y->x = $rank = $x;
+                    if ('NAMESPACE' == $x) {
+                        $this->ns = $y->str;
+                        $this->use = [];
+                        $place = PHP::_NS; # namespace; - global 2exclude
+                    }
+                } elseif (T_NEW == $ary[2]) {
+                    $y->x = $rank = 'class';
                 } elseif (T_DOUBLE_COLON == $ary[2]) {
-                    $y->x = $rank = $this->match('(', $next) ? '_method' : 'const-class';
-                } elseif (T_OBJECT_OPERATOR == $ary[2]) {
-                    $y->x = $rank = $this->match('(', $next) ? 'method' : 'property';
+                    $this->pos = $this->match('(', $next);
+                    $y->x = $rank = $this->pos ? '_method' : 'const-class';
+                } elseif (T_OBJECT_OPERATOR == $ary[2]) { # see .. T_NULLSAFE_OBJECT_OPERATOR
+                    $this->pos = $this->match('(', $next);
+                    $y->x = $rank = $this->pos ? 'method' : 'property';
                 } elseif ($this->match(T_DOUBLE_COLON, $next)) {
                     $y->x = $rank = 'class';
-                } elseif ($this->match('(', $next)) {
+                } elseif ($this->pos = $this->match('(', $next)) {
                     $y->x = $rank = $this->match(T_DOUBLE_COLON, $y, -1) ? '_method' : 'function';
                 } else {
                     $y->x = $rank = '___________USAGE';
-                }
+                }#T_INSTEADOF T_IMPLEMENTS T_HALT_COMPILER T_EXTENDS T_EVAL T_USE T_AS T_VAR
             }
             yield [$y, $next, $ary];
 
@@ -177,6 +189,20 @@ class PHP
         }
     }
 
+    function get_params(&$to) {
+        for (
+            $to = $this->pos, $ps = 1;
+            $ps && ++$to < $this->count;
+            '(' !== $this->tok[$to] or $ps++, ')' !== $this->tok[$to] or $ps--
+        );
+        return $this->pos;
+    }
+
+    function str($i, $to) {
+        for ($s = ''; $i <= $to; $s .= is_array($this->tok[$i]) ? $this->tok[$i++][1] : $this->tok[$i++]);
+        return $s;
+    }
+
     function abs_name() {
         
     }
@@ -184,10 +210,14 @@ class PHP
     function match($t, $y, $step = 1) {
         $step > 0 or $y = $this->tok($y->i + $step);
         for (; $this->is_ignore($y); $y = $this->tok($y->i + $step));
-        return $t === ($y->tok ?: $y->str);
+        return $t === ($y->tok ?: $y->str) ? $y->i : false;
     }
 
-    function is_ignore($y) {
+    function is_name($name) {
+        return in_array($name, [T_STRING, T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE]);
+    }
+
+    function is_ignore($y) { # T_ATTRIBUTE
         return in_array($y->tok, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT]);
     }
 }
