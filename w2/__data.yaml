@@ -179,8 +179,10 @@ clear_ua: ["Visitor's cleaning (authed), days", number, '', 1000]
 #.cron
 
 #.phpman =========================================================================
-+ {en:English, pt_BR:Brazilian Portuguese,zh:Chinese (Simplified),fr:French,de:German,ja:Japanese,ru:Russian,es:Spanish,tr:Turkish}
++ {en:English, de:German, es:Spanish, fr:French, it:Italian, ja:Japanese,
+  pt_BR:Brazilian Portuguese, ru:Russian, tr:Turkish, uk:Ukrainian, zh:Chinese (Simplified)}
 #.phpman
+
 
 #.zml =========================================================================
 tags: @csv( ) END DIRS FILE
@@ -227,4 +229,3 @@ form2: @php Form::A(SKY::$mem['d'][3], yml('dev.cfg', '+ @inc(dev_cfg)'))
   <?php # Auto generated "First-Run" file by Coresky framework
   
 #.first_run
-
