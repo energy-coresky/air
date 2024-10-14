@@ -20,31 +20,22 @@ types: @csv( ) int float bool string true false null void iterable object mixed 
 soft: [enum, resource, numeric] # https://www.php.net/manual/ru/reserved.other-reserved-words.php
 
 gt_74: @csv( ) >
-  T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG
+  T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG T_NULLSAFE_OBJECT_OPERATOR
   T_ATTRIBUTE T_ENUM T_MATCH T_NAME_FULLY_QUALIFIED T_NAME_QUALIFIED T_NAME_RELATIVE T_READONLY
-def_3t: @csv( ) NAMESPACE INTERFACE TRAIT ENUM FUNCTION CLASS CONST
-#  var:
-#  define: T_STRING=define ?T_WHITESPACE =( T_CONSTANT_ENCAPSED_STRING
-#  eval: T_EVAL ?T_WHITESPACE =(
-use:
-  interface:
-    - T_IMPLEMENTS T_WHITESPACE T_STRING
-  trait:
-    - T_USE T_WHITESPACE T_STRING
-  enum:
-    - 
-  function:
-    - T_STRING ?T_WHITESPACE =(
-  constant:
-    - 
-  class:
-    - T_NEW T_WHITESPACE T_STRING
-    - T_STRING T_DOUBLE_COLON
-    - T_EXTENDS T_WHITESPACE T_STRING
-    - T_STRING T_VARIABLE
 
+tokens: @csv( ) NAMESPACE INTERFACE TRAIT ENUM FUNCTION CLASS CONST
+
+use_tokens: {
+  NEW: class, EXTENDS: class, IMPLEMENTS: interface, INSTANCEOF: class|interface,
+  DOUBLE_COLON: [_method, const-class],
+  OBJECT_OPERATOR: [method, property],
+  NULLSAFE_OBJECT_OPERATOR: [method, property],
+  USE: use, INSTEADOF: trait
+}
+
+oc: {'{': '}', '(': ')', '[': ']'}
 prev_space: @csv( ) ; { } ) , [ :
-after_space: ['{', '[']
+next_space: ['{', '[']
 
 extensions: @csv( ) # all known extensions (must)
   apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant
