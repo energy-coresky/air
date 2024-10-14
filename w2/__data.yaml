@@ -23,7 +23,7 @@ gt_74: @csv( ) >
   T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG T_NULLSAFE_OBJECT_OPERATOR
   T_ATTRIBUTE T_ENUM T_MATCH T_NAME_FULLY_QUALIFIED T_NAME_QUALIFIED T_NAME_RELATIVE T_READONLY
 
-tokens: @csv( ) NAMESPACE INTERFACE TRAIT ENUM FUNCTION CLASS CONST
+tokens: @csv( ) CLASS INTERFACE TRAIT ENUM FUNCTION NAMESPACE CONST
 
 use_tokens: {
   NEW: class, EXTENDS: class, IMPLEMENTS: interface, INSTANCEOF: class|interface,
@@ -33,7 +33,7 @@ use_tokens: {
   USE: use, INSTEADOF: trait
 }
 
-oc: {'{': '}', '(': ')', '[': ']'}
+oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
 prev_space: @csv( ) ; { } ) , [ :
 next_space: ['{', '[']
 

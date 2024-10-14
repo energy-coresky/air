@@ -13,13 +13,14 @@ class PHP
 
     static $php = false;
     static $name_tok = [[T_STRING, T_NS_SEPARATOR]];
+    static $block;
 
     public $pad; # 0 for minified PHP
     public $tok;
     public $count = 0;
     public $syntax_fail = false;
     public $ns = '';
-    public $use = [];
+    public $use = [[]/*class-like*/, []/*function*/, []/*const*/];
 
     private $stack = [];
     private $x = [];
@@ -38,6 +39,7 @@ class PHP
             array_map(fn($k) => constant("T_$k"), $p),
             array_map(fn($v) => [$v, true], $p) # definitions
         );
+        PHP::$block = array_keys(array_slice($p, 0, 5, true));
         foreach (PHP::$php->use_tokens as $k => $v)
             $p[constant("T_$k")] = [$v, false]; # usages
         $p[58] = ['colon', false]; # ord(':') === 58
@@ -150,7 +152,7 @@ class PHP
 
     function rank($func = false) {
         $prev = $curly = 0;
-        $place = PHP::_GLOB;
+        $pos = PHP::_GLOB;
         for ($y = $this->tok(); $y; $y = $y->next) { # T_HALT_COMPILER T_EVAL T_AS
             $y->open = $skip = false;
             if ($this->is_name($y)) {
@@ -163,8 +165,16 @@ class PHP
                     if (T_NAMESPACE == $prev) {
                         $this->ns = $y->str;
                         $this->use = [];
-                        $place = PHP::_NS; # namespace; - global 2exclude
-                    } elseif (T_FUNCTION == $prev) {
+                        $pos = PHP::_NS; # namespace; - global 2exclude
+                    } elseif ($y->is_def && T_CONST != $prev) { # def class-like
+                        if (T_FUNCTION == $prev) {
+                            if (PHP::_CLASS == $pos)
+                                $y->x = 'METHOD';
+                            if (PHP::_GLOB == $pos || PHP::_NS == $pos)
+                                $pos = PHP::_FUNC;
+                        } else {
+                            $pos = PHP::_CLASS;
+                        }
                     } elseif (in_array($prev, [T_EXTENDS, T_IMPLEMENTS])) {
                         if ($this->match(',', $y->next))
                             $skip = true;
@@ -180,7 +190,7 @@ class PHP
                 } else {
                     $y->x = '___________USAGE';
                 }
-//if ($y->open) {$from = $this->get_params($to);$y->x .= $this->str($from, $to);}
+if ($y->open) {$from = $this->get_params($to);$y->x .= $this->str($from, $to);}
             } elseif (T_FUNCTION === $prev && '&' === $y->str || ',' === $y->str) {
                 $skip = true;
             }
@@ -209,7 +219,7 @@ class PHP
         // (T_VAR)T_PUBLIC T_PROTECTED T_PRIVATE T_STATIC T_ABSTRACT T_FINAL T_READONLY(8.1)
     }
 
-    function str($i, $to) {
+    function str($i, $to, $skip_ignore = false) { //2do $skip_ignore
         for ($s = ''; $i <= $to; $s .= is_array($this->tok[$i]) ? $this->tok[$i++][1] : $this->tok[$i++]);
         return $s;
     }

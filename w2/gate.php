@@ -49,8 +49,7 @@ class Gate
     function actions($content) {
         $php = new PHP($content);
         $list = [];
-        foreach ($php->rank() as $y) {
-            [$y] = $y; # 2do METHOD
+        foreach ($php->rank() as $y) { # 2do METHOD
             if ('FUNCTION' === $y->x && (in_array(substr($y->str, 0, 2), ['j_', 'a_']) || in_array(substr($y->str, -2), ['_j', '_a']))) {
                 $list[$y->str] = [];
                 $p =& $list[$y->str];
