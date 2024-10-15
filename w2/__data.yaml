@@ -20,8 +20,12 @@ types: @csv( ) int float bool string true false null void iterable object mixed 
 soft: [enum, resource, numeric] # https://www.php.net/manual/ru/reserved.other-reserved-words.php
 
 gt_74: @csv( ) >
-  T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG T_NULLSAFE_OBJECT_OPERATOR
-  T_ATTRIBUTE T_ENUM T_MATCH T_NAME_FULLY_QUALIFIED T_NAME_QUALIFIED T_NAME_RELATIVE T_READONLY
+  AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG
+  AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG
+  NAME_RELATIVE
+  NAME_QUALIFIED
+  NAME_FULLY_QUALIFIED
+  ATTRIBUTE ENUM MATCH READONLY NULLSAFE_OBJECT_OPERATOR
 
 tokens: @csv( ) CLASS INTERFACE TRAIT ENUM FUNCTION NAMESPACE CONST
 
@@ -36,6 +40,7 @@ use_tokens: {
 oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
 prev_space: @csv( ) ; { } ) , [ :
 next_space: ['{', '[']
+modifiers: @csv( ) VAR PUBLIC PROTECTED PRIVATE STATIC ABSTRACT FINAL READONLY
 
 extensions: @csv( ) # all known extensions (must)
   apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant

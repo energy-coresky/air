@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.501;
+    const version = 0.503;
 
     const TYPE = 1;
     const _GLOB = 0;
@@ -30,13 +30,14 @@ class PHP
 
     private function ini_once() {
         PHP::$php = Plan::php();
-        foreach (PHP::$php->gt_74 as $i => $const)
-            defined($const) or define($const, $i + 11001);
+        foreach (PHP::$php->gt_74 as $i => $str)
+            defined($const = "T_$str") or define($const, $i + 11001);
         $p =& PHP::$php->tokens; # definitions
         $p = array_combine(array_map(fn($k) => constant("T_$k"), $p), $p);
         $p =& PHP::$php->use_tokens; # usages
         $p = array_combine(array_map(fn($k) => constant("T_$k"), array_keys($p)), $p);
         $p[58] = 'colon'; # ord(':') === 58
+        array_walk(PHP::$php->modifiers, fn(&$v) => $v = constant("T_$v"));
         PHP::$name_tok[0] += [2 => T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
         PHP::$name_tok[1] = PHP::$name_tok[0] + [5 => T_NAMESPACE];
     }
@@ -198,9 +199,7 @@ class PHP
             $y->open = $y->rank = $skip = false;
             if ($this->is_name($y, $prev)) {
                 if (T_NAMESPACE == $prev) {
-                    $this->ns = $y->str;
-                    $this->use = [[], [], []];
-                    $x->pos = PHP::_NS; # namespace; - global 2exclude
+                    $this->set_ns($y->str, $x);
                 } elseif ($y->is_def && T_CONST != $prev) { # def class-like
                     if (T_FUNCTION == $prev) {
                         if (PHP::_CLASS == $x->pos)
@@ -215,16 +214,8 @@ class PHP
                         $skip = true;
                 }
 if ($y->open) $y->rank .= $this->str($y->open, $this->get_close($y));
-
-            } elseif ('"' == $y->str) { //2do add T_START_HEREDOC
-                $x->in_str = !$x->in_str;
-            } elseif (T_USE == $y->tok) {
-                $x->use = 0;
-            } elseif (T_USE == $prev && (T_FUNCTION == $y->tok || T_CONST == $y->tok)) {
-                $x->use = T_CONST == $y->tok ? 2 : 1;
-                $skip = true;
-            } elseif (T_FUNCTION === $prev && '&' === $y->str || ',' === $y->str) {
-                $skip = true;
+            } else {
+                $this->other($y, $prev, $skip);
             }
             yield $prev => $y;
 
@@ -234,18 +225,45 @@ if ($y->open) $y->rank .= $this->str($y->open, $this->get_close($y));
         }
     }
 
+    function other($y, $prev, &$skip) {
+        if (T_FUNCTION == $prev && '&' === $y->str || ',' === $y->str)
+            return $skip = true;
+        if (T_NAMESPACE == $y->tok && (';' === $y->x->next || '{' === $y->x->next))
+            return $this->set_ns('', $y->x); # return to global namespace
+        if (T_USE == $y->tok)
+            return $y->x->use = 0;
+        if (T_USE == $prev) {
+            $func = T_FUNCTION == $y->tok;
+            if ($func || T_CONST == $y->tok)
+                $skip = $y->x->use = $func ? 1 : 2;
+            return;
+        }
+        if ('"' == $y->str) //2do add T_START_HEREDOC
+            return $y->x->in_str = !$y->x->in_str;
+    }
+
+    function set_ns($ns, $x) {
+        $this->ns = $ns;
+        $this->use = [[], [], []];
+        $x->pos = PHP::_NS;
+    }
+
     function get_name($name) {
         return $this->ns . '\\' . $name;
     }
 
     function get_close($y) {
         for ($to = $y->open, $n = 1; $n && ++$to < $this->count; )
-            ')' === $this->tok[$to] ? $n-- : ('(' === $this->tok[$to] ? $n++ : 0);
+            '(' === $this->tok[$to] ? $n++ : (')' !== $this->tok[$to] ? 0 : $n--);
         return $to;
     }
 
-    function get_modifiers() {
-        // (T_VAR)T_PUBLIC T_PROTECTED T_PRIVATE T_STATIC T_ABSTRACT T_FINAL T_READONLY(8.1)
+    function get_modifiers($y) {
+        $ary = [];
+        if (in_array($y->tok, $this->_modifiers))
+            $ary[] = $y->tok;
+        // (T_VAR)T_PUBLIC
+        return $ary;
     }
 
     function get_methods($class_name = '', $prx = [], $pox = []) {
