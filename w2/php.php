@@ -144,10 +144,9 @@ class PHP
         return array_search($y->str, $this->_oc, true) ? -1 : (int)isset($this->_oc[$y->str]);
     }
 
-    function next($y, &$next) {
+    function next($y) {
         for (; $this->is_ignore($y); $y = $this->tok($y->i + 1));
-        $next = $y->tok ?: $y->str;
-        return $y->i;
+        return [$y->tok ?: $y->str, $y->i];
     }
 
     function is_name($y, $prev, &$next) {
@@ -157,22 +156,22 @@ class PHP
         if (!$ok($y->tok, (int)($y->next && T_NS_SEPARATOR == $y->next->tok)))
             return false;
         $y->tok = T_STRING;
-        while ($y->next && $ok($y->next->tok)) {
+        while ($y->next && $ok($y->next->tok)) { # collect T_NAME_xx for 7.4
             $y->str .= $y->next->str;
             $y->next = $this->tok($y->next->i + 1);
         }
         $y->is_def = false;
-        $i = $this->next($y->next, $next);
+        [$next, $i] = $this->next($y->next);
         if ('(' === $next)
-            $y->i_open = $i;
+            $y->open = $i;
         if ($y->x = $this->_tokens[$prev] ?? false) {
             $y->is_def = true;
         } elseif ($y->x = $this->_use_tokens[$prev] ?? false) {
             if (is_array($y->x))
-                $y->x = $y->i_open ? $y->x[0] : $y->x[1];
+                $y->x = $y->open ? $y->x[0] : $y->x[1];
         } elseif (T_DOUBLE_COLON === $next) {
             $y->x = 'class';
-        } elseif ($y->i_open) {
+        } elseif ($y->open) {
             $y->x = 'function';
         } elseif (in_array($y->str, $this->_types)) {
             $y->x = PHP::TYPE;
@@ -188,7 +187,7 @@ class PHP
         $prev = $curly = 0;
         $pos = PHP::_GLOB;
         for ($y = $this->tok(); $y; $y = $y->next) { # T_HALT_COMPILER T_EVAL T_AS
-            $y->i_open = $skip = false;
+            $y->open = $skip = false;
             if ($this->is_name($y, $prev, $next)) {
                 if (T_NAMESPACE == $prev) {
                     $this->ns = $y->str;
@@ -207,7 +206,7 @@ class PHP
                     if (',' === $next)
                         $skip = true;
                 }
-if ($y->i_open) {$to = $this->get_params($y); $y->x .= $this->str($y->i_open, $to);}
+if ($y->open) $y->x .= $this->str($y->open, $this->get_close($y));
 
             } elseif (T_FUNCTION === $prev && '&' === $y->str || ',' === $y->str) {
                 $skip = true;
@@ -224,8 +223,8 @@ if ($y->i_open) {$to = $this->get_params($y); $y->x .= $this->str($y->i_open, $t
         return $this->ns . '\\' . $name;
     }
 
-    function get_params($y) {
-        for ($to = $y->i_open, $n = 1; $n && ++$to < $this->count; )
+    function get_close($y) {
+        for ($to = $y->open, $n = 1; $n && ++$to < $this->count; )
             ')' === $this->tok[$to] ? $n-- : ('(' === $this->tok[$to] ? $n++ : 0);
         return $to;
     }
