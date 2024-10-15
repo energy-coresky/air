@@ -46,26 +46,12 @@ class Gate
         return substr_replace($code, '', strpos($code, '<br />'), 6);
     }
 
-    function actions($content) {
-        $php = new PHP($content);
-        $list = [];
-        foreach ($php->rank() as $y) { # 2do METHOD
-            if ('FUNCTION' === $y->x && (in_array(substr($y->str, 0, 2), ['j_', 'a_']) || in_array(substr($y->str, -2), ['_j', '_a']))) {
-                $list[$y->str] = [];
-                $p =& $list[$y->str];
-                $php->get_params($to);
-            } elseif ($list && $y->i < $to && T_VARIABLE == $y->tok) {
-                $p[] = $y->str;
-            }
-        }
-        return $list;
-    }
-
     function parse($ware, $fn, $act_only = true) {
         $ctrl = basename($fn, '.php');
         $content = Plan::_gq([$ware, $fn]) or $content = "<?php\n\nclass $ctrl extends Controller\n{}\n";
         $list = (Globals::instance())->parse_def($ctrl, $content);
-        #$list = $this->actions($content);
+        $php = new PHP($content);
+        #$list = $php->get_methods('', ['j_', 'a_'], ['_j', '_a']);
         if ('main' == $ware && 'default_c' == $ctrl) {
             foreach ($this->trait as $k => $v)
                 isset($list[$k]) or $list[$k] = $v;
