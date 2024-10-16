@@ -46,11 +46,28 @@ class Gate
         return substr_replace($code, '', strpos($code, '<br />'), 6);
     }
 
+    function get_methods($class_name = '', $prx = [], $pox = []) {
+        $php = new PHP($content);
+        $list = [];
+        foreach ($php->rank() as $y) {
+            if ('METHOD' === $y->rank) {
+                if ($prx && !in_array(substr($y->str, 0, 2), $prx) ||
+                    $pox && !in_array(substr($y->str, -2), $pox)
+                    ) continue;
+                $list[$y->str] = [];
+                $p =& $list[$y->str];
+                $to = $php->get_close($y);
+            } elseif ($list && $y->i < $to && T_VARIABLE == $y->tok) {
+                $p[] = $y->str;
+            }
+        }
+        return $list;
+    }
+
     function parse($ware, $fn, $act_only = true) {
         $ctrl = basename($fn, '.php');
         $content = Plan::_gq([$ware, $fn]) or $content = "<?php\n\nclass $ctrl extends Controller\n{}\n";
         $list = (Globals::instance())->parse_def($ctrl, $content);
-        $php = new PHP($content);
         #$list = $php->get_methods('', ['j_', 'a_'], ['_j', '_a']);
         if ('main' == $ware && 'default_c' == $ctrl) {
             foreach ($this->trait as $k => $v)
