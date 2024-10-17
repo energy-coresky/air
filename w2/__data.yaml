@@ -30,11 +30,11 @@ gt_74: @csv( ) >
 tokens: @csv( ) CLASS INTERFACE TRAIT ENUM FUNCTION NAMESPACE CONST
 
 use_tokens: {
-  NEW: class, EXTENDS: class, IMPLEMENTS: interface, INSTANCEOF: class|interface,
-  DOUBLE_COLON: [_method, const-class],
-  OBJECT_OPERATOR: [method, property],
-  NULLSAFE_OBJECT_OPERATOR: [method, property],
-  USE: use, INSTEADOF: trait
+  NEW: $T_CLASS, EXTENDS: $T_CLASS, IMPLEMENTS: $T_CLASS, INSTANCEOF: $T_CLASS,
+  DOUBLE_COLON: [$T_FN, $T_CONST],
+  OBJECT_OPERATOR: [$T_FN, $T_VAR],
+  NULLSAFE_OBJECT_OPERATOR: [$T_FN, $T_VAR],
+  USE: $T_USE, INSTEADOF: $T_TRAIT
 }
 
 oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
