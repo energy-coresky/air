@@ -64,13 +64,13 @@ class PHP
         return $this->debug();
         return "\nlines: $qq\n";
         $out = '';
-        for ($y = $this->tok(); $y; $y = $new) {
-            $new = $this->tok($y->i + 1);
+        for ($y = $this->tok(); $y; $y = $next) {
+            $next = $this->tok($y->i + 1);
             if ($this->pad) {
                 $prev = $this->tok($y->i - 1);
                 if (T_COMMENT == $y->tok
 #                    || T_WHITESPACE == $y->tok && in_array($prev->str, $this->_prev_space)
-#                    || T_WHITESPACE == $y->tok && in_array($new->str, $this->_next_space)
+#                    || T_WHITESPACE == $y->tok && in_array($next->str, $this->_next_space)
                 )
                     continue;
             }
@@ -115,6 +115,8 @@ class PHP
     }
 
     function debug() {
+        if ($this->syntax_fail)
+            throw new Error($this->syntax_fail);
         $out = '';
         foreach ($this->rank() as $y) {
             if (T_STRING == $y->tok) {
@@ -151,26 +153,23 @@ class PHP
         return '}' == $y->str ? -1 : (int)('{' == $y->str);
     }
 
-    function next($y, &$i) {
-        for (; $this->is_ignore($y); $y = $this->tok($y->i + 1));
-        $i = $y->i;
-        return $y->tok ?: $y->str;
-    }
-
     function is_name($y, $prev) {
-        $ok = fn($tok, int $ns = 0) => in_array($tok, PHP::$name_tok[$ns], true);
+        $ok = fn($tok, int $ns = 1) => in_array($tok, PHP::$name_tok[$ns]);
+
         $y->new = $this->tok($y->i + 1);
-        if (!$ok($y->tok, (int)($y->new && T_NS_SEPARATOR == $y->new->tok)))
-            return false; # $y->next not calculated in this case!
+        for ($z = $y->new; $z && $this->is_ignore($z); $z = $this->tok($z->i + 1));
+        $y->next = $z ? ($z->tok ?: $z->str) : 0;
+        if (!$ok($y->tok, (int)(T_NS_SEPARATOR === $y->next)))
+            return false;
 
         $y->tok = T_STRING;
-        while ($y->new && $ok($y->new->tok, (int)(T_NS_SEPARATOR == $prev))) { # collect T_NAME_xx for 7.4
-            $y->str .= $y->new->str;
-            $y->new = $this->tok($y->new->i + 1);
+        while ($ok($z->tok)) {
+            $y->str .= $z->str; # collect T_NAME_xx for 7.4
+            $y->new = $this->tok($z->i + 1);
+            for ($z = $y->new; $this->is_ignore($z); $z = $this->tok($z->i + 1));
         }
-        $y->is_def = false;
-        if ('(' === ($y->next = $this->next($y->new, $i)))
-            $y->open = $i;
+        if ('(' === ($y->next = $z->tok ?: $z->str))
+            $y->open = $z->i;
 
         if ($y->rank = $this->_tokens[$prev] ?? false) {
             $y->is_def = true;
@@ -194,7 +193,7 @@ class PHP
     function rank() { # T_HALT_COMPILER T_EVAL T_AS
         $prev = $ux = 0;
         for ($y = $this->tok(); $y; $y = $y->new) {
-            $y->open = $y->rank = $y->next = $skip = false;
+            $skip = $y->open = $y->rank = $y->next = $y->is_def = false;
             $this->curly += $y->curly = $this->bracket($y);
 
             if ($this->is_name($y, $prev)) {
@@ -254,7 +253,7 @@ class PHP
     }
 
     function get_name($y) {
-        if (T_VAR == $y->rank)
+        //if (T_VAR == $y->rank)
             return $y->str;
         return $this->ns . '\\' . $y->str;
     }
