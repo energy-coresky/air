@@ -35,9 +35,9 @@ class PHP
         PHP::$php = Plan::php();
         foreach (PHP::$php->gt_74 as $i => $str)
             defined($const = "T_$str") or define($const, $i + 11001);
-        $p =& PHP::$php->tokens; # definitions
+        $p =& PHP::$php->tokens_def;
         $p = array_combine(array_map(fn($k) => constant("T_$k"), $p), $p);
-        $p =& PHP::$php->use_tokens; # usages
+        $p =& PHP::$php->tokens_use;
         $p = array_combine(array_map(fn($k) => constant("T_$k"), array_keys($p)), $p);
         $p[58] = T_CASE; # ord(':') === 58
         array_walk(PHP::$php->modifiers, fn(&$v) => $v = constant("T_$v"));
@@ -127,7 +127,7 @@ class PHP
                 $out .= "===================== \n$s\n";
             } #else { $out .= $this->curly . " == $y->str\n"; }
         }
-        return var_export($this->_tokens, true) . var_export($this->_use_tokens, true) . $out;
+        return var_export($this->_tokens_def, true) . var_export($this->use, true) . $out;
     }
 
     function tok($i = 0) {
@@ -153,46 +153,48 @@ class PHP
         return '}' == $y->str ? -1 : (int)('{' == $y->str);
     }
 
-    function is_name($y, $prev) {
-        $ok = fn($tok, int $ns = 1) => in_array($tok, PHP::$name_tok[$ns]);
+    private function is_name($y, $prev) {
+        $name = fn($tok, int $ns = 1) => in_array($tok, PHP::$name_tok[$ns]);
+        $y->new = $this->get_new($y->i);
+        $y->next = $y->new ? ($y->new->tok ?: $y->new->str) : 0;
 
-        $y->new = $this->tok($y->i + 1);
-        for ($z = $y->new; $z && $this->is_ignore($z); $z = $this->tok($z->i + 1));
-        $y->next = $z ? ($z->tok ?: $z->str) : 0;
-        if (!$ok($y->tok, (int)(T_NS_SEPARATOR === $y->next)))
-            return false;
+        if ($name($y->tok, (int)(T_NS_SEPARATOR === $y->next))) {
+            $y->tok = T_STRING;
+            while ($name($y->new->tok)) {
+                $y->str .= $y->new->str; # collect T_NAME_xx for 7.4
+                $y->new = $this->get_new($y->new->i);
+            }
+            if ('(' === ($y->next = $y->new->tok ?: $y->new->str))
+                $y->open = $y->new->i;
 
-        $y->tok = T_STRING;
-        while ($ok($z->tok)) {
-            $y->str .= $z->str; # collect T_NAME_xx for 7.4
-            $y->new = $this->tok($z->i + 1);
-            for ($z = $y->new; $this->is_ignore($z); $z = $this->tok($z->i + 1));
+            if ($y->rank = $this->_tokens_def[$prev] ?? false) {
+                $y->is_def = true;
+            } elseif ($y->rank = $this->_tokens_use[$prev] ?? false) {
+                if (is_array($y->rank))
+                    $y->rank = $y->rank[(int)!$y->open];
+            } elseif (T_DOUBLE_COLON === $y->next) {
+                $y->rank = T_CLASS;
+            } elseif ($y->open) {
+                $y->rank = T_FUNCTION;
+            } elseif (in_array($y->str, $this->_types)) {
+                $y->rank = T_LIST;
+            } elseif (T_VARIABLE === $y->next) {
+                $y->rank = T_CLASS;////////
+            } elseif (!$this->in_str) {
+                $y->rank = T_CONST;//////
+            }
         }
-        if ('(' === ($y->next = $z->tok ?: $z->str))
-            $y->open = $z->i;
+        return $y->rank;
+    }
 
-        if ($y->rank = $this->_tokens[$prev] ?? false) {
-            $y->is_def = true;
-        } elseif ($y->rank = $this->_use_tokens[$prev] ?? false) {
-            if (is_array($y->rank))
-                $y->rank = $y->rank[(int)!$y->open];
-        } elseif (T_DOUBLE_COLON === $y->next) {
-            $y->rank = T_CLASS;
-        } elseif ($y->open) {
-            $y->rank = T_FUNCTION;
-        } elseif (in_array($y->str, $this->_types)) {
-            $y->rank = T_LIST;
-        } elseif (T_VARIABLE === $y->next) {
-            $y->rank = T_CLASS;////////
-        } elseif (!$this->in_str) {
-            $y->rank = T_CONST;//////
-        }
-        return true;
+    function get_new($i = 0) {
+        while (is_array($this->tok[++$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign));
+        return $this->tok($i);
     }
 
     function rank() { # T_HALT_COMPILER T_EVAL T_AS
         $prev = $ux = 0;
-        for ($y = $this->tok(); $y; $y = $y->new) {
+        for ($y = $this->get_new(); $y; $y = $y->new) {
             $skip = $y->open = $y->rank = $y->next = $y->is_def = false;
             $this->curly += $y->curly = $this->bracket($y);
 
@@ -208,27 +210,35 @@ class PHP
                         $this->pos |= PHP::_CLASS;
                     }
                 } elseif (in_array($prev, [T_EXTENDS, T_IMPLEMENTS, T_USE])) {
-                    ',' !== $y->next or $skip = true;
-                    if (T_USE == $prev) {
-                        if ($this->pos > 7) {
-                            $y->rank = T_TRAIT; # fix use trait;
-                        } else {
-                            $this->use[$ux][] = $y->str;
-                        }
-                    }
+                    $skip = $this->use($y, $prev, $ux);
                 }
             } else {
-                $this->other($y, $prev, $skip, $ux);
+                $this->other($y, $prev, $ux, $skip);
             }
 
             yield $prev => $y;
-            if ($skip || $this->is_ignore($y))
-                continue;
-            $prev = $y->tok ?: ord($y->str);
+            $skip or $prev = $y->tok ?: ord($y->str);
         }
     }
 
-    function other($y, $prev, &$skip, &$ux) {
+    private function use($y, $prev, $ux) {
+        $skip = ',' === $y->next;
+        if (T_USE != $prev)
+            return $skip;
+        if ($this->pos > 7) {
+            $y->rank = T_TRAIT; # fix use trait;
+            return $skip;
+        }
+        if ($skip || ';' === $y->next) {
+            $ary = explode('\\', $y->str);
+            $this->use[$ux][end($ary)] = $y->str;
+        } elseif ($y->next == T_AS) {
+            
+        }
+        return $skip;
+    }
+
+    private function other($y, $prev, &$ux, &$skip) {
         if (T_FUNCTION == $prev && '&' === $y->str || ',' === $y->str) {
             $skip = true;
         } elseif (T_NAMESPACE == $prev && (';' == $y->str || 1 == $y->curly)) {
@@ -266,7 +276,7 @@ class PHP
 
     function get_modifiers($y, $i = 4, $add_public = false) { //2do $add_public
         for ($ary = [], $i = $y->i - $i; $y = $this->tok($i--); ) {
-            if ($this->is_ignore($y))
+            if (in_array($y->tok, $this->_tokens_ign)) # T_ATTRIBUTE not ignore
                 continue;
             if (!in_array($y->tok, $this->_modifiers))
                 break;
@@ -278,9 +288,5 @@ class PHP
     function str($i, $to, $skip_ignore = false) { //2do $skip_ignore
         for ($s = ''; $i <= $to; $s .= is_array($this->tok[$i]) ? $this->tok[$i++][1] : $this->tok[$i++]);
         return $s;
-    }
-
-    function is_ignore($y) {
-        return in_array($y->tok, [T_WHITESPACE, T_COMMENT, T_DOC_COMMENT]); # T_ATTRIBUTE not ignore
     }
 }
