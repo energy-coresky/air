@@ -26,6 +26,7 @@ class PHP
 
     private $stack = [];
     private $x = [];
+    private $part = '';
 
     static function file(string $name, $pad = 4) {
         return new PHP(file_get_contents($name), $pad);
@@ -120,7 +121,7 @@ class PHP
         $out = '';
         foreach ($this->rank() as $y) {
             if (T_STRING == $y->tok) {
-                $s = $this->curly . " $y->line " . token_name($y->tok) . ' ' . $this->get_name($y);
+                $s = $this->pos . " $y->line " . token_name($y->tok) . ' ' . $this->get_real($y);
                 $s .= " ------------------- " . (is_int($y->rank) ? strtolower(token_name($y->rank)) : $y->rank);
                 if ($y->open)
                     $s .= $this->str($y->open, $this->get_close($y));
@@ -153,19 +154,33 @@ class PHP
         return '}' == $y->str ? -1 : (int)('{' == $y->str);
     }
 
-    private function is_name($y, $prev) {
-        $name = fn($tok, int $ns = 1) => in_array($tok, PHP::$name_tok[$ns]);
-        $y->new = $this->get_new($y->i);
-        $y->next = $y->new ? ($y->new->tok ?: $y->new->str) : 0;
+    function ignore($i) {
+        return is_array($this->tok[$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign);
+    }
 
-        if ($name($y->tok, (int)(T_NS_SEPARATOR === $y->next))) {
+    function get_new($y, $i) {
+        while ($this->ignore(++$i));
+        $y->new = $this->tok($i);
+        $y->next = $y->new ? ($y->new->tok ?: $y->new->str) : 0;
+    }
+
+    function get_name($y, $ok = false) {
+        $y->open = $y->rank = $y->is_def = false;
+        $this->get_new($y, $y->i);
+        $name = fn($tok, int $ns = 1) => in_array($tok, PHP::$name_tok[$ns]);
+        if ($ok = $ok || $name($y->tok, (int)(T_NS_SEPARATOR === $y->next))) {
             $y->tok = T_STRING;
             while ($name($y->new->tok)) {
                 $y->str .= $y->new->str; # collect T_NAME_xx for 7.4
-                $y->new = $this->get_new($y->new->i);
+                $this->get_new($y, $y->new->i);
             }
-            if ('(' === ($y->next = $y->new->tok ?: $y->new->str))
-                $y->open = $y->new->i;
+        }
+        return $ok;
+    }
+
+    private function rank_name($y, $prev) {
+        if ($this->get_name($y)) {
+            '(' !== $y->next or $y->open = $y->new->i;
 
             if ($y->rank = $this->_tokens_def[$prev] ?? false) {
                 $y->is_def = true;
@@ -187,18 +202,12 @@ class PHP
         return $y->rank;
     }
 
-    function get_new($i = 0) {
-        while (is_array($this->tok[++$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign));
-        return $this->tok($i);
-    }
-
     function rank() { # T_HALT_COMPILER T_EVAL T_AS
-        $prev = $ux = 0;
-        for ($y = $this->get_new(); $y; $y = $y->new) {
-            $skip = $y->open = $y->rank = $y->next = $y->is_def = false;
+        for ($i = $prev = $ux = $skip = 0; $this->ignore(++$i); );
+        for ($y = $this->tok($i); $y; $y = $y->new) {
             $this->curly += $y->curly = $this->bracket($y);
 
-            if ($this->is_name($y, $prev)) {
+            if ($this->rank_name($y, $prev)) {
                 if (T_NAMESPACE == $prev) {
                     $this->set_ns($y->str, (int)('{' === $y->next));
                 } elseif ($y->is_def && T_CONST != $prev) { # def class-like
@@ -210,7 +219,7 @@ class PHP
                         $this->pos |= PHP::_CLASS;
                     }
                 } elseif (in_array($prev, [T_EXTENDS, T_IMPLEMENTS, T_USE])) {
-                    $skip = $this->use($y, $prev, $ux);
+                    $this->use($y, $prev, $ux, $skip);
                 }
             } else {
                 $this->other($y, $prev, $ux, $skip);
@@ -221,25 +230,31 @@ class PHP
         }
     }
 
-    private function use($y, $prev, $ux) {
+    private function use(&$y, $prev, $ux, &$skip) {
         $skip = ',' === $y->next;
         if (T_USE != $prev)
-            return $skip;
-        if ($this->pos > 7) {
-            $y->rank = T_TRAIT; # fix use trait;
-            return $skip;
+            return;
+        if ($this->pos > 7)
+            return $y->rank = T_TRAIT; # fix use trait;
+
+        if ('{' === $y->next) {
+            $skip = $this->part = $y->str;
+        } elseif ($skip || ';' === $y->next || '}' === $y->next) {
+            $ary = explode('\\', $str = $this->part . $y->str);
+            $this->use[$ux][end($ary)] = $str;
+        } elseif (T_AS === $y->next) {
+            $str = $this->part . $y->str;
+            for ($i = $y->new->i + 1; $this->ignore(++$i); );
+            $this->get_name($y = $this->tok($i), true);
+            $this->use[$ux][$y->str] = $str;
+            $skip = ',' === $y->next;
         }
-        if ($skip || ';' === $y->next) {
-            $ary = explode('\\', $y->str);
-            $this->use[$ux][end($ary)] = $y->str;
-        } elseif ($y->next == T_AS) {
-            
-        }
-        return $skip;
+        if ('}' === $y->next)
+            $this->part = '';
     }
 
     private function other($y, $prev, &$ux, &$skip) {
-        if (T_FUNCTION == $prev && '&' === $y->str || ',' === $y->str) {
+        if (T_FUNCTION == $prev && '&' === $y->str || ',' === $y->str || $this->part) {
             $skip = true;
         } elseif (T_NAMESPACE == $prev && (';' == $y->str || 1 == $y->curly)) {
             $this->set_ns('', $y->curly); # return to global namespace
@@ -262,7 +277,7 @@ class PHP
         $this->ns_crly = $crly;
     }
 
-    function get_name($y) {
+    function get_real($y) {
         //if (T_VAR == $y->rank)
             return $y->str;
         return $this->ns . '\\' . $y->str;
