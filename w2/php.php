@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.515;
+    const version = 0.517;
 
     const _GLOB  = 0;
     const _NS    = 2;
@@ -119,16 +119,17 @@ class PHP
         if ($this->syntax_fail)
             throw new Error($this->syntax_fail);
         $out = '';
-        foreach ($this->rank() as $y) {
+        foreach ($this->rank() as $zz => $y) {
             if (T_STRING == $y->tok) {
-                $s = $this->pos . " $y->line " . token_name($y->tok) . ' ' . $this->get_real($y);
+                $s = $this->pos . ".$this->curly $zz $y->line " . token_name($y->tok) . ' ' . $this->get_real($y);
                 $s .= " ------------------- " . (is_int($y->rank) ? strtolower(token_name($y->rank)) : $y->rank);
                 if ($y->open)
                     $s .= $this->str($y->open, $this->get_close($y));
                 $out .= "===================== \n$s\n";
             } #else { $out .= $this->curly . " == $y->str\n"; }
         }
-        return var_export($this->_tokens_def, true) . var_export($this->use, true) . $out;
+        return var_export($this->use, true) . var_export($this->ns, true) . 
+            $out . var_export($this->_tokens_def, true);
     }
 
     function tok($i = 0) {
@@ -165,7 +166,7 @@ class PHP
     }
 
     function get_name($y, $ok = false) {
-        $y->open = $y->rank = $y->is_def = false;
+        $y->real = $y->open = $y->rank = $y->is_def = false;
         $this->get_new($y, $y->i);
         $name = fn($tok, int $ns = 1) => in_array($tok, PHP::$name_tok[$ns]);
         if ($ok = $ok || $name($y->tok, (int)(T_NS_SEPARATOR === $y->next))) {
@@ -195,16 +196,17 @@ class PHP
                 $y->rank = T_LIST;
             } elseif (T_VARIABLE === $y->next) {
                 $y->rank = T_CLASS;////////
-            } elseif (!$this->in_str) {
+            } elseif (!$this->in_str && T_NAMESPACE != $prev) {
                 $y->rank = T_CONST;//////
             }
         }
-        return $y->rank;
+        return T_STRING == $y->tok;
     }
 
     function rank() { # T_HALT_COMPILER T_EVAL T_AS
-        for ($i = $prev = $ux = $skip = 0; $this->ignore(++$i); );
+        for ($i = $prev = $ux = 0; $this->ignore(++$i); );
         for ($y = $this->tok($i); $y; $y = $y->new) {
+            $skip = 0;
             $this->curly += $y->curly = $this->bracket($y);
 
             if ($this->rank_name($y, $prev)) {
@@ -251,6 +253,7 @@ class PHP
         }
         if ('}' === $y->next)
             $this->part = '';
+        $y->rank = false;
     }
 
     private function other($y, $prev, &$ux, &$skip) {
@@ -278,9 +281,19 @@ class PHP
     }
 
     function get_real($y) {
-        //if (T_VAR == $y->rank)
-            return $y->str;
-        return $this->ns . '\\' . $y->str;
+        if (!$y->rank)#
+            return false;#
+        if ($y->is_def)
+            return $this->ns && 'METHOD' !== $y->rank ? "$this->ns\\$y->str" : $y->str;
+        if ('\\' == $y->str[0])
+            return substr($y->str, 1);
+        if (T_CLASS == $y->rank)
+            return $this->use[0][$y->str] ?? "$this->ns\\$y->str";
+        if (T_FUNCTION == $y->rank)
+            return $this->use[1][$y->str] ?? "??$y->str";
+        if (T_CONST == $y->rank)
+            return $this->use[2][$y->str] ?? "??$y->str";
+        return $y->str;
     }
 
     function get_close($y) {
