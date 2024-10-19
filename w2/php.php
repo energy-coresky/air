@@ -9,7 +9,6 @@ class PHP
     const _METH  = 4;
 
     static $php = false;
-    static $name_tok = [[T_STRING, T_NS_SEPARATOR]];
 
     public $pad; # 0 for minified PHP
     public $top = [[]/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
@@ -23,6 +22,7 @@ class PHP
     private $stack = [];
     private $x = [];
     private $part = '';
+    private $conv = [T_CLASS => 0, T_FUNCTION => 1, T_CONST => 2];
 
     static function file(string $name, $pad = 4) {
         return new PHP(file_get_contents($name), $pad);
@@ -38,8 +38,9 @@ class PHP
         $p = array_combine(array_map(fn($k) => constant("T_$k"), array_keys($p)), $p);
         $p[58] = T_CASE; # ord(':') === 58
         array_walk(PHP::$php->modifiers, fn(&$v) => $v = constant("T_$v"));
-        PHP::$name_tok[0] += [2 => T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
-        PHP::$name_tok[1] = PHP::$name_tok[0] + [5 => T_NAMESPACE];
+        $p =& PHP::$php->tokens_name;
+        $p[0] += [2 => T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
+        $p[1] = $p[0] + [5 => T_NAMESPACE];
     }
 
     function __construct(string $in, $pad = 4) {
@@ -128,7 +129,7 @@ class PHP
 
             if ($this->rank_name($y, $prev)) {
                 if (T_NAMESPACE == $prev) {
-                    $this->top = [[], [], [], $y->str . '\\'];
+                    $this->top = [[], [], [], $y->str];
                 } elseif ($y->is_def && T_CONST != $prev) { # def class-like
                     if (T_FUNCTION == $prev) {
                         if ($cls = PHP::_CLASS & $this->pos)
@@ -162,7 +163,7 @@ class PHP
     }
 
     private function rank_name($y, $prev) {
-        if ($this->get_name($y)) {
+        if ($ok = $this->get_name($y)) {
             '(' !== $y->next or $y->open = $y->new->i;
 
             if ($y->rank = $this->_tokens_def[$prev] ?? false) {
@@ -179,17 +180,17 @@ class PHP
                 $y->rank = T_LIST;
             } elseif (T_VARIABLE === $y->next) {
                 $y->rank = T_CLASS;////////
-            } elseif (!$this->in_str && T_NAMESPACE != $prev) {
+            } elseif (!$this->in_str && !in_array($prev, [T_NAMESPACE, T_USE])) {
                 $y->rank = T_CONST;//////
             }
         }
-        return T_STRING == $y->tok;
+        return $ok;
     }
 
     function get_name($y, $ok = false) {
         $y->open = $y->rank = $y->is_def = false;
         $this->get_new($y, $y->i);
-        $name = fn($tok, int $ns = 1) => in_array($tok, PHP::$name_tok[$ns]);
+        $name = fn($tok, int $ns = 1) => in_array($tok, $this->_tokens_name[$ns]);
         if ($ok = $ok || $name($y->tok, (int)(T_NS_SEPARATOR === $y->next))) {
             $y->tok = T_STRING;
             while ($name($y->new->tok)) {
@@ -218,7 +219,6 @@ class PHP
         }
         if ('}' === $y->next)
             $this->part = '';
-        $y->rank = false;
     }
 
     function get_new($y, $i) {
@@ -228,19 +228,21 @@ class PHP
     }
 
     function get_real($y) {
-        if (!$y->rank)#
-            return false;#
+        $ns = '' === $this->ns ? '' : "$this->ns\\";
         if ($y->is_def)
-            return in_array($y->rank, ['METHOD', 'CLASS-CONST']) ? $y->str : $this->ns . $y->str;
+            return $ns . $y->str;
         if ('\\' == $y->str[0])
             return substr($y->str, 1);
+        if ('namespace\\' == strtolower(substr($y->str, 0, 10)))
+            return $ns . substr($y->str, 10);
+        if (3 == ($ux = $this->conv[$y->rank] ?? 3))
+            return "??$y->str";
+        $a = explode('\\', $y->str, 2);
+        if (isset($this->top[$ux][$a[0]]))
+            return $this->top[$ux][$a[0]] . (isset($a[1]) ? "\\$a[1]" : '');
         if (T_CLASS == $y->rank)
-            return $this->top[0][$y->str] ?? $this->ns . $y->str;
-        if (T_FUNCTION == $y->rank)
-            return $this->top[1][$y->str] ?? "??$y->str";
-        if (T_CONST == $y->rank)
-            return $this->top[2][$y->str] ?? "??$y->str";
-        return $y->str;
+            return $ns . $y->str;
+        return "?$y->str";
     }
 
     function get_close($y) {

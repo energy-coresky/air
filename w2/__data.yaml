@@ -30,12 +30,12 @@ gt_74: @csv( ) >
 tokens_def: @csv( ) CLASS INTERFACE TRAIT ENUM FUNCTION CONST
 tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT, $T_INLINE_HTML, $T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO]
 tokens_use: {
-  NEW: $T_CLASS, EXTENDS: $T_CLASS, IMPLEMENTS: $T_CLASS, INSTANCEOF: $T_CLASS,
+  NEW: $T_CLASS, EXTENDS: $T_CLASS, IMPLEMENTS: $T_CLASS, INSTANCEOF: $T_CLASS, INSTEADOF: $T_TRAIT,
   DOUBLE_COLON: [$T_FN, $T_CONST],
   OBJECT_OPERATOR: [$T_FN, $T_VAR],
   NULLSAFE_OBJECT_OPERATOR: [$T_FN, $T_VAR],
-  USE: $T_USE, INSTEADOF: $T_TRAIT
 }
+tokens_name: [[$T_STRING, $T_NS_SEPARATOR]]
 
 oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
 prev_space: @csv( ) ; { } ) , [ :
