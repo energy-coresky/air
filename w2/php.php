@@ -36,7 +36,7 @@ class PHP
         $p = array_combine(array_map(fn($k) => constant("T_$k"), $p), $p);
         $p =& PHP::$php->tokens_use;
         $p = array_combine(array_map(fn($k) => constant("T_$k"), array_keys($p)), $p);
-        $p[58] = T_CASE; # ord(':') === 58
+        $p[58] = T_LIST; # T_CASE ord(':') === 58
         array_walk(PHP::$php->modifiers, fn(&$v) => $v = constant("T_$v"));
         $p =& PHP::$php->tokens_name;
         $p[0] += [2 => T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
@@ -61,7 +61,7 @@ class PHP
     }
 
     function __toString() {
-        return "\nlines: $qq\n";
+        return "\nlines: \n";
         $out = '';
         for ($y = $this->tok(); $y; $y = $next) {
             $next = $this->tok($y->i + 1);
@@ -173,7 +173,7 @@ class PHP
                 if (is_array($y->rank))
                     $y->rank = $y->rank[(int)!$y->open];
             } elseif (T_DOUBLE_COLON === $y->next) {
-                $y->rank = T_CLASS;
+                $y->rank = in_array(strtolower($y->str), ['self', 'parent', /*static*/'']) ? false : T_CLASS;
             } elseif ($y->open) {
                 $y->rank = T_FUNCTION;
             } elseif (in_array($y->str, $this->_types)) {
@@ -203,7 +203,7 @@ class PHP
 
     private function use(&$y, $ux, &$skip) {
         if (PHP::_CLASS == $this->pos)
-            return $y->rank = T_TRAIT; # fix use trait;
+            return $y->rank = T_CLASS; # fix use T_TRAIT;
 
         if ('{' === $y->next) {
             $skip = $this->part = $y->str;
