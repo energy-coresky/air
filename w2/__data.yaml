@@ -1,5 +1,7 @@
 
 #.php =========================================================================
+version: $PHP_VERSION
+
 const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
 
 spec: @csv( ) STDIN STDOUT STDERR __COMPILER_HALT_OFFSET__

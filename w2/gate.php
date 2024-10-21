@@ -46,13 +46,15 @@ class Gate
         return substr_replace($code, '', strpos($code, '<br />'), 6);
     }
 
-    function get_methods($class_name = '', $prx = [], $pox = []) {
+    function get_methods($content) { // $class_name
         $php = new PHP($content);
+        if ($php->parse_error)
+            throw new Error($php->parse_error);
         $list = [];
         foreach ($php->rank() as $y) {
             if ('METHOD' === $y->rank) {
-                if ($prx && !in_array(substr($y->str, 0, 2), $prx) ||
-                    $pox && !in_array(substr($y->str, -2), $pox)
+                if (!in_array(substr($y->str, 0, 2), ['j_', 'a_']) &&
+                    !in_array(substr($y->str, -2), ['_j', '_a'])
                     ) continue;
                 $list[$y->str] = [];
                 $p =& $list[$y->str];
@@ -67,8 +69,8 @@ class Gate
     function parse($ware, $fn, $act_only = true) {
         $ctrl = basename($fn, '.php');
         $content = Plan::_gq([$ware, $fn]) or $content = "<?php\n\nclass $ctrl extends Controller\n{}\n";
-        $list = (Globals::instance())->parse_def($ctrl, $content);
-        #$list = $php->get_methods('', ['j_', 'a_'], ['_j', '_a']);
+        #$list = (Globals::instance())->parse_def($ctrl, $content);
+        $list = $this->get_methods($content);
         if ('main' == $ware && 'default_c' == $ctrl) {
             foreach ($this->trait as $k => $v)
                 isset($list[$k]) or $list[$k] = $v;

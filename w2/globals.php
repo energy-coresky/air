@@ -15,9 +15,9 @@ class Globals extends Usage
         return $glb ?? ($glb = new self);
     }
 
-    static function file($fn, $php) {
+    static function file($fn, $code) { # used in earth/mvc/m_air.php
         $glb = new Globals;
-        $glb->parse_def($fn, $php);
+        $glb->parse_def($fn, $code);
         return $glb->yml->definitions;
     }
 
@@ -120,6 +120,57 @@ class Globals extends Usage
         ];
     }
 
+    function parse_def($fn, $code = false) {
+        parent::$cnt[0]++;
+        $php = new PHP($code ?: file_get_contents($fn));
+        $glob_list = $define = false;
+        $vars = [];
+        foreach ($php->rank() as $prev => $y) {
+            $this->pos = [$fn, $y->line];
+            $ns = '' === $php->ns ? '' : "$php->ns\\";
+            switch ($y->tok) {
+                case T_EVAL:
+                    static $n = 1;
+                    $this->push('EVAL', $n++ . ".$fn $y->line");
+                    break;
+                case T_GLOBAL:
+                    $glob_list = true;
+                    $vars = [];
+                    break;
+                case T_STRING:
+                    if ($y->is_def && !in_array($y->rank, ['NAMESPACE', 'CLASS-CONST', 'METHOD', '']))
+                        $this->push($y->rank, $ns . $y->str);
+                    break;
+                case T_VARIABLE:
+                    if ($glob_list)
+                        $vars[] = $y->str;
+                    $rule = '$GLOBALS' == $y->str || '=' === $y->next && (/*!$ns &&*/ !$php->pos || in_array($y->str, $vars));
+                    if ($rule && T_DOUBLE_COLON != $prev) # =& also work
+                        $this->push('VAR', $y->str);
+                    break;
+                default:
+                    if (';' == $y->str)
+                        $glob_list = false;
+                    if ($define && '(' == $y->str && T_CONSTANT_ENCAPSED_STRING === $y->next) {
+                        $this->pos[1] = $define;
+                        $this->push('DEFINE', substr($y->new->str, 1, -1));
+                    }
+                    break;
+            }
+            $define = T_STRING == $y->tok && 'define' == $y->str ? $y->line : false;
+            if (T_NAMESPACE == $prev) {
+                if ($this->name == $php->ns) {
+                    $this->list[] = $this->pos;
+                } elseif (!isset($this->also_ns[$php->ns])) {
+                    $this->push('NAMESPACE', $php->ns);
+                    $this->also_ns[$php->ns] = 0;
+                } else {
+                    $this->also_ns[$php->ns]++;
+                }
+            }
+        }
+    }
+
     function parse_html($fn, $line_start, $str) {
         //2do warm jet-cache
         //$this->parse_def($fn, $line_start, $str);
@@ -211,134 +262,6 @@ class Globals extends Usage
                 break;
         }
         return '';
-    }
-
-    function parse_def($fn, $php = false) {
-        parent::$cnt[0]++;
-        $mode = $php ? 1 : 0;
-        $php or $php = file_get_contents($fn);
-        $line = $line_start = 1;
-        $curly = $glob_list = $ns_kw = 0;
-        $place = 'GLOB';
-        $methods = $param = $vars = [];
-        $p1 = $p2 = $ns = '';
-        foreach (token_get_all(unl($php)) as $token) {
-            $id = $token;
-            $this->pos = [$fn, $line];
-            $line_start = $line;
-            if (is_array($token)) {
-                [$id, $str] = $token;
-                $line += substr_count($str, "\n");
-                switch ($id) {
-                    case T_WHITESPACE: case T_COMMENT:
-                        continue 2;
-                    case T_CURLY_OPEN:
-                        ++$curly;
-                        break;
-                    case T_EVAL:
-                        static $n = 1;
-                        $this->push('EVAL', $n++ . "." . $this->pos[0] . ' ' . $this->pos[1]);
-                        break;
-                    case T_GLOBAL:
-                        $glob_list = true;
-                        break;
-                    case T_NAMESPACE:
-                        $ns_kw = true;
-                        $ns = '';
-                        break;
-                    case T_STRING: case T_NAME_QUALIFIED: case T_NS_SEPARATOR:
-                        if ($ns_kw) {
-                            $ns .= $str;
-                        } elseif (in_array($p1, [T_CLASS, T_INTERFACE, T_TRAIT, ])) {
-                            $this->push($place = substr(token_name($p1), 2), $ns . $str);
-                            if (1 == $mode && 'CLASS' == $place && $str == $fn)
-                                $mode = 2;
-                        } elseif ('GLOB' == $place) {
-                            if (T_FUNCTION === $p1 && T_USE != $p2 || T_FUNCTION === $p2 && '&' === $p1)
-                                $this->push($place = 'FUNCTION', $ns . $str);
-                            if (T_CONST === $p1 && T_USE != $p2)
-                                $this->push('CONST', $ns . $str);
-                        } elseif (2 == $mode && T_FUNCTION === $p1) {
-                            if (in_array(substr($str, 0, 2), ['j_', 'a_']) || in_array(substr($str, -2), ['_j', '_a'])) {
-                                $method = $str;
-                                $mode = 3;
-                                $param = [];
-                            }
-                        }
-                        $id = [$id, $str];
-                        break;
-                    case T_CONSTANT_ENCAPSED_STRING:
-                        if ('(' == $p1 && is_array($p2) && 'define' == $p2[1])
-                            $this->push('DEFINE', substr($str, 1, -1));
-                        break;
-                    case T_VARIABLE:
-                        if ($glob_list)
-                            $vars[] = $str;
-                        if ('$GLOBALS' == $str)
-                            $this->push('VAR', $str);
-                        if (4 == $mode)
-                            $param[] = $str;
-                        $id = [$id, $str];
-                        break;
-                    case T_INLINE_HTML:
-                        //'jet' != $this->ext or $this->parse_html($fn, $line_start, $str);
-                        break;
-                }
-            }
-            switch ($id) {
-                case ')':
-                    if (4 == $mode) {
-                        $mode = 2;
-                        $methods[$method] = $param;
-                    }
-                    break;
-                case '(': # def anonymous function
-                    if (3 == $mode) {
-                        $mode = 4;
-                    } elseif ('GLOB' == $place && (T_FUNCTION === $p1 || T_FUNCTION === $p2 && '&' === $p1)) {
-                        $place = 'FUNCTION';
-                    }
-                    break;
-                case '}':
-                    if (!--$curly) {
-                        $place = 'GLOB';
-                        $vars = [];
-                        $mode = 0;
-                    }
-                    break;
-                case '{':
-                    ++$curly;
-                    if (!$ns_kw) {
-                        break;
-                    } elseif ('' === $ns) {
-                        $ns_kw = false;
-                    }
-                case ';':
-                    $glob_list = false;
-                    if ($ns_kw) {
-                        $ns_kw = false;
-                        if ($this->name == $ns) {
-                            $this->list[] = $this->pos;
-                        } elseif (!isset($this->also_ns[$ns])) {
-                            $this->push('NAMESPACE', $ns);
-                            $this->also_ns[$ns] = 0;
-                        } else {
-                            $this->also_ns[$ns]++;
-                        }
-                        $ns .= '\\';
-                    }
-                    break;
-                case '=': # =& also work
-                    $rule = T_DOUBLE_COLON != $p2 && is_array($p1) && T_VARIABLE == $p1[0];
-                    if ($rule && ('GLOB' == $place || in_array($p1[1], $vars)))
-                        $this->push('VAR', $p1[1]);
-                    break;
-            }
-
-            $p2 = $p1;
-            $p1 = $id;
-        }
-        return $methods;
     }
 
     function _def() {

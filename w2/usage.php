@@ -23,7 +23,7 @@ class Usage
     function __construct($path = '.') {
         $this->yml = clone Plan::php();
         global $sky, $argv;
-        defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 314);
+        defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 411);
         $this->path = $path;
         $sky->k_gr = $this;
         //$this->_2 = CLI ? ($argv[2] ?? '') : $sky->_2;
