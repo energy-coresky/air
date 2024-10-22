@@ -15,10 +15,10 @@ class Globals extends Usage
         return $glb ?? ($glb = new self);
     }
 
-    static function file($fn, $code) { # used in earth/mvc/m_air.php
+    static function file($fn, $code) { # used by earth/mvc/m_air.php
         $glb = new Globals;
         $glb->parse_def($fn, $code);
-        return $glb->yml->definitions;
+        return self::$definitions;
     }
 
     static function def($dir, $sect = 'CLASS') {
@@ -49,7 +49,7 @@ class Globals extends Usage
         if ($name)
             return json(['html' => $html, 'menu' => count($this->list)]);
         json(['html' => $html, 'menu' => view('_glob.xmenu', [
-            'defs' => $this->yml->definitions,
+            'defs' => self::$definitions,
             'cnt' => parent::$cnt,
             'mand' => count($mand = array_diff(explode(' ', SKY::i('gr_extns')), explode(' ', SKY::i('gr_nmand')), Root::$core)),
             'color' => function ($ext) use (&$mand) {
@@ -138,7 +138,7 @@ class Globals extends Usage
                     $vars = [];
                     break;
                 case T_STRING:
-                    if ($y->is_def && !in_array($y->rank, ['NAMESPACE', 'CLASS-CONST', 'METHOD', '']))
+                    if ($y->is_def && !in_array($y->rank, ['NAMESPACE', 'CLASS-CONST', 'METHOD']))
                         $this->push($y->rank, $ns . $y->str);
                     break;
                 case T_VARIABLE:
@@ -148,16 +148,16 @@ class Globals extends Usage
                     if ($rule && T_DOUBLE_COLON != $prev) # =& also work
                         $this->push('VAR', $y->str);
                     break;
-                default:
+                case 0:
                     if (';' == $y->str)
                         $glob_list = false;
-                    if ($define && '(' == $y->str && T_CONSTANT_ENCAPSED_STRING === $y->next) {
+                    if ($define && T_CONSTANT_ENCAPSED_STRING === $y->next) {
                         $this->pos[1] = $define;
                         $this->push('DEFINE', substr($y->new->str, 1, -1));
                     }
                     break;
             }
-            $define = T_STRING == $y->tok && 'define' == $y->str ? $y->line : false;
+            $define = T_FUNCTION === $y->rank && 'define' == $y->str ? $y->line : false;
             if (T_NAMESPACE == $prev) {
                 if ($this->name == $php->ns) {
                     $this->list[] = $this->pos;
@@ -215,14 +215,15 @@ class Globals extends Usage
     }
 
     function push($key, $ident) {
+        //$assign = fn(&$place, $ident, $mess = '') => $place[$ident][] = $this->pos[0] . ' ' . $this->pos[1] . " $mess";
         $assign = function (&$place, $ident, $mess = '') {
             $place[$ident][] = $this->pos[0] . ' ' . $this->pos[1] . " $mess";
         };
 
-        $place =& $this->yml->definitions[$key];
-        if (in_array($lc = strtolower($ident), $this->yml->keywords))
+        $place =& self::$definitions[$key];
+        if (in_array($lc = strtolower($ident), PHP::$data->keywords))
             return $assign($place, $ident, 'Keyword override');
-        if (in_array($lc, $this->yml->const)) # predefined_const
+        if (in_array($lc, PHP::$data->const)) # predefined_const
             return $assign($place, $ident, 'Predefined constant override');
 
         $is_lc = isset($this->all_lc[$lc]);
@@ -277,14 +278,14 @@ class Globals extends Usage
 
         $this->walk_files([$this, 'parse_def']);
         if ('.' != $this->path)
-            return $this->yml->definitions;
-        foreach ($this->yml->definitions as &$definition)
+            return self::$definitions;
+        foreach (self::$definitions as &$definition)
             uksort($definition, 'strcasecmp');
 
         $nap = Plan::mem_rq('report.nap');
 
         return $this->c_nmand($extns) + [
-            'defs' => $this->yml->definitions,
+            'defs' => self::$definitions,
             'e_idents' => [
                 'max_i' => -1, // infinite
                 'row_c' => function($in, $evar = false) use ($nap) {
@@ -325,7 +326,7 @@ class Globals extends Usage
             ],
             'after' => function($e, &$cnt) {
                 Plan::mem_p('gr_def.json', json_encode($this->json, JSON_PRETTY_PRINT));
-                parent::$cnt[4] = array_sum(array_map('count', $this->yml->definitions));
+                parent::$cnt[4] = array_sum(array_map('count', self::$definitions));
                 $cnt = parent::$cnt;
                 parent::$cnt[5] = $cnt[4] - $cnt[2] - $cnt[3];
                 return 1 + $e->key();

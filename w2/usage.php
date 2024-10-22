@@ -5,25 +5,25 @@ class Usage
     protected static $functions = []; // 2do: detect SKY::$vars collisions
     protected static $constants = [];
     protected static $classes = [];
-    protected static $special_const = ['STDIN', 'STDOUT', 'STDERR', '__COMPILER_HALT_OFFSET__'];
+    protected static $definitions;
 
     protected $path;
     protected $json = [];
-    protected $yml;
+    
+    protected $pos;
 
     static $extns = [];
     static $cnt = [0, 0, 0, 0, 0, 0, 'tot' => [0, 0, 0], 8 => 0];
 
     public $_2;
-    public $parts = [3 => 'Interfaces', 'Traits', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'];
+    public $parts = [3 => 'Interfaces', 'Traits', 'Enums', 1 => 'Functions', 2 => 'Constants', 0 => 'Classes'];
     public $name = '';
     public $list = [];
     public $act = null;
 
     function __construct($path = '.') {
-        $this->yml = clone Plan::php();
+        self::$definitions = (PHP::$data ?: PHP::ini_once())->definitions;
         global $sky, $argv;
-        defined('T_NAME_QUALIFIED') or define('T_NAME_QUALIFIED', 411);
         $this->path = $path;
         $sky->k_gr = $this;
         //$this->_2 = CLI ? ($argv[2] ?? '') : $sky->_2;
@@ -56,20 +56,20 @@ class Usage
             $name = '';
         };
         self::$cnt[$curly = 0]++;
-        $php = file_get_contents($fn);
+        $code = file_get_contents($fn);
         $line = $ok = 1;
         $this->use = [[], [], []]; # cls fun const
         $this->ns = $p1 = $name = $pos = $quot = '';
         $clist = [T_OBJECT_OPERATOR, T_DOUBLE_COLON, T_FUNCTION, T_NEW, T_CONST];
         $slist = ['self', 'parent', 'static'];
-        foreach (token_get_all(unl($php)) as $token) {
+        foreach (token_get_all(unl($code)) as $token) {
             $id = $token;
             $this->pos = [$fn, $line];
             if (is_array($token)) {
                 [$id, $str] = $token;
                 $line += substr_count($str, "\n");
                 switch ($id) {
-                    case T_STRING: case T_NS_SEPARATOR:  //case T_NAME_QUALIFIED:
+                    case T_STRING: case T_NS_SEPARATOR:
                         if (T_AS === $p1 && $name) {
                             $this->use[$usn][$str] = $name;
                             $name = '';
@@ -191,15 +191,11 @@ case '&':
             $rn = new ReflectionExtension($one);
             $list = $rn->getClassNames();
             self::$classes += array_change_key_case(array_combine($list, array_pad([], count($list), $one)));
-            self::$functions += array_change_key_case(array_map(function() use ($one) {
-                return $one;
-            }, $rn->getFunctions()));
+            self::$functions += array_change_key_case(array_map(fn() => $one, $rn->getFunctions()));
             if (isset($const[$one])) {
                 if ('Core' === $one)
-                    $const[$one] += array_flip(self::$special_const); # special_const like STDIN
-                self::$constants += array_map(function() use ($one) {
-                    return $one;
-                }, $const[$one]);
+                    $const[$one] += array_flip(PHP::$data->spec); # special_const like STDIN
+                self::$constants += array_map(fn() => $one, $const[$one]);
             }
         }
         return $extns;
@@ -218,7 +214,6 @@ case '&':
             ($offset = array_search($dir, $dirs)) !== false ? array_splice($dirs, $offset, 1) : ($dirs[] = $dir);
             SKY::i('gr_dirs' . $this->act, implode(' ', $dirs));
         }
-        //trace($dirs);
         return $dirs;
     }
 
@@ -272,7 +267,7 @@ case '&':
     function _use() {// see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
         $extns = self::extensions();
         self::$extns = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
-        self::$extns += ['' => [[], [], [], [], []]]; # classes, funcs, consts, interfaces, traits
+        self::$extns += ['' => [[], [], [], [], [], []]]; # classes, funcs, consts, interfaces, traits, enums
         $this->walk_files([$this, 'parse_use']);
         $nap = Plan::mem_rq('report.nap');
 
@@ -353,5 +348,99 @@ case '&':
                 return $used ? tag('used', 'style="color:#777"', 'sup') : '';
             },
         ];
+    }
+
+    function ns($ns) {
+        if ($this->name == $ns) {
+            $this->list[] = $this->pos;
+        } elseif (!isset($this->also_ns[$ns])) {
+            $this->push('NAMESPACE', $ns);
+            $this->also_ns[$ns] = 0;
+        } else {
+            $this->also_ns[$ns]++;
+        }
+    }
+
+    function ___parse_use($fn) {
+        $use = function ($x, &$ary, &$name, $y = 0) {
+            $extn = $ary[2 == $x ? $name : strtolower($name)] ?? '';
+            $abs or $ok or '' !== $extn or $name = $this->ns . $name;
+
+            $p =& self::$extns[$extn][$extn || !$y ? $x : $y];
+            if ($this->name) {
+                if ($this->name == $name)
+                    $this->list[] = $this->pos;
+            } elseif (isset($p[$name])) {
+                $p[$name][1]++;
+                if ($this->pos[0] != $p[$name][0][0])
+                    $p[$name][2]++;
+                $p[$name][0] = $this->pos;
+            } else {
+                $p[$name] = [$this->pos, 0, 0];
+            }
+            $name = '';
+        };
+        self::$cnt[0]++;
+        $php = new PHP(file_get_contents($fn));
+        foreach ($php->rank() as $prev => $y) {
+            $this->pos = [$fn, $y->line];
+            
+            
+        }
+    }
+
+    function ___parse_all($fn, $code = false) {
+        parent::$cnt[0]++;
+        $php = new PHP($code ?: file_get_contents($fn));
+        $skip_rank = fn($rank) => in_array($rank, ['NAMESPACE', 'CLASS-CONST', 'METHOD']);
+        $glob_list = $define = false;
+        $vars = [];
+        foreach ($php->rank() as $prev => $y) {
+            $this->pos = [$fn, $y->line];
+            $ns = '' === $php->ns ? '' : "$php->ns\\";
+            switch ($y->tok) {
+                case T_EVAL:
+                    static $n = 1;
+                    $this->push('EVAL', $n++ . ".$fn $y->line");
+                    break;
+                case T_GLOBAL:
+                    $glob_list = true;
+                    $vars = [];
+                    break;
+                case T_STRING:
+                    if ($y->is_def) {
+                        $skip_rank($y->rank) or $this->push($y->rank, $ns . $y->str);
+                    } elseif (in_array($rank = $y->rank, [T_CONST, T_FUNCTION])) {
+                        $use(2, self::$constants, $y->str);
+                        $use(1, self::$functions, $y->str);
+                    } elseif (T_CLASS == $rank) {
+                        $use(0, self::$classes, $y->str);
+                        $use(0, self::$classes, $y->str, 3); # interfaces
+                        $use(0, self::$classes, $y->str, 4); # traits
+                        $if == T_IMPLEMENTS == $prev;
+                        if ($if || T_USE == $prev)
+                            $qqq = $if ? 3 : 4;
+                    }
+                    break;
+                case T_VARIABLE:
+                    if ($glob_list)
+                        $vars[] = $y->str;
+                    $rule = '$GLOBALS' == $y->str || '=' === $y->next && (/*!$ns &&*/ !$php->pos || in_array($y->str, $vars));
+                    if ($rule && T_DOUBLE_COLON != $prev) # =& also work
+                        $this->push('VAR', $y->str);
+                    break;
+                case 0:
+                    if (';' == $y->str)
+                        $glob_list = false;
+                    if ($define && T_CONSTANT_ENCAPSED_STRING === $y->next) {
+                        $this->pos[1] = $define;
+                        $this->push('DEFINE', substr($y->new->str, 1, -1));
+                    }
+                    break;
+            }
+            $define = T_FUNCTION === $y->rank && 'define' == $y->str ? $y->line : false;
+            if (T_NAMESPACE == $prev)
+                $this->ns($php->ns);
+        }
     }
 }
