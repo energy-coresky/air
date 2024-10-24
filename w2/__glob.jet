@@ -34,8 +34,8 @@
 <div class="other-info">
 <table cellspacing="0" cellpadding="0" width="100%">
 @if('ext' == $k_gr->_2)
-<tr><td><b>Extensions</b>:</td><td>{{$mand . '/' . count($cnt['ext'])}} of {{count(Globals::$extns)-1}}</td></tr>
-@loop(Globals::$extns as $key => $ary)
+<tr><td><b>Extensions</b>:</td><td>{{$mand . '/' . count($cnt['ext'])}} of {{count(Globals::$uses)-1}}</td></tr>
+@loop(Globals::$uses as $key => $ary)
   @continue(!$ary[0] && !$ary[1] && !$ary[2] || !$key)
   @php $name = 'apache2handler' == $key ? 'apache2h..' : $key ~php
   <tr><td {{!$key ? '' : ' noborder'}}>
@@ -49,7 +49,7 @@
 @loop($k_gr->parts as $i => $part)
   <tr><td style="padding-left:10px" noborder>
     <u onclick="$('#idnt-{{$i}}')[0].scrollIntoView({block:'center',behavior:'smooth'})">{{$part}}</u>:
-  </td><td noborder>{{count(Globals::$extns[''][$i])}}</td></tr>
+  </td><td noborder>{{count(Globals::$uses[''][$i])}}</td></tr>
 ~loop
 <tr><td>No problem:</td><td>{{$cnt[2]}}</td></tr>
 <tr><td>Marked OK:</td><td>{{$cnt[3]}}</td></tr>
@@ -71,7 +71,7 @@
 
 #.ext //////////////////////////////////////////////////////////////////////////////////////////////////////////
 <br><span class="res-total"></span>
-@loop(Globals::$extns as $key => $ary)@continue(!$key)
+@loop(Globals::$uses as $key => $ary)@continue(!$key)
   @if(($used = $ary[0] || $ary[1] || $ary[2]) || $show_emp)
     <h2 id="idnt-{{$key}}" style="margin-bottom:3px;">{!$key . $sup($key, $used)!}</h2>
   ~if

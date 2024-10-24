@@ -17,7 +17,10 @@ keywords: @sar(|~| ) @each @csv( )
   interface isset list match namespace new or print private protected public readonly require require_once
   return static switch throw trait try unset use var while xor yield~from yield
 
-types: @csv( ) int float bool string true false null void iterable object mixed never
+types: @csv( ) null bool int float string array object resource never void false true callable mixed iterable
+type_alias: # https://www.php.net/manual/ru/language.types.type-system.php#language.types.type-system.alias
+  mixed: object|resource|array|string|float|int|bool|null
+  iterable: Traversable|array
 
 soft: [enum, resource, numeric] # https://www.php.net/manual/ru/reserved.other-reserved-words.php
 
@@ -33,7 +36,7 @@ tokens_def: @csv( ) CLASS INTERFACE TRAIT ENUM FUNCTION CONST NAMESPACE
 tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT, $T_INLINE_HTML, $T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO]
 tokens_use: {
   NEW: $T_CLASS, EXTENDS: $T_CLASS, IMPLEMENTS: $T_CLASS, INSTANCEOF: $T_CLASS, # INSTEADOF: $T_TRAIT,
-  DOUBLE_COLON: [$T_FN, $T_CONST],
+  DOUBLE_COLON: [$T_FN, $T_DOUBLE_COLON],
   OBJECT_OPERATOR: [$T_FN, $T_VAR],
   NULLSAFE_OBJECT_OPERATOR: [$T_FN, $T_VAR],
 }

@@ -2,16 +2,13 @@
 
 class PHP
 {
-    const version = 0.525;
+    const version = 0.527;
 
-    const _ANOF  = 1;
+    const _ANOF  = 1; # anonymous func
+    const ARRF  = 3; # arrow func (for ->in_par and NOT for ->pos)
     const _FUNC  = 2;
     const _CLASS = 4;
     const _METH  = 8;
-    const A_CLASS     = 0x1000;
-    const A_TRAIT     = 0x2000;
-    const A_INTERFACE = 0x4000;
-    const A_ENUM      = 0x8000;
 
     static $data = false;
 
@@ -21,13 +18,13 @@ class PHP
     public $count;
     public $parse_error = false;
     public $in_str = false;
+    public $in_par = 0;
     public $pos = 0;
     public $curly = 0;
 
     private $stack = [];
     private $x = [];
     private $part = '';
-    private $conv = [T_CLASS => 0, T_FUNCTION => 1, T_CONST => 2];
 
     static function file(string $name, $pad = 4) {
         return new PHP(file_get_contents($name), $pad);
@@ -52,7 +49,8 @@ class PHP
         PHP::$data or PHP::ini_once();
         $this->pad = $pad;
         try {
-            $this->tok = token_get_all(unl($in), TOKEN_PARSE);
+            //$this->tok = token_get_all(unl($in), TOKEN_PARSE);
+            $this->tok = token_get_all(unl($in), 0);
         } catch (Throwable $e) {
             $this->tok = [$this->parse_error = 'Line ' . $e->getLine() . ', ' . $e->getMessage()];
         }
@@ -131,13 +129,13 @@ class PHP
     }
 
     function rank() {
-        for ($y = $this->tok($prev = $ux = 0, true); $y; $y = $y->new) {
+        $uei = fn($tok, &$use) => ($use = T_USE == $tok) || T_EXTENDS == $tok || T_IMPLEMENTS == $tok;
+        for ($y = $this->tok($prev = $ux = $dar = 0, true); $y; $y = $y->new) {
             $skip = false;
             $this->curly += $y->curly = $this->bracket($y);
 
             if ($this->rank_name($y, $prev)) {
-                $use = T_USE == $prev;
-                if ($use || T_EXTENDS == $prev || T_IMPLEMENTS == $prev)
+                if ($uei($prev, $use))
                     $skip = ',' === $y->next;
                 if ($use)
                     PHP::_CLASS == $this->pos ? ($y->rank = T_CLASS) : $this->prev_use($y, $ux, $skip);
@@ -145,10 +143,18 @@ class PHP
                 $this->pos &= array_pop($this->stack)[0];
             } elseif (T_NAMESPACE == $prev && (';' == $y->str || 1 == $y->curly)) {
                 $this->head = [[], [], [], '']; # return to global namespace
-            } elseif (T_FUNCTION == $prev && '&' === $y->str || ',' === $y->str || $this->part) {
-                $skip = true;
-            } elseif (T_FUNCTION == $prev && '(' == $y->str && !$this->pos) { # anonymous function in the global
-                array_push($this->stack, [~($this->pos = PHP::_ANOF), $this->curly]);
+            } elseif (T_FUNCTION == $prev && '&' === $y->str
+                || ',' === $y->str && $uei($prev, $use)
+                || '' != $this->part) {
+                    $skip = true;
+            } elseif (T_FUNCTION == $prev && '(' == $y->str) { # anonymous function
+                $this->in_par = PHP::_ANOF;
+                $this->pos or array_push($this->stack, [~($this->pos = PHP::_ANOF), $this->curly]);
+            } elseif (1 == $y->curly || $dar == $y->i) {
+                $this->in_par = 0;
+            } elseif (T_FN == $y->tok) { # arrow function
+                $dar = $this->get_close($y, $y->new);
+                for ($this->in_par = PHP::ARRF; T_DOUBLE_ARROW !== $this->tok[++$dar][0]; );
             } elseif (T_USE == $y->tok) {
                 $ux = 0;
             } elseif (T_USE == $prev) {
@@ -163,49 +169,51 @@ class PHP
     }
 
     private function rank_name($y, $prev) {
-        if ($ok = $this->get_name($y)) {
-            '(' !== $y->next or $y->open = $y->new->i;
-
-            if ($y->rank = $this->_tokens_def[$prev] ?? false) {
-                $y->is_def = true;
-                if (T_NAMESPACE == $prev) {
-                    $this->head = [[], [], [], $y->str];
-                } elseif (T_CONST == $prev) {
-                    if (PHP::_CLASS & $this->pos) {
-                        $y->rank = 'CLASS-CONST';
-                    } elseif ($this->ns) {
-                        $this->head[2][$y->str] = "$this->ns\\$y->str";
-                    }
-                } elseif (T_FUNCTION == $prev) {
-                    if (PHP::_CLASS & $this->pos) {
-                        $y->rank = 'METHOD';
-                        $this->pos |= $pos = PHP::_METH;
-                    } else {
-                        if ($this->ns)
-                            $this->head[1][$y->str] = "$this->ns\\$y->str";
-                        $this->pos |= $pos = PHP::_FUNC;
-                    }
-                    array_push($this->stack, [~$pos, $this->curly]);
-                } else { # class-like definition
-                    $this->pos |= $pos = PHP::_CLASS;
-                    array_push($this->stack, [~$pos, $this->curly]);
+        if (!$this->get_name($y))
+            return false;
+        if ($y->rank = $this->_tokens_def[$prev] ?? false) {
+            $y->is_def = true;
+            if (T_NAMESPACE == $prev) {
+                $this->head = [[], [], [], $y->str];
+            } elseif (T_CONST == $prev) {
+                if (PHP::_CLASS & $this->pos) {
+                    $y->rank = 'CLASS-CONST';
+                } elseif ($this->ns) {
+                    $this->head[2][$y->str] = "$this->ns\\$y->str";
                 }
-            } elseif ($y->rank = $this->_tokens_use[$prev] ?? false) {
-                if (is_array($y->rank))
-                    $y->rank = $y->rank[(int)!$y->open];
-            } elseif (T_DOUBLE_COLON === $y->next) {
-                $y->rank = in_array(strtolower($y->str), ['self', 'parent', 'static']) ? T_LIST : T_CLASS;
-            } elseif ($y->open) {
-                $y->rank = T_FUNCTION;
-            } elseif (in_array($y->str, $this->_types)) {
-                $y->rank = T_LIST;
-            } elseif (T_VARIABLE === $y->next) {
-                $y->rank = T_CLASS;////////
-            } elseif (!$this->in_str && !in_array($prev, [T_USE])) {
-                $y->rank = T_CONST;//////
+            } elseif (T_FUNCTION == $prev) {
+                if (PHP::_CLASS & $this->pos) {
+                    $y->rank = 'METHOD';
+                    $this->pos |= $this->in_par = PHP::_METH;
+                } else {
+                    if ($this->ns)
+                        $this->head[1][$y->str] = "$this->ns\\$y->str";
+                    $this->pos |= $this->in_par = PHP::_FUNC;
+                }
+                array_push($this->stack, [~$this->in_par, $this->curly]);
+            } else { # class-like definition
+                $this->pos |= PHP::_CLASS;
+                array_push($this->stack, [~PHP::_CLASS, $this->curly]);
             }
+        } elseif ($y->rank = $this->_tokens_use[$prev] ?? false) { // 2do new self,parent,sattic
+            if (is_array($y->rank))
+                $y->rank = $y->rank[(int)!$y->open];
+        } elseif (T_DOUBLE_COLON === $y->next) {
+            $y->rank = in_array(strtolower($y->str), ['self', 'parent', 'static']) ? T_LIST : T_CLASS;
+        } elseif (T_GOTO == $prev) {
+            $y->rank = T_GOTO;// 2do labels: e.g. goto loop;
+        } elseif ($y->open) {
+            $y->rank = T_FUNCTION;
+        } elseif (':' === $y->next && in_array($prev, [0x28 /* ( */, 0x2C /* , */])) {
+            $y->rank = T_ELLIPSIS; # named argument from >= PHP 8.0.0
+        } elseif (in_array($y->str, $this->_types)) {
+            $y->rank = T_LIST;
+        } elseif ($this->in_par && 0x3A /* : */ == $prev || T_VARIABLE == $y->next) {
+            $y->rank = T_CLASS; // 2do DNF from 8.2
+        } elseif (!$this->in_str && T_USE != $prev) {
+            $y->rank = T_CONST;
         }
-        return $ok;
+        return true;
     }
 
     function get_name($y, $ok = false) {
@@ -222,6 +230,7 @@ class PHP
                 $y->str .= $y->new->str; # collect T_NAME_xx for 7.4
                 $get_new($y, $y->new->i);
             }
+            '(' !== $y->next or $y->open = $y->new->i;
         }
         return $ok;
     }
@@ -242,25 +251,31 @@ class PHP
             $this->part = '';
     }
 
-    function get_real($y) {
+    function get_real($y, &$exact = true) {
+        static $conv = [T_CLASS => 0, T_FUNCTION => 1, T_CONST => 2];
         $ns = '' === $this->ns ? '' : "$this->ns\\";
-        if ($y->is_def)
-            return $ns . $y->str;
+        $exact = true;
+
+      if ($y->is_def)
+          return $ns . $y->str;
         if ('\\' == $y->str[0])
             return substr($y->str, 1);
         if ('namespace\\' == strtolower(substr($y->str, 0, 10)))
             return $ns . substr($y->str, 10);
-        if (3 == ($ux = $this->conv[$y->rank] ?? 3))
-            return "??$y->str";
-        $a = explode('\\', $y->str, 2);
+      if (3 == ($ux = $conv[$y->rank] ?? 3))
+          return "??$y->str";
+      $two = 2 == count($a = explode('\\', $y->str, 2));
         if (isset($this->head[$ux][$a[0]]))
-            return $this->head[$ux][$a[0]] . (isset($a[1]) ? "\\$a[1]" : '');
+            return $this->head[$ux][$a[0]] . ($two ? "\\$a[1]" : '');
         if (T_CLASS == $y->rank)
             return $ns . $y->str;
-        return ($ns ? '?' : '') . $y->str;
+        $exact = !$ns;
+        return $y->str;
     }
 
-    function get_close($y) {
+    function get_close($y, $fn = false) {
+        if ($fn)
+            for ($y->open = $fn->i - 1; '(' !== $this->tok[++$y->open]; );
         for ($to = $y->open, $n = 1; $n && ++$to < $this->count; )
             '(' === $this->tok[$to] ? $n++ : (')' !== $this->tok[$to] ? 0 : $n--);
         return $to;
@@ -277,7 +292,7 @@ class PHP
         return $ary;
     }
 
-    function str($i, $to, $skip_ignore = false) { //2do $skip_ignore
+    function str($i, $to) {
         for ($s = ''; $i <= $to; $s .= is_array($this->tok[$i]) ? $this->tok[$i++][1] : $this->tok[$i++]);
         return $s;
     }

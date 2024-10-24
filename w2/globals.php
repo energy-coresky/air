@@ -215,7 +215,10 @@ class Globals extends Usage
     }
 
     function push($key, $ident) {
-        //$assign = fn(&$place, $ident, $mess = '') => $place[$ident][] = $this->pos[0] . ' ' . $this->pos[1] . " $mess";
+        $place =& self::$definitions[$key];
+        $place[$ident][] = implode(' ', $this->pos) . ' ';
+return;
+
         $assign = function (&$place, $ident, $mess = '') {
             $place[$ident][] = $this->pos[0] . ' ' . $this->pos[1] . " $mess";
         };
@@ -262,7 +265,7 @@ class Globals extends Usage
                 $assign($place, $ident, 'Dangerous code');
                 break;
         }
-        return '';
+        //return '';
     }
 
     function _def() {
@@ -309,7 +312,7 @@ class Globals extends Usage
                         return false;
 
                     $c = explode(' ', array_shift($ary), 3);
-                    $x = $c[2] ? $c[2] : ($gt ? $err_msg : '');
+                    $x = $c[2] ?: ($gt ? $err_msg : '');
                     if ($x && $x[0] == '-')
                          $x = substr($x, 1);
                     $ok = isset($nap[$id]);

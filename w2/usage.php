@@ -9,10 +9,9 @@ class Usage
 
     protected $path;
     protected $json = [];
-    
     protected $pos;
 
-    static $extns = [];
+    static $uses = [];
     static $cnt = [0, 0, 0, 0, 0, 0, 'tot' => [0, 0, 0], 8 => 0];
 
     public $_2;
@@ -41,7 +40,7 @@ class Usage
                 $name = isset($pfx) ? $this->use[$x][$pfx] . "\\$name" : $this->use[$x][$name];
             $extn = $ary[2 == $x ? $name : strtolower($name)] ?? '';
             $abs or $ok or '' !== $extn or $name = $this->ns . $name;
-            $p =& self::$extns[$extn][$extn || !$y ? $x : $y];
+            $p =& self::$uses[$extn][$extn || !$y ? $x : $y];
             if ($this->name) {
                 if ($this->name == $name)
                     $this->list[] = $this->pos;
@@ -157,7 +156,7 @@ case '&':
                         $this->ns .= '\\';
                     } elseif ('USE' === $pos) {
                         if ($curly) {
-                            $use(0, self::$classes, $name, 4); # traits
+$name && $use(0, self::$classes, $name, 4); # traits
                         } else {
                             $ary = explode('\\', $name);
                             $this->use[$usn][end($ary)] = $name; # use ns name
@@ -266,9 +265,9 @@ case '&':
 
     function _use() {// see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
         $extns = self::extensions();
-        self::$extns = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
-        self::$extns += ['' => [[], [], [], [], [], []]]; # classes, funcs, consts, interfaces, traits, enums
-        $this->walk_files([$this, 'parse_use']);
+        self::$uses = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
+        self::$uses += ['' => [[], [], [], [], [], []]]; # classes, funcs, consts, interfaces, traits, enums
+        $this->walk_files([$this, 'parse']);
         $nap = Plan::mem_rq('report.nap');
 
         return [
@@ -279,7 +278,7 @@ case '&':
                     static $p, $i, $j = 0, $defs = 0, $ary = [];
                     if ($evar) {
                         is_int($i = $ext) ? ($ext = '') : ($i = 0);
-                        $p = self::$extns[$ext];
+                        $p = self::$uses[$ext];
                         '' !== $ext or 0 !== $defs or $defs = json_decode(Plan::mem_gq('gr_def.json') ?: '[]');
                         if (0 !== $defs)
                             $ary = $p[$i] and uksort($ary, 'strcasecmp');
@@ -332,12 +331,12 @@ case '&':
                 } else {
                     ksort($this->json);
                     Plan::mem_p('gr_use.json', json_encode($this->json, JSON_PRETTY_PRINT));
-                    self::$cnt[4] = array_sum(array_map('count', self::$extns['']));
+                    self::$cnt[4] = array_sum(array_map('count', self::$uses['']));
                     self::$cnt[5] = self::$cnt[4] - $cnt[2] - $cnt[3];
                 }
                 return 1 + $e->key();
             },
-            'sup' => function($ext, $used) {
+            'sup' => function($ext, $_used) {
                 static $nmand;
                 if (in_array($ext, Root::$core))
                     return tag('core', 'style="color:red"', 'sup');
@@ -345,7 +344,7 @@ case '&':
                     $nmand = explode(' ', SKY::i('gr_nmand'));
                 if (in_array($ext, $nmand))
                     return tag('not mandatory', 'style="color:magenta"', 'sup');
-                return $used ? tag('used', 'style="color:#777"', 'sup') : '';
+                return $_used ? tag('used', 'style="color:#777"', 'sup') : '';
             },
         ];
     }
@@ -354,43 +353,51 @@ case '&':
         if ($this->name == $ns) {
             $this->list[] = $this->pos;
         } elseif (!isset($this->also_ns[$ns])) {
-            $this->push('NAMESPACE', $ns);
+            $this->d_add('NAMESPACE', $ns);
             $this->also_ns[$ns] = 0;
         } else {
             $this->also_ns[$ns]++;
         }
     }
 
-    function ___parse_use($fn) {
-        $use = function ($x, &$ary, &$name, $y = 0) {
-            $extn = $ary[2 == $x ? $name : strtolower($name)] ?? '';
-            $abs or $ok or '' !== $extn or $name = $this->ns . $name;
+    function d_add($key, $ident) {
+        $place =& self::$definitions[$key];
+        $place[$ident][] = implode(' ', $this->pos).' ';
+    }
 
-            $p =& self::$extns[$extn][$extn || !$y ? $x : $y];
-            if ($this->name) {
-                if ($this->name == $name)
-                    $this->list[] = $this->pos;
-            } elseif (isset($p[$name])) {
-                $p[$name][1]++;
-                if ($this->pos[0] != $p[$name][0][0])
-                    $p[$name][2]++;
-                $p[$name][0] = $this->pos;
-            } else {
-                $p[$name] = [$this->pos, 0, 0];
-            }
-            $name = '';
-        };
-        self::$cnt[0]++;
-        $php = new PHP(file_get_contents($fn));
-        foreach ($php->rank() as $prev => $y) {
-            $this->pos = [$fn, $y->line];
-            
-            
+    //function u_add($x, &$ary, &$name, $y = 0) {
+    function u_add($y, $php, $prev) {
+        $name = $php->get_real($y, $exact);
+        if (T_CLASS == $y->rank) {
+            $if = T_IMPLEMENTS == $prev;
+            $i = $if || T_USE == $prev ? ($if ? 3 : 4) : 0; # 5 - enums
+            $j = 0;
+            $p0 =& self::$classes;
+        } elseif (T_CONST == $y->rank) {
+            $j = $i = 2;
+            $p0 =& self::$constants;
+        } else {
+            $j = $i = 1;
+            $p0 =& self::$functions;
+        }
+        $extn = $p0[2 == $i ? $name : strtolower($name)] ?? '';
+
+        $p =& self::$uses[$extn][$extn ? $j : $i];
+        if ($this->name) { # show code snapshots
+            if ($this->name == $name)
+                $this->list[] = $this->pos;
+        } elseif (isset($p[$name])) { # use again
+            $p[$name][1]++;
+            if ($this->pos[0] != $p[$name][0][0])
+                $p[$name][2]++;
+            $p[$name][0] = $this->pos;
+        } else { # new usage
+            $p[$name] = [$this->pos, 0, 0];
         }
     }
 
-    function ___parse_all($fn, $code = false) {
-        parent::$cnt[0]++;
+    function parse($fn, $code = false) {
+        self::$cnt[0]++;
         $php = new PHP($code ?: file_get_contents($fn));
         $skip_rank = fn($rank) => in_array($rank, ['NAMESPACE', 'CLASS-CONST', 'METHOD']);
         $glob_list = $define = false;
@@ -401,7 +408,7 @@ case '&':
             switch ($y->tok) {
                 case T_EVAL:
                     static $n = 1;
-                    $this->push('EVAL', $n++ . ".$fn $y->line");
+                    $this->d_add('EVAL', $n++ . ".$fn $y->line");
                     break;
                 case T_GLOBAL:
                     $glob_list = true;
@@ -409,17 +416,9 @@ case '&':
                     break;
                 case T_STRING:
                     if ($y->is_def) {
-                        $skip_rank($y->rank) or $this->push($y->rank, $ns . $y->str);
-                    } elseif (in_array($rank = $y->rank, [T_CONST, T_FUNCTION])) {
-                        $use(2, self::$constants, $y->str);
-                        $use(1, self::$functions, $y->str);
-                    } elseif (T_CLASS == $rank) {
-                        $use(0, self::$classes, $y->str);
-                        $use(0, self::$classes, $y->str, 3); # interfaces
-                        $use(0, self::$classes, $y->str, 4); # traits
-                        $if == T_IMPLEMENTS == $prev;
-                        if ($if || T_USE == $prev)
-                            $qqq = $if ? 3 : 4;
+                        $skip_rank($y->rank) or $this->d_add($y->rank, $ns . $y->str);
+                    } elseif (in_array($y->rank, [T_CONST, T_FUNCTION, T_CLASS])) {
+                        $this->u_add($y, $php, $prev);
                     }
                     break;
                 case T_VARIABLE:
@@ -427,20 +426,22 @@ case '&':
                         $vars[] = $y->str;
                     $rule = '$GLOBALS' == $y->str || '=' === $y->next && (/*!$ns &&*/ !$php->pos || in_array($y->str, $vars));
                     if ($rule && T_DOUBLE_COLON != $prev) # =& also work
-                        $this->push('VAR', $y->str);
+                        $this->d_add('VAR', $y->str);
                     break;
                 case 0:
                     if (';' == $y->str)
                         $glob_list = false;
                     if ($define && T_CONSTANT_ENCAPSED_STRING === $y->next) {
                         $this->pos[1] = $define;
-                        $this->push('DEFINE', substr($y->new->str, 1, -1));
+                        $this->d_add('DEFINE', substr($y->new->str, 1, -1));
                     }
                     break;
             }
             $define = T_FUNCTION === $y->rank && 'define' == $y->str ? $y->line : false;
+            //$this->u_add($y, $php); start new NS
             if (T_NAMESPACE == $prev)
                 $this->ns($php->ns);
         }
+        //$this->u_add($y, $php); file finished
     }
 }
