@@ -267,7 +267,7 @@ $name && $use(0, self::$classes, $name, 4); # traits
         $extns = self::extensions();
         self::$uses = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
         self::$uses += ['' => [[], [], [], [], [], []]]; # classes, funcs, consts, interfaces, traits, enums
-        $this->walk_files([$this, 'parse']);
+        $this->walk_files([$this, 'parse']);// parse_use
         $nap = Plan::mem_rq('report.nap');
 
         return [

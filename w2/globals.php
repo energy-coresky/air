@@ -17,7 +17,7 @@ class Globals extends Usage
 
     static function file($fn, $code) { # used by earth/mvc/m_air.php
         $glb = new Globals;
-        $glb->parse_def($fn, $code);
+        $glb->parse($fn, $code);
         return self::$definitions;
     }
 
@@ -120,60 +120,9 @@ class Globals extends Usage
         ];
     }
 
-    function parse_def($fn, $code = false) {
-        parent::$cnt[0]++;
-        $php = new PHP($code ?: file_get_contents($fn));
-        $glob_list = $define = false;
-        $vars = [];
-        foreach ($php->rank() as $prev => $y) {
-            $this->pos = [$fn, $y->line];
-            $ns = '' === $php->ns ? '' : "$php->ns\\";
-            switch ($y->tok) {
-                case T_EVAL:
-                    static $n = 1;
-                    $this->push('EVAL', $n++ . ".$fn $y->line");
-                    break;
-                case T_GLOBAL:
-                    $glob_list = true;
-                    $vars = [];
-                    break;
-                case T_STRING:
-                    if ($y->is_def && !in_array($y->rank, ['NAMESPACE', 'CLASS-CONST', 'METHOD']))
-                        $this->push($y->rank, $ns . $y->str);
-                    break;
-                case T_VARIABLE:
-                    if ($glob_list)
-                        $vars[] = $y->str;
-                    $rule = '$GLOBALS' == $y->str || '=' === $y->next && (/*!$ns &&*/ !$php->pos || in_array($y->str, $vars));
-                    if ($rule && T_DOUBLE_COLON != $prev) # =& also work
-                        $this->push('VAR', $y->str);
-                    break;
-                case 0:
-                    if (';' == $y->str)
-                        $glob_list = false;
-                    if ($define && T_CONSTANT_ENCAPSED_STRING === $y->next) {
-                        $this->pos[1] = $define;
-                        $this->push('DEFINE', substr($y->new->str, 1, -1));
-                    }
-                    break;
-            }
-            $define = T_FUNCTION === $y->rank && 'define' == $y->str ? $y->line : false;
-            if (T_NAMESPACE == $prev) {
-                if ($this->name == $php->ns) {
-                    $this->list[] = $this->pos;
-                } elseif (!isset($this->also_ns[$php->ns])) {
-                    $this->push('NAMESPACE', $php->ns);
-                    $this->also_ns[$php->ns] = 0;
-                } else {
-                    $this->also_ns[$php->ns]++;
-                }
-            }
-        }
-    }
-
     function parse_html($fn, $line_start, $str) {
         //2do warm jet-cache
-        //$this->parse_def($fn, $line_start, $str);
+        //$this->parse($fn, $line_start, $str);
     }
 
     function c_progress() {
@@ -279,7 +228,7 @@ return;
         $this->all = array_fill_keys(array_keys($all), 0);
         $this->all_lc = array_change_key_case($this->all);
 
-        $this->walk_files([$this, 'parse_def']);
+        $this->walk_files([$this, 'parse']);
         if ('.' != $this->path)
             return self::$definitions;
         foreach (self::$definitions as &$definition)
