@@ -516,7 +516,7 @@ return;
 
     //function add_u($x, &$ary, &$name, $y = 0) {
     function add_u($y, $php, $prev) {
-        $name = $php->get_real($y, $exact_name);
+        $name = $php->get_real($y, $ns_name);
         if (T_CLASS == $y->rank) {
             $if = T_IMPLEMENTS == $prev;
             $i = $if || T_USE == $prev ? ($if ? 3 : 4) : 0; # 5 - enums

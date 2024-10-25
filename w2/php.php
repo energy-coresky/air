@@ -264,11 +264,10 @@ class PHP
 
     function get_real($y, &$ns_name = '') {
         static $conv = [T_CLASS => 0, T_FUNCTION => 1, T_CONST => 2];
-        $ns = '' === $this->ns ? '' : "$this->ns\\";
         $ns_name = '';
-
         if ('\\' == $y->str[0])
             return substr($y->str, 1);
+        $ns = '' === $this->head[3] ? '' : $this->head[3] . '\\';
         if ('namespace\\' == strtolower(substr($y->str, 0, 10)))
             return $ns . substr($y->str, 10);
       if (3 == ($ux = $conv[$y->rank] ?? 3))
