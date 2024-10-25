@@ -54,9 +54,9 @@ class PHP
         } catch (Throwable $e) {
             $this->tok = [$this->parse_error = 'Line ' . $e->getLine() . ', ' . $e->getMessage()];
         }
-        if (PHP_VERSION !== PHP::$data->version) {
+        if (PHP_VERSION_ID !== PHP::$data->version) {
             //~~~~~~~~~ Debug::drop_all_cache();
-            throw new Error('PHP version do not match: ' . PHP_VERSION . ' !== ' . PHP::$data->version);
+            throw new Error('PHP version do not match: ' . PHP_VERSION_ID . ' !== ' . PHP::$data->version);
         }
         $this->count = count($this->tok);
     }
@@ -137,15 +137,15 @@ class PHP
             if ($this->rank_name($y, $prev)) {
                 if ($uei($prev, $use))
                     $skip = ',' === $y->next;
-                if ($use)
-                    PHP::_CLASS == $this->pos ? ($y->rank = T_CLASS) : $this->prev_use($y, $ux, $skip);
+                $use && $this->prev_use($y, $ux, $skip);
             } elseif (-1 == $y->curly && $this->stack && $this->curly == end($this->stack)[1]) {
                 $this->pos &= array_pop($this->stack)[0];
             } elseif (T_NAMESPACE == $prev && (';' == $y->str || 1 == $y->curly)) {
                 $this->head = [[], [], [], '']; # return to global namespace
             } elseif (T_FUNCTION == $prev && '&' === $y->str
                 || ',' === $y->str && $uei($prev, $use)
-                || '' != $this->part) {
+                || '' != $this->part
+                || $this->in_par && '?' == $y->str) {
                     $skip = true;
             } elseif (T_FUNCTION == $prev && '(' == $y->str) { # anonymous function
                 $this->in_par = PHP::_ANOF;
@@ -199,13 +199,13 @@ class PHP
             if (is_array($y->rank))
                 $y->rank = $y->rank[(int)!$y->open];
         } elseif (T_DOUBLE_COLON === $y->next) {
-            $y->rank = in_array(strtolower($y->str), ['self', 'parent', 'static']) ? T_LIST : T_CLASS;
-        } elseif (T_GOTO == $prev) {
-            $y->rank = T_GOTO;// 2do labels: e.g. goto loop;
+            $y->rank = T_CLASS;
         } elseif ($y->open) {
             $y->rank = T_FUNCTION;
-        } elseif (':' === $y->next && in_array($prev, [0x28 /* ( */, 0x2C /* , */])) {
-            $y->rank = T_ELLIPSIS; # named argument from >= PHP 8.0.0
+        } elseif (T_GOTO == $prev) {
+            $y->rank = T_GOTO;
+        } elseif (':' === $y->next && in_array($prev, [/* (, */ 0x28, 0x2C, /* {; */ 0x7D, 0x3B])) {
+            $y->rank = T_GOTO; # named arguments from >= PHP 8.0.0 OR labels for goto ;
         } elseif (in_array($y->str, $this->_types)) {
             $y->rank = T_LIST;
         } elseif ($this->in_par && 0x3A /* : */ == $prev || T_VARIABLE == $y->next) {
@@ -213,6 +213,8 @@ class PHP
         } elseif (!$this->in_str && T_USE != $prev) {
             $y->rank = T_CONST;
         }
+        if (in_array(strtolower($y->str), ['self', 'parent', 'static']))
+            $y->rank = T_LIST;
         return true;
     }
 
@@ -236,6 +238,15 @@ class PHP
     }
 
     private function prev_use(&$y, $ux, &$skip) {
+        if ($this->pos) {
+            $y->rank = T_CLASS;
+            if ('{' === $y->next) { # skip redeclare trait's methods
+                for ($i = $y->new->i; '}' !== $this->tok[++$i]; );
+                $y->new = $this->tok($i + 1, true);
+                $y->next = $y->new->tok ?: $y->new->str;
+            }
+            return $skip = ',' === $y->next;
+        }
         $str = $this->part . $y->str;
         if ('{' === $y->next) {
             $skip = $this->part = $y->str;
@@ -251,25 +262,24 @@ class PHP
             $this->part = '';
     }
 
-    function get_real($y, &$exact = true) {
+    function get_real($y, &$ns_name = '') {
         static $conv = [T_CLASS => 0, T_FUNCTION => 1, T_CONST => 2];
         $ns = '' === $this->ns ? '' : "$this->ns\\";
-        $exact = true;
+        $ns_name = '';
 
-      if ($y->is_def)
-          return $ns . $y->str;
         if ('\\' == $y->str[0])
             return substr($y->str, 1);
         if ('namespace\\' == strtolower(substr($y->str, 0, 10)))
             return $ns . substr($y->str, 10);
       if (3 == ($ux = $conv[$y->rank] ?? 3))
-          return "??$y->str";
-      $two = 2 == count($a = explode('\\', $y->str, 2));
+          return "?$y->str";
+        $two = 2 == count($a = explode('\\', $y->str, 2));
         if (isset($this->head[$ux][$a[0]]))
             return $this->head[$ux][$a[0]] . ($two ? "\\$a[1]" : '');
-        if (T_CLASS == $y->rank)
+        if (T_CLASS == $y->rank || $two)
             return $ns . $y->str;
-        $exact = !$ns;
+        if ($ns)
+            $ns_name = $ns . $y->str;
         return $y->str;
     }
 
