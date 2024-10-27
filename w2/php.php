@@ -4,19 +4,19 @@ class PHP
 {
     const version = 0.527;
 
-    const _ANOF  = 1; # anonymous func
+    const _ANONYM  = 1; # anonymous func, class
     const ARRF  = 3; # arrow func (for ->in_par and NOT for ->pos)
     const _FUNC  = 2;
     const _CLASS = 4;
     const _METH  = 8;
 
     static $data = false;
+    static $warning = false;
 
     public $pad; # 0 for minified PHP
     public $head = [[]/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
     public $tok;
     public $count;
-    public $parse_error = false;
     public $in_str = false;
     public $in_par = 0;
     public $pos = 0;
@@ -32,6 +32,12 @@ class PHP
 
     static function ini_once() {
         PHP::$data = Plan::php();
+        if (PHP_VERSION_ID !== PHP::$data->version) { # different console's and web versions
+            PHP::$warning = 'PHP version do not match: ' . PHP_VERSION_ID . ' !== ' . PHP::$data->version;
+            Plan::cache_d(['main', 'yml_main_php.php']);
+            PHP::$data = Plan::php(false);
+        }
+
         foreach (PHP::$data->gt_74 as $i => $str)
             defined($const = "T_$str") or define($const, $i + 0x10000);
         $p =& PHP::$data->tokens_def;
@@ -49,14 +55,10 @@ class PHP
         PHP::$data or PHP::ini_once();
         $this->pad = $pad;
         try {
-            //$this->tok = token_get_all(unl($in), TOKEN_PARSE);
-            $this->tok = token_get_all(unl($in), 0);
+            $this->tok = token_get_all($in, TOKEN_PARSE);
         } catch (Throwable $e) {
-            $this->tok = [$this->parse_error = 'Line ' . $e->getLine() . ', ' . $e->getMessage()];
-        }
-        if (PHP_VERSION_ID !== PHP::$data->version) {
-            //~~~~~~~~~ Debug::drop_all_cache();
-            throw new Error('PHP version do not match: ' . PHP_VERSION_ID . ' !== ' . PHP::$data->version);
+            PHP::$warning = 'Line ' . $e->getLine() . ', ' . $e->getMessage();
+            $this->tok = token_get_all($in);
         }
         $this->count = count($this->tok);
     }
@@ -139,7 +141,7 @@ class PHP
                     $skip = ',' === $y->next;
                 $use && $this->prev_use($y, $ux, $skip);
             } elseif (-1 == $y->curly && $this->stack && $this->curly == end($this->stack)[1]) {
-                $this->pos &= array_pop($this->stack)[0];
+                $this->pos &= ~array_pop($this->stack)[0];
             } elseif (T_NAMESPACE == $prev && (';' == $y->str || 1 == $y->curly)) {
                 $this->head = [[], [], [], '']; # return to global namespace
             } elseif (T_FUNCTION == $prev && '&' === $y->str
@@ -147,9 +149,9 @@ class PHP
                 || '' != $this->part
                 || $this->in_par && '?' == $y->str) {
                     $skip = true;
-            } elseif (T_FUNCTION == $prev && '(' == $y->str) { # anonymous function
-                $this->in_par = PHP::_ANOF;
-                $this->pos or array_push($this->stack, [~($this->pos = PHP::_ANOF), $this->curly]);
+            } elseif (T_FUNCTION == $prev && '(' == $y->str || T_NEW == $prev && T_CLASS == $y->tok) {
+                $this->in_par = PHP::_ANONYM;
+                $this->pos or array_push($this->stack, [$this->pos = PHP::_ANONYM, $this->curly]);
             } elseif (1 == $y->curly || $dar == $y->i) {
                 $this->in_par = 0;
             } elseif (T_FN == $y->tok) { # arrow function
@@ -190,12 +192,12 @@ class PHP
                         $this->head[1][$y->str] = "$this->ns\\$y->str";
                     $this->pos |= $this->in_par = PHP::_FUNC;
                 }
-                array_push($this->stack, [~$this->in_par, $this->curly]);
+                array_push($this->stack, [$this->in_par, $this->curly]);
             } else { # class-like definition
                 $this->pos |= PHP::_CLASS;
-                array_push($this->stack, [~PHP::_CLASS, $this->curly]);
+                array_push($this->stack, [PHP::_CLASS, $this->curly]);
             }
-        } elseif ($y->rank = $this->_tokens_use[$prev] ?? false) { // 2do new self,parent,sattic
+        } elseif ($y->rank = $this->_tokens_use[$prev] ?? false) {
             if (is_array($y->rank))
                 $y->rank = $y->rank[(int)!$y->open];
         } elseif (T_DOUBLE_COLON === $y->next) {
@@ -204,7 +206,7 @@ class PHP
             $y->rank = T_FUNCTION;
         } elseif (T_GOTO == $prev) {
             $y->rank = T_GOTO;
-        } elseif (':' === $y->next && in_array($prev, [/* (, */ 0x28, 0x2C, /* {; */ 0x7D, 0x3B])) {
+        } elseif (':' === $y->next && in_array($prev, [/* (, */ 0x28, 0x2C, /* {}; */ 0x7B, 0x7D, 0x3B])) {
             $y->rank = T_GOTO; # named arguments from >= PHP 8.0.0 OR labels for goto ;
         } elseif (in_array($y->str, $this->_types)) {
             $y->rank = T_LIST;
@@ -239,7 +241,7 @@ class PHP
 
     private function prev_use(&$y, $ux, &$skip) {
         if ($this->pos) {
-            $y->rank = T_CLASS;
+            $y->rank = T_CLASS; # (trait)
             if ('{' === $y->next) { # skip redeclare trait's methods
                 for ($i = $y->new->i; '}' !== $this->tok[++$i]; );
                 $y->new = $this->tok($i + 1, true);
@@ -265,13 +267,13 @@ class PHP
     function get_real($y, &$ns_name = '') {
         static $conv = [T_CLASS => 0, T_FUNCTION => 1, T_CONST => 2];
         $ns_name = '';
-        if ('\\' == $y->str[0])
+        if ('\\' === $y->str[0])
             return substr($y->str, 1);
         $ns = '' === $this->head[3] ? '' : $this->head[3] . '\\';
         if ('namespace\\' == strtolower(substr($y->str, 0, 10)))
             return $ns . substr($y->str, 10);
-      if (3 == ($ux = $conv[$y->rank] ?? 3))
-          return "?$y->str";
+        if (3 == ($ux = $conv[$y->rank] ?? 3))
+            return "?$y->str";
         $two = 2 == count($a = explode('\\', $y->str, 2));
         if (isset($this->head[$ux][$a[0]]))
             return $this->head[$ux][$a[0]] . ($two ? "\\$a[1]" : '');
@@ -290,7 +292,7 @@ class PHP
         return $to;
     }
 
-    function get_modifiers($y, $i = 4, $add_public = false) { //2do $add_public
+    function get_modifiers($y, $i = 4, $add_public = false) {
         for ($ary = [], $i = $y->i - $i; $y = $this->tok($i--); ) {
             if (in_array($y->tok, $this->_tokens_ign)) # T_ATTRIBUTE not ignore
                 continue;

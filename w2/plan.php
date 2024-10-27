@@ -193,9 +193,9 @@ class Plan
         return $lg ? setlocale(LC_ALL, "$lg.utf8", "$lg.UTF-8", $lg) : setlocale(LC_ALL, 0);
     }
 
-    static function php() {
+    static function php($static = true) {
         static $php;
-        $php or $php = self::set('main', fn() => yml('php', '+ @object @inc(php)'));
+        $static && $php or $php = self::set('main', fn() => yml('php', '+ @object @inc(php)'));
         return $php;
     }
 

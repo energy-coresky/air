@@ -184,75 +184,13 @@ class Globals
     }
 
     function push($key, $ident) {
-        $place =& self::$definitions[$key];
-        $place[$ident][] = implode(' ', $this->pos) . ' ';
-return;
-
-        $assign = function (&$place, $ident, $mess = '') {
-            $place[$ident][] = $this->pos[0] . ' ' . $this->pos[1] . " $mess";
-        };
-
-        $place =& self::$definitions[$key];
-        if (in_array($lc = strtolower($ident), PHP::$data->keywords))
-            return $assign($place, $ident, 'Keyword override');
-        if (in_array($lc, PHP::$data->const)) # predefined_const
-            return $assign($place, $ident, 'Predefined constant override');
-
-        $is_lc = isset($this->all_lc[$lc]);
-        $is_nc = isset($this->all[$ident]);
-        switch ($key) {
+        /*
             case 'NAMESPACE':
-                $assign($place, $ident);
-            case 'INTERFACE':
-                !$is_lc || interface_exists($ident, false) ? $assign($place, $ident) : $assign($place, $ident, 'Identifier in usage');
-            case 'TRAIT':
-                !$is_lc || trait_exists($ident, false) ? $assign($place, $ident) : $assign($place, $ident, 'Identifier in usage');
-            case 'CLASS':
-                !$is_lc || class_exists($ident, false) ? $assign($place, $ident) : $assign($place, $ident, 'Identifier in usage');
-            case 'VAR':
-                if ('$GLOBALS' == $ident) {
-                    $assign($place, $ident, '-Do not use $GLOBALS');
-                } else {
-                    $assign($place, $ident);
-                }
-                break;
+            case 'INTERFACE': case 'TRAIT': case 'CLASS': case 'ENUM':
             case 'FUNCTION':
-                isset(self::$functions[$lc]) ? $assign($place, $ident, "Internal function name used") : $assign($place, $ident);
             case 'CONST':
             case 'DEFINE':
-                isset(self::$constants[$ident]) ? $assign($place, $ident, "Internal constant name used") : $assign($place, $ident);
-            case 'EVAL':
-                $assign($place, $ident, 'Dangerous code');
-        }
-        //return '';
-    }
-
-    function parse_use($fn) {
-        $use = function ($x, &$ary, &$name, $y = 0) {
-            if ($abs = '\\' === $name[0]) {
-                $name = substr($name, 1);
-            } elseif (strpos($name, '\\') && $this->ns) {
-                [$pfx, $name] = explode('\\', $name, 2);
-            }
-            if ($ok = !$abs && isset($this->use[$x][$pfx ?? $name]))
-                $name = isset($pfx) ? $this->use[$x][$pfx] . "\\$name" : $this->use[$x][$name];
-            $extn = $ary[2 == $x ? $name : strtolower($name)] ?? '';
-            $abs or $ok or '' !== $extn or $name = $this->ns . $name;
-            $p =& self::$uses[$extn][$extn || !$y ? $x : $y];
-            if ($this->name) {
-                if ($this->name == $name)
-                    $this->list[] = $this->pos;
-            } elseif (isset($p[$name])) {
-                $p[$name][1]++;
-                if ($this->pos[0] != $p[$name][0][0])
-                    $p[$name][2]++;
-                $p[$name][0] = $this->pos;
-            } else {
-                $p[$name] = [$this->pos, 0, 0];
-            }
-            $name = '';
-        };
-        self::$cnt[$curly = 0]++;
+            case 'VAR':       case 'EVAL':*/
     }
 
     static function extensions($simple = false) {
@@ -343,7 +281,7 @@ return;
         $this->interfaces = array_flip(get_declared_interfaces());
         $classes = array_flip(get_declared_classes());
         $this->traits = array_flip(get_declared_traits());
-        //require __DIR__ . '/internals.php'; collect maximal list? 2do: save it to DB with links to docs
+        //2do: = Earth::php_names();
 
         $all = self::$constants + $this->interfaces + $classes + $this->traits;
         $this->all = array_fill_keys(array_keys($all), 0);
@@ -407,7 +345,7 @@ return;
         ];
     }
 
-    function view_use() {// see vendor/sebastian/recursion-context/tests/ContextTest.php^101 Exception::class
+    function view_use() {
         $extns = self::extensions();
         self::$uses = array_combine($extns, array_pad([], count($extns), [[], [], []])); # classes, funcs, consts
         self::$uses += ['' => [[], [], [], [], [], []]]; # classes, funcs, consts, interfaces, traits, enums
@@ -493,11 +431,6 @@ return;
         ];
     }
 
-    function parse_html($fn, $line_start, $str) {
-        //2do warm jet-cache
-        //$this->parse($fn, $line_start, $str);
-    }
-
     function ns($ns) {
         if ($this->name == $ns) {
             $this->list[] = $this->pos;
@@ -548,6 +481,8 @@ return;
     function parse($fn, $code = false) {
         self::$cnt[0]++;
         $php = new PHP($code ?: file_get_contents($fn));
+        //if (PHP::$warning)
+            
         $skip_rank = fn($rank) => in_array($rank, ['NAMESPACE', 'CLASS-CONST', 'METHOD']);
         $glob_list = $define = false;
         $vars = [];

@@ -48,8 +48,8 @@ class Gate
 
     function get_methods($content) { // $class_name
         $php = new PHP($content);
-        if ($php->parse_error)
-            throw new Error($php->parse_error);
+        if (PHP::$warning)
+            throw new Error(PHP::$warning);
         $list = [];
         foreach ($php->rank() as $y) {
             if ('METHOD' === $y->rank) {
