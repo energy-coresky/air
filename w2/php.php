@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.529;
+    const version = 0.531;
 
     const _ANONYM  = 1; # anonymous func, class
     const ARRF  = 3; # arrow func (for ->in_par and NOT for ->pos)
@@ -13,7 +13,7 @@ class PHP
     static $data = false;
     static $warning = false;
 
-    public $pad; # 0 for minified PHP
+    public $tab; # 0 for minified PHP
     public $head = [[]/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
     public $tok;
     public $count;
@@ -26,8 +26,8 @@ class PHP
    public $x = [];
     private $part = '';
 
-    static function file(string $name, $pad = 4) {
-        return new PHP(file_get_contents($name), $pad);
+    static function file(string $name, $tab = 4) {
+        return new PHP(file_get_contents($name), $tab);
     }
 
     static function ini_once() {
@@ -51,9 +51,9 @@ class PHP
         return PHP::$data;
     }
 
-    function __construct(string $in, $pad = 4) {
+    function __construct(string $in, $tab = 4) {
         PHP::$data or PHP::ini_once();
-        $this->pad = $pad;
+        $this->tab = $tab;
         try {
             $this->tok = token_get_all($in, TOKEN_PARSE);
         } catch (Throwable $e) {
@@ -69,43 +69,79 @@ class PHP
         return PHP::$data->{substr($name, 1)};
     }
 
-    function beautifier($pad) {//tidy
+    function beautifier($indent) {//tidy
         $this->nice();
-        $next = fn(&$y) => T_WHITESPACE != $y->tok or $y = $this->tok($y->i + 1);
-        for ($out = '', $y = $this->tok(); $y; $y = $new) {
+        $depth = $dar = $dec = 0;
+        $out = $line = '';
+        $pad = function () use (&$depth, $indent) {
+            return str_repeat ($indent, $depth);
+        };
+        $flush = function ($s = '', $s2 = '') use (&$out, &$line, $pad) {
+            $out .= $line . $s;
+            $line = $pad() . $s2;
+        };
+        $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
+
+        for ($y = $this->tok(); $y; $y = $new) {
             $y->curly = $this->bracket($y);
             $new = $this->tok($y->i + 1);
             if ($this->in_str) {
-                $out .= $y->str;
+                $line .= $y->str;
                 continue;
             }
-            $open = $this->x[$y->i] ?? false;
+            
             $ws = T_WHITESPACE == $y->tok;
             if (in_array($y->tok, $this->_space_after)) {
-                $y->str .= ' ';
-                $next($new);
-            } elseif ($ws && T_NS_SEPARATOR == $new->tok || T_NS_SEPARATOR == $y->tok && T_WHITESPACE == $new->tok) {
-                if ($ws)
-                    continue;
-                $new = $this->tok($y->i + 2);
+                $line .= $y->str . ' ';
+                if (T_IF == $y->tok) {
+                    $dar = $this->get_close($y, $new);
+                    if ('{' === $this->tok($dar, true)->str)
+                        $dar = 0;
+                }
+            } elseif (T_OPEN_TAG == $y->tok) {
+                $flush(trim($y->str) . "\n\n");
+            } elseif ($dar == $y->i) {
+                $depth++;
+                $flush(")\n");
+                $dec = true;
+            } elseif (1 == $y->curly) {
+                [$open, $close] = $this->x[$y->i];
+                $depth++;
+                $flush("{\n");
+                $this->x[$y->i] = $close;
+            } elseif (-1 == $y->curly && array_search($y->i, $this->x, true)) {
+                $depth--;
+                ';' == $prv->str ? ($line = $pad() . '}') : $flush("\n", '}');
+            } elseif (in_array($y->tok ?: $y->str, $this->_space_op, true)) {
+                $line .= " $y->str ";
+            } elseif (':' == $y->str && '?' == $prv->str) {
+                $line .= ": ";
+            } elseif (',' == $y->str) {
+                $line .= ", ";
+            } elseif ('}' == $prv->str && $alfa($y->str[0])) {
+                $flush("\n\n", $y->str);
             } elseif (';' == $y->str) {
-                $y->str .= "\n";
-                $next($new);
-                
-            } elseif ('{' == $y->str) {
-                $y->str .= "\n";
-                $next($new);
+                if ($dec) {
+                    $dec = false;
+                    $depth--;
+                }
+                $flush(";\n");
+            } elseif ($ws) {
+                continue;
+            } else {
+                if ($alfa($prv->str[-1]) && $alfa($y->str[0]))
+                    $line .= ' ';
+                $line .= $y->str;
+                //if ($open)$line .= $open;
             }
-            $out .= $y->str;
-            if ($open)$out .= $open;
             $prv = $y;
         }
         return $out;
     }
 
     function __toString() {
-        if ($this->pad)
-            return $this->beautifier($this->pad);
+        if ($this->tab)
+            return $this->beautifier(str_pad('', $this->tab));
         # else minifier
         $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
         for ($out = '', $y = $this->tok(); $y; $y = $new) {
@@ -144,7 +180,6 @@ class PHP
     function nice() {
         if (PHP::$warning)
             throw new Error(PHP::$warning);
-        $x =& $this->x;
         $stk =& $this->stack;
         for ($y = $this->tok(); $y; $y = $new) {
             $new = $this->tok($y->i + 1);
@@ -155,18 +190,19 @@ class PHP
             }
             
             if ($stk)
-                $x[end($stk)] += strlen(' ' == $y->str ? ' ' : trim($y->str));
+                $this->x[end($stk)][0] += strlen(' ' == $y->str ? ' ' : trim($y->str));
 
             $oc = $this->bracket($y) or $this->in_str or $y->tok
                 or $oc = array_search($y->str, $this->_oc) ? -1 : (int)isset($this->_oc[$y->str]);
 
             if (1 == $oc) {
                 $stk[] = $y->i;
-                $x[$y->i] = 1;
+                $this->x[$y->i] = [1];
             } elseif (-1 == $oc) {
                 $j = array_pop($stk);
+                $this->x[$j][1] = $y->i;
                 if ($stk)
-                    $x[end($stk)] += $x[$j] - 1;
+                    $this->x[end($stk)][0] += $this->x[$j][0] - 1;
             }
         }
     }
@@ -362,7 +398,6 @@ class PHP
             'tok' => &$p[0],
             'str' => &$p[1],
             'line' => $tok[2] ?? fn() => $this->char_line($i),
-            'x' => &$this->x,
         ];
     }
 }
