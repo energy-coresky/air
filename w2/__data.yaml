@@ -42,10 +42,10 @@ tokens_use: {
 }
 tokens_name: [[$T_STRING, $T_NS_SEPARATOR]]
 
-oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
-prev_space: @csv( ) ; { } ) , [ :
-next_space: ['{', '[']
 modifiers: @csv( ) VAR PUBLIC PROTECTED PRIVATE STATIC ABSTRACT FINAL READONLY
+oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
+# add T_MATCH
+space_after: [$T_IF, $T_ELSEIF, $T_FOR, $T_WHILE, $T_FOREACH, $T_TRY, $T_CATCH, $T_SWITCH, $T_LIST, $T_DO]
 
 extensions: @csv( ) # all known extensions (must)
   apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant

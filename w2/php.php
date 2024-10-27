@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.527;
+    const version = 0.529;
 
     const _ANONYM  = 1; # anonymous func, class
     const ARRF  = 3; # arrow func (for ->in_par and NOT for ->pos)
@@ -22,8 +22,8 @@ class PHP
     public $pos = 0;
     public $curly = 0;
 
-    private $stack = [];
-    private $x = [];
+   public $stack = [];
+   public $x = [];
     private $part = '';
 
     static function file(string $name, $pad = 4) {
@@ -69,22 +69,61 @@ class PHP
         return PHP::$data->{substr($name, 1)};
     }
 
-    function __toString() {
-        return "\nlines: \n";
-        $out = '';
-        for ($y = $this->tok(); $y; $y = $next) {
-            $next = $this->tok($y->i + 1);
-            if ($this->pad) {
-                $prev = $this->tok($y->i - 1);
-                if (T_COMMENT == $y->tok
-#                    || T_WHITESPACE == $y->tok && in_array($prev->str, $this->_prev_space)
-#                    || T_WHITESPACE == $y->tok && in_array($next->str, $this->_next_space)
-                )
+    function beautifier($pad) {//tidy
+        $this->nice();
+        $next = fn(&$y) => T_WHITESPACE != $y->tok or $y = $this->tok($y->i + 1);
+        for ($out = '', $y = $this->tok(); $y; $y = $new) {
+            $y->curly = $this->bracket($y);
+            $new = $this->tok($y->i + 1);
+            if ($this->in_str) {
+                $out .= $y->str;
+                continue;
+            }
+            $open = $this->x[$y->i] ?? false;
+            $ws = T_WHITESPACE == $y->tok;
+            if (in_array($y->tok, $this->_space_after)) {
+                $y->str .= ' ';
+                $next($new);
+            } elseif ($ws && T_NS_SEPARATOR == $new->tok || T_NS_SEPARATOR == $y->tok && T_WHITESPACE == $new->tok) {
+                if ($ws)
                     continue;
+                $new = $this->tok($y->i + 2);
+            } elseif (';' == $y->str) {
+                $y->str .= "\n";
+                $next($new);
+                
+            } elseif ('{' == $y->str) {
+                $y->str .= "\n";
+                $next($new);
             }
             $out .= $y->str;
+            if ($open)$out .= $open;
+            $prv = $y;
         }
-        return "\nlines: $qq\n";
+        return $out;
+    }
+
+    function __toString() {
+        if ($this->pad)
+            return $this->beautifier($this->pad);
+        # else minifier
+        $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
+        for ($out = '', $y = $this->tok(); $y; $y = $new) {
+            $new = $this->tok($y->i + 1);
+            if (T_COMMENT == $y->tok || T_DOC_COMMENT == $y->tok) # 2do ->save_comment
+                continue;
+            if (T_OPEN_TAG == $y->tok)
+                $y->str = '<?php ';
+            if (T_WHITESPACE == $y->tok) {//2do
+                if ($not($prv->str[-1]) || !$new || $not($new->str[0]))
+                    continue;
+                $y->str = ' ';
+            }
+
+            $out .= $y->str;
+            $prv = $y;
+        }
+        return $out;
     }
 
     function char_line($i) {
@@ -103,6 +142,8 @@ class PHP
     }
 
     function nice() {
+        if (PHP::$warning)
+            throw new Error(PHP::$warning);
         $x =& $this->x;
         $stk =& $this->stack;
         for ($y = $this->tok(); $y; $y = $new) {
@@ -115,17 +156,17 @@ class PHP
             
             if ($stk)
                 $x[end($stk)] += strlen(' ' == $y->str ? ' ' : trim($y->str));
-//            $oc = $this->bracket($y); return array_search($y->str, $this->_oc, true) ? -1 : (int)isset($this->_oc[$y->str]);
+
+            $oc = $this->bracket($y) or $this->in_str or $y->tok
+                or $oc = array_search($y->str, $this->_oc) ? -1 : (int)isset($this->_oc[$y->str]);
+
             if (1 == $oc) {
                 $stk[] = $y->i;
                 $x[$y->i] = 1;
             } elseif (-1 == $oc) {
-                $char = $this->tok[end($stk)][1];
-                if ($y->str == $this->_oc[$char[1] ?? $char[0]]) { // checking!!
-                    $j = array_pop($stk);
-                    if ($stk)
-                        $x[end($stk)] += $x[$j] - 1;
-                }
+                $j = array_pop($stk);
+                if ($stk)
+                    $x[end($stk)] += $x[$j] - 1;
             }
         }
     }
