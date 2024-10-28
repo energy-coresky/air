@@ -83,6 +83,8 @@ class PHP
                 continue;
             if (T_OPEN_TAG == $y->tok)
                 $y->str = '<?php ';
+            if (!$y->i)
+                "/* Minified with Coresky framework, https://coresky.net */";
             if (T_WHITESPACE == $y->tok) {//2do
                 if ($not($prv->str[-1]) || !$new || $not($new->str[0]))
                     continue;
@@ -96,7 +98,7 @@ class PHP
     }
 
     function beautifier($at) {
-        $depth = $dar = $dec = $prv = 0;
+        $depth = $dar = $dec = $prv = $in_php = 0;
         $out = $line = '';
         $flush = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
             '' === $s1 or $out .= $line . $s1;
@@ -117,19 +119,19 @@ class PHP
 
             if (T_OPEN_TAG == $y->tok) {
                 $flush(trim($y->str) . "\n\n");
+                $in_php = true;
+            } elseif (T_CLOSE_TAG == $y->tok) {
+                $line .= " ?>";
+                $in_php = false;
             } elseif (in_array($y->tok, $this->_space_after)) {
                 $line .= $y->str . ' ';
-                if (T_IF == $y->tok) {
+                if (in_array($y->tok, $this->_control)) {
                     $dar = $this->get_close($y, $y->new);
-                    if ('{' === $this->tok($dar, true)->str)
+                    if (in_array($this->tok($dar, true)->str, ['{', ';'])) # test no curly
                         $dar = 0;
                 }
             } elseif (in_array($y->tok ?: $y->str, $this->_space_op, true)) {
                 $line .= " $y->str ";
-            } elseif ($dar == $y->i) {
-                $depth++;
-                $flush(")\n");
-                $dec = true;
             } elseif ($oc || ',' == $y->str) {
                 if ($at) {
                     if ($oc > 0)
@@ -137,7 +139,12 @@ class PHP
                     $line .= ',' == $y->str ? ', ' : $y->str;
                 } else {
                     $y->len = strlen($line);
-                    $line .= $this->open_close($oc, $y, $prv->str, $depth, $flush);
+                    $line .= $this->open_close($oc, $y, $prv->tok ?: $prv->str, $depth, $flush);
+                    if ($dar == $y->i) {
+                        $depth++;
+                        $flush("\n");
+                        $dec = true;
+                    }
                 }
             } elseif (':' == $y->str && '?' == $prv->str) {
                 $line .= ": ";
@@ -148,7 +155,7 @@ class PHP
                     $dec = false;
                     $depth--;
                 }
-                $flush(";\n");
+                $this->in_par ? ($line .= "; ") : $flush(";\n");
             } else {
                 if ($prv && $alfa($prv->str[-1]) && $alfa($y->str[0]))
                     $line .= ' ';
@@ -156,7 +163,7 @@ class PHP
             }
             $prv = $y;
         }
-        return $out;
+        return $out . $line . ($in_php ? "\n" : '');
     }
 
     function open_close($oc, $y, $prev, &$depth, $flush) {
@@ -167,7 +174,8 @@ class PHP
             [$new, $str] = $this->beautifier($y->new->i);
             if ($y->len + strlen($str) < 120) {
                 [$_len, $_close] = $this->x[$new->i];
-                if ($y->len + $_len > 120 && $close != $this->tok($_close, true)->i)
+                if ($y->len + $_len > 120 &&
+                    $close != $this->tok($_close, true)->i)
                     return false; # add new line
                 $y->new = $new;
                 $y->str .= $str;
@@ -178,16 +186,20 @@ class PHP
 
         if ($oc > 0) { # open
             [$len, $close] = $this->x[$y->i];
-            if ('{' != $y->str && $test($y, $len, $close)) {
-                $stk[] = true;
+            $curly = '{' == $y->str;
+            if (!$curly && $test($y, $len, $close)) {
+                if ($for = T_FOR === $prev)
+                    $this->in_par = true;
+                $stk[] = $for ? 1 : true;
                 return $y->str;
             }
-            $stk[] = '{' == $y->str;
+            $stk[] = $curly;
             $this->x[$y->i] = $close;
-            $depth++;
-            $flush("$y->str\n");
+            $depth++;// && ')' == $prev
+            $flush($curly ? " {\n" : "$y->str\n");
         } elseif ($oc < 0) { # close
-            array_pop($stk);
+            if (1 === array_pop($stk))
+                $this->in_par = false;
             if (!array_search($y->i, $this->x, true))
                 return $y->str;
             $depth--;
@@ -228,8 +240,8 @@ class PHP
             $new = $this->tok($y->i + 1);
 
             if ($new && T_COMMENT == $y->tok && "\n" == $y->str[-1] && T_WHITESPACE == $new->tok) {
-                $y->str = substr($y->str, 0, -1);
-                $new->str = "\n" . $new->str;
+                #$y->str = substr($y->str, 0, -1);
+                #$new->str = "\n" . $new->str;
             }
             
             if ($stk)
