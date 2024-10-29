@@ -359,7 +359,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $x = self::xdata($option);
         if ($tag = false === $option)
             $code = "<?php $code";
-        $out = $u = $ct = '';
+        $out = $u = $ct = $halt = '';
         $ary = $y = [];
         foreach (token_get_all($code) as $i => $t) {
             if ($tag && !$i)
@@ -367,9 +367,13 @@ class Display # php jet yaml html bash || php_method md || var diff log
             $sx = 0;
             if (is_array($t)) switch ($t[0]) { # r g d c m j - gray
                 case T_INLINE_HTML:
-                    $sx = count($ary);
-                    $out = substr($out, 0, $sq) . self::bg(substr($out, $sq), self::$bg[0]);
-                    $out .= $ct . self::highlight_html($t[1], $y, $u = '_');
+                    if ($halt) {
+                        $out .= self::span('c', $t[1]);
+                    } else {
+                        $sx = count($ary);
+                        $out = substr($out, 0, $sq) . self::bg(substr($out, $sq), self::$bg[0]);
+                        $out .= $ct . self::highlight_html($t[1], $y, $u = '_');
+                    }
                     break;
                 case T_CLOSE_TAG:
                     $out .= self::span('r', '?>');
@@ -390,6 +394,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 case T_STRING:
                     $out .= self::span('j', $t[1]);
                     break;
+                case T_HALT_COMPILER:
+                    $halt = true;
                 default:
                     $out .= $t[0] == T_WHITESPACE ? $t[1] : self::span('g', $t[1]);
                     break;

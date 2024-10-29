@@ -152,4 +152,13 @@ class Vendor
     function c_remote() {
         return ['vnd' => $this];
     }
+
+    static function history($var = 'php', $in = []) {
+        $ary = unserialize(SKY::w($var = "history_$var") ?: 'a:0:{}');
+        if ($in) { # add to history
+            $ary = (is_array($in) ? $in : [$in => $in]) + $ary;
+            SKY::w($var, serialize(array_slice($ary, 0, 19, true)));
+        }
+        return $ary; # return history list
+    }
 }

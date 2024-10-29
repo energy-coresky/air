@@ -45,15 +45,26 @@ tokens_name: [[$T_STRING, $T_NS_SEPARATOR]]
 modifiers: @csv( ) VAR PUBLIC PROTECTED PRIVATE STATIC ABSTRACT FINAL READONLY
 oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
 # add T_MATCH
-space_after: [$T_IF, $T_ELSEIF, $T_FOR, $T_WHILE, $T_FOREACH, $T_CATCH, $T_SWITCH, $T_LIST, $T_DO, $T_CASE]
+space_after: [$T_ECHO, $T_IF, $T_ELSEIF, $T_FOR, $T_WHILE, $T_FOREACH, $T_CATCH, $T_SWITCH, $T_LIST, $T_DO, $T_CASE]
+space_befor: [$T_ELSEIF, $T_ELSE, $T_CATCH]
+nline_befor: [$T_IF, $T_FOR, $T_WHILE, $T_FOREACH, $T_SWITCH, $T_LIST, $T_DO]
 space_op: [
-  =, /, %, *, ., >, <, ?, :, &, +, -,
+  =, /, %, *, ., >, <, ?, :, +, -,
+  $T_LOGICAL_AND, $T_LOGICAL_OR, $T_LOGICAL_XOR,
   $T_AND_EQUAL, $T_BOOLEAN_AND, $T_BOOLEAN_OR, $T_COALESCE_EQUAL, $T_COALESCE, $T_CONCAT_EQUAL, $T_DIV_EQUAL,
   $T_DOUBLE_ARROW, $T_IS_EQUAL, $T_IS_IDENTICAL, $T_IS_NOT_IDENTICAL, $T_IS_GREATER_OR_EQUAL, $T_IS_NOT_EQUAL,
   $T_IS_SMALLER_OR_EQUAL, $T_MINUS_EQUAL, $T_MOD_EQUAL, $T_MUL_EQUAL, $T_OR_EQUAL, $T_PLUS_EQUAL, $T_POW, $T_POW_EQUAL,
   $T_SL, $T_SL_EQUAL, $T_SPACESHIP, $T_SR, $T_SR_EQUAL, $T_XOR_EQUAL
 ]
+#space_amp: [$T_FUNCTION]
 control: [$T_IF, $T_FOR, $T_FOREACH, $T_WHILE]
+curly_reason: [
+  $T_NAMESPACE, $T_USE,
+  $T_IF, $T_ELSEIF, $T_ELSE,
+  $T_FUNCTION, $T_CLASS, $T_INTERFACE, $T_TRAIT, #$T_ENUM,
+  $T_FOR, $T_FOREACH, $T_WHILE, $T_SWITCH, $T_DO,
+  $T_TRY, $T_CATCH, $T_FINALLY
+] # $T_OBJECT_OPERATOR, $T_NULLSAFE_OBJECT_OPERATOR
 
 extensions: @csv( ) # all known extensions (must)
   apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant
@@ -72,10 +83,12 @@ color: # r g z y m j in sky.css
 #.schemes
   w_base: {r:#f77, g:#00e, d:#000, c:#2b3, m:#93c, j:#000} # c-comment d-default j:#c41
   v_php:  {r:#d00, g:#070, d:#00b, c:#ff8000, m:#000, j:#c41} # native php highlight_string(..) function colors
+  z_php:  {r:#d00, g:#070, d:#00b, c:#ff8000, m:#000, j:#c41}
   b_far:  {r:#ff5, g:#fff, d:#7ee, c:#b84, m:#888, j:#68a} # #c41
   x_far:  {r:#f77, g:#fff, d:#7ee, c:#68a, m:#888, j:#962}
 #.schemes
 background: @bang(= )
+  z: 0=#fff -=#fdd +=#dfd *=#ffd .=#eee
   w: 0=#eee -=#fdd +=#dfd *=#ffd .=#eee
   v: 0=#eee -=#fdd +=#dfd *=#ffd .=#eee
   b: 0=#000 -=#511 +=#151 *=#551 .=#555
@@ -83,6 +96,7 @@ background: @bang(= )
 pairs:
   w_base: v_php
   v_php:  w_base
+  z_php:  v_php
   b_far:  x_far
   x_far:  b_far
 #.php
