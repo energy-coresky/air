@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.533;
+    const version = 0.535;
 
     use Processor;
 
@@ -41,13 +41,9 @@ class PHP
             Plan::cache_d(['main', 'yml_main_php.php']);
             PHP::$data = Plan::php(false);
         }
-
         foreach (PHP::$data->gt_74 as $i => $str)
             defined($const = "T_$str") or define($const, $i + 0x10000);
-        $p =& PHP::$data->tokens_def;
-        $p = array_combine(array_map(fn($k) => constant("T_$k"), $p), $p);
-        $p =& PHP::$data->tokens_use;
-        $p = array_combine(array_map(fn($k) => constant("T_$k"), array_keys($p)), $p);
+        (PHP::$data->ini_once)();
         $p =& PHP::$data->tokens_name;
         $p[0] += [2 => T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
         $p[1] = $p[0] + [5 => T_NAMESPACE];
@@ -103,9 +99,9 @@ class PHP
             return true;
         [$new, $str] = $this->yml_proc('nice_php', $y->new->i);
         if ($y->len + strlen($str) < 120) {
-            $_x = $this->x($new->i);
-            if (//$y->len + $_x->comma * $_x->len > 120 && $x->close != $this->tok($_x->close, true)->i
-                $_x->comma < $x->comma && $x->close != $this->tok($_x->close, true)->i
+            $nx = $this->x($new->i);
+            if (//$y->len + $nx->comma * $nx->len > 120 && $x->close != $this->tok($nx->close, true)->i
+                $nx->comma < $x->comma && $x->close != $this->tok($nx->close, true)->i
                 )
                 return false; # add new line
             $y->new = $new;
@@ -129,7 +125,7 @@ class PHP
                 return $y->str;
             }
             $stk[] = $curly;
-            $this->x[$x->close] = $x;
+            $this->x[$x->close] = $y->i;
             if ($cls = $curly && in_array($x->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
                 $put("\n") or $put("{");
             $depth++;
@@ -156,22 +152,9 @@ class PHP
         }
     }
 
-    function bracket($y) {
-        if ('"' == $y->str || in_array($y->tok, [T_START_HEREDOC, T_END_HEREDOC])) {
-            $this->in_str = !$this->in_str;
-            return 0;
-        }
-        if ($y->tok || $this->in_str)
-            return 0;
-        if ($this->is_nice)
-            return array_search($y->str, $this->_oc) ? -1 : (int)isset($this->_oc[$y->str]);
-        return '}' == $y->str ? -1 : (int)('{' == $y->str);
-    }
-
     function nice() {
         if (PHP::$warning)
             throw new Error(PHP::$warning);
-
         static $fn = 'nice_php_array';
         if ($fn) {
             $ary = Plan::set('main', fn() => yml($fn, "+ @inc($fn) $this->fn_yml_proc"));
@@ -182,7 +165,6 @@ class PHP
         $this->is_nice = true;
         $stk =& $this->stack;
         $reason = $prev = 0;
-        $direct = [T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR, T_NAME_QUALIFIED => T_NS_SEPARATOR];
 
         for ($y = $this->tok(); $y; $y = $new) {
             $new = $this->tok($y->i + 1);
@@ -190,7 +172,7 @@ class PHP
                 $this->x[$j = end($stk)][0] += strlen(' ' == $y->str ? ' ' : trim($y->str));
                 ',' != $y->str or $this->x[$j][2]++;
             }
-            if (in_array($y->tok = $direct[$y->tok] ?? $y->tok, $this->_curly_reason))
+            if (in_array($y->tok = $this->_not_open_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
 
             $oc = $this->bracket($y);
@@ -198,7 +180,7 @@ class PHP
                 $stk[] = $y->i;
                 $this->x[$y->i] = [
                     1, 0, 1, # sum, close, commas, reason
-                    in_array($prev, $direct) ? $prev : $reason,
+                    in_array($prev, $this->_not_open_curly) ? $prev : $reason,
                 ];
             } elseif (-1 == $oc) {
                 $j = array_pop($stk);
@@ -209,6 +191,18 @@ class PHP
             in_array($y->tok, $this->_tokens_ign) or $prev = $y->tok ?: $y->str;
         }
         return $this->yml_proc('nice_php', 0);
+    }
+
+    function bracket($y) {
+        if ('"' == $y->str || in_array($y->tok, [T_START_HEREDOC, T_END_HEREDOC])) {
+            $this->in_str = !$this->in_str;
+            return 0;
+        }
+        if ($y->tok || $this->in_str)
+            return 0;
+        if ($this->is_nice)
+            return array_search($y->str, $this->_oc) ? -1 : (int)isset($this->_oc[$y->str]);
+        return '}' == $y->str ? -1 : (int)('{' == $y->str);
     }
 
     function rank() {
@@ -374,10 +368,12 @@ class PHP
     }
 
     function get_modifiers($y, $i = 4, $add_public = false) {
+        static $list;
+        $list or $list = Plan::set('main', fn() => yml('modifiers', "+ @inc(modifiers) $this->fn_yml_proc"));
         for ($ary = [], $i = $y->i - $i; $y = $this->tok($i--); ) {
             if (in_array($y->tok, $this->_tokens_ign)) # T_ATTRIBUTE not ignore
                 continue;
-            if (!in_array($y->tok, $this->_modifiers))
+            if (!in_array($y->tok, $list))
                 break;
             $ary[] = T_VAR == $y->tok ? 'public' : strtolower($y->str);
         }

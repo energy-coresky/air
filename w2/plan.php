@@ -195,7 +195,7 @@ class Plan
 
     static function php($static = true) {
         static $php;
-        $static && $php or $php = self::set('main', fn() => yml('php', '+ @object @inc(php)'));
+        $static && $php or $php = self::set('main', fn() => yml('php', '+ @inc(php)'));
         return $php;
     }
 

@@ -31,7 +31,6 @@ class YML
         }
         if ($vars)
             $vars = (object)['data' => $vars];
-        global $sky;////////////////////
         $fn = 'yml_' . Plan::$ware . "_$fn.php";
         $out = Plan::cache_rq($fn = ['main', $fn], $vars, false);
         DEV && trace("$fn[1] IS $query # " . ($out ? 'used cached' : 'recompiled'), 'YAML');
@@ -64,7 +63,8 @@ class YML
     private function out() {
         if (!$this->php)
             return $this->array;
-        $this->array = 'return ' . var_export($this->array, true);
+        $out = '$array = ' . var_export($this->array, true) . ";\n\n";
+        $code = '';
         if (isset($this->php[0])) { # preflight
             [$param, $code] = $this->php[0];
             unset($this->php[0]);
@@ -72,9 +72,9 @@ class YML
                 $param and $param = " use ($param)";
                 $code = "\$__return = call_user_func(function()$param {\n$code\n});";
             }
-            $this->array = "$code\n\n" . $this->array;
+            $code .= "\n";
         }
-        return strtr($this->array, $this->php);
+        return strtr($out, $this->php) . $code . 'return $array';
     }
 
     static function path($path, $unset = false) {

@@ -1,4 +1,3 @@
-
 #.nice_php ///////////////////////////////////////////////////////////////////////////////////
 body:
   rules:
@@ -103,6 +102,12 @@ tail:
 
 
 #.nice_php_array ///////////////////////////////////////////////////////////////////////////////////
++ @preflight |
+  $array['not_open_curly'] = [
+    T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR,
+    T_NAME_QUALIFIED => T_NS_SEPARATOR,
+  ];
+
 space_after: [$T_ECHO, $T_IF, $T_ELSEIF, $T_FOR, $T_WHILE, $T_FOREACH, $T_CATCH, $T_SWITCH, $T_LIST, $T_DO, $T_CASE]
 
 space_befor: [$T_ELSEIF, $T_ELSE, $T_CATCH]
@@ -129,6 +134,10 @@ curly_reason: [
 ]
 #.nice_php_array
 
+#.modifiers ///////////////////////////////////////////////////////////////////////////////////
++ [$T_VAR, $T_PUBLIC, $T_PROTECTED, $T_PRIVATE, $T_STATIC, $T_ABSTRACT, $T_FINAL, $T_READONLY]
+#.modifiers
+
 ~
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # add T_MATCH
@@ -139,13 +148,3 @@ T_ENUM T_MATCH
 T_ENDDECLARE
 T_ENDIF T_ENDFOR T_ENDFOREACH T_ENDWHILE T_ENDSWITCH
 #space_amp: [$T_FUNCTION]
-
-
-#.test
-head:
-  param: $at
-
-body:
-  code: |
-    return $at . $this->tab;
-#.test

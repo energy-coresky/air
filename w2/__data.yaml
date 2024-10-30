@@ -1,6 +1,18 @@
 
 #.php =========================================================================
-version: $PHP_VERSION_ID
++ @preflight |
+  $array = (object)$array;
+  $array->ini_once = function () use ($array) {
+      $p =& $array->tokens_def;
+      $p = array_combine(array_map(fn($k) => constant("T_$k"), $p), $p);
+      $p =& $array->tokens_use;
+      $p = array_combine(array_map(fn($k) => constant("T_$k"), array_keys($p)), $p);
+  };
+
+version:   $PHP_VERSION_ID
+php:       https://www.php.net/manual/
+packagist: https://repo.packagist.org/p2/
+coresky:   https://coresky.net/api
 
 const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
 
@@ -42,8 +54,6 @@ tokens_use: {
 }
 tokens_name: [[$T_STRING, $T_NS_SEPARATOR]]
 
-modifiers: [$T_VAR, $T_PUBLIC, $T_PROTECTED, $T_PRIVATE, $T_STATIC, $T_ABSTRACT, $T_FINAL, $T_READONLY]
-
 oc: {'{': '}', '(': ')', '[': ']'} # ->oc to mean Open/Close chars
 
 extensions: @csv( ) # all known extensions (must)
@@ -54,10 +64,6 @@ extensions: @csv( ) # all known extensions (must)
   pdo_sqlite PDO_SQLSRV pgsql Phar phpdbg* posix* pspell readline Reflection session shmop
   SimpleXML snmp soap sockets sodium SourceGuardian SPL sqlite3 standard sysvmsg* sysvsem* sysvshm*
   tidy tokenizer wddx xml xmlreader xmlwriter xsl Zend OPcache zip zlib
-
-php:       https://www.php.net/manual/
-packagist: https://repo.packagist.org/p2/
-coresky:   https://coresky.net/api
 
 color: # r g z y m j in sky.css
 #.schemes
