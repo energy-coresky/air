@@ -2,8 +2,9 @@
 
 class PHP
 {
-    use Processor;
     const version = 0.533;
+
+    use Processor;
 
     const _ANONYM  = 1; # anonymous func, class
     const ARRF  = 3; # arrow func (for ->in_par and NOT for ->pos)
@@ -84,7 +85,7 @@ class PHP
             if (T_OPEN_TAG == $y->tok)
                 $y->str = '<?php ';
             if (!$y->i)
-                "/* Minified with Coresky framework, https://coresky.net */";
+                $y->str .= "/* Minified with Coresky framework, https://coresky.net */";
             if (T_WHITESPACE == $y->tok) {//2do
                 if ($not($pv->str[-1]) || !$new || $not($new->str[0]))
                     continue;
@@ -98,14 +99,13 @@ class PHP
     }
 
     private function calc_depth($y, $x) {
-        [$len, $close, $comma] = $x;
-        if ($y->len + $len < 120)
+        if ($y->len + $x->len < 120)
             return true;
         [$new, $str] = $this->yml_proc('nice_php', $y->new->i);
         if ($y->len + strlen($str) < 120) {
-            [$_len, $_close, $_comma] = $this->x[$new->i];
-            if (//$y->len + $_comma * $_len > 120 && $close != $this->tok($_close, true)->i
-                $_comma < $comma && $close != $this->tok($_close, true)->i
+            $_x = $this->x($new->i);
+            if (//$y->len + $_x->comma * $_x->len > 120 && $x->close != $this->tok($_x->close, true)->i
+                $_x->comma < $x->comma && $x->close != $this->tok($_x->close, true)->i
                 )
                 return false; # add new line
             $y->new = $new;
@@ -119,9 +119,9 @@ class PHP
         $stk =& $this->stack;
 
         if ($oc > 0) { # open
-            $x = $this->x[$y->i];
+            $x = $this->x($y->i);
             if ($curly = '{' == $y->str)
-                !in_array($x[3], [T_OBJECT_OPERATOR, T_NS_SEPARATOR]) or $curly = false;
+                !in_array($x->reason, [T_OBJECT_OPERATOR, T_NS_SEPARATOR]) or $curly = false;
             if (!$curly && $this->calc_depth($y, $x)) {
                 if ($for = T_FOR === $prev)
                     $this->in_par = true;
@@ -129,8 +129,8 @@ class PHP
                 return $y->str;
             }
             $stk[] = $curly;
-            $this->x[$x[1]] = $x;
-            if ($cls = $curly && in_array($y->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
+            $this->x[$x->close] = $x;
+            if ($cls = $curly && in_array($x->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
                 $put("\n") or $put("{");
             $depth++;
             $cls ? $put("\n") : $put($curly ? " {\n" : "$y->str\n");
@@ -389,6 +389,16 @@ class PHP
         return $s;
     }
 
+    function x($i) {
+        $x =& $this->x[$i];
+        return (object)[
+            'len' => &$x[0],
+            'close' => &$x[1],
+            'comma' => &$x[2],
+            'reason' => &$x[3],
+        ];
+    }
+
     function tok($i = 0, $new = false) {
         if ($new)
             while (is_array($this->tok[++$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign));
@@ -402,7 +412,6 @@ class PHP
             'tok' => &$p[0],
             'str' => &$p[1],
             'line' => $tok[2] ?? fn() => $this->char_line($i),
-            'reason' => $this->x[$i][3] ?? 0,////////////////////////////
         ];
     }
 }

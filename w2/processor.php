@@ -5,14 +5,22 @@ trait Processor
     private function yml_proc(...$in) {
         $fn = $this->fn_yml_proc;
         $marker = array_shift($in);
-       $ware = 'main';
-        '~' == $fn[0] or $fn = "$ware::$fn";
+       
+        if ('~' == $fn[0]) {
+            $ware = 'main';
+        } else {
+            $ware = Plan::$ware;
+            $fn = "$ware::$fn";
+        }
 
-        $dst = ['main', $cache = 'proc_' . $ware . "_$marker.php"];
-        $ok = 0;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst = ['main', $cache = 'proc_' . $ware . "_$marker.php"])
+        static $cached = [];
+        $dst = ['main', $name = 'proc_' . $ware . "_$marker.php"];
+        $closure =& $cached[$name];
+        $ok = 0;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
 
-        trace($ok ? "$cache used cached" : "$cache recompiled", 'PROC');
+        trace($ok ? "$name used cached" : "$name recompiled", 'PROC');
         if (!$ok) {
+            $closure = false;
             $y = yml("+ @inc($marker) $fn");
             $param = $y['head']['param'];
             $php = "<?php\n\nreturn function ($param) {\n";
@@ -21,8 +29,8 @@ trait Processor
                     if ('code' == $k) {
                         $php .= "$v\n\n";
                     } elseif ('vars' == $k) {
-                        foreach ($v as $name => $is)
-                            $php .= "\$$name = " . var_export($is, true) . ";\n";
+                        foreach ($v as $var => $is)
+                            $php .= "\$$var = " . var_export($is, true) . ";\n";
                     } elseif ('rules' == $k) {
                         foreach ($v as $n => $rule) {
                             $php .= $n ? ' else' : '';
@@ -34,9 +42,9 @@ trait Processor
             }
             Plan::cache_s($dst, "$php\n};\n\n");
         }
+        $closure or $closure = Closure::bind(Plan::cache_r($dst), $this, $this);
 
-        $proc = Closure::bind(Plan::cache_r($dst), $this, $this);
-        return call_user_func_array($proc, $in);
+        return call_user_func_array($closure, $in);
     }
 
     private function preprocessor($in) {
