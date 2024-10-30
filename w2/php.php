@@ -2,6 +2,7 @@
 
 class PHP
 {
+    use Processor;
     const version = 0.533;
 
     const _ANONYM  = 1; # anonymous func, class
@@ -26,6 +27,7 @@ class PHP
     private $x = [];
     private $part = '';
     private $is_nice = false;
+    private $fn_yml_proc = '~/w2/beauty.yaml';
 
     static function file(string $name, $tab = 4) {
         return new PHP(file_get_contents($name), $tab);
@@ -45,7 +47,6 @@ class PHP
         $p = array_combine(array_map(fn($k) => constant("T_$k"), $p), $p);
         $p =& PHP::$data->tokens_use;
         $p = array_combine(array_map(fn($k) => constant("T_$k"), array_keys($p)), $p);
-        array_walk(PHP::$data->modifiers, fn(&$v) => $v = constant("T_$v"));
         $p =& PHP::$data->tokens_name;
         $p[0] += [2 => T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
         $p[1] = $p[0] + [5 => T_NAMESPACE];
@@ -71,10 +72,9 @@ class PHP
     }
 
     function __toString() {
-        if ($this->tab) {
-            $this->nice();
-            return $this->beautifier(0);
-        }
+        if ($this->tab)
+            return $this->nice();
+
         # else minifier
         $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
         for ($out = '', $y = $this->tok(); $y; $y = $new) {
@@ -97,91 +97,11 @@ class PHP
         return $out;
     }
 
-    private function beautifier($at) {
-        $depth = $dar = $dec = $in_php = 0;
-        $out = $line = '';
-        $put = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
-            '' === $s1 or $out .= $line . $s1;
-            $line = str_pad('', $depth * $this->tab) . $s2;
-        };
-        $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
-
-        for ($y = $pv = $this->tok($at); $y; $y = $y->new) {
-            $y->new = $this->tok($y->i + 1);
-            $oc = $this->bracket($y);
-            $ws = T_WHITESPACE == $y->tok;
-            if ($at && strlen($out . $line) > 120)
-                return [$y, $out . $line];
-            if ($ws || $this->in_str) {
-                $ws or $line .= $y->str;
-                continue;
-            }
-
-            if (in_array($y->tok, $this->_space_befor))
-                $y->str = ' ' . $y->str;
-            if ('}' == $pv->str && in_array($y->tok, $this->_nline_befor))
-                $put("\n");
-
-            if (T_OPEN_TAG == $y->tok) {
-                $put(trim($y->str) . "\n\n");
-                $in_php = true;
-            } elseif (in_array($y->tok, [T_HALT_COMPILER, T_CLOSE_TAG])) {
-                $line .= $y->str;
-                $in_php = false;
-            } elseif (in_array($y->tok, $this->_space_after)) {
-                $line .= $y->str . ' ';
-                if (in_array($y->tok, $this->_control)) {
-                    $dar = $this->get_close($y, $y->new);
-                    if (in_array($this->tok($dar, true)->str, ['{', ';'])) # test no curly
-                        $dar = 0;
-                }
-            } elseif (in_array($y->tok ?: $y->str, $this->_space_op, true)) {
-                $line .= " $y->str ";
-            } elseif ($oc || ',' == $y->str) {
-                if ($at) {
-                    if ($oc > 0)
-                        return [$y, $out . $line];
-                    $line .= ',' == $y->str ? ', ' : $y->str;
-                } else {
-                    $y->len = strlen($line);
-                    $line .= $this->open_close($oc, $y, $pv->tok ?: $pv->str, $depth, $put);
-                    if ($dar == $y->i) {
-                        $depth++;
-                        $put("\n");
-                        $dec = true;
-                    }
-                }
-            } elseif (':' == $y->str && '?' == $pv->str) {
-                $line .= ": ";
-            } elseif ('}' == $pv->str && $alfa($y->str[0])) {
-                $put("\n\n", $y->str);
-            } elseif (';' == $y->str) {
-                if ($dec) {
-                    $dec = false;
-                    $depth--;
-                }
-                $this->in_par ? ($line .= "; ") : $put(";\n");
-            } elseif (in_array($y->tok, [T_COMMENT, T_DOC_COMMENT]) ) {
-                if ('' === trim($line) && $out && $out[-1] == "\n" && '' !== $line) {
-                    $out = substr($out, 0, -1) . " " . trim($y->str) . "\n";
-                    $put('');
-                } else $put("\n", trim($y->str));//$line .= $y->str;
-                    
-            } else {
-                if ($alfa($pv->str[-1]) && $alfa($y->str[0]) || T_RETURN == $pv->tok)
-                    $line .= ' ';
-                $line .= $y->str;
-            }
-            $pv = $y;
-        }
-        return $out . $line . ($in_php ? "\n" : '');
-    }
-
     private function calc_depth($y, $x) {
         [$len, $close, $comma] = $x;
         if ($y->len + $len < 120)
             return true;
-        [$new, $str] = $this->beautifier($y->new->i);
+        [$new, $str] = $this->yml_proc('nice_php', $y->new->i);
         if ($y->len + strlen($str) < 120) {
             [$_len, $_close, $_comma] = $this->x[$new->i];
             if (//$y->len + $_comma * $_len > 120 && $close != $this->tok($_close, true)->i
@@ -249,12 +169,21 @@ class PHP
     }
 
     function nice() {
-        $this->is_nice = true;
         if (PHP::$warning)
             throw new Error(PHP::$warning);
+
+        static $fn = 'nice_php_array';
+        if ($fn) {
+            $ary = Plan::set('main', fn() => yml($fn, "+ @inc($fn) $this->fn_yml_proc"));
+            foreach ($ary as $key => $val)
+                PHP::$data->{$key} = $val;
+            $fn = false;
+        }
+        $this->is_nice = true;
         $stk =& $this->stack;
         $reason = $prev = 0;
         $direct = [T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR, T_NAME_QUALIFIED => T_NS_SEPARATOR];
+
         for ($y = $this->tok(); $y; $y = $new) {
             $new = $this->tok($y->i + 1);
             if ($stk) {
@@ -279,6 +208,7 @@ class PHP
             }
             in_array($y->tok, $this->_tokens_ign) or $prev = $y->tok ?: $y->str;
         }
+        return $this->yml_proc('nice_php', 0);
     }
 
     function rank() {

@@ -254,6 +254,8 @@ class Console
 
     /** Read tmemo cell from $_memory */
     function c_m($id = 8, $unhtml = false) {
+        global $sky;
+        $sky->trace_cli = false;
         $s = sqlf('+select tmemo from $_memory where id=%d', $id);
         //$id > 3 or $s = strip_tags($s);
         echo !$unhtml ? $s : (1 == $unhtml ? unhtml($s) : unhtml(unhtml($s)));

@@ -2,6 +2,43 @@
 
 trait Processor
 {
+    private function yml_proc(...$in) {
+        $fn = $this->fn_yml_proc;
+        $marker = array_shift($in);
+       $ware = 'main';
+        '~' == $fn[0] or $fn = "$ware::$fn";
+
+        $dst = ['main', $cache = 'proc_' . $ware . "_$marker.php"];
+        $ok = 0;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst = ['main', $cache = 'proc_' . $ware . "_$marker.php"])
+
+        trace($ok ? "$cache used cached" : "$cache recompiled", 'PROC');
+        if (!$ok) {
+            $y = yml("+ @inc($marker) $fn");
+            $param = $y['head']['param'];
+            $php = "<?php\n\nreturn function ($param) {\n";
+            foreach (['head', 'body', 'tail'] as $section) {
+                foreach ($y[$section] as $k => $v) {
+                    if ('code' == $k) {
+                        $php .= "$v\n\n";
+                    } elseif ('vars' == $k) {
+                        foreach ($v as $name => $is)
+                            $php .= "\$$name = " . var_export($is, true) . ";\n";
+                    } elseif ('rules' == $k) {
+                        foreach ($v as $n => $rule) {
+                            $php .= $n ? ' else' : '';
+                            $php .= "if ($rule[on]) {\n";
+                            $php .= "$rule[do]\n}";
+                        }
+                    }
+                }
+            }
+            Plan::cache_s($dst, "$php\n};\n\n");
+        }
+
+        $proc = Closure::bind(Plan::cache_r($dst), $this, $this);
+        return call_user_func_array($proc, $in);
+    }
+
     private function preprocessor($in) {
         $ary = [];
         $p =& $ary;

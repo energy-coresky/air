@@ -31,7 +31,7 @@ class YML
         }
         if ($vars)
             $vars = (object)['data' => $vars];
-        global $sky;
+        global $sky;////////////////////
         $fn = 'yml_' . Plan::$ware . "_$fn.php";
         $out = Plan::cache_rq($fn = ['main', $fn], $vars, false);
         DEV && trace("$fn[1] IS $query # " . ($out ? 'used cached' : 'recompiled'), 'YAML');
@@ -443,8 +443,8 @@ class YML
             if (!$fn)
                 $default = $yml->at[0];
         }
-        if ('' === $name) {
-            $name = $default;
+        if ('' === $name || '~' == $name[0]) {
+            $name = $name ? DIR_S . substr($name, 1) : $default;
             $yml->var($name);
             $ware = true;
         }
