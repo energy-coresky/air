@@ -1,12 +1,14 @@
+# ////////////////////////////////////////////////////////////////////////////////////////////
 #.nice_php ///////////////////////////////////////////////////////////////////////////////////
 body:
   rules:
     + @inc(.tag_rules)
     + @inc(.semicolon)
+    + @inc(.ampersand)
+    + @inc(.equal)
     + @inc(.whitespace_after)
+    + @inc(.whitespace_both)
     + @inc(.comments)
-    - on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
-      do: $line .= " $y->str ";
     - on: $oc || ',' == $y->str
       do: |
         if ($at) {
@@ -23,13 +25,13 @@ body:
             }
         }
 
-    - on: ':' == $y->str && '?' == $pv->str
-      do: $line .= ": ";
+#    - on: ':' == $y->str && '?' == $pv->str
+#      do: $line .= ": ";
 
-    - on: '}' == $pv->str && $alfa($y->str[0])
-      do: $put("\n\n", $y->str);
+#    - on: '}' == $pv->str && $alfa($y->str[0])
+#      do: $put("\n\n", $y->str);
 
-    - on: 1
+    - on: null
       do: |
         if ($alfa($pv->str[-1]) && $alfa($y->str[0]) || T_RETURN == $pv->tok)
             $line .= ' ';
@@ -40,7 +42,7 @@ head:
   param: $at
   code: |
     $depth = $dar = $dec = $in_php = 0;
-    $out = $line = '';
+    $out = $line = $last_pv_semi ='';
     $put = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
         '' === $s1 or $out .= $line . $s1;
         $line = str_pad('', $depth * $this->tab) . $s2;
@@ -61,8 +63,16 @@ head:
 
         if (in_array($y->tok, $this->_ws_head))
             $y->str = ' ' . $y->str;
-        if ('}' == $pv->str && in_array($y->tok, $this->_nl_head))
-            $put("\n");
+        if ('}' == $pv->str && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
+            $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
+        }
+        if (';' == $pv->str && in_array($y->tok, $this->_semicolon_prev)) {
+            $last_pv_semi == $y->tok or $line = '' or $put("\n");
+            $last_pv_semi = $y->tok;
+        }
+        
+
+
 tail:
   code: |
     $pv = $y;
@@ -70,30 +80,6 @@ tail:
     return $out . $line . ($in_php ? "\n" : '');
 #.nice_php
 
-
-#.nice_php_array ///////////////////////////////////////////////////////////////////////////////////
-+ @preflight |
-  $array['not_open_curly'] = [
-    T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR,
-    T_NAME_QUALIFIED => T_NS_SEPARATOR,
-  ];
-
-nl_head: [@@inc(.loops), $T_IF, $T_SWITCH, $T_MATCH, $T_LIST, $T_DO]
-ws_head: [$T_ELSE, $T_CATCH]
-ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_SWITCH, $T_ECHO, $T_MATCH, $T_LIST, $T_DO, $T_CASE]
-ws_both: [
-  @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift),
-  $T_DOUBLE_ARROW, $T_ELSEIF,
-  =, /, %, *, ., >, <, ?, :, +, -
-]
-
-control: [$T_IF, @@inc(.loops)]
-
-curly_reason: [
-  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
-  @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
-]
-#.nice_php_array
 
 ~
 # =====================================================================================
@@ -173,6 +159,33 @@ curly_reason: [
 ]
 #.other
 
+#.nice_php_array ///////////////////////////////////////////////////////////////////////////////////
++ @preflight |
+  $array['not_open_curly'] = [
+    T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR,
+    T_NAME_QUALIFIED => T_NS_SEPARATOR,
+  ];
+
+#nl_head: [@@inc(.loops), $T_IF, $T_SWITCH, $T_MATCH, $T_LIST, $T_DO]
+not_nl_after_curly: [',', ')', ']', '}', ;, $T_ELSE, $T_ELSEIF]
+ws_head: [$T_ELSE, $T_CATCH]
+ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_SWITCH, $T_ECHO, $T_MATCH, $T_LIST, $T_DO, $T_CASE]
+ws_both: [
+  @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift),
+  $T_DOUBLE_ARROW, $T_ELSEIF,
+  /, %, *, ., >, <, ?, :, +, -
+]
+semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
+double_nl_after: [@@inc(.newdn), $T_NAMESPACE]
+
+control: [$T_IF, @@inc(.loops)]
+
+curly_reason: [
+  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
+  @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
+]
+#.nice_php_array
+
 # =====================================================================================
 #.loops ==========================           RULES           ==========================
 # =====================================================================================
@@ -198,6 +211,30 @@ curly_reason: [
     $this->in_par ? ($line .= "; ") : $put(";\n");
 #.semicolon
 
+#.ampersand
+- on: '&' == $y->str
+  do: |
+    $new = $this->tok($y->i, true);
+    if ($alfa($pv->str[-1]))
+        $y->str = ' ' . $y->str;
+    if ($alfa($new->str[0]) && T_FUNCTION != $pv->tok && 
+        (T_VARIABLE != $new->tok || '=' == $pv->str)
+    )
+        $y->str .= ' ';
+        
+    
+        $line .= $y->str;
+        //T_FUNCTION == $pv->tok ? ' &' : ('=' == $pv->str ? '& ' : '&');
+    
+#.ampersand
+
+#.equal
+- on: '=' == $y->str
+  do: |
+    $new = $this->tok($y->i, true);
+    $line .= " =" . ('&' == $new->str ? '' : ' ');
+#.equal
+
 #.whitespace_after
 - on: in_array($y->tok, $this->_ws_tail)
   do: |
@@ -209,13 +246,16 @@ curly_reason: [
     }
 #.whitespace_after
 
+#.whitespace_both
+- on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
+  do: $line .= " $y->str ";
+#.whitespace_both
+
 #.comments
 - on: in_array($y->tok, [T_COMMENT, T_DOC_COMMENT])
   do: |
-    if ('' === trim($line) && $out && $out[-1] == "\n" && '' !== $line) {
-        $out = substr($out, 0, -1) . " " . trim($y->str) . "\n";
-        $put('');
-    } else $put("\n", trim($y->str));//$line .= $y->str;
+  #  if ('' === trim($line) && $out && $out[-1] == "\n" && '' !== $line) {
+  #      $out = substr($out, 0, -1) . " " . trim($y->str) . "\n";
+  #      $put('');
+  #  } else $put("\n", trim($y->str));//$line .= $y->str;
 #.comments
-
-

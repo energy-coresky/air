@@ -131,10 +131,12 @@ class PHP
             $depth++;
             $cls ? $put("\n") : $put($curly ? " {\n" : "$y->str\n");
         } elseif ($oc < 0) { # close
+            $y->reason = 0;
             if (1 === array_pop($stk))
                 $this->in_par = false;
             if (!isset($this->x[$y->i]))
                 return $y->str;
+            $y->reason = $this->x($this->x[$y->i])->reason;
             $depth--;
             in_array($prev, [';', ',']) ? $put('', $y->str) : $put("\n", $y->str);
         } else { # comma
@@ -166,7 +168,7 @@ class PHP
         $stk =& $this->stack;
         $reason = $prev = 0;
 
-        for ($y = $this->tok(); $y; $y = $new) {
+        for ($y = $this->tok(); $y; $y = $new) { # step 1
             $new = $this->tok($y->i + 1);
             if ($stk) {
                 $this->x[$j = end($stk)][0] += strlen(' ' == $y->str ? ' ' : trim($y->str));
