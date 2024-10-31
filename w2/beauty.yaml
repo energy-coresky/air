@@ -1,28 +1,12 @@
 #.nice_php ///////////////////////////////////////////////////////////////////////////////////
 body:
   rules:
-    - on: T_OPEN_TAG == $y->tok
-      do: |
-        $in_php = true;
-        $y->i ? ($line .= '<?php ') : $put(trim($y->str) . "\n\n");
-
-    - on: in_array($y->tok, [T_HALT_COMPILER, T_CLOSE_TAG])
-      do: |
-        $line .= $y->str;
-        $in_php = false;
-
-    - on: in_array($y->tok, $this->_ws_tail)
-      do: |
-        $line .= $y->str . ' ';
-        if (in_array($y->tok, $this->_control)) {
-            $dar = $this->get_close($y, $y->new);
-            if (in_array($this->tok($dar, true)->str, ['{', ';'])) # test no curly
-                $dar = 0;
-        }
-
+    + @inc(.tag_rules)
+    + @inc(.semicolon)
+    + @inc(.whitespace_after)
+    + @inc(.comments)
     - on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
       do: $line .= " $y->str ";
-
     - on: $oc || ',' == $y->str
       do: |
         if ($at) {
@@ -38,26 +22,12 @@ body:
                 $dec = true;
             }
         }
+
     - on: ':' == $y->str && '?' == $pv->str
       do: $line .= ": ";
 
     - on: '}' == $pv->str && $alfa($y->str[0])
       do: $put("\n\n", $y->str);
-
-    - on: ';' == $y->str
-      do: |
-        if ($dec) {
-            $dec = false;
-            $depth--;
-        }
-        $this->in_par ? ($line .= "; ") : $put(";\n");
-
-    - on: in_array($y->tok, [T_COMMENT, T_DOC_COMMENT])
-      do: |
-        if ('' === trim($line) && $out && $out[-1] == "\n" && '' !== $line) {
-            $out = substr($out, 0, -1) . " " . trim($y->str) . "\n";
-            $put('');
-        } else $put("\n", trim($y->str));//$line .= $y->str;
 
     - on: 1
       do: |
@@ -162,7 +132,7 @@ curly_reason: [
 + [$T_NAME_FULLY_QUALIFIED, $T_NAME_QUALIFIED, $T_NAME_RELATIVE]
 #.names8.inside A STRING
 + [$T_NUM_STRING, $T_STRING_VARNAME, $T_CURLY_OPEN, $T_DOLLAR_OPEN_CURLY_BRACES, $T_ENCAPSED_AND_WHITESPACE]
-#.inside.typedef
+#.inside.typedef FOLLOWED: fn(&$r) => $r =& $x; NOT: public int|(A&B) $q = 1 & 0;
 + [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (доступно с PHP 8.1.0)
 #.typedef.newdn
 + [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
@@ -202,3 +172,50 @@ curly_reason: [
   $T_BAD_CHARACTER, # все, что ниже ASCII 32 исключая \t (0x09), \n (0x0a) и \r (0x0d)
 ]
 #.other
+
+# =====================================================================================
+#.loops ==========================           RULES           ==========================
+# =====================================================================================
+#.tag_rules
+- on: T_OPEN_TAG == $y->tok
+  do: |
+    $in_php = true;
+    $y->i ? ($line .= "$y->str ") : $put(trim($y->str) . "\n\n");
+
+- on: in_array($y->tok, [T_HALT_COMPILER, T_CLOSE_TAG])
+  do: |
+    $line .= $y->str;
+    $in_php = false;
+#.tag_rules
+
+#.semicolon
+- on: ';' == $y->str
+  do: |
+    if ($dec) {
+        $dec = false;
+        $depth--;
+    }
+    $this->in_par ? ($line .= "; ") : $put(";\n");
+#.semicolon
+
+#.whitespace_after
+- on: in_array($y->tok, $this->_ws_tail)
+  do: |
+    $line .= $y->str . ' ';
+    if (in_array($y->tok, $this->_control)) {
+        $dar = $this->get_close($y, $y->new);
+        if (in_array($this->tok($dar, true)->str, ['{', ';'])) # test no curly
+            $dar = 0;
+    }
+#.whitespace_after
+
+#.comments
+- on: in_array($y->tok, [T_COMMENT, T_DOC_COMMENT])
+  do: |
+    if ('' === trim($line) && $out && $out[-1] == "\n" && '' !== $line) {
+        $out = substr($out, 0, -1) . " " . trim($y->str) . "\n";
+        $put('');
+    } else $put("\n", trim($y->str));//$line .= $y->str;
+#.comments
+
+
