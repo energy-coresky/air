@@ -3,15 +3,15 @@ body:
   rules:
     - on: T_OPEN_TAG == $y->tok
       do: |
-        $put(trim($y->str) . "\n\n");
         $in_php = true;
+        $y->i ? ($line .= '<?php ') : $put(trim($y->str) . "\n\n");
 
     - on: in_array($y->tok, [T_HALT_COMPILER, T_CLOSE_TAG])
       do: |
         $line .= $y->str;
         $in_php = false;
 
-    - on: in_array($y->tok, $this->_space_after)
+    - on: in_array($y->tok, $this->_ws_tail)
       do: |
         $line .= $y->str . ' ';
         if (in_array($y->tok, $this->_control)) {
@@ -20,7 +20,7 @@ body:
                 $dar = 0;
         }
 
-    - on: in_array($y->tok ?: $y->str, $this->_space_op, true)
+    - on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
       do: $line .= " $y->str ";
 
     - on: $oc || ',' == $y->str
@@ -89,9 +89,9 @@ head:
             continue;
         }
 
-        if (in_array($y->tok, $this->_space_befor))
+        if (in_array($y->tok, $this->_ws_head))
             $y->str = ' ' . $y->str;
-        if ('}' == $pv->str && in_array($y->tok, $this->_nline_befor))
+        if ('}' == $pv->str && in_array($y->tok, $this->_nl_head))
             $put("\n");
 tail:
   code: |
@@ -108,43 +108,97 @@ tail:
     T_NAME_QUALIFIED => T_NS_SEPARATOR,
   ];
 
-space_after: [$T_ECHO, $T_IF, $T_ELSEIF, $T_FOR, $T_WHILE, $T_FOREACH, $T_CATCH, $T_SWITCH, $T_LIST, $T_DO, $T_CASE]
-
-space_befor: [$T_ELSEIF, $T_ELSE, $T_CATCH]
-
-nline_befor: [$T_IF, $T_FOR, $T_WHILE, $T_FOREACH, $T_SWITCH, $T_LIST, $T_DO]
-
-space_op: [
-  =, /, %, *, ., >, <, ?, :, +, -,
-  $T_LOGICAL_AND, $T_LOGICAL_OR, $T_LOGICAL_XOR,
-  $T_AND_EQUAL, $T_BOOLEAN_AND, $T_BOOLEAN_OR, $T_COALESCE_EQUAL, $T_COALESCE, $T_CONCAT_EQUAL, $T_DIV_EQUAL,
-  $T_DOUBLE_ARROW, $T_IS_EQUAL, $T_IS_IDENTICAL, $T_IS_NOT_IDENTICAL, $T_IS_GREATER_OR_EQUAL, $T_IS_NOT_EQUAL,
-  $T_IS_SMALLER_OR_EQUAL, $T_MINUS_EQUAL, $T_MOD_EQUAL, $T_MUL_EQUAL, $T_OR_EQUAL, $T_PLUS_EQUAL, $T_POW, $T_POW_EQUAL,
-  $T_SL, $T_SL_EQUAL, $T_SPACESHIP, $T_SR, $T_SR_EQUAL, $T_XOR_EQUAL
+nl_head: [@@inc(.loops), $T_IF, $T_SWITCH, $T_MATCH, $T_LIST, $T_DO]
+ws_head: [$T_ELSE, $T_CATCH]
+ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_SWITCH, $T_ECHO, $T_MATCH, $T_LIST, $T_DO, $T_CASE]
+ws_both: [
+  @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift),
+  $T_DOUBLE_ARROW, $T_ELSEIF,
+  =, /, %, *, ., >, <, ?, :, +, -
 ]
 
-control: [$T_IF, $T_FOR, $T_FOREACH, $T_WHILE]
+control: [$T_IF, @@inc(.loops)]
 
 curly_reason: [
-  $T_NAMESPACE, $T_USE,
-  $T_IF, $T_ELSEIF, $T_ELSE,
-  $T_FUNCTION, $T_CLASS, $T_INTERFACE, $T_TRAIT, $T_ENUM,
-  $T_FOR, $T_FOREACH, $T_WHILE, $T_SWITCH, $T_DO,
-  $T_TRY, $T_CATCH, $T_FINALLY
+  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
+  @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
 ]
 #.nice_php_array
 
-#.modifiers ///////////////////////////////////////////////////////////////////////////////////
-+ [$T_VAR, $T_PUBLIC, $T_PROTECTED, $T_PRIVATE, $T_STATIC, $T_ABSTRACT, $T_FINAL, $T_READONLY]
-#.modifiers
-
 ~
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# add T_MATCH
-$T_DECLARE, 
-T_ATTRIBUTE $T_ARRAY,
-T_ENUM T_MATCH
-
-T_ENDDECLARE
-T_ENDIF T_ENDFOR T_ENDFOREACH T_ENDWHILE T_ENDSWITCH
-#space_amp: [$T_FUNCTION]
+# =====================================================================================
+#.loops ==========================     ALL TOKENS SORTED     ==========================
+# =====================================================================================
++ [$T_FOR, $T_FOREACH, $T_WHILE]
+#.loops.ifels
++ [$T_IF, $T_ELSEIF, $T_ELSE]
+#.ifels.modifiers
++ [$T_VAR, $T_PUBLIC, $T_PROTECTED, $T_PRIVATE, $T_STATIC, $T_ABSTRACT, $T_FINAL, $T_READONLY]
+#.modifiers.sets
++ [$T_PUBLIC_SET, $T_PROTECTED_SET, $T_PRIVATE_SET] # хуки свойств (доступно с PHP 8.4.0)
+#.sets.try
++ [$T_TRY, $T_CATCH, $T_FINALLY]
+#.try.casts
++ [$T_ARRAY_CAST, $T_BOOL_CAST, $T_DOUBLE_CAST, $T_INT_CAST, $T_OBJECT_CAST, $T_STRING_CAST, $T_UNSET_CAST]
+#.casts.magic
++ [$T_DIR, $T_FILE, $T_LINE, $T_NS_C, $T_FUNC_C, $T_CLASS_C, $T_TRAIT_C, $T_METHOD_C]
+#.magic.inc
++ [$T_INCLUDE, $T_INCLUDE_ONCE, $T_REQUIRE, $T_REQUIRE_ONCE]
+#.inc.op_eq
++ [
+  $T_PLUS_EQUAL, $T_MINUS_EQUAL, $T_DIV_EQUAL, $T_MOD_EQUAL, $T_MUL_EQUAL, $T_POW_EQUAL,
+  $T_AND_EQUAL, $T_OR_EQUAL, $T_XOR_EQUAL, $T_COALESCE_EQUAL, $T_CONCAT_EQUAL, $T_SL_EQUAL, $T_SR_EQUAL
+]
+#.op_eq.op_is
++ [
+  $T_IS_EQUAL, $T_IS_NOT_EQUAL, $T_IS_IDENTICAL, $T_IS_NOT_IDENTICAL,
+  $T_IS_GREATER_OR_EQUAL, $T_IS_SMALLER_OR_EQUAL, $T_COALESCE, $T_SPACESHIP
+]
+#.op_is.op_obj
++ [$T_OBJECT_OPERATOR, $T_NULLSAFE_OBJECT_OPERATOR] # ?-> классы и объекты
+#.op_obj.ends
++ [$T_ENDIF, $T_ENDFOR, $T_ENDFOREACH, $T_ENDSWITCH, $T_ENDWHILE, $T_ENDDECLARE]
+#.ends.names8
++ [$T_NAME_FULLY_QUALIFIED, $T_NAME_QUALIFIED, $T_NAME_RELATIVE]
+#.names8.inside A STRING
++ [$T_NUM_STRING, $T_STRING_VARNAME, $T_CURLY_OPEN, $T_DOLLAR_OPEN_CURLY_BRACES, $T_ENCAPSED_AND_WHITESPACE]
+#.inside.typedef
++ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (доступно с PHP 8.1.0)
+#.typedef.newdn
++ [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
+#.newdn.bools
++ [$T_BOOLEAN_AND, $T_BOOLEAN_OR] # && ||
+#.bools.logic
++ [$T_LOGICAL_AND, $T_LOGICAL_OR, $T_LOGICAL_XOR]
+#.logic.shift
++ [$T_SL, $T_SR] # >> <<
+#.shift.words
++ [
+  $T_EXIT, $T_RETURN, $T_YIELD, $T_YIELD_FROM, $T_FN, $T_ARRAY, $T_EXTENDS, $T_IMPLEMENTS,
+  $T_GLOBAL, $T_GOTO, $T_NEW, $T_HALT_COMPILER, $T_INSTANCEOF, $T_INSTEADOF, $T_DECLARE,
+  $T_ISSET, $T_UNSET, $T_LIST, $T_EMPTY, $T_EVAL, # isset() unset() list() empty() eval()
+  $T_DO, $T_AS, $T_CONTINUE, $T_BREAK, $T_DEFAULT, $T_CASE, $T_SWITCH, $T_MATCH, # match (доступно с PHP 8.0.0)
+  $T_ECHO, $T_PRINT, $T_THROW,
+  $T_CALLABLE, $T_CLONE
+]
+#.words.here
++ [$T_START_HEREDOC, $T_END_HEREDOC]
+#.here.comment
++ [$T_COMMENT, $T_DOC_COMMENT, $T_ATTRIBUTE] ### // # /* */ #[ attributes (PHP 8.0)
+#.comment.id
++ [$T_INC, $T_DEC]
+#.id.tags
++ [$T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO, $T_CLOSE_TAG] # <?php <? или <%, <?= или <%=, ?> или %>
+#.tags.other
++ [                                # ::(T_DOUBLE_COLON=T_PAAMAYIM_NEKUDOTAYIM), =>(T_DOUBLE_ARROW)
+  $T_WHITESPACE, $T_STRING, $T_VARIABLE, $T_INLINE_HTML, $T_USE, $T_DOUBLE_COLON, $T_DOUBLE_ARROW,
+  $T_NS_SEPARATOR, $T_ELLIPSIS, # ... аргументы функции
+  $T_CONSTANT_ENCAPSED_STRING, # "foo" или 'bar' строка
+  $T_CONST,
+  $T_POW, # **
+  $T_NAMESPACE,
+  $T_LNUMBER, # 123, 012, 0x1ac и т.д.  целые числа
+  $T_DNUMBER, # 0.12 и т.д. числа с плавающей точкой
+  $T_BAD_CHARACTER, # все, что ниже ASCII 32 исключая \t (0x09), \n (0x0a) и \r (0x0d)
+]
+#.other

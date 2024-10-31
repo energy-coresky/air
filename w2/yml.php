@@ -2,7 +2,7 @@
 
 class YML
 {
-    const version = 0.957;
+    const version = 0.958;
 
     static $boot = 0;
     static $custom = [];
@@ -219,11 +219,11 @@ class YML
     }
 
     private function code(string $str, &$t) {
-        if (!preg_match("/^@(\w+)(\(|)(.*)$/s", $str, $match))
+        if (!preg_match("/^@(@|\w+)(\(|)(.*)$/s", $str, $match))
             return false;
         [,$name, $q, $rest] = $match;
         if (!$q)
-            return $t = '@' . $name;
+            return $t = '@' == $name ? '@' : '@' . $name;
         if ($br = Rare::bracket("($rest"))
             $t = "@$name$br";
         return $br ? [$name, substr($br, 1, -1), $this->at[1]] : false;
@@ -265,7 +265,7 @@ class YML
             }
 
             $y->json = 2 == strlen($y->mode);
-            if ($y->json && !$y->code && 'v' == $y->mode[0])
+            if ($y->json && 'v' == $y->mode[0] && !$y->code && !$y->ws)
                 $y->mode[0] = 'e';
             $y->k1 = ':' == $wt;
             $y->k3 = $wt && 'k' == $y->mode ? $wt : false;
@@ -397,6 +397,10 @@ class YML
             [$code, $pad] = $one;
             if ($m->pad > $pad || 1 === $pad) {
                 $noeval = 'eval' == $code[0] && '!' == $code[1] && !$this->marker;
+                if ('' === $code[0]) {
+                    $m->key = false;
+                    continue;
+                }
                 if ('deny' == $code[0] || $noeval)
                     break;
                 if ('each' == $code[0] && ($each = true))
