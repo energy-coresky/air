@@ -3,8 +3,10 @@
 body:
   rules:
     + @inc(.tag_rules)
+    + @inc(.casecolon)
     + @inc(.semicolon)
     + @inc(.ampersand)
+    + @inc(.question)
     + @inc(.equal)
     + @inc(.whitespace_after)
     + @inc(.whitespace_both)
@@ -16,32 +18,24 @@ body:
                 return [$y, $out . $line];
             $line .= ',' == $y->str ? ', ' : $y->str;
         } else {
-            $y->len = strlen($line);
+            $y->line =& $line;
             $line .= $this->open_close($oc, $y, $pv->tok ?: $pv->str, $depth, $put);
             if ($dar == $y->i) {
                 $depth++;
                 $put("\n");
-                $dec = true;
+                $d1 = 1;
             }
         }
-
-#    - on: ':' == $y->str && '?' == $pv->str
-#      do: $line .= ": ";
-
-#    - on: '}' == $pv->str && $alfa($y->str[0])
-#      do: $put("\n\n", $y->str);
-
     - on: null
       do: |
-        if ($alfa($pv->str[-1]) && $alfa($y->str[0]) || T_RETURN == $pv->tok)
+        isset($pv->com) or $pv->com=0;
+        if (!$pv->com && $alfa($pv->str[-1]) && $alfa($y->str[0]) || T_RETURN == $pv->tok)
             $line .= ' ';
         $line .= $y->str;
-
-
 head:
   param: $at
   code: |
-    $depth = $dar = $dec = $in_php = 0;
+    $depth = $dar = $d1 = $d2 = $in_php = $case = 0;
     $out = $line = $last_pv_semi ='';
     $put = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
         '' === $s1 or $out .= $line . $s1;
@@ -53,6 +47,13 @@ head:
         $y->new = $this->tok($y->i + 1);
         if (T_WHITESPACE == $y->tok)
             continue;
+        if ($y->com = in_array($y->tok, $this->_comments)) {
+            $c2 = $y->str[1] ?? '#';
+            $y->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->str[0] ? 2 : 1); # (->com & 1) - is nl required
+            $y->str = rtrim($y->str); # (->com == 5) - attribute
+            if (2 == $y->com && strpos($y->str, "\n"))
+                $y->com = 1;
+        }
         if ($at && strlen($out . $line) > 120)/////////
             return [$y, $out . $line];
         $oc = $this->bracket($y);
@@ -60,21 +61,19 @@ head:
             $line .= $y->str;
             continue;
         }
-
-        if (in_array($y->tok, $this->_ws_head))
+        if (in_array($y->tok, $this->_ws_head)) {
             $y->str = ' ' . $y->str;
-        if ('}' == $pv->str && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
+        }
+        if ('}' == $pv->str && isset($pv->reason) && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
             $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
         }
         if (';' == $pv->str && in_array($y->tok, $this->_semicolon_prev)) {
             $last_pv_semi == $y->tok or $line = '' or $put("\n");
             $last_pv_semi = $y->tok;
         }
-        
-
-
 tail:
   code: |
+    //$y->com or 
     $pv = $y;
     }
     return $out . $line . ($in_php ? "\n" : '');
@@ -169,16 +168,16 @@ tail:
 #nl_head: [@@inc(.loops), $T_IF, $T_SWITCH, $T_MATCH, $T_LIST, $T_DO]
 not_nl_after_curly: [',', ')', ']', '}', ;, $T_ELSE, $T_ELSEIF]
 ws_head: [$T_ELSE, $T_CATCH]
-ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_SWITCH, $T_ECHO, $T_MATCH, $T_LIST, $T_DO, $T_CASE]
+ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH, $T_LIST, $T_DO]
 ws_both: [
   @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift),
   $T_DOUBLE_ARROW, $T_ELSEIF,
-  /, %, *, ., >, <, ?, :, +, -
+  /, %, *, ., >, <, +, -
 ]
 semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
 double_nl_after: [@@inc(.newdn), $T_NAMESPACE]
-
 control: [$T_IF, @@inc(.loops)]
+comments: @inc(.comment)
 
 curly_reason: [
   $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
@@ -201,11 +200,42 @@ curly_reason: [
     $in_php = false;
 #.tag_rules
 
+#.question
+- on: '?' == $y->str
+  do: |
+    ':' == $y->new->str ? ($line .= ' ?') : ($line .= ' ? ');
+#.question
+
+#.casecolon
+- on: ($x = ':' == $y->str) || in_array($y->tok, [T_SWITCH, T_CASE, T_DEFAULT])
+  do: |
+    if ($case) { # colon
+        $case = 0;
+        $d2 = ++$depth;
+        $put(":\n");
+    } elseif ($x) { # colon also
+        $line .= '?' == $pv->str ? ': ' : ' : ';
+    } elseif (T_SWITCH == $y->tok) {
+        $line .= $y->str . ' ';
+        $d2 = 0;
+    } else {
+        $case = 2;
+        if ($d2) {
+            $depth--;
+            $put('', $y->str);
+        } else {
+            $line .= $y->str;
+        }
+        T_DEFAULT == $y->tok or $line .= ' ';
+        $d2 = 0;
+    }
+#.casecolon
+
 #.semicolon
 - on: ';' == $y->str
   do: |
-    if ($dec) {
-        $dec = false;
+    if ($d1 == 1) {
+        $d1 = 0;
         $depth--;
     }
     $this->in_par ? ($line .= "; ") : $put(";\n");
@@ -252,8 +282,11 @@ curly_reason: [
 #.whitespace_both
 
 #.comments
-- on: in_array($y->tok, [T_COMMENT, T_DOC_COMMENT])
+- on: $y->com
   do: |
+    $nl = 1 & $y->com;
+    $nl ? $put("$y->str\n") : ($line .= $y->str);
+
   #  if ('' === trim($line) && $out && $out[-1] == "\n" && '' !== $line) {
   #      $out = substr($out, 0, -1) . " " . trim($y->str) . "\n";
   #      $put('');

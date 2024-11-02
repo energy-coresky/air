@@ -95,12 +95,13 @@ class PHP
     }
 
     private function calc_depth($y, $x) {
-        if ($y->len + $x->len < 120)
+        $len = strlen($y->line);
+        if ($len + $x->len < 120)
             return true;
         [$new, $str] = $this->yml_proc('nice_php', $y->new->i);
-        if ($y->len + strlen($str) < 120) {
+        if ($len + strlen($str) < 120) {
             $nx = $this->x($new->i);
-            if (//$y->len + $nx->comma * $nx->len > 120 && $x->close != $this->tok($nx->close, true)->i
+            if (//$len + $nx->comma * $nx->len > 120 && $x->close != $this->tok($nx->close, true)->i
                 $nx->comma < $x->comma && $x->close != $this->tok($nx->close, true)->i
                 )
                 return false; # add new line
@@ -138,7 +139,10 @@ class PHP
                 return $y->str;
             $y->reason = $this->x($this->x[$y->i])->reason;
             $depth--;
-            in_array($prev, [';', ',']) ? $put('', $y->str) : $put("\n", $y->str);
+            if (T_SWITCH == $y->reason)
+                $depth--;
+            
+            '' === trim($y->line) ? $put('', $y->str) : $put("\n", $y->str);
         } else { # comma
             if (!$stk || end($stk))
                 return ", ";
