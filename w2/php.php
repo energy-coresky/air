@@ -54,10 +54,10 @@ class PHP
         PHP::$data or PHP::ini_once();
         $this->tab = $tab;
         try {
-            $this->tok = token_get_all($in, TOKEN_PARSE);
+            $this->tok = token_get_all(unl($in), TOKEN_PARSE);
         } catch (Throwable $e) {
             PHP::$warning = 'Line ' . $e->getLine() . ', ' . $e->getMessage();
-            $this->tok = token_get_all($in);
+            $this->tok = token_get_all(unl($in));
         }
         $this->count = count($this->tok);
     }
@@ -414,6 +414,7 @@ class PHP
             'tok' => &$p[0],
             'str' => &$p[1],
             'line' => $tok[2] ?? fn() => $this->char_line($i),
+            'com' => 0,
         ];
     }
 }
