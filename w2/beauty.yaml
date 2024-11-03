@@ -2,12 +2,13 @@
 #.nice_php ///////////////////////////////////////////////////////////////////////////////////
 body:
   rules:
+    + @inc(.kw_array)
     + @inc(.tag_rules)
     + @inc(.casecolon)
     + @inc(.semicolon)
     + @inc(.ampersand)
     + @inc(.question)
-    + @inc(.equal)
+    + @inc(.equals_sign)
     + @inc(.whitespace_after)
     + @inc(.whitespace_both)
     + @inc(.comments)
@@ -26,8 +27,7 @@ body:
                 $d1 = 1;
             }
         }
-    - on: null
-      do: |
+    default: |
         isset($pv->com) or $pv->com=0;
         if (!$pv->com && $alfa($pv->str[-1]) && $alfa($y->str[0]) || T_RETURN == $pv->tok)
             $line .= ' ';
@@ -44,12 +44,8 @@ head:
     $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
 
     for ($y = $pv = $this->tok($at); $y; $y = $y->new) {
-        $y->new = $this->tok($y->i + 1);
-        if (T_WHITESPACE == $y->tok)
-            continue;
-
-        if ($y->new && T_WHITESPACE == $y->new->tok)
-            $y->new = $this->tok($y->i + 2); # next is NOT WS
+        if (($y->new = $this->tok($y->i + 1)) && T_WHITESPACE == $y->new->tok)
+            $y->new = $this->tok($y->i + 2); # next is NOT WHITESPACE
 
         if ($y->com = in_array($y->tok, $this->_comments)) {
             $c2 = $y->str[1] ?? '#';
@@ -58,13 +54,13 @@ head:
             if (2 == $y->com && strpos($y->str, "\n"))
                 $y->com = 3; # multiline comment
         }
-        if ($at && strlen($out . $line) > 120)/////////
-            return [$y, $out . $line];
+
         $oc = $this->bracket($y);
         if ($this->in_str) {
             $line .= $y->str;
             continue;
         }
+
         if (in_array($y->tok, $this->_ws_head)) {
             $y->str = ' ' . $y->str;
         }
@@ -75,8 +71,11 @@ head:
             $last_pv_semi == $y->tok or $line = '' or $put("\n");
             $last_pv_semi = $y->tok;
         }
+
 tail:
   code: |
+    if ($at && strlen($out . $line) > 120)/////////
+        return [$y, $out . $line];
     $pv = $y;
     }
     return $out . $line . ($in_php ? "\n" : '');
@@ -202,6 +201,16 @@ curly_reason: [
     $in_php = false;
 #.tag_rules
 
+#.kw_array
+- on: T_ARRAY == $y->tok && ($new = $this->tok($y->i, true)) && '(' == $new->str
+  do: |
+    $new->str = '['; // modify source
+    $x = $this->x($new->i);      // get "(" x-data
+    $this->tok[$x->close] = ']'; // set ")" to "]" from open data
+    $this->tok[$y->i] = [T_COMMENT, '/*']; // dummy comment
+    continue; // skip T_ARRAY
+#.kw_array
+
 #.question
 - on: '?' == $y->str
   do: |
@@ -257,12 +266,12 @@ curly_reason: [
         $line .= $y->str;
 #.ampersand
 
-#.equal
+#.equals_sign
 - on: '=' == $y->str
   do: |
     $new = $this->tok($y->i, true);
     $line .= " =" . ('&' == $new->str ? '' : ' ');
-#.equal
+#.equals_sign
 
 #.whitespace_after
 - on: in_array($y->tok, $this->_ws_tail)
@@ -283,11 +292,13 @@ curly_reason: [
 #.comments
 - on: $y->com
   do: |
+    if ('/*' == $y->str) // dummy comment
+        continue;
     $ok_com = function () use ($out, $y) {
         $pos = strrpos($out, "\n", -2);
-        if (!$len = strlen($prev = trim(substr($out, $pos)))) // empty prev line
+        if (!$len = strlen(trim(substr($out, $pos)))) // empty prev line
             return false;
-        return $len + strlen($y->str) < 90 && '}' != $prev;
+        return $len + strlen($y->str) < 90 && $len > 3;
     };
     if ('' === trim($line) && !$pv->com && (!$y->new || !in_array($y->new->tok, $this->_comments)) && $ok_com()) {
         $out = substr($out, 0, -1) . " $y->str\n";

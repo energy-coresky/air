@@ -33,9 +33,13 @@ trait Processor
                             $php .= "\$$var = " . var_export($is, true) . ";\n";
                     } elseif ('rules' == $k) {
                         foreach ($v as $n => $rule) {
-                            $php .= null === $rule['on']
-                                ? " else { $rule[do] }\n"
-                                : ($n ? ' else' : '') . "if ($rule[on]) {\n$rule[do]\n}";
+                            if ('default' === $n) {
+                                $php .= " else { $rule }\n";
+                            } elseif ($n > 0) {
+                                $php .= " elseif ($rule[on]) {\n$rule[do]\n}";
+                            } else {
+                                $php .= "if ($rule[on]) {\n$rule[do]\n}";
+                            }
                         }
                     }
                 }

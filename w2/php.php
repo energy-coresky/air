@@ -135,8 +135,11 @@ class PHP
             $y->reason = 0;
             if (1 === array_pop($stk))
                 $this->in_par = false;
-            if (!isset($this->x[$y->i]))
+            if (!isset($this->x[$y->i])) {
+                if (']' == $y->str && ', ' == substr($y->line, -2))
+                    $y->line = substr($y->line, 0, -2); # modify source
                 return $y->str;
+            }
             $y->reason = $this->x($this->x[$y->i])->reason;
             $depth--;
             if (T_SWITCH == $y->reason)
