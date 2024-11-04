@@ -12,28 +12,14 @@ body:
     + @inc(.whitespace_after)
     + @inc(.whitespace_both)
     + @inc(.comments)
-    - on: $oc || ',' == $y->str
-      do: |
-        if ($at) {
-            if ($oc > 0)
-                return [$y, $out . $line];
-            $line .= ',' == $y->str ? ', ' : $y->str;
-        } else {
-            $y->line =& $line;
-            $line .= $this->open_close($oc, $y, $pv->tok ?: $pv->str, $depth, $put);
-            if ($dar == $y->i) {
-                $depth++;
-                $put("\n");
-                $d1 = 1;
-            }
-        }
+    + @inc(.brackets_or_comma)
     default: |
         isset($pv->com) or $pv->com=0;
         if (!$pv->com && $alfa($pv->str[-1]) && $alfa($y->str[0]) || T_RETURN == $pv->tok)
             $line .= ' ';
         $line .= $y->str;
 head:
-  param: $at
+  param: $at, $to = 0
   code: |
     $depth = $dar = $d1 = $d2 = $in_php = $case = 0;
     $out = $line = $last_pv_semi ='';
@@ -74,8 +60,6 @@ head:
 
 tail:
   code: |
-    if ($at && strlen($out . $line) > 120)/////////
-        return [$y, $out . $line];
     $pv = $y;
     }
     return $out . $line . ($in_php ? "\n" : '');
@@ -167,7 +151,10 @@ tail:
     T_NAME_QUALIFIED => T_NS_SEPARATOR,
   ];
 
-not_nl_after_curly: [',', ')', ']', '}', ;, $T_ELSE, $T_ELSEIF]
+not_nl_after_curly: [
+  ',', '(', ')', '[', ']', '{', '}', ;,
+  $T_ELSE, $T_ELSEIF, $T_CATCH, $T_FINALLY
+]
 ws_head: [$T_ELSE, $T_CATCH]
 ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH, $T_LIST, $T_DO]
 ws_both: [
@@ -309,3 +296,26 @@ curly_reason: [
         $line .= $y->str;
     }
 #.comments
+
+#.brackets_or_comma
+- on: $oc || ',' == $y->str
+  do: |
+    if ($at) {
+        if ($oc > 0) { // opening
+            $x = $this->x($y->i);
+            if ($x->len > 80 || '{' == $y->str)
+                return [$y, $out . $line, $x];
+        } elseif ($y->i >= $to) { // close or comma
+            return [$y, $out . $line, false];
+        }
+        $line .= $y->str . ($oc ? '' : ' ');
+    } else {
+        $y->line =& $line;
+        $line .= $this->indents($oc, $y, $pv->tok ?: $pv->str, $depth, $put);
+        if ($dar == $y->i) {
+            $depth++;
+            $put("\n");
+            $d1 = 1;
+        }
+    }
+#.brackets_or_comma

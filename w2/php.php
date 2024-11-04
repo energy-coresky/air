@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.535;
+    const version = 0.537;
 
     use Processor;
 
@@ -94,15 +94,19 @@ class PHP
         return $out;
     }
 
-    private function calc_depth($y, $x) {
+    private function left_bracket($y, $x) {
         $len = strlen($y->line);
-        if ($len + $x->len < 120)
+        if ($len + $x->len < 120) // $x->comma > 2
             return true;
-        [$new, $str] = $this->yml_proc('nice_php', $y->new->i);
+        [$new, $str, $nx] = $this->yml_proc('nice_php', $y->new->i, $x->close);
+        if (!$nx || '[' == $y->str && '[' == $new->str)
+            return false; # add new line
         if ($len + strlen($str) < 120) {
-            $nx = $this->x($new->i);
+            [, $distance, ] = $this->yml_proc('nice_php', $nx->close, $x->close);
+            
             if (//$len + $nx->comma * $nx->len > 120 && $x->close != $this->tok($nx->close, true)->i
-                $nx->comma < $x->comma && $x->close != $this->tok($nx->close, true)->i
+                //$nx->comma < $x->comma && $x->close != $this->tok($nx->close, true)->i
+                strlen($distance) > 20
                 )
                 return false; # add new line
             $y->new = $new;
@@ -112,53 +116,46 @@ class PHP
         return false; # add new line
     }
 
-    private function open_close($oc, $y, $prev, &$depth, $put) {
+    private function indents($oc, $y, $prev, &$depth, $put) {
         $stk =& $this->stack;
 
         if ($oc > 0) { # open
             $x = $this->x($y->i);
-            if ($curly = '{' == $y->str)
-                !in_array($x->reason, [T_OBJECT_OPERATOR, T_NS_SEPARATOR]) or $curly = false;
-            if (!$curly && $this->calc_depth($y, $x)) {
+            $curly = '{' == $y->str && !in_array($x->reason, $this->_not_open_curly);
+            if (!$curly && $this->left_bracket($y, $x)) {
                 if ($for = T_FOR === $prev)
                     $this->in_par = true;
-                $stk[] = $for ? 1 : true;
-                return $y->str;
+                $stk[] = $for ? 0 : false;
+                return $y->str; # continue $line
             }
-            $stk[] = $curly;
+            $stk[] = $curly ? false : $y->str;
             $this->x[$x->close] = $y->i;
-            if ($cls = $curly && in_array($x->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
+            if ($class = $curly && in_array($x->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
                 $put("\n") or $put("{");
             $depth++;
-            $cls ? $put("\n") : $put($curly ? " {\n" : "$y->str\n");
+            $class ? $put("\n") : $put($curly ? " {\n" : "$y->str\n");
         } elseif ($oc < 0) { # close
             $y->reason = 0;
-            if (1 === array_pop($stk))
+            $pop = array_pop($stk);
+            if (0 === $pop)
                 $this->in_par = false;
             if (!isset($this->x[$y->i])) {
                 if (']' == $y->str && ', ' == substr($y->line, -2))
                     $y->line = substr($y->line, 0, -2); # modify source
                 return $y->str;
             }
+            if (']' == $y->str && $y->line && ' ' != $y->line[-1]) # modify source
+                $put(",\n");
             $y->reason = $this->x($this->x[$y->i])->reason;
             $depth--;
-            if (T_SWITCH == $y->reason)
-                $depth--;
-            
+            T_SWITCH != $y->reason or $depth--;
             '' === trim($y->line) ? $put('', $y->str) : $put("\n", $y->str);
         } else { # comma
-            if (!$stk || end($stk))
-                return ", ";
+            if (!$stk || !end($stk))
+                return ', ';
             $put(",\n");
         }
         return '';
-    }
-
-    function char_line($i) {
-        for ($d = 1; $tok =& $this->tok[$i - $d++]; ) {
-            if ($tok[0])
-                return $tok[2] + substr_count($tok[1], "\n");
-        }
     }
 
     function nice() {
@@ -392,6 +389,13 @@ class PHP
     function str($i, $to) {
         for ($s = ''; $i <= $to; $s .= is_array($this->tok[$i]) ? $this->tok[$i++][1] : $this->tok[$i++]);
         return $s;
+    }
+
+    function char_line($i) {
+        for ($d = 1; $tok =& $this->tok[$i - $d++]; ) {
+            if ($tok[0])
+                return $tok[2] + substr_count($tok[1], "\n");
+        }
     }
 
     function x($i) {
