@@ -28,7 +28,7 @@ class PHP
     private $x = [];
     private $part = '';
     private $is_nice = false;
-    private $fn_yml_proc = '~/w2/beauty.yaml';
+    private $wind_cfg = '~/w2/beauty.yaml';
 
     static function file(string $name, $tab = 4) {
         return new PHP(file_get_contents($name), $tab);
@@ -98,11 +98,11 @@ class PHP
         $len = strlen($y->line);
         if ($len + $x->len < 120) // $x->comma > 2
             return true;
-        [$new, $str, $nx] = $this->yml_proc('nice_php', $y->new->i, $x->close);
+        [$new, $str, $nx] = $this->wind_nice_php($y->new->i, $x->close);
         if (!$nx || '[' == $y->str && '[' == $new->str)
             return false; # add new line
         if ($len + strlen($str) < 120) {
-            [, $distance, ] = $this->yml_proc('nice_php', $nx->close, $x->close);
+            [, $distance, ] = $this->wind_nice_php($nx->close, $x->close);
             
             if (//$len + $nx->comma * $nx->len > 120 && $x->close != $this->tok($nx->close, true)->i
                 //$nx->comma < $x->comma && $x->close != $this->tok($nx->close, true)->i
@@ -163,7 +163,7 @@ class PHP
             throw new Error(PHP::$warning);
         static $fn = 'nice_php_array';
         if ($fn) {
-            $ary = Plan::set('main', fn() => yml($fn, "+ @inc($fn) $this->fn_yml_proc"));
+            $ary = Plan::set('main', fn() => yml($fn, "+ @inc($fn) $this->wind_cfg"));
             foreach ($ary as $key => $val)
                 PHP::$data->{$key} = $val;
             $fn = false;
@@ -196,7 +196,7 @@ class PHP
             }
             in_array($y->tok, $this->_tokens_ign) or $prev = $y->tok ?: $y->str;
         }
-        return $this->yml_proc('nice_php', 0);
+        return $this->wind_nice_php(0);
     }
 
     function bracket($y) {
@@ -375,7 +375,7 @@ class PHP
 
     function get_modifiers($y, $i = 4, $add_public = false) {
         static $list;
-        $list or $list = Plan::set('main', fn() => yml('modifiers', "+ @inc(modifiers) $this->fn_yml_proc"));
+        $list or $list = Plan::set('main', fn() => yml('modifiers', "+ @inc(modifiers) $this->wind_cfg"));
         for ($ary = [], $i = $y->i - $i; $y = $this->tok($i--); ) {
             if (in_array($y->tok, $this->_tokens_ign)) # T_ATTRIBUTE not ignore
                 continue;

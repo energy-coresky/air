@@ -2,10 +2,18 @@
 
 trait Processor
 {
-    private function yml_proc(...$in) {
-        $fn = $this->fn_yml_proc;
-        $marker = array_shift($in);
-       
+    protected $_marker = '';
+
+    function __call($name, $args) {
+        if ('wind_' == substr($name, 0, 5)) {
+            $this->_marker = substr($name, 5);
+            return $this->wind(...$args);
+        }
+    }
+
+    private function wind(...$in) {
+        $fn = $this->wind_cfg;
+
         if ('~' == $fn[0]) {
             $ware = 'main';
         } else {
@@ -14,14 +22,14 @@ trait Processor
         }
 
         static $cached = [];
-        $dst = ['main', $name = 'proc_' . $ware . "_$marker.php"];
+        $dst = ['main', $name = 'wind_' . $ware . "_$this->_marker.php"];
         $closure =& $cached[$name];
         $ok = 0;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
 
-        trace($ok ? "$name used cached" : "$name recompiled", 'PROC');
+        trace($ok ? "$name used cached" : "$name recompiled", 'WIND');
         if (!$ok) {
             $closure = false;
-            $y = yml("+ @inc($marker) $fn");
+            $y = yml("+ @inc($this->_marker) $fn");
             $param = $y['head']['param'];
             $php = "<?php\n\nreturn function ($param) {\n";
             foreach (['head', 'body', 'tail'] as $section) {
