@@ -308,7 +308,7 @@ class SKY implements PARADISE
 
     function tracing($top = '', $is_x = true) {
         $data = DEV ? Debug::data() : '';
-        $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc";
+        $top .= "\nDIR: " . DIR . "\n$this->tracing$this->gpc" . Debug::memory();
         $now = defined('NOW') ? NOW : 'Timestamp: ' . time();
         $top .= sprintf("\n---\n%s: script execution time: %01.3f sec, SQL queries: " . SQL::$query_num, $now, microtime(true) - START_TS) . $data;
         if ($is_x && SKY::$dd) {

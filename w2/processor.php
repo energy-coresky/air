@@ -24,7 +24,7 @@ trait Processor
         static $cached = [];
         $dst = ['main', $name = 'wind_' . $ware . "_$this->_marker.php"];
         $closure =& $cached[$name];
-        $ok = 0;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
+        $ok = (bool)$closure;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
 
         trace($ok ? "$name used cached" : "$name recompiled", 'WIND');
         if (!$ok) {

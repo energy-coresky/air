@@ -80,8 +80,8 @@ class PHP
                 continue;
             if (T_OPEN_TAG == $y->tok)
                 $y->str = '<?php ';
-            if (!$y->i)
-                $y->str .= "/* Minified with Coresky framework, https://coresky.net */";
+#            if (!$y->i)
+#                $y->str .= "\n#Minified with Coresky framework, https://coresky.net\n";
             if (T_WHITESPACE == $y->tok) {//2do
                 if ($not($pv->str[-1]) || !$new || $not($new->str[0]))
                     continue;
@@ -97,21 +97,17 @@ class PHP
     private function left_bracket($y, $x) {
         $len = strlen($y->line);
         if ($len + $x->len < 120) // $x->comma > 2
-            return true;
+            return true; # continue line
         [$new, $str, $nx] = $this->wind_nice_php($y->new->i, $x->close);
         if (!$nx || '[' == $y->str && '[' == $new->str)
             return false; # add new line
         if ($len + strlen($str) < 120) {
             [, $distance, ] = $this->wind_nice_php($nx->close, $x->close);
-            
-            if (//$len + $nx->comma * $nx->len > 120 && $x->close != $this->tok($nx->close, true)->i
-                //$nx->comma < $x->comma && $x->close != $this->tok($nx->close, true)->i
-                strlen($distance) > 20
-                )
+            if (strlen($distance) > 20)
                 return false; # add new line
             $y->new = $new;
             $y->str .= $str;
-            return true;
+            return true; # continue line
         }
         return false; # add new line
     }
@@ -171,7 +167,6 @@ class PHP
         $this->is_nice = true;
         $stk =& $this->stack;
         $reason = $prev = 0;
-
         for ($y = $this->tok(); $y; $y = $new) { # step 1
             $new = $this->tok($y->i + 1);
             if ($stk) {

@@ -37,7 +37,7 @@ head:
             $c2 = $y->str[1] ?? '#';
             $y->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->str[0] ? 2 : 1); # (->com & 1) - is nl required
             $y->str = rtrim($y->str); # (->com == 5) - attribute, nl required
-            if (2 == $y->com && strpos($y->str, "\n"))
+            if (2 == $y->com && (strpos($y->str, "\n") || '' === $line))
                 $y->com = 3; # multiline comment
         }
 
@@ -97,47 +97,45 @@ tail:
 ]
 #.op_is.op_obj
 + [$T_OBJECT_OPERATOR, $T_NULLSAFE_OBJECT_OPERATOR] # ?-> классы и объекты
-#.op_obj.ends
-+ [$T_ENDIF, $T_ENDFOR, $T_ENDFOREACH, $T_ENDSWITCH, $T_ENDWHILE, $T_ENDDECLARE]
-#.ends.names8
-+ [$T_NAME_FULLY_QUALIFIED, $T_NAME_QUALIFIED, $T_NAME_RELATIVE]
-#.names8.inside A STRING
-+ [$T_NUM_STRING, $T_STRING_VARNAME, $T_CURLY_OPEN, $T_DOLLAR_OPEN_CURLY_BRACES, $T_ENCAPSED_AND_WHITESPACE]
-#.inside.typedef FOLLOWED: fn(&$r) => $r =& $x; NOT: public int|(A&B) $q = 1 & 0;
-+ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (доступно с PHP 8.1.0)
-#.typedef.newdn
-+ [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
-#.newdn.bools
+#.op_obj.bools
 + [$T_BOOLEAN_AND, $T_BOOLEAN_OR] # && ||
 #.bools.logic
-+ [$T_LOGICAL_AND, $T_LOGICAL_OR, $T_LOGICAL_XOR]
++ [$T_LOGICAL_AND, $T_LOGICAL_OR, $T_LOGICAL_XOR] # and or xor
 #.logic.shift
 + [$T_SL, $T_SR] # >> <<
-#.shift.words
-+ [
-  $T_EXIT, $T_RETURN, $T_YIELD, $T_YIELD_FROM, $T_FN, $T_ARRAY, $T_EXTENDS, $T_IMPLEMENTS,
-  $T_GLOBAL, $T_GOTO, $T_NEW, $T_HALT_COMPILER, $T_INSTANCEOF, $T_INSTEADOF, $T_DECLARE,
-  $T_ISSET, $T_UNSET, $T_LIST, $T_EMPTY, $T_EVAL, # isset() unset() list() empty() eval()
-  $T_DO, $T_AS, $T_CONTINUE, $T_BREAK, $T_DEFAULT, $T_CASE, $T_SWITCH, $T_MATCH, # match (доступно с PHP 8.0.0)
-  $T_ECHO, $T_PRINT, $T_THROW,
-  $T_CALLABLE, $T_CLONE
-]
-#.words.here
-+ [$T_START_HEREDOC, $T_END_HEREDOC]
-#.here.com3
-+ [$T_COMMENT, $T_DOC_COMMENT, $T_ATTRIBUTE] ### // # /* */ #[ attributes (PHP 8.0)
-#.com3.id
+#.shift.id
 + [$T_INC, $T_DEC]
-#.id.tags
+#.id.in_str INSIDE INTERPOLATED STRING
++ [$T_NUM_STRING, $T_STRING_VARNAME, $T_CURLY_OPEN, $T_DOLLAR_OPEN_CURLY_BRACES, $T_ENCAPSED_AND_WHITESPACE]
+#.in_str.names8
++ [$T_NAME_FULLY_QUALIFIED, $T_NAME_QUALIFIED, $T_NAME_RELATIVE]
+#.names8.amp8 FOLLOWED: fn(&$r) => $r =& $x; NOT: public int|(A&B) $q = 1 & 0;
++ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (доступно с PHP 8.1.0)
+#.amp8.newdn
++ [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
+#.newdn.words
++ [
+  $T_EXIT, $T_RETURN, $T_YIELD, $T_YIELD_FROM, $T_ARRAY, $T_EXTENDS, $T_IMPLEMENTS,
+  $T_GLOBAL, $T_GOTO, $T_HALT_COMPILER, $T_INSTANCEOF, $T_INSTEADOF, $T_DECLARE,
+  $T_ISSET, $T_UNSET, $T_LIST, $T_EMPTY, $T_EVAL, # isset() unset() list() empty() eval()
+  $T_DO, $T_AS, $T_CONTINUE, $T_BREAK, $T_SWITCH, $T_MATCH, $T_DEFAULT, $T_CASE, # match (доступно с PHP 8.0.0)
+  $T_ECHO, $T_PRINT, $T_CALLABLE,
+  $T_THROW, $T_NEW, $T_CLONE,
+  $T_NAMESPACE, $T_USE, $T_FN, $T_CONST
+]
+#.words.ends
++ [$T_ENDIF, $T_ENDFOR, $T_ENDFOREACH, $T_ENDWHILE, $T_ENDSWITCH, $T_ENDDECLARE]
+#.ends.heredoc
++ [$T_START_HEREDOC, $T_END_HEREDOC]
+#.heredoc.com3
++ [$T_COMMENT, $T_DOC_COMMENT, $T_ATTRIBUTE] ### // # /* */ #[ attributes (PHP 8.0)
+#.com3.tags
 + [$T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO, $T_CLOSE_TAG] # <?php <? или <%, <?= или <%=, ?> или %>
 #.tags.other
-+ [                                # ::(T_DOUBLE_COLON=T_PAAMAYIM_NEKUDOTAYIM), =>(T_DOUBLE_ARROW)
-  $T_WHITESPACE, $T_STRING, $T_VARIABLE, $T_INLINE_HTML, $T_USE, $T_DOUBLE_COLON, $T_DOUBLE_ARROW,
-  $T_NS_SEPARATOR, $T_ELLIPSIS, # ... аргументы функции
-  $T_CONSTANT_ENCAPSED_STRING, # "foo" или 'bar' строка
-  $T_CONST,
-  $T_POW, # **
-  $T_NAMESPACE,
++ [        # ::(T_DOUBLE_COLON=T_PAAMAYIM_NEKUDOTAYIM), =>(T_DOUBLE_ARROW)
+  $T_WHITESPACE, $T_STRING, $T_VARIABLE, $T_DOUBLE_COLON, $T_DOUBLE_ARROW,
+  $T_NS_SEPARATOR, $T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING, # "foo" or 'bar' строка
+  $T_POW, $T_ELLIPSIS, # ** ... аргументы функции
   $T_LNUMBER, # 123, 012, 0x1ac и т.д.  целые числа
   $T_DNUMBER, # 0.12 и т.д. числа с плавающей точкой
   $T_BAD_CHARACTER, # все, что ниже ASCII 32 исключая \t (0x09), \n (0x0a) и \r (0x0d)
@@ -166,7 +164,6 @@ semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
 double_nl_after: [@@inc(.newdn), $T_NAMESPACE]
 control: [$T_IF, @@inc(.loops)]
 comments: @inc(.com3)
-
 curly_reason: [
   $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
   @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
@@ -232,9 +229,10 @@ curly_reason: [
 #.semicolon
 - on: ';' == $y->str
   do: |
-    if ($d1 == 1) {
+    if ($d1) {
+        //$d1--;
+        $depth -= $d1;
         $d1 = 0;
-        $depth--;
     }
     $this->in_par ? ($line .= "; ") : $put(";\n");
 #.semicolon
@@ -315,7 +313,7 @@ curly_reason: [
         if ($dar == $y->i) {
             $depth++;
             $put("\n");
-            $d1 = 1;
+            $d1++;
         }
     }
 #.brackets_or_comma

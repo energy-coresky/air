@@ -163,11 +163,19 @@ class Debug
         }
     }
 
+    static function memory() {
+        $m = sprintf("\nMemory: %s Mb", $peak = round(memory_get_peak_usage() / 1048576, 2)); // 1M
+        $max = ini_get('memory_limit');
+        if (is_string($max) && 'M' == $max[-1])
+            $m .= ', ' . round(100 * $peak / (int)$max, 2) . ' %';
+        return $m . "\n";
+    }
+
     static function gpc() {
         return "\$_GET: " . Plan::var($_GET) .
             "\n\$_POST: " . Plan::var($_POST) .
             "\n\$_FILES: " . Plan::var($_FILES) .
-            "\n\$_COOKIE: " . Plan::var($_COOKIE) . "\n";
+            "\n\$_COOKIE: " . Plan::var($_COOKIE);
     }
 
     static function closure($fun) {
