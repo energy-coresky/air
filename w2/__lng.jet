@@ -114,7 +114,7 @@ Database not supported for now
         </div>
     </div>
     <div style="background:pink;padding:10px;display:none">
-        <a @href($(this).parent().hide()) class="fr">@inc(__img.x)</a>
+        <a @href($(this).parent().hide()) class="fr">@inc(__dev.x)</a>
         Warning: this constant(s) found in code, but don't declared: <span id="lg-warn"></span>
     </div>
 ~if

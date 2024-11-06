@@ -1,9 +1,145 @@
+#.yaml ================================================================================
+# ////////////////////////////////     ALL TOKENS SORTED     //////////////////////////
+#.loops ===============================================================================
++ [$T_FOR, $T_FOREACH, $T_WHILE]
+#.loops.ifels
++ [$T_IF, $T_ELSEIF, $T_ELSE]
+#.ifels.modifiers
++ [$T_VAR, $T_PUBLIC, $T_PROTECTED, $T_PRIVATE, $T_STATIC, $T_ABSTRACT, $T_FINAL, $T_READONLY]
+#.modifiers.sets
++ [$T_PUBLIC_SET, $T_PROTECTED_SET, $T_PRIVATE_SET] # хуки свойств (доступно с PHP 8.4.0)
+#.sets.try
++ [$T_TRY, $T_CATCH, $T_FINALLY]
+#.try.casts
++ [$T_ARRAY_CAST, $T_BOOL_CAST, $T_DOUBLE_CAST, $T_INT_CAST, $T_OBJECT_CAST, $T_STRING_CAST, $T_UNSET_CAST]
+#.casts.magic
++ [$T_DIR, $T_FILE, $T_LINE, $T_NS_C, $T_FUNC_C, $T_CLASS_C, $T_TRAIT_C, $T_METHOD_C]
+#.magic.inc
++ [$T_INCLUDE, $T_INCLUDE_ONCE, $T_REQUIRE, $T_REQUIRE_ONCE]
+#.inc.op_eq
++ [
+  $T_PLUS_EQUAL, $T_MINUS_EQUAL, $T_DIV_EQUAL, $T_MOD_EQUAL, $T_MUL_EQUAL, $T_POW_EQUAL,
+  $T_AND_EQUAL, $T_OR_EQUAL, $T_XOR_EQUAL, $T_COALESCE_EQUAL, $T_CONCAT_EQUAL, $T_SL_EQUAL, $T_SR_EQUAL
+]
+#.op_eq.op_is
++ [
+  $T_IS_EQUAL, $T_IS_NOT_EQUAL, $T_IS_IDENTICAL, $T_IS_NOT_IDENTICAL,
+  $T_IS_GREATER_OR_EQUAL, $T_IS_SMALLER_OR_EQUAL, $T_COALESCE, $T_SPACESHIP
+]
+#.op_is.op_obj
++ [$T_OBJECT_OPERATOR, $T_NULLSAFE_OBJECT_OPERATOR] # ?-> классы и объекты
+#.op_obj.bools
++ [$T_BOOLEAN_AND, $T_BOOLEAN_OR] # && ||
+#.bools.logic
++ [$T_LOGICAL_AND, $T_LOGICAL_OR, $T_LOGICAL_XOR] # and or xor
+#.logic.shift
++ [$T_SL, $T_SR] # >> <<
+#.shift.id
++ [$T_INC, $T_DEC]
+#.id.in_str INSIDE INTERPOLATED STRING
++ [$T_NUM_STRING, $T_STRING_VARNAME, $T_CURLY_OPEN, $T_DOLLAR_OPEN_CURLY_BRACES, $T_ENCAPSED_AND_WHITESPACE]
+#.in_str.names8
++ [$T_NAME_FULLY_QUALIFIED, $T_NAME_QUALIFIED, $T_NAME_RELATIVE]
+#.names8.amp8 FOLLOWED: fn(&$r) => $r =& $x; NOT: public int|(A&B) $q = 1 & 0;
++ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (доступно с PHP 8.1.0)
+#.amp8.newdn
++ [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
+#.newdn.words
++ [
+  $T_EXIT, $T_RETURN, $T_YIELD, $T_YIELD_FROM, $T_ARRAY, $T_EXTENDS, $T_IMPLEMENTS,
+  $T_GLOBAL, $T_GOTO, $T_HALT_COMPILER, $T_INSTANCEOF, $T_INSTEADOF, $T_DECLARE,
+  $T_ISSET, $T_UNSET, $T_LIST, $T_EMPTY, $T_EVAL, # isset() unset() list() empty() eval()
+  $T_DO, $T_AS, $T_CONTINUE, $T_BREAK, $T_SWITCH, $T_MATCH, $T_DEFAULT, $T_CASE, # match (доступно с PHP 8.0.0)
+  $T_ECHO, $T_PRINT, $T_CALLABLE,
+  $T_THROW, $T_NEW, $T_CLONE,
+  $T_NAMESPACE, $T_USE, $T_FN, $T_CONST
+]
+#.words.ends
++ [$T_ENDIF, $T_ENDFOR, $T_ENDFOREACH, $T_ENDWHILE, $T_ENDSWITCH, $T_ENDDECLARE]
+#.ends.heredoc
++ [$T_START_HEREDOC, $T_END_HEREDOC]
+#.heredoc.com3
++ [$T_COMMENT, $T_DOC_COMMENT, $T_ATTRIBUTE] ### // # /* */ #[ attributes (PHP 8.0)
+#.com3.tags
++ [$T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO, $T_CLOSE_TAG] # <?php <? или <%, <?= или <%=, ?> или %>
+#.tags.other
++ [        # ::(T_DOUBLE_COLON=T_PAAMAYIM_NEKUDOTAYIM), =>(T_DOUBLE_ARROW)
+  $T_WHITESPACE, $T_STRING, $T_VARIABLE, $T_DOUBLE_COLON, $T_DOUBLE_ARROW,
+  $T_NS_SEPARATOR, $T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING, # "foo" or 'bar' строка
+  $T_POW, $T_ELLIPSIS, # ** ... аргументы функции
+  $T_LNUMBER, # 123, 012, 0x1ac и т.д.  целые числа
+  $T_DNUMBER, # 0.12 и т.д. числа с плавающей точкой
+  $T_BAD_CHARACTER, # все, что ниже ASCII 32 исключая \t (0x09), \n (0x0a) и \r (0x0d)
+]
+#.other
 
-#.x
-<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
-  <path d="M1.293 1.293a1 1 0 0 1 1.414 0L8 6.586l5.293-5.293a1 1 0 1 1 1.414 1.414L9.414 8l5.293 5.293a1 1 0 0 1-1.414 1.414L8 9.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L6.586 8 1.293 2.707a1 1 0 0 1 0-1.414z"></path>
-</svg>
-#.x
+# =====================================================================================
+# ////////////////////////////////          DATABASE         //////////////////////////
+# =====================================================================================
+#.php_keywords
++ @sar(|~| ) @each @csv( )
+  __halt_compiler abstract and array as break callable case catch class clone const continue declare default
+  die do echo else elseif empty enddeclare endfor endforeach endif endswitch endwhile eval exit extends
+  final finally fn for foreach function global goto if implements include include_once instanceof insteadof
+  interface isset list match namespace new or print private protected public readonly require require_once
+  return static switch throw trait try unset use var while xor yield~from yield
+#.php_keywords
+
+#.extensions
++ @csv( ) # all known extensions (must)
+  apache2handler bcmath bz2 calendar cgi-fcgi COM* Core ctype curl date dba dom enchant
+  exif FFI* fileinfo filter ftp gd gettext gmp hash HRTime* iconv imagick imap interbase
+  intl ionCube Loader json ldap libxml mbstring mhash* mysqli mysqlnd oci8 odbc openssl pcntl*
+  pcre PDO PDO_CUBRID PDO_DBLIB PDO_FIREBIRD PDO_IBM PDO_INFORMIX pdo_mysql PDO_OCI PDO_ODBC pdo_pgsql
+  pdo_sqlite PDO_SQLSRV pgsql Phar phpdbg* posix* pspell readline Reflection session shmop
+  SimpleXML snmp soap sockets sodium SourceGuardian SPL sqlite3 standard sysvmsg* sysvsem* sysvshm*
+  tidy tokenizer wddx xml xmlreader xmlwriter xsl Zend OPcache zip zlib
+#.extensions
+
+#.timezones =========================================================================
++ @csv( )
+  Africa: Abidjan Accra Addis_Ababa Algiers Asmara Bamako Bangui Banjul Bissau Blantyre Brazzaville Bujumbura Cairo Ceuta Conakry Dakar Dar_es_Salaam Djibouti Douala Freetown Gaborone Harare Johannesburg Juba Kampala Khartoum Kigali Kinshasa Lagos Libreville Lome Luanda Lubumbashi Lusaka Malabo Maputo Maseru Mbabane Mogadishu Monrovia Nairobi Ndjamena Niamey Nouakchott Ouagadougou Porto-Novo Sao_Tome Tripoli Tunis Windhoek
+  America: Adak Anchorage Anguilla Antigua Argentina/Buenos_Aires Argentina/Catamarca Argentina/Cordoba Argentina/Jujuy Argentina/La_Rioja Argentina/Mendoza Argentina/Rio_Gallegos Argentina/Salta Argentina/San_Juan Argentina/San_Luis Argentina/Tucuman Argentina/Ushuaia Aruba Asuncion Atikokan Bahia_Banderas Barbados Belize Blanc-Sablon Bogota Boise Cambridge_Bay Cancun Caracas Cayman Chicago Chihuahua Costa_Rica Creston Curacao Danmarkshavn Dawson Dawson_Creek Denver Detroit Dominica Edmonton El_Salvador Fort_Nelson Glace_Bay Goose_Bay Grand_Turk Grenada Guadeloupe Guatemala Guayaquil Halifax Havana Hermosillo Indiana/Indianapolis Indiana/Knox Indiana/Marengo Indiana/Petersburg Indiana/Tell_City Indiana/Vevay Indiana/Vincennes Indiana/Winamac Inuvik Iqaluit Jamaica Juneau Kentucky/Louisville Kentucky/Monticello Kralendijk La_Paz Los_Angeles Lower_Princes Managua Marigot Martinique Matamoros Mazatlan Menominee Merida Metlakatla Mexico_City Miquelon Moncton Monterrey Montevideo Montserrat Nassau New_York Nipigon Nome North_Dakota/Beulah North_Dakota/Center North_Dakota/New_Salem Ojinaga Panama Pangnirtung Paramaribo Phoenix Port-au-Prince Port_of_Spain Puerto_Rico Punta_Arenas Rainy_River Rankin_Inlet Regina Resolute Santiago Santo_Domingo Sitka St_Barthelemy St_Johns St_Kitts St_Lucia St_Thomas St_Vincent Swift_Current Tegucigalpa Thule Thunder_Bay Tijuana Toronto Tortola Vancouver Whitehorse Winnipeg Yakutat Yellowknife
+  Antarctica: Macquarie McMurdo
+  Arctic: Longyearbyen
+  Asia: Amman Baghdad Bangkok Beirut Colombo Damascus Dhaka Famagusta Gaza Hebron Ho_Chi_Minh Hong_Kong Irkutsk Jakarta Jayapura Jerusalem Karachi Kolkata Kuala_Lumpur Macau Makassar Manila Nicosia Phnom_Penh Pontianak Pyongyang Seoul Shanghai Singapore Taipei Tbilisi Tehran Tokyo Vientiane Yangon Yekaterinburg
+  Atlantic: Azores Bermuda Canary Faroe Madeira Reykjavik St_Helena Stanley
+  Australia: Adelaide Brisbane Broken_Hill Darwin Hobart Lindeman Lord_Howe Melbourne Perth Sydney
+  Europe: Amsterdam Andorra Athens Belgrade Berlin Bratislava Brussels Bucharest Budapest Busingen Chisinau Copenhagen Dublin Gibraltar Guernsey Helsinki Isle_of_Man Istanbul Jersey Kaliningrad Kiev Lisbon Ljubljana London Luxembourg Madrid Malta Mariehamn Minsk Monaco Moscow Oslo Paris Podgorica Prague Riga Rome San_Marino Sarajevo Simferopol Skopje Sofia Stockholm Tallinn Tirane Uzhgorod Vaduz Vatican Vienna Vilnius Warsaw Zagreb Zaporozhye Zurich
+  Indian: Antananarivo Comoro Maldives Mayotte
+  Pacific: Auckland Easter Guam Honolulu Midway Pago_Pago Saipan
+#.timezones
+
+#.languages =========================================================================
++ @bang(. ) >
+  ab.Abkhazian aa.Afar af.Afrikaans ak.Akan sq.Albanian am.Amharic ar.Arabic an.Aragonese hy.Armenian as.Assamese
+  av.Avaric ae.Avestan ay.Aymara az.Azerbaijani bm.Bambara ba.Bashkir eu.Basque be.Belarusian bn.Bengali bh.Bihari
+  bi.Bislama bs.Bosnian br.Breton bg.Bulgarian my.Burmese ca.Catalan km.Central_Khmer ch.Chamorro ce.Chechen ny.Chichewa
+  zh.Chinese cu.Church_Slavic cv.Chuvash kw.Cornish co.Corsican cr.Cree hr.Croatian cs.Czech da.Danish nl.Dutch
+  dz.Dzongkha en.English eo.Esperanto et.Estonian ee.Ewe fo.Faroese fj.Fijian fi.Finnish fr.French ff.Fulah gd.Gaelic
+  gl.Galician lg.Ganda ka.Georgian de.German el.Greek kl.Greenlandic gu.Gujarati ht.Haitian ha.Hausa he.Hebrew hz.Herero
+  hi.Hindi ho.Hiri_Motu hu.Hungarian is.Icelandic io.Ido ig.Igbo id.Indonesian ia.Interlingua ie.Interlingue iu.Inuktitut
+  ik.Inupiaq ga.Irish it.Italian ja.Japanese jv.Javanese kn.Kannada kr.Kanuri ks.Kashmiri kk.Kazakh ki.Kikuyu rw.Kinyarwanda
+  ky.Kirghiz kv.Komi kg.Kongo ko.Korean kj.Kuanyama ku.Kurdish lo.Lao la.Latin lv.Latvian li.Limburgan ln.Lingala lt.Lithuanian
+  lu.Luba-Katanga lb.Luxembourgish mk.Macedonian mg.Malagasy ms.Malay ml.Malayalam dv.Maldivian mt.Maltese gv.Manx mi.Maori
+  mr.Marathi mh.Marshallese mn.Mongolian na.Nauru nv.Navaho ng.Ndonga ne.Nepali nd.North_Ndebele se.Northern_Sami no.Norwegian
+  nb.Norwegian_Bokmål nn.Norwegian_Nynorsk ii.Nuosu oj.Ojibwa or.Oriya om.Oromo os.Ossetian pi.Pali pa.Panjabi ps.Pashto
+  fa.Persian pl.Polish pt.Portuguese qu.Quechua ro.Romanian rm.Romansh rn.Rundi ru.Russian sg.Sango sa.Sanskrit sc.Sardinian
+  sr.Serbian sn.Shona sd.Sindhi si.Sinhala sk.Slovak sl.Slovene so.Somali nr.South_Ndebele st.Southern_Sotho es.Spanish
+  su.Sundanese sw.Swahili ss.Swati sv.Swedish tl.Tagalog ty.Tahitian tg.Tajik ta.Tamil tt.Tatar te.Telugu th.Thai
+  bo.Tibetan ti.Tigrinya to.Tongan ts.Tsonga tn.Tswana tr.Turkish tk.Turkmen tw.Twi ug.Uighur uk.Ukrainian ur.Urdu
+  uz.Uzbek ve.Venda vi.Vietnamese vo.Volapük wa.Walloon cy.Welsh fy.Western_Frisian wo.Wolof xh.Xhosa yi.Yiddish
+  yo.Yoruba za.Zhuang zu.Zulu
+#.languages
+
+#.test
++ [@@inc(.loops), @@inc(.loops)]
+#.test
+
+
+# =====================================================================================
+# ////////////////////////////////          IMAGES           //////////////////////////
+# =====================================================================================
 
 #.d
 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="14px" height="14px" viewBox="0 0 14 14" enable-background="new 0 0 14 14" xml:space="preserve">
@@ -45,4 +181,5 @@ data:image/gif;base64,R0lGODlhDwAKALMAAAAAzP////////////////////////////////////
 </svg>
 #.ok
 
-<img src="@inc(__img.ok2)"/>
+###<img src="@inc(.ok2)"/>
+

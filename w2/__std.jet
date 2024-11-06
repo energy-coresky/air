@@ -238,7 +238,7 @@ DATABASES ({{count($databases)}})
 
 #.c23_edit.c23_2edit //////////////////////////////////////////////////////////////////////////////
 <div class="c23-tpl" style="background:{!$isaddr?'#efe':'#fee'!}">
-    <a class="red-link fr" @href(sky.g.hide(this))>@inc(__img.x)</a>
+    <a class="red-link fr" @href(sky.g.hide(this))>@inc(__dev.x)</a>
     <input name="kname[]" size="6" placeholder="key name" value="{{$kname}}"/>
     <input name="key[]" size="15" placeholder="key" value="{{$key}}"/>
     <div style="margin-top:2px">

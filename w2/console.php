@@ -182,6 +182,27 @@ class Console
         }
     }
 
+    /** Show markers (from current dir) */
+    function c_markers() {
+        global $dir_run;
+        foreach (Rare::list_path($dir_run(), 'is_file') as $fn) {
+            $data = file_get_contents($fn = str_replace('\\', '/', $fn));
+            if (!preg_match_all("/^#\.(\w+(\.\w+)*)/m", $data, $m, 0))
+                continue;
+            $list = [];
+            foreach ($m[1] as $line) {
+                foreach (explode('.', $line) as $marker)
+                    isset($list[$marker]) ? $list[$marker]++ : ($list[$marker] = 1);
+            }
+            echo "$fn\n  ";
+            ksort($list);
+            foreach ($list as $marker => $n)
+                echo 1 == $n ? "\033[93m.$marker\033[0m"
+                    : (2 == $n ? ".$marker" : "\033[91m.$marker\033[0m");
+            echo "\n";
+        }
+    }
+
     /** Show Coresky version */
     function c_v() {
         class_exists('SKY', false) or require DIR_S . '/sky.php';

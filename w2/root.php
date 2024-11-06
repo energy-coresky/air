@@ -182,7 +182,7 @@ class Root
                 echo tag('Not loaded extensions', '', 'h3');
                 $echo(array_map(function ($v) {
                     return tag('?') . " $v ";
-                }, array_diff(Plan::php()->extensions, $ext)), 'e');
+                }, array_diff(yml('+ @inc(extensions)'), $ext)), 'e');
                 $top .= $priv;
                 break;
             case 'License': $fn = '/LICENSE';

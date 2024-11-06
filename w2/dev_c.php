@@ -109,7 +109,7 @@ class dev_c extends Controller
 
     function a_img() {
         SKY::$debug = 0;
-        [,$s] = explode("#.$this->_1", file_get_contents(DIR_S . '/w2/__img.jet'), 3);
+        [,$s] = explode("#.$this->_1", file_get_contents(DIR_S . '/assets/database.yaml'), 3);
         [$type, $data] = explode(",", trim($s), 2);
         header('Cache-Control: private, max-age=3600');
         MVC::mime(substr($type, 5, strlen($type) - 12));

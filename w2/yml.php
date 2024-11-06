@@ -441,25 +441,31 @@ class YML
     }
 
     static function inc($name, $ware = false, $marker = '', $yml = null) {
-        $default = '$DIR_S/w2/__data.yaml';
-        if (false !== strpos($marker, '.')) {
-            [$fn, $marker] = explode('.', $marker, 2);
-            if (!$fn)
-                $default = $yml->at[0];
-        }
-        if ('' === $name || '~' == $name[0]) {
-            $name = $name ? DIR_S . substr($name, 1) : $default;
-            $yml->var($name);
+        $empty = '' === $name;
+        if ($empty || '~' == $name[0]) {
+            $name = DIR_S . ($empty ? '/w2/__data.yaml' : substr($name, 1));
             $ware = true;
         }
-        $inc = function ($dir, $name) use ($marker) {
-            $ext = explode('.', $name);
-            switch (end($ext)) {
-                case 'php': return $dir ? (require $name) : Plan::_r($name);
-                case 'txt': return $dir ? file_get_contents($name) : Plan::_g($name);
-                case 'json': return json_decode($dir ? file_get_contents($name) : Plan::_g($name), true);
+        if (false !== strpos($marker, '.')) {
+            if ($empty)
+                $name = $yml->at[0];
+            [$ext, $marker] = explode('.', $marker, 2);
+            $ext or $ext = 'yml';
+            $marker or $marker = $yml->marker;
+        } else {
+            $ext = substr($name, 1 + (int)strrpos($name, '.'));
+        }
+        $inc = function ($dir, $name) use ($marker, $ext) {
+            switch ($ext) {
+                case 'php':
+                    return $dir ? (require $name) : Plan::_r($name);
+                case 'txt':
+                    return $dir ? file_get_contents($name) : Plan::_g($name);
+                case 'json':
+                    return json_decode($dir ? file_get_contents($name) : Plan::_g($name), true);
                 case 'yml':
-                case 'yaml': return YML::file($dir ? $name : Plan::_t($name), $marker);
+                case 'yaml':
+                    return YML::file($dir ? $name : Plan::_t($name), $marker);
                 default:
                     if (strpos($name, ' '))
                         [$name, $via1] = explode(' ', $name, 2);

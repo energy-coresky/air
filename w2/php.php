@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.537;
+    const version = 0.539;
 
     use Processor;
 
@@ -28,7 +28,7 @@ class PHP
     private $x = [];
     private $part = '';
     private $is_nice = false;
-    private $wind_cfg = '~/w2/beauty.yaml';
+    private $wind_cfg = '~/w2/__beauty.yaml';
 
     static function file(string $name, $tab = 4) {
         return new PHP(file_get_contents($name), $tab);

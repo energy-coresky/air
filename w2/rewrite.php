@@ -175,6 +175,7 @@ class Rewrite
 
 __halt_compiler();
 
+#.library
 + @match(/^(\d) (\S*) (.*)$/s) # @scan(%d %s %[^^]) # %[^;])%[ -~]
   Main-page: |
     0 / $main = '' === $uri;
@@ -244,3 +245,4 @@ __halt_compiler();
         $p =& $surl[0];
         empty($rw[$p]) or $p = $rw[$p];
     }
+#.library

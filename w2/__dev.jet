@@ -15,6 +15,12 @@
 <h3 style="background:pink;color:red">{{$stdout}}</h3>
 #._801
 
+#.x
+<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" fill="currentColor" class="bi bi-x-lg" viewBox="0 0 16 16">
+  <path d="M1.293 1.293a1 1 0 0 1 1.414 0L8 6.586l5.293-5.293a1 1 0 1 1 1.414 1.414L9.414 8l5.293 5.293a1 1 0 0 1-1.414 1.414L8 9.414l-5.293 5.293a1 1 0 0 1-1.414-1.414L6.586 8 1.293 2.707a1 1 0 0 1 0-1.414z"></path>
+</svg>
+#.x
+
 #.files //////////////////////////////////////////////////////////////////////////////
 config.yaml dpv #initial
 core:
@@ -397,7 +403,7 @@ $(function() {
         <a class="sce@scea($y_log[7])" href=@p(_dev?main=7)>S</a>@eat
         <a class="sce@scea($y_log[5])" href=@p(_dev?main=9)>C</a>@eat
         <a class="sce@scea($y_log[4])" href=@p(_dev?main=10)>E</a>@eat
-        <a @href(sky.d.close_box())>Esc - Close @inc(__img.x)</a>
+        <a @href(sky.d.close_box())>Esc - Close @inc(__dev.x)</a>
     </div>
 </div>
 
