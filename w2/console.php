@@ -264,7 +264,7 @@ class Console
             Plan::mem_p('gate.php', $dat);
             echo 'Old file moved to `' . Plan::mem_t('gate.php') . "`\n";
         }
-        Plan::_p('gate.php', Boot::auto(Gate::default()));
+        Plan::_p('gate.php', Boot::auto(yml('default_c: @inc(yml.default_c) ~/w2/gate.php')));
         $this->c_drop();
     }
 

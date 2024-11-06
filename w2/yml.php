@@ -193,7 +193,8 @@ class YML
                 } elseif (':' == $t) {
                     $this->halt("JSON error near `:`");
                 }
-                if (null !== $m->key && (!empty($m->val) || $m->code || is_string($m->key)))
+                //if (null !== $m->key && (!empty($m->val) || $m->code || is_string($m->key)))
+                if (null !== $m->key && ('' !== $m->val || $m->code || is_string($m->key)))
                     $this->push($m);
 
                 if ($open) { # [ or {

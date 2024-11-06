@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.539;
+    const version = 0.541;
 
     use Processor;
 
@@ -157,13 +157,8 @@ class PHP
     function nice() {
         if (PHP::$warning)
             throw new Error(PHP::$warning);
-        static $fn = 'nice_php_array';
-        if ($fn) {
-            $ary = Plan::set('main', fn() => yml($fn, "+ @inc($fn) $this->wind_cfg"));
-            foreach ($ary as $key => $val)
-                PHP::$data->{$key} = $val;
-            $fn = false;
-        }
+        if (!isset(PHP::$data->not_open_curly))
+            Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $this->is_nice = true;
         $stk =& $this->stack;
         $reason = $prev = 0;

@@ -28,10 +28,6 @@ class Gate
     private $ra;
     private $ns;
 
-    static function default() {
-        return json_decode(Boot::tail(__FILE__, __COMPILER_HALT_OFFSET__), true);
-    }
-
     static function instance() {
         static $gate;
         return $gate ?? ($gate = new Gate);
@@ -71,10 +67,13 @@ class Gate
         $content = Plan::_gq([$ware, $fn]) or $content = "<?php\n\nclass $ctrl extends Controller\n{}\n";
         #$list = (Globals::instance())->parse_def($ctrl, $content);
         $list = $this->get_methods($content);
-        if ('main' == $ware && 'default_c' == $ctrl) {
-            foreach ($this->trait as $k => $v)
-                isset($list[$k]) or $list[$k] = $v;
-        }
+        if ('main' == $ware && 'default_c' == $ctrl)
+            $list += [
+                'j_init'       => ['$tz', '$scr'],
+                'a_crash'      => [],
+                'a_etc'        => ['$fn', '$ware'],
+                'a_test_crash' => [],
+            ];
         if ($act_only)
             return $list;
 
@@ -483,36 +482,17 @@ class Gate
         }
         return $out;
     }
-
-    private $trait = [
-        'j_init'       => ['$tz', '$scr'],
-        'a_crash'      => [],
-        'a_etc'        => ['$fn', '$ware'],
-        'a_test_crash' => [],
-    ];
 }
 
 __halt_compiler();
 
-{
-  "default_c": {
-    "j_init": [
-      0,[],[],[
-        ["","tz","","[\\d\\.]+",0],
-        ["","scr","",".*",0]
-      ]
-    ],
-    "a_crash": [
-      1,[1],[],[]
-    ],
-    "a_etc": [
-      1,[1],[
-        ["","","","[a-z\\d_\\.\\-]+",0],
-        ["","","","\\w+",1]
-      ],[]
-    ],
-    "a_test_crash": [
-      1,[1],[],[]
-    ]
-  }
-}
+#.default_c
+j_init: [
+    0, [], [], [['', tz, '', "[\d\.]+", 0], ['', scr, '', ".*", 0]]
+  ]
+a_etc: [
+    1, [1], [['', '', '', "[a-z\d_\.\-]+", 0], ['', '', '', "\w+", 1]], []
+  ]
+a_crash: [1, [1], [], []]
+a_test_crash: @path(a_crash)
+#.default_c

@@ -70,12 +70,14 @@ tail:
     return $out . $line . ($in_php ? "\n" : '');
 #.nice_php
 
-#.nice_php_array ///////////////////////////////////////////////////////////////////////////////////
+#.ary_nice_php ///////////////////////////////////////////////////////////////////////////////////
 + @preflight |
   $array['not_open_curly'] = [
     T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR,
     T_NAME_QUALIFIED => T_NS_SEPARATOR,
   ];
+  foreach ($array as $key => $val)
+      PHP::$data->{$key} = $val;
 
 not_nl_after_curly: [
   ',', '(', ')', '[', ']', '{', '}', ;,
@@ -96,7 +98,7 @@ curly_reason: [
   $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
   @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
 ]
-#.nice_php_array
+#.ary_nice_php
 
 # =====================================================================================
 # ================================           RULES           ==========================
