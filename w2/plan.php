@@ -316,8 +316,8 @@ class Plan
         $vars = '';
         if ($context) {
             $vars = "\n";
-            foreach ($context as $k => $v)///////////////////////??????????????///////////////
-                $vars .= "\$$k = " . self::var($v,'',1) . ";\n";
+            foreach ($context as $k => $v) //2do details for stdClass
+                $vars .= "\$$k = " . self::var($v) . ";\n";
         }
         $p =& SKY::$errors;
         $p[isset($p[1]) ? 2 : 1] = ["#$p[0] $title", $desc . $vars];
@@ -332,7 +332,7 @@ class Plan
                 return L::m($type); // for php8 - get_debug_type($var) class@anonymous stdClass
             case 'object':
                 $cls = get_class($var);
-                if ($quote===true || 'stdClass' != $cls) {
+                if ($quote) {
                     $p =& self::$var_path;
                     self::$see_also[$cls] = [$p[':' == $p[1][0] ? 3 : 0] . $p[1] . implode('', $p[2]) => $var];
                     return L::m("Object $cls");
