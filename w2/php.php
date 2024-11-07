@@ -154,27 +154,26 @@ class PHP
         return '';
     }
 
-    function mod_array(&$y, $chk = false) {
-        static $akey = 0;
-        if (!$chk) {
-            $new = $this->tok($y->i, true);
-            if ('(' == $new->str) {
-                $this->count -= $len = $new->i - $y->i;
-                array_splice($this->tok, $y->i, 1 + $len, '['); # modify code
-                return $y = $this->tok($y->i);
-            }
-        } elseif ('[' === $y->str) {
-            $akey = 1;
-        } elseif ($akey && $chk()) {
-            if ($y->str === (string)($akey - 1)) {
+    function mod_array(&$y) {
+        $new = $this->tok($y->i, true);
+        if ('(' == $new->str) {
+            $this->count -= $len = $new->i - $y->i;
+            array_splice($this->tok, $y->i, 1 + $len, '['); # modify code
+            return $y = $this->tok($y->i);
+        }
+        return false;
+    }
+
+    function del_arrow(&$y, $prev, &$akey) {
+        if (!$y->ignore && in_array($prev, ['[', ','], true)) {
+            if ($y->str === (string)($akey++ - 1)) {
                 $new = $this->tok($y->i, true);
                 if (T_DOUBLE_ARROW == $new->tok) {
                     if (T_WHITESPACE === $this->tok[$new->i + 1][0])
                         $new = $this->tok($new->i + 1);
                     $this->count -= $len = 1 + $new->i - $y->i;
                     array_splice($this->tok, $y->i, $len); # modify code
-                    $y->new = $this->tok($y->i);
-                    return $akey++;
+                    return $y->new = $this->tok($y->i);
                 }
             }
             $akey = 0; # off
@@ -190,24 +189,25 @@ class PHP
         if (!isset(PHP::$data->not_open_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $stk =& $this->stack;
-        $reason = $prev = 0;
+        $reason = $prev = $akey = 0;
         for ($y = $this->tok(); $y; $y = $y->new) { # step 1
             $mod = T_ARRAY == $y->tok && $this->mod_array($y);
-            $ignore = in_array($y->tok, $this->_tokens_ign);
-            if (!$this->in_str && $this->mod_array($y, fn() => !$ignore && in_array($prev, ['[', ','], true))) {
+            $y->ignore = in_array($y->tok, $this->_tokens_ign);
+            if (!$this->in_str && '[' === $y->str) {
+                $akey = 1;
+            } elseif ($akey && $this->del_arrow($y, $prev, $akey)) {
                 $prev = T_DOUBLE_ARROW;
                 continue;
             }
-            $y->new = $this->tok($y->i + 1);
-            $oc = $this->int_bracket($y, true);
 
             if ($stk) {
                 $this->x[$i = end($stk)[0]][0] += strlen(' ' == $y->str ? ' ' : trim($y->str));
-                ',' != $y->str or $this->x[$i][2]++;
+                ',' != $y->str or $this->x[$i][2]++;/// comas?
             }
             if (in_array($y->tok = $this->_not_open_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
 
+            $oc = $this->int_bracket($y, true);
             if ($oc > 0) {
                 $stk[] = [$y->i, $mod];
                 $this->x[$y->i] = [1, 0, 1, in_array($prev, $this->_not_open_curly) ? $prev : $reason];
@@ -220,7 +220,8 @@ class PHP
                 if ($stk)
                     $this->x[end($stk)[0]][0] += $this->x[$i][0] - 1;
             }
-            $ignore or $prev = $y->tok ?: $y->str;
+            $y->new = $this->tok($y->i + 1);
+            $y->ignore or $prev = $y->tok ?: $y->str;
         }
     }
 

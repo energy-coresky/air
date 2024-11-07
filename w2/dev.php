@@ -287,7 +287,7 @@ class DEV
                 $wares[$name] += ['options' => $_POST];
             file_exists("$dir/.coresky") or file_put_contents("$dir/.coresky", DIR);
         }
-        Plan::app_p('wares.php', Boot::auto($wares));
+        Plan::app_p('wares.php', new PHP(Boot::auto($wares)));
         Plan::cache_d('sky_plan.php');
         if ($class)
             return $this->j_ware($class, 'install');

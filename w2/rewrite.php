@@ -68,7 +68,7 @@ class Rewrite
                 break;
         }
         $_POST = []; # erase form data from POST
-        return Plan::_p('rewrite.php', Boot::auto(self::$map));
+        return Plan::_p('rewrite.php', new PHP(Boot::auto(self::$map)));
     }
 
     static function highlight(&$v) {

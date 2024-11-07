@@ -257,7 +257,7 @@ class dev_c extends Controller
             $ary[$ctrl][$act] = true === $in ? self::post_data() : $in;
         }
         Plan::gate_dq([$ware, "$ware-$ctrl.php"]); # drop cache file
-        Plan::_p([$ware, 'gate.php'], Boot::auto($ary));
+        Plan::_p([$ware, 'gate.php'], new PHP(Boot::auto($ary)));
     }
 
     static function cshow() {
