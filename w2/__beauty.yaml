@@ -7,7 +7,6 @@
 #.nice_php ///////////////////////////////////////////////////////////////////////////////////
 body:
   rules:
-    + @inc(.kw_array)
     + @inc(.tag_rules)
     + @inc(.casecolon)
     + @inc(.semicolon)
@@ -46,7 +45,7 @@ head:
                 $y->com = 3; # multiline comment
         }
 
-        $oc = $this->bracket($y);
+        $oc = $this->int_bracket($y, true);
         if ($this->in_str) {
             $line .= $y->str;
             continue;
@@ -79,6 +78,7 @@ tail:
   foreach ($array as $key => $val)
       PHP::$data->{$key} = $val;
 
+tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT]
 not_nl_after_curly: [
   ',', '(', ')', '[', ']', '{', '}', ;,
   $T_ELSE, $T_ELSEIF, $T_CATCH, $T_FINALLY
@@ -98,6 +98,7 @@ curly_reason: [
   $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
   @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
 ]
+optim_key: [$T_WHITESPACE, @@inc(.com3), $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENCAPSED_STRING]
 #.ary_nice_php
 
 # =====================================================================================
@@ -116,7 +117,7 @@ curly_reason: [
 #.tag_rules
 
 #.kw_array
-- on: T_ARRAY == $y->tok && ($new = $this->tok($y->i, true)) && '(' == $new->str
+- on: 000000 ///////////////////////////////////////
   do: |
     $new->str = '['; // modify source
     $x = $this->x($new->i);      // get "(" x-data
@@ -207,8 +208,8 @@ curly_reason: [
 #.comments
 - on: $y->com
   do: |
-    if ('/*' == $y->str) // dummy comment
-        continue;
+    //if ('/*' == $y->str) // dummy comment
+    //    continue;
     $ok_com = function () use ($out, $y) {
         $pos = strrpos($out, "\n", -2);
         if (!$len = strlen(trim(substr($out, $pos)))) // empty prev line
