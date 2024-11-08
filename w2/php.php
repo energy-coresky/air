@@ -23,6 +23,7 @@ class PHP
     public $in_par = 0;
     public $pos = 0;
     public $curly = 0;
+    public $max_length = 120;
 
     private $stack = [];
     private $x = [];
@@ -74,19 +75,22 @@ class PHP
 
         # else minifier
         $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
-        for ($out = '', $y = $this->tok(); $y; $y = $new) {
+        for ($out = '', $y = $this->tok(); $y; $y = $new) { //2do 1+++$a;
             $new = $this->tok($y->i + 1);
             if (T_COMMENT == $y->tok || T_DOC_COMMENT == $y->tok) # 2do ->save_comment
                 continue;
             if (T_OPEN_TAG == $y->tok)
                 $y->str = '<?php ';
-#            if (!$y->i)
-#                $y->str .= "\n#Minified with Coresky framework, https://coresky.net\n";
+            if (!$y->i)
+                $y->str .= "/* Minified with Coresky framework, https://coresky.net */";
             if (T_WHITESPACE == $y->tok) {//2do
                 if ($not($pv->str[-1]) || !$new || $not($new->str[0]))
                     continue;
                 $y->str = ' ';
             }
+            $this->int_bracket($y);
+            if (!$this->in_str && ']' == $y->str && ',' == $pv->str)
+                $out = substr($out, 0, -1);
 
             $out .= $y->str;
             $pv = $y;
@@ -96,12 +100,12 @@ class PHP
 
     private function left_bracket($y, $x) {
         $len = strlen($y->line);
-        if ($len + $x->len < 120) // $x->comma > 2
+        if ($len + $x->len < $this->max_length) // $x->comma > 2
             return true; # continue line
         [$new, $str, $nx] = $this->wind_nice_php($y->new->i, $x->close);
         if (!$nx || '[' == $y->str && '[' == $new->str)
             return false; # add new line
-        if ($len + strlen($str) < 120) {
+        if ($len + strlen($str) < $this->max_length) {
             [, $distance, ] = $this->wind_nice_php($nx->close, $x->close);
             if (strlen($distance) > 20)
                 return false; # add new line
@@ -177,7 +181,7 @@ class PHP
                 }
             }
             $akey = 0; # off
-        } elseif (!in_array($y->tok, $this->_optim_key) && ',' !== $y->str) {
+        } elseif (!in_array($y->tok, $this->_optim_key) && ',' != $y->str) {
             $akey = 0; # off
         }
         return false;
@@ -189,11 +193,12 @@ class PHP
         if (!isset(PHP::$data->not_open_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $stk =& $this->stack;
-        $reason = $prev = $akey = 0;
+        $reason = $prev = $akey = $_key = 0;
         for ($y = $this->tok(); $y; $y = $y->new) { # step 1
             $mod = T_ARRAY == $y->tok && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
             if (!$this->in_str && '[' === $y->str) {
+                $_key = $akey;
                 $akey = 1;
             } elseif ($akey && $this->del_arrow($y, $prev, $akey)) {
                 $prev = T_DOUBLE_ARROW;
@@ -209,11 +214,13 @@ class PHP
 
             $oc = $this->int_bracket($y, true);
             if ($oc > 0) {
-                $stk[] = [$y->i, $mod];
+                $stk[] = [$y->i, $mod, $_key];
                 $this->x[$y->i] = [1, 0, 1, in_array($prev, $this->_not_open_curly) ? $prev : $reason];
                 # len, close, comma, reason
             } elseif ($oc < 0) {
-                [$i, $mod] = array_pop($stk);
+                [$i, $mod, $_key] = array_pop($stk);
+                if ('[' === $this->tok[$i])
+                    $akey = $_key;
                 if ($mod)
                     $y->str = ']'; # modify code
                 $this->x[$i][1] = $y->i;

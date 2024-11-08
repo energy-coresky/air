@@ -183,23 +183,42 @@ class Console
     }
 
     /** Show markers (from current dir) */
-    function c_markers() {
+    function c_markers($i = false) {
         global $dir_run;
+        $list = [];
         foreach (Rare::list_path($dir_run(), 'is_file') as $fn) {
             $data = file_get_contents($fn = str_replace('\\', '/', $fn));
             if (!preg_match_all("/^#\.(\w+(\.\w+)*)/m", $data, $m, 0))
                 continue;
-            $list = [];
+            $p =& $list[basename($fn)];
             foreach ($m[1] as $line) {
                 foreach (explode('.', $line) as $marker)
-                    isset($list[$marker]) ? $list[$marker]++ : ($list[$marker] = 1);
+                    isset($p[$marker]) ? $p[$marker]++ : ($p[$marker] = 1);
             }
-            echo "$fn\n  ";
-            ksort($list);
-            foreach ($list as $marker => $n)
-                echo 1 == $n ? "\033[93m.$marker\033[0m"
-                    : (2 == $n ? ".$marker" : "\033[91m.$marker\033[0m");
-            echo "\n";
+            ksort($p);
+        }
+        if ($i) {
+            echo " \033[91m Markers intersection\033[0m:\n";
+            foreach ($list as $fn => $ary) {
+                $ary = array_keys($ary);
+                $all = [];
+                array_walk($list, function ($v, $k) use (&$all, $fn) {
+                    if ($fn != $k)
+                        $all = array_merge($all, array_keys($v));
+                });
+                if ($ary = array_intersect($ary, $all))
+                    echo "  FILE: $fn, MARKERS: " . implode(' ', $ary) . "\n";
+            }
+        } else {
+            foreach ($list as $fn => $ary) {
+                echo "  FILE: $fn, MARKERS:";
+                foreach ($ary as $marker => $n)
+                    echo 1 == $n ? "\033[93m $marker\033[0m"
+                        : (2 == $n ? " $marker" : "\033[91m $marker\033[0m");
+                echo "\n";
+            }
+            echo " \033[93m yellow\033[0m - no right boundary\n";
+            echo " \033[91m red\033[0m - more then twice boundary\n";
         }
     }
 

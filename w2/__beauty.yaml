@@ -210,7 +210,7 @@ optim_key: [$T_WHITESPACE, @@inc(.com3), $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENC
   do: |
     //if ('/*' == $y->str) // dummy comment
     //    continue;
-    $ok_com = function () use ($out, $y) {
+    $ok_com = function () use (&$out, &$y) {
         $pos = strrpos($out, "\n", -2);
         if (!$len = strlen(trim(substr($out, $pos)))) // empty prev line
             return false;
