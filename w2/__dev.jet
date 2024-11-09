@@ -453,7 +453,7 @@ $(function() {
             ▲ Views (<span>?</span>)
         </a>&nbsp; &nbsp;
         <a n="s" href="#">
-            ▲ SQLs (<span>?</span>)
+            ▲ Queries (<span>?</span>)
         </a>&nbsp; &nbsp;
         <a n="c" href="#">▲ Classes (<span>?</span>)</a>
         </form>

@@ -182,7 +182,7 @@ class Console
         }
     }
 
-    /** Show markers (from current dir) */
+    /** Show markers [1] (from current dir) */
     function c_markers($i = false) {
         global $dir_run;
         $list = [];
@@ -200,13 +200,11 @@ class Console
         if ($i) {
             echo " \033[91m Markers intersection\033[0m:\n";
             foreach ($list as $fn => $ary) {
-                $ary = array_keys($ary);
                 $all = [];
                 array_walk($list, function ($v, $k) use (&$all, $fn) {
-                    if ($fn != $k)
-                        $all = array_merge($all, array_keys($v));
+                    $fn == $k or $all = array_merge($all, array_keys($v));
                 });
-                if ($ary = array_intersect($ary, $all))
+                if ($ary = array_intersect(array_keys($ary), $all))
                     echo "  FILE: $fn, MARKERS: " . implode(' ', $ary) . "\n";
             }
         } else {

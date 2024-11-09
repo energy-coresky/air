@@ -90,7 +90,7 @@ class YML
             if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
                 if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
                     $this->halt("Cannot find marker `$marker`");
-                trace("Used magic marker from $fn", 'YAML');
+                trace("Used magic marker from $fn", 'CARE');
             }
             $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
             unset($ary);

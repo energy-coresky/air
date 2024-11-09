@@ -23,6 +23,7 @@ class PHP
     public $in_par = 0;
     public $pos = 0;
     public $curly = 0;
+    public $html_cnt = 0;
     public $max_length = 120;
 
     private $stack = [];
@@ -69,6 +70,8 @@ class PHP
     }
 
     function __toString() {
+        if (PHP::$warning)
+            throw new Error(PHP::$warning);
         $this->nice();
         if ($this->tab)
             return $this->wind_nice_php(0); # step 2
@@ -168,40 +171,37 @@ class PHP
         return false;
     }
 
-    function del_arrow(&$y, $prev, &$akey) {
+    function del_arrow(&$y, &$prev, &$key) {
         if (!$y->ignore && in_array($prev, ['[', ','], true)) {
-            if ($y->str === (string)($akey++ - 1)) {
+            if ($y->str === (string)($key++ - 1)) {
                 $new = $this->tok($y->i, true);
                 if (T_DOUBLE_ARROW == $new->tok) {
                     if (T_WHITESPACE === $this->tok[$new->i + 1][0])
                         $new = $this->tok($new->i + 1);
                     $this->count -= $len = 1 + $new->i - $y->i;
                     array_splice($this->tok, $y->i, $len); # modify code
+                    $prev = T_DOUBLE_ARROW;
                     return $y->new = $this->tok($y->i);
                 }
             }
-            $akey = 0; # off
+            $key = 0; # off
         } elseif (!in_array($y->tok, $this->_optim_key) && ',' != $y->str) {
-            $akey = 0; # off
+            $key = 0; # off
         }
         return false;
     }
 
     function nice() {
-        if (PHP::$warning)
-            throw new Error(PHP::$warning);
         if (!isset(PHP::$data->not_open_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $stk =& $this->stack;
-        $reason = $prev = $akey = $_key = 0;
+        $reason = $prev = $key = $_key = 0;
         for ($y = $this->tok(); $y; $y = $y->new) { # step 1
-            $mod = T_ARRAY == $y->tok && $this->mod_array($y);
+            $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
             if (!$this->in_str && '[' === $y->str) {
-                $_key = $akey;
-                $akey = 1;
-            } elseif ($akey && $this->del_arrow($y, $prev, $akey)) {
-                $prev = T_DOUBLE_ARROW;
+                [$_key, $key] = [$key, 1];
+            } elseif ($key && $this->del_arrow($y, $prev, $key)) {
                 continue;
             }
 
@@ -220,20 +220,21 @@ class PHP
             } elseif ($oc < 0) {
                 [$i, $mod, $_key] = array_pop($stk);
                 if ('[' === $this->tok[$i])
-                    $akey = $_key;
+                    $key = $_key;
                 if ($mod)
                     $y->str = ']'; # modify code
                 $this->x[$i][1] = $y->i;
                 if ($stk)
                     $this->x[end($stk)[0]][0] += $this->x[$i][0] - 1;
             }
+            T_INLINE_HTML == $y->tok && $this->html_cnt++;
             $y->new = $this->tok($y->i + 1);
             $y->ignore or $prev = $y->tok ?: $y->str;
         }
     }
 
     function int_bracket($y, $is_nice = false) {
-        if ('"' == $y->str || in_array($y->tok, [T_START_HEREDOC, T_END_HEREDOC])) {
+        if ('"' == $y->str && !$y->tok || in_array($y->tok, [T_START_HEREDOC, T_END_HEREDOC])) {
             $this->in_str = !$this->in_str;
             return 0;
         }

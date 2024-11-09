@@ -77,12 +77,17 @@ sky.d.draw = {
         return str;
     },
     s: function(data, str) {
-        var m, n, i = 0, s = '';
+        var m, n, i = 0, s = '', yml = str;
         for (; m = str.match(/>\nSQL: (.+?)\n\n<(.*)/sm); str = m[2]) {
             //s && (s += '<br>');
             m[1] = m[1].replace(/(select|update|insert|join|from|where|group|order)/gi, '<m>$1</m>');
             m[1] = m[1].replace(/^([\d\.]+ sec)/m, '<span style="color:red;border-bottom:1px solid blue">$1</span>');
             s += '<span style="color:#f77">#' + ++i + '</span> ' + m[1] + '<hr>';
+        }
+        for (; m = yml.match(/>\n(YAML|WIND): (.+?)\n\n<(.*)/sm); yml = m[3]) {
+            m[2] = m[2].replace(/@(\w+)/gi, '@<m>$1</m>');
+            m[2] = m[2].replace(/( # .*)/gi, '<y>$1</y>');
+            s += '<span style="color:#f77">#' + ++i + '</span> ' + m[2] + '<hr>';
         }
         return s ? s : '?';
     },
@@ -249,6 +254,7 @@ sky.d.init = function(from) {
     if ('run' != sky.a._1)
         sky.d.files();
 
+    for (var yml = str, yml_cnt = 0; m = yml.match(/>\n(YAML|WIND): .+?\n\n<(.*)/sm); yml = m[2], yml_cnt++);
     for (var a = []; m = str.match(/(TOP|SUB|BLK)\-VIEW: (\d+) (\S+) (\S+)(.*)/s); str = m[5]) {
         a.push({type:m[1], no:m[2], hnd:m[3], tpl:'^' == m[4] ? ('BLK' == m[1] ? 'injected-to-parent' : 'not-used') : m[4]});
         if ('TOP' == m[1])
@@ -257,7 +263,7 @@ sky.d.init = function(from) {
 
     var csql = '?';
     if (m = str.match(/([\.\d]+ sec), SQL queries: (\d+)/s)) {
-        csql = m[2];
+        csql = m[2] + (yml_cnt ? '+' + yml_cnt : '');
         $('#tpl-list').next().find('span:eq(0)').html(m[1]);
     }
 

@@ -267,7 +267,7 @@ class Jet
             if (3 != count($ary = preg_split("/^\#[\.\w+]*?\.{$marker}\b[\.\w+]*.*$/m", $in, 3))) {
                 if (3 != count($ary = preg_split("/^\#[\.\w+]*?\._\b[\.\w+]*.*$/m", $in, 3)))
                     throw new Error("Jet: cannot find `$name.$marker`");
-                trace("Used magic marker from $name.jet", 'JET');
+                trace("Used magic marker from $name.jet", 'CARE');
             }
             $in = preg_replace("/^\r?\n?(.*?)\r?\n?$/s", '$1', $ary[1]);
             $this->marker = $marker;

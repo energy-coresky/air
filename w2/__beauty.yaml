@@ -8,6 +8,8 @@
 body:
   rules:
     + @inc(.tag_rules)
+    + @inc(.multilines)
+    + @inc(.endword)
     + @inc(.casecolon)
     + @inc(.semicolon)
     + @inc(.ampersand)
@@ -18,15 +20,14 @@ body:
     + @inc(.comments)
     + @inc(.brackets_or_comma)
     default: |
-        isset($pv->com) or $pv->com=0;
-        if (!$pv->com && $alfa($pv->str[-1]) && $alfa($y->str[0]) || T_RETURN == $pv->tok)
+        if ($line !== '' && $alfa($line[-1]) && $alfa($y->str[0]))
             $line .= ' ';
         $line .= $y->str;
 head:
   param: $at, $to = 0
   code: |
     $depth = $dar = $d1 = $d2 = $in_php = $case = 0;
-    $out = $line = $last_pv_semi ='';
+    $out = $line = $last_pv_semi = '';
     $put = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
         '' === $s1 or $out .= $line . $s1;
         $line = str_pad('', $depth * $this->tab) . $s2;
@@ -47,9 +48,12 @@ head:
 
         $oc = $this->int_bracket($y, true);
         if ($this->in_str) {
-            $line .= $y->str;
+            $line .= $y->str; // T_ENCAPSED_AND_WHITESPACE
             continue;
         }
+
+        if (T_RETURN == $pv->tok && ';' != $y->str)
+            $line .= ' ';
 
         if (in_array($y->tok, $this->_ws_head)) {
             $y->str = ' ' . $y->str;
@@ -93,12 +97,17 @@ ws_both: [
 semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
 double_nl_after: [@@inc(.newdn), $T_NAMESPACE]
 control: [$T_IF, @@inc(.loops)]
-comments: @inc(.com3)
 curly_reason: [
   $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
   @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
 ]
-optim_key: [$T_WHITESPACE, @@inc(.com3), $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENCAPSED_STRING]
+optim_key: [
+  @@inc(.com3), $T_WHITESPACE, $T_VARIABLE,
+  $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENCAPSED_STRING
+]
+multilines: [$T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING, $T_ENCAPSED_AND_WHITESPACE]
+comments: @inc(.com3)
+endword: @inc(.ends)
 #.ary_nice_php
 
 # =====================================================================================
@@ -108,40 +117,47 @@ optim_key: [$T_WHITESPACE, @@inc(.com3), $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENC
 - on: T_OPEN_TAG == $y->tok
   do: |
     $in_php = true;
-    $y->i ? ($line .= "$y->str ") : $put(trim($y->str) . "\n\n");
-
+    $y->i ? ($line .= "$y->str") : $put(trim($y->str) . "\n\n");
 - on: in_array($y->tok, [T_HALT_COMPILER, T_CLOSE_TAG])
   do: |
-    $line .= $y->str;
+    $line .= '' === $line || ' ' == $line[-1] ? $y->str : " $y->str";
     $in_php = false;
 #.tag_rules
 
-#.kw_array
-- on: 000000 ///////////////////////////////////////
+#.multilines
+- on: in_array($y->tok, $this->_multilines)
   do: |
-    $new->str = '['; // modify source
-    $x = $this->x($new->i);      // get "(" x-data
-    $this->tok[$x->close] = ']'; // set ")" to "]" from open data
-    $this->tok[$y->i] = [T_COMMENT, '/*']; // dummy comment
-    continue; // skip T_ARRAY
-#.kw_array
+    if ($pos = strrpos($y->str, "\n")) {
+        $put(substr($y->str, 0, $pos));
+        $line = substr($y->str, $pos);
+    } else {
+        $line .= $y->str;
+    }
+#.multilines
 
-#.question
-- on: '?' == $y->str
+#.endword
+- on: in_array($y->tok, $this->_endword)
   do: |
-    ':' == $y->new->str ? ($line .= ' ?') : ($line .= ' ? ');
-#.question
+    $line .= $y->str;
+#.endword
 
 #.casecolon
-- on: ($x = ':' == $y->str) || in_array($y->tok, [T_SWITCH, T_CASE, T_DEFAULT])
+- on: ':' == $y->str
   do: |
-    if ($case) { # colon
+    if ($case) { # colon also
         $case = 0;
         $d2 = ++$depth;
         $put(":\n");
-    } elseif ($x) { # colon also
+    } elseif (')' == $pv->str) { # colon
+        $line .= ':';
+
+    } else { # colon
+        
         $line .= '?' == $pv->str ? ': ' : ' : ';
-    } elseif (T_SWITCH == $y->tok) {
+    }
+- on: in_array($y->tok, [T_SWITCH, T_CASE, T_DEFAULT])
+  do: |
+    if (T_SWITCH == $y->tok) {
         $line .= $y->str . ' ';
         $d2 = 0;
     } else {
@@ -182,6 +198,12 @@ optim_key: [$T_WHITESPACE, @@inc(.com3), $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENC
         $line .= $y->str;
 #.ampersand
 
+#.question
+- on: '?' == $y->str
+  do: |
+    ':' == $y->new->str ? ($line .= ' ?') : ($line .= ' ? ');
+#.question
+
 #.equals_sign
 - on: '=' == $y->str
   do: |
@@ -195,14 +217,14 @@ optim_key: [$T_WHITESPACE, @@inc(.com3), $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENC
     $line .= $y->str . ' ';
     if (in_array($y->tok, $this->_control)) {
         $dar = $this->get_close($y, $y->new);
-        if (in_array($this->tok($dar, true)->str, ['{', ';'])) # test no curly
+        if (in_array($this->tok($dar, true)->str, ['{', ';', ':'])) # test no curly
             $dar = 0;
     }
 #.whitespace_after
 
 #.whitespace_both
 - on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
-  do: $line .= " $y->str ";
+  do: $line .= $line === '' || ' ' == $line[-1] ? "$y->str " : " $y->str ";
 #.whitespace_both
 
 #.comments
