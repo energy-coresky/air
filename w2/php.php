@@ -32,7 +32,15 @@ class PHP
     private $wind_cfg = '~/w2/__beauty.yaml';
 
     static function file(string $name, $tab = 4) {
-        return new PHP(file_get_contents($name), $tab);
+        return new self(file_get_contents($name), $tab);
+    }
+
+    static function ary(array $in, $return = false) {
+        $php = new self("<?php " . var_export($in, true) . ';', 2);
+        $php->max_length = 80;
+        if ($return)
+            return (string)$php;
+        echo $php;
     }
 
     static function ini_once() {

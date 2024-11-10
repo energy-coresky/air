@@ -357,10 +357,10 @@ class Console
         print_r($list);
     }
 
-    /** Parse Yaml [ware=main] [fn=config.yaml] [one of 0|1|2] or Inline Yaml > sky y "+ @csv(;) $PATH()" */
+    /** Parse Yaml [ware=main] [fn=config.yaml] [one of 0|1|2|3] or Inline Yaml > sky y "+ @csv(;) $PATH()" */
     function c_y($ware = 'main', $fn = 'config.yaml', $func = 0) {
-        $list = ['var_export', 'print_r', 'var_dump'];
-        $out = fn($v, $func) => is_string($v) ? print($v) : $list[$func]($v);
+        $list = ['var_export', 'print_r', 'var_dump', 'PHP::ary'];
+        $out = fn($v, $func) => is_string($v) ? print($v) : call_user_func($list[$func], $v);
         if (strpos($ware, ' ')) { # inline yaml
             !is_num($fn) or $func = $fn;
             '+' == $ware[0] or print "Inline Yaml: ";
