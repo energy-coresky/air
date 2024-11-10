@@ -24,7 +24,7 @@ class PHP
     public $pos = 0;
     public $curly = 0;
     public $html_cnt = 0;
-    public $max_length = 120;
+    public $max_length = 0;
 
     private $stack = [];
     private $x = [];
@@ -82,10 +82,13 @@ class PHP
             $new = $this->tok($y->i + 1);
             if (T_COMMENT == $y->tok || T_DOC_COMMENT == $y->tok) # 2do ->save_comment
                 continue;
-            if (T_OPEN_TAG == $y->tok)
-                $y->str = '<?php ';
+            if (T_OPEN_TAG == $y->tok) {
+                $echo = in_array($new->tok, [T_ECHO, T_PRINT]) && ($new = $this->tok($y->i + 2));
+                $y->str = $echo ? '<?=' : ($this->html_cnt > 1 ? '<?' : '<?php ');
+            }
             if (!$y->i)
                 $y->str .= "/* Minified with Coresky framework, https://coresky.net */";
+            
             if (T_WHITESPACE == $y->tok) {//2do
                 if ($not($pv->str[-1]) || !$new || $not($new->str[0]))
                     continue;
@@ -101,15 +104,15 @@ class PHP
         return $out;
     }
 
-    private function left_bracket($y, $x) {
+    private function left_bracket($y) {
         $len = strlen($y->line);
-        if ($len + $x->len < $this->max_length) // $x->comma > 2
+        if ($len + $y->len < $this->max_length) // $y->comma > 2
             return true; # continue line
-        [$new, $str, $nx] = $this->wind_nice_php($y->new->i, $x->close);
-        if (!$nx || '[' == $y->str && '[' == $new->str)
+        [$new, $str] = $this->wind_nice_php($y->new->i, $y->close);
+        if (!$new->len || '[' == $y->str && '[' == $new->str)
             return false; # add new line
         if ($len + strlen($str) < $this->max_length) {
-            [, $distance, ] = $this->wind_nice_php($nx->close, $x->close);
+            [, $distance] = $this->wind_nice_php($new->close, $y->close);
             if (strlen($distance) > 20)
                 return false; # add new line
             $y->new = $new;
@@ -123,33 +126,32 @@ class PHP
         $stk =& $this->stack;
 
         if ($oc > 0) { # open
-            $x = $this->x($y->i);
-            $curly = '{' == $y->str && !in_array($x->reason, $this->_not_open_curly);
-            if (!$curly && $this->left_bracket($y, $x)) {
+            $curly = '{' == $y->str && !in_array($y->reason, $this->_not_open_curly);
+            if (!$curly && $this->left_bracket($y)) {
                 if ($for = T_FOR === $prev)
                     $this->in_par = true;
                 $stk[] = $for ? 0 : false;
                 return $y->str; # continue $line
             }
             $stk[] = $curly ? false : $y->str;
-            $this->x[$x->close] = $y->i;
-            if ($class = $curly && in_array($x->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
+            $this->x[$y->close] = $y->i;
+            if ($y->new->i == $y->close)
+                $y->new = $this->tok($y->new->i);
+            if ($class = $curly && in_array($y->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
                 $put("\n") or $put("{");
             $depth++;
             $class ? $put("\n") : $put($curly ? " {\n" : "$y->str\n");
         } elseif ($oc < 0) { # close
-            $y->reason = 0;
             $pop = array_pop($stk);
             if (0 === $pop)
                 $this->in_par = false;
-            if (!isset($this->x[$y->i])) {
+            if (!$y->len) {
                 if (']' == $y->str && ', ' == substr($y->line, -2))
                     $y->line = substr($y->line, 0, -2); # modify source
                 return $y->str;
             }
             if (']' == $y->str && $y->line && ' ' != $y->line[-1]) # modify source
                 $put(",\n");
-            $y->reason = $this->x($this->x[$y->i])->reason;
             $depth--;
             T_SWITCH != $y->reason or $depth--;
             '' === trim($y->line) ? $put('', $y->str) : $put("\n", $y->str);
@@ -171,8 +173,8 @@ class PHP
         return false;
     }
 
-    function del_arrow(&$y, &$prev, &$key) {
-        if (!$y->ignore && in_array($prev, ['[', ','], true)) {
+    function del_arrow(&$y, &$prev, &$key, $ignore) {
+        if (!$ignore && in_array($prev, ['[', ','], true)) {
             if ($y->str === (string)($key++ - 1)) {
                 $new = $this->tok($y->i, true);
                 if (T_DOUBLE_ARROW == $new->tok) {
@@ -198,13 +200,12 @@ class PHP
         $reason = $prev = $key = $_key = 0;
         for ($y = $this->tok(); $y; $y = $y->new) { # step 1
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
-            $y->ignore = in_array($y->tok, $this->_tokens_ign);
+            $ignore = in_array($y->tok, $this->_tokens_ign);
             if (!$this->in_str && '[' === $y->str) {
                 [$_key, $key] = [$key, 1];
-            } elseif ($key && $this->del_arrow($y, $prev, $key)) {
+            } elseif ($key && $this->del_arrow($y, $prev, $key, $ignore)) {
                 continue;
             }
-
             if ($stk) {
                 $this->x[$i = end($stk)[0]][0] += strlen(' ' == $y->str ? ' ' : trim($y->str));
                 ',' != $y->str or $this->x[$i][2]++;/// comas?
@@ -229,8 +230,9 @@ class PHP
             }
             T_INLINE_HTML == $y->tok && $this->html_cnt++;
             $y->new = $this->tok($y->i + 1);
-            $y->ignore or $prev = $y->tok ?: $y->str;
+            $ignore or $prev = $y->tok ?: $y->str;
         }
+        $this->max_length or $this->max_length = $this->html_cnt > 1 ? 320 : 120;
     }
 
     function int_bracket($y, $is_nice = false) {
@@ -432,30 +434,22 @@ class PHP
         }
     }
 
-    function x($i) {
-        $x =& $this->x[$i];
-        return (object)[
-            'len' => &$x[0],
-            'close' => &$x[1],
-            'comma' => &$x[2],
-            'reason' => &$x[3],
-        ];
-    }
-
     function tok($i = 0, $new = false) {
+        static $keys = ['len', 'close', 'comma', 'reason'];
         if ($new)
             while (is_array($this->tok[++$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign));
         if ($i < 0 || $i >= $this->count)
             return false;
-        $tok =& $this->tok[$i];
-        $is = is_array($tok) or $ary = [0, &$tok];
-        $is ? ($p =& $tok) : ($p =& $ary);
-        return (object)[
-            'i' => $i,
-            'tok' => &$p[0],
-            'str' => &$p[1],
-            'line' => $tok[2] ?? fn() => $this->char_line($i),
-            'com' => 0,
-        ];
+        $ary = ['len' => false, 'com' => 0];
+        if ($v = $this->x[$i] ?? false)
+            $ary = array_combine($keys, is_array($v) ? $v : $this->x[$v]) + $ary;
+        $y = (object)$ary;
+        $tok =& $this->tok[$y->i = $i];
+        $is_array = is_array($tok) or $ary = [0, &$tok];
+        $is_array ? ($p =& $tok) : ($p =& $ary);
+        $y->tok =& $p[0];
+        $y->str =& $p[1];
+        $y->line = $p[2] ?? fn() => $this->char_line($i);
+        return $y;
     }
 }

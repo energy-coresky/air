@@ -58,7 +58,7 @@ head:
         if (in_array($y->tok, $this->_ws_head)) {
             $y->str = ' ' . $y->str;
         }
-        if ('}' == $pv->str && isset($pv->reason) && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
+        if ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
             $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
         }
         if (';' == $pv->str && in_array($y->tok, $this->_semicolon_prev)) {
@@ -116,20 +116,29 @@ endword: @inc(.ends)
 #.tag_rules
 - on: T_OPEN_TAG == $y->tok
   do: |
+    $y->i ? ($line .= $y->str) : $put(trim($y->str) . "\n\n");
     $in_php = true;
-    $y->i ? ($line .= "$y->str") : $put(trim($y->str) . "\n\n");
-- on: in_array($y->tok, [T_HALT_COMPILER, T_CLOSE_TAG])
+- on: T_CLOSE_TAG == $y->tok
   do: |
-    $line .= '' === $line || ' ' == $line[-1] ? $y->str : " $y->str";
+    '' === $line || ' ' == $line[-1] or $y->str = " $y->str";
+    if ("\n" == $y->str[-1]) {
+        $put($y->str);
+    } else {
+        $line .= $y->str;
+    }
+    $in_php = false;
+- on: T_HALT_COMPILER == $y->tok
+  do: |
+    $line .= $y->str;
     $in_php = false;
 #.tag_rules
 
 #.multilines
 - on: in_array($y->tok, $this->_multilines)
   do: |
-    if ($pos = strrpos($y->str, "\n")) {
-        $put(substr($y->str, 0, $pos));
-        $line = substr($y->str, $pos);
+    if (false !== ($pos = strrpos($y->str, "\n"))) {
+        $put(substr($y->str, 0, $pos + 1));
+        $line = substr($y->str, $pos + 1);
     } else {
         $line .= $y->str;
     }
@@ -148,7 +157,7 @@ endword: @inc(.ends)
         $case = 0;
         $d2 = ++$depth;
         $put(":\n");
-    } elseif (')' == $pv->str) { # colon
+    } elseif (')' == $pv->str) {
         $line .= ':';
 
     } else { # colon
@@ -253,11 +262,11 @@ endword: @inc(.ends)
   do: |
     if ($at) {
         if ($oc > 0) { // opening
-            $x = $this->x($y->i);
-            if ($x->len > 80 || '{' == $y->str)
-                return [$y, $out . $line, $x];
+            //$x = $this->x($y->i);
+            if ($y->len > 80 || '{' == $y->str)
+                return [$y, $out . $line];
         } elseif ($y->i >= $to) { // close or comma
-            return [$y, $out . $line, false];
+            return [$y, $out . $line];
         }
         $line .= $y->str . ($oc ? '' : ' ');
     } else {
