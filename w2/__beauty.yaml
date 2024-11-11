@@ -7,18 +7,18 @@
 #.nice_php ///////////////////////////////////////////////////////////////////////////////////
 body:
   rules:
-    + @inc(.tag_rules)
-    + @inc(.multilines)
-    + @inc(.endword)
-    + @inc(.casecolon)
-    + @inc(.semicolon)
-    + @inc(.ampersand)
-    + @inc(.question)
-    + @inc(.equals_sign)
-    + @inc(.whitespace_after)
-    + @inc(.whitespace_both)
-    + @inc(.comments)
-    + @inc(.brackets_or_comma)
+    + @inc(.tag_rules)        # <? ?>
+    + @inc(.multilines)       # <div, "A\nB"
+    + @inc(.endword)          # endif,..
+    + @inc(.casecolon)        # : switch case default
+    + @inc(.semicolon)        # ;
+    + @inc(.ampersand)        # &
+    + @inc(.question)         # ?
+    + @inc(.equals_sign)      # =
+    + @inc(.comments)         # //,..
+    + @inc(.whitespace_both)  # elseif + - += -= => ..
+    + @inc(.whitespace_after) # for,.. if catch echo match do
+    + @inc(.brackets_or_comma) # {[(,)]}
     default: |
         if ($line !== '' && $alfa($line[-1]) && $alfa($y->str[0]))
             $line .= ' ';
@@ -26,17 +26,23 @@ body:
 head:
   param: $at, $to = 0
   code: |
-    $depth = $dar = $d1 = $d2 = $in_php = $case = 0;
+    $depth = $dar = $d1 = $d2 = $in_php = $case = $reason = 0;
     $out = $line = $last_pv_semi = '';
     $put = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
         '' === $s1 or $out .= $line . $s1;
         $line = str_pad('', $depth * $this->tab) . $s2;
     };
     $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
+    $stk =& $this->stack;
 
     for ($y = $pv = $this->tok($at); $y; $y = $y->new) {
         if (($y->new = $this->tok($y->i + 1)) && T_WHITESPACE == $y->new->tok)
             $y->new = $this->tok($y->i + 2); # next is NOT WHITESPACE
+        $oc = $this->int_bracket($y, true);
+        if ($this->in_str) {
+            $line .= $y->str; // T_ENCAPSED_AND_WHITESPACE
+            continue;
+        }
 
         if ($y->com = in_array($y->tok, $this->_comments)) {
             $c2 = $y->str[1] ?? '#';
@@ -46,21 +52,13 @@ head:
                 $y->com = 3; # multiline comment
         }
 
-        $oc = $this->int_bracket($y, true);
-        if ($this->in_str) {
-            $line .= $y->str; // T_ENCAPSED_AND_WHITESPACE
-            continue;
-        }
-
         if (T_RETURN == $pv->tok && ';' != $y->str)
             $line .= ' ';
-
-        if (in_array($y->tok, $this->_ws_head)) {
+        if (in_array($y->tok, $this->_ws_head))
             $y->str = ' ' . $y->str;
-        }
-        if ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
-            $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
-        }
+        if ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly))
+            $put(in_array($reason, $this->_double_nl_after) ? "\n\n" : "\n");
+
         if (';' == $pv->str && in_array($y->tok, $this->_semicolon_prev)) {
             $last_pv_semi == $y->tok or $line = '' or $put("\n");
             $last_pv_semi = $y->tok;
@@ -68,46 +66,50 @@ head:
 
 tail:
   code: |
+    //$y->com or 
     $pv = $y;
+    if ($y->len)
+        $reason = $y->reason;
     }
     return $out . $line . ($in_php ? "\n" : '');
 #.nice_php
 
 #.ary_nice_php ///////////////////////////////////////////////////////////////////////////////////
 + @preflight |
-  $array['not_open_curly'] = [
+  $array['not_open_curly'] = [ # step1,2
     T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR,
     T_NAME_QUALIFIED => T_NS_SEPARATOR,
   ];
   foreach ($array as $key => $val)
       PHP::$data->{$key} = $val;
 
-tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT]
+tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT] # step1
+curly_reason: [ # step1
+  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
+  @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
+]
+optim_key: [ # step1
+  @@inc(.com3), $T_WHITESPACE, $T_VARIABLE,
+  $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENCAPSED_STRING
+]
 not_nl_after_curly: [
   ',', '(', ')', '[', ']', '{', '}', ;,
   $T_ELSE, $T_ELSEIF, $T_CATCH, $T_FINALLY
 ]
 ws_head: [$T_ELSE, $T_CATCH]
-ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH, $T_LIST, $T_DO]
+ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH, $T_DO]
 ws_both: [
-  @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift),
+  /, %, *, ., >, <, +, -,
   $T_DOUBLE_ARROW, $T_ELSEIF, $T_POW,
-  /, %, *, ., >, <, +, -
+  @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)
 ]
 semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
 double_nl_after: [@@inc(.newdn), $T_NAMESPACE]
-control: [$T_IF, @@inc(.loops)]
-curly_reason: [
-  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,
-  @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
-]
-optim_key: [
-  @@inc(.com3), $T_WHITESPACE, $T_VARIABLE,
-  $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENCAPSED_STRING
-]
+control: [@@inc(.loops), $T_IF]
 multilines: [$T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING, $T_ENCAPSED_AND_WHITESPACE]
 comments: @inc(.com3)
 endword: @inc(.ends)
+altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
 #.ary_nice_php
 
 # =====================================================================================
@@ -147,7 +149,12 @@ endword: @inc(.ends)
 #.endword
 - on: in_array($y->tok, $this->_endword)
   do: |
-    $line .= $y->str;
+    if (T_ENDIF == $y->tok) {
+        $line .= $y->str;
+    } else {
+        $depth -= T_ENDSWITCH == $y->tok ? 2 : 1;
+        $put('' === trim($line) ? '' : "\n", $y->str);
+    }
 #.endword
 
 #.casecolon
@@ -157,9 +164,19 @@ endword: @inc(.ends)
         $case = 0;
         $d2 = ++$depth;
         $put(":\n");
+    } elseif (T_ELSE == $pv->tok) {
+        goto ifels;
     } elseif (')' == $pv->str) {
-        $line .= ':';
-
+        if (in_array($reason, [T_IF, T_ELSEIF])) {
+            ifels:
+            $line .= ':';
+        } elseif (in_array($reason, $this->_altsyntax)) {
+            ++$depth;
+            $put(":\n");
+        } else {
+            $line .= ':';
+        }
+        $reason = 0;
     } else { # colon
         
         $line .= '?' == $pv->str ? ': ' : ' : ';
@@ -220,22 +237,6 @@ endword: @inc(.ends)
     $line .= " =" . ('&' == $new->str ? '' : ' ');
 #.equals_sign
 
-#.whitespace_after
-- on: in_array($y->tok, $this->_ws_tail)
-  do: |
-    $line .= $y->str . ' ';
-    if (in_array($y->tok, $this->_control)) {
-        $dar = $this->get_close($y, $y->new);
-        if (in_array($this->tok($dar, true)->str, ['{', ';', ':'])) # test no curly
-            $dar = 0;
-    }
-#.whitespace_after
-
-#.whitespace_both
-- on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
-  do: $line .= $line === '' || ' ' == $line[-1] ? "$y->str " : " $y->str ";
-#.whitespace_both
-
 #.comments
 - on: $y->com
   do: |
@@ -257,6 +258,22 @@ endword: @inc(.ends)
     }
 #.comments
 
+#.whitespace_both
+- on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
+  do: $line .= $line === '' || ' ' == $line[-1] ? "$y->str " : " $y->str ";
+#.whitespace_both
+
+#.whitespace_after
+- on: in_array($y->tok, $this->_ws_tail)
+  do: |
+    $line .= $y->str . ' ';
+    if (in_array($y->tok, $this->_control)) {
+        $dar = $this->get_close($y, $y->new);
+        if (in_array($this->tok($dar, true)->str, ['{', ';', ':'])) # test no curly
+            $dar = 0;
+    }
+#.whitespace_after
+
 #.brackets_or_comma
 - on: $oc || ',' == $y->str
   do: |
@@ -271,7 +288,7 @@ endword: @inc(.ends)
         $line .= $y->str . ($oc ? '' : ' ');
     } else {
         $y->line =& $line;
-        $line .= $this->indents($oc, $y, $pv->tok ?: $pv->str, $depth, $put);
+        $line .= $this->indents($oc, $y, $pv->tok, $depth, $put);
         if ($dar == $y->i) {
             $depth++;
             $put("\n");

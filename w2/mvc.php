@@ -269,13 +269,13 @@ trait HOOK_D
             $file = WWW . "m/etc/$fn";
         }
         if (is_file($file)) {
-            switch ($ext) {
+            switch ($ext):
                 case 'txt': MVC::mime('text/plain; charset=' . ENC); break;
                 case 'css': MVC::mime('text/css'); break;
                 case 'xml': MVC::mime('application/xml'); break;
                 case 'js':  MVC::mime('application/javascript'); break;
                 case 'map': MVC::mime('application/json'); break;
-            }
+            endswitch;
             MVC::last_modified(filemtime($file), false, function() use ($sky, $fn) {
                 SKY::log('etc', "304 $fn");
             });

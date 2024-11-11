@@ -361,6 +361,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
             $code = "<?php $code";
         $out = $u = $ct = $halt = '';
         $ary = $y = [];
+        $sq = 0;
         foreach (token_get_all($code) as $i => $t) {
             if ($tag && !$i)
                 continue;

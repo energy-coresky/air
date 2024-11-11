@@ -136,12 +136,12 @@ class PHP
         if ($oc > 0) { # open
             $curly = '{' == $y->str && !in_array($y->reason, $this->_not_open_curly);
             if (!$curly && $this->left_bracket($y)) {
-                if ($for = T_FOR === $prev)
+                if ($for = T_FOR == $prev)
                     $this->in_par = true;
                 $stk[] = $for ? 0 : false;
                 return $y->str; # continue $line
             }
-            $stk[] = $curly ? false : $y->str;
+            $stk[] = !$curly;
             $this->x[$y->close] = $y->i;
             if ($y->new->i == $y->close)
                 $y->new = $this->tok($y->new->i);
@@ -150,8 +150,7 @@ class PHP
             $depth++;
             $class ? $put("\n") : $put($curly ? " {\n" : "$y->str\n");
         } elseif ($oc < 0) { # close
-            $pop = array_pop($stk);
-            if (0 === $pop)
+            if (0 === array_pop($stk))
                 $this->in_par = false;
             if (!$y->len) {
                 if (']' == $y->str && ', ' == substr($y->line, -2))
@@ -162,7 +161,7 @@ class PHP
                 $put(",\n");
             $depth--;
             T_SWITCH != $y->reason or $depth--;
-            '' === trim($y->line) ? $put('', $y->str) : $put("\n", $y->str);
+            $put('' === trim($y->line) ? '' : "\n", $y->str);
         } else { # comma
             if (!$stk || !end($stk))
                 return ', ';
@@ -224,8 +223,13 @@ class PHP
             $oc = $this->int_bracket($y, true);
             if ($oc > 0) {
                 $stk[] = [$y->i, $mod, $_key];
-                $this->x[$y->i] = [1, 0, 1, in_array($prev, $this->_not_open_curly) ? $prev : $reason];
+                $rsn = in_array($prev, $this->_not_open_curly) ? $prev : $reason;
+                if (!$rsn && '{' == $y->str)
+                    $rsn = $_rsn;
+                $this->x[$y->i] = [1, 0, 1, $rsn];
                 # len, close, comma, reason
+                if (T_SWITCH == $reason)
+                    [$_rsn, $reason] = [$reason, 0];
             } elseif ($oc < 0) {
                 [$i, $mod, $_key] = array_pop($stk);
                 if ('[' === $this->tok[$i])
