@@ -25,8 +25,6 @@ trait Processor
         $dst = ['main', $name = 'wind_' . $ware . "_$this->_marker.php"];
         $closure =& $cached[$name];
         $ok = (bool)$closure;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
-
-        trace($ok ? "$name # used cached" : "$name # recompiled", 'WIND');
         if (!$ok) {
             $closure = false;
             $y = yml("+ @inc($this->_marker) $fn");

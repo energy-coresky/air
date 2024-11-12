@@ -7,7 +7,7 @@ class Rewrite
     static $cnt = 0;
 
     static function lib(&$map, &$list = null) {
-        $list = array_keys($yml = YML::text(Boot::tail(__FILE__, __COMPILER_HALT_OFFSET__)));
+        $list = array_keys($yml = yml('+ @inc(yml.library) ~/w2/rewrite.php'));
         $lib = [];
         foreach ($yml as $v)
             $lib[] = [$list[count($lib)], $v[2], $v[0], $v[1]];

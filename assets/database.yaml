@@ -73,6 +73,15 @@
 ]
 #.other
 
+#.all_tokens
++ [
+  @@inc(.loops), @@inc(.ifels), @@inc(.modifiers), @@inc(.sets), @@inc(.try), @@inc(.casts),
+  @@inc(.magic), @@inc(.inc), @@inc(.op_eq), @@inc(.op_is), @@inc(.op_obj), @@inc(.bools),
+  @@inc(.logic), @@inc(.shift), @@inc(.id), @@inc(.in_str), @@inc(.names8), @@inc(.amp8),
+  @@inc(.newdn), @@inc(.words), @@inc(.ends), @@inc(.heredoc), @@inc(.com3), @@inc(.tags), @@inc(.other)
+]
+#.all_tokens
+
 # =====================================================================================
 # ////////////////////////////////          DATABASE         //////////////////////////
 # =====================================================================================

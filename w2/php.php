@@ -181,8 +181,8 @@ class PHP
         return false;
     }
 
-    function del_arrow(&$y, &$pv, &$key, $ignore) {
-        if (!$ignore && in_array($pv->str, ['[', ','], true)) {
+    function del_arrow(&$y, &$pv, &$key) {
+        if (!$y->ignore && in_array($pv->str, ['[', ','], true)) {
             if ($y->str === (string)($key++ - 1)) {
                 $new = $this->tok($y->i, true);
                 if (T_DOUBLE_ARROW == $new->tok) {
@@ -207,10 +207,10 @@ class PHP
         $reason = $key = $_key = $rsn = 0;
         for ($y = $pv = $this->tok(); $y; $y = $y->new) { # step 1
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
-            $ignore = in_array($y->tok, $this->_tokens_ign);
+            $y->ignore = in_array($y->tok, $this->_tokens_ign);
             if (!$this->in_str && '[' === $y->str) {
                 [$_key, $key] = [$key, 1];
-            } elseif ($key && $this->del_arrow($y, $pv, $key, $ignore)) {
+            } elseif ($key && $this->del_arrow($y, $pv, $key)) {
                 continue;
             }
             if ($stk) {
@@ -243,7 +243,7 @@ class PHP
                 }
             }
             $y->new = $this->tok($y->i + 1);
-            $ignore or $pv = $y;
+            $y->ignore or $pv = $y;
         }
         $this->max_length[0] or $this->max_length[0] = 130;
         $this->max_length[1] or $this->max_length[1] = 320;

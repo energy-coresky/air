@@ -372,7 +372,7 @@ class Language
                     $code .= sprintf("const L_$const=%s;\n", var_export($ary ? $val2 : $val, true));
                 }
             }
-            $pg or $code .= Boot::tail(__FILE__, __COMPILER_HALT_OFFSET__);
+            $pg or $code .= yml('+ @inc(yml.translate) ~/w2/language.php');
             Plan::_p("lng/$lg$pg.php", Boot::auto($out, $code));
         }
     }
@@ -569,24 +569,27 @@ class Language
 
 __halt_compiler();
 
-function t(...$in) {
-    static $n = 0;
-
-    if ($args = (bool)$in) {
-        $s = array_shift($in);
-        if ($in && is_array($in[0]))
-            $in = $in[0];
-    } elseif ($n++ % 2) {
-        $s = ob_get_clean();
-    } else {
-        return ob_start();
-    }
-
-    if (isset(SKY::$reg['trans_late'][$s])) {
-        DEFAULT_LG == LG or $s = SKY::$reg['trans_late'][$s];
-    } elseif (DEV && 1 == SKY::d('trans')) {
-        SKY::$reg['trans_coll'][$s] = 0;
-    }
-    $args or print $s;
-    return $in ? vsprintf($s, $in) : $s;
-}
+#.translate
++ |
+  function t(...$in) {
+      static $n = 0;
+    
+      if ($args = (bool)$in) {
+          $s = array_shift($in);
+          if ($in && is_array($in[0]))
+              $in = $in[0];
+      } elseif ($n++ % 2) {
+          $s = ob_get_clean();
+      } else {
+          return ob_start();
+      }
+    
+      if (isset(SKY::$reg['trans_late'][$s])) {
+          DEFAULT_LG == LG or $s = SKY::$reg['trans_late'][$s];
+      } elseif (DEV && 1 == SKY::d('trans')) {
+          SKY::$reg['trans_coll'][$s] = 0;
+      }
+      $args or print $s;
+      return $in ? vsprintf($s, $in) : $s;
+  }
+#.translate

@@ -17,7 +17,7 @@ body:
     + @inc(.question)         # ?
     + @inc(.equals_sign)      # =
     + @inc(.comments)         # //,..
-    + @inc(.whitespace_both)  # elseif + - += -= => ..
+    + @inc(.whitespace_both)  # + - += -= => ..
     + @inc(.whitespace_after) # for,.. if catch echo match do
     + @inc(.brackets_or_comma) # {[(,)]}
     default: |
@@ -27,7 +27,7 @@ body:
 head:
   param: $at, $to = 0
   code: |
-    $depth = $dar = $d1 = $d2 = $in_php = $case = $reason = 0;
+    $depth = $dar = $d1 = $d2 = $in_php = $case = 0;
     $out = $line = $last_pv_semi = '';
     $put = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
         '' === $s1 or $out .= $line . $s1;
@@ -44,7 +44,7 @@ head:
             $y->new->com = in_array($y->new->tok, $this->_comments);
         $oc = $this->int_bracket($y, true);
         if ($this->in_str) {
-            $line .= $y->str; // T_ENCAPSED_AND_WHITESPACE
+            $line .= $y->str;
             continue;
         }
 
@@ -61,7 +61,7 @@ head:
         if (in_array($y->tok, [T_CATCH]))
             $y->str = ' ' . $y->str;
         if ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly))
-            $put(in_array($reason, $this->_double_nl_after) ? "\n\n" : "\n");
+            $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
 
         if (';' == $pv->str && in_array($y->tok, $this->_semicolon_prev)) {
             $last_pv_semi == $y->tok or $line = '' or $put("\n");
@@ -71,8 +71,6 @@ head:
 tail:
   code: |
     $pv = $y;
-    if ($y->len)
-        $reason = $y->reason;
     }
     return $out . $line . ($in_php ? "\n" : '');
 #.nice_php
@@ -101,8 +99,7 @@ not_nl_after_curly: [
 ]
 ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH, $T_DO]
 ws_both: [
-  /, %, *, ., >, <, +, -,
-  $T_DOUBLE_ARROW, $T_ELSEIF, $T_POW,
+  /, %, *, ., >, <, +, -, $T_DOUBLE_ARROW, $T_POW,
   @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)
 ]
 semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
@@ -135,6 +132,7 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
   do: |
     $line .= $y->str;
     $in_php = false;
+    $this->in_html = 1;
 #.tag_rules
 
 #.multilines
@@ -169,7 +167,7 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
   do: |
     if ($swt = T_ENDSWITCH == $y->tok)
         $depth--;
-    if ($this->in_html && !$swt) {//T_ENDIF == $y->tok || 
+    if ($this->in_html && !$swt) {
         $line .= $y->str;
     } else {
         $this->in_html or $depth--;
@@ -180,7 +178,7 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
 #.casecolon
 - on: ':' == $y->str
   do: |
-    if ($case) { # colon also
+    if ($case) {
         $case = false;
         $d2 = ++$depth;
         $put(":\n");
@@ -188,24 +186,21 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
         if (!$this->in_html)
             goto ifels;
         $line .= ':';
-    } elseif (')' == $pv->str) { // [T_IF, T_ELSEIF]
-        if (in_array($reason, $this->_altsyntax) && !$this->in_html) {
+    } elseif (')' == $pv->str) {
+        if (isset($pv->reason) && in_array($pv->reason, $this->_altsyntax) && !$this->in_html) {
             ifels:
             ++$depth;
             $put(":\n");
         } else {
-            $line .= ':';
+            $line .= ' : ';
         }
-        $reason = 0;
-    } else { # colon
-        
+    } else {
         $line .= '?' == $pv->str ? ': ' : ' : ';
     }
 - on: in_array($y->tok, [T_SWITCH, T_CASE, T_DEFAULT])
   do: |
     if (T_SWITCH == $y->tok) {
         $line .= $y->str . ' ';
-        $d2 = 0;
     } else {
         $case = true;
         if ($d2) {
@@ -215,8 +210,8 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
             $line .= $y->str;
         }
         T_DEFAULT == $y->tok or $line .= ' ';
-        $d2 = 0;
     }
+    $d2 = 0;
 #.casecolon
 
 #.semicolon
@@ -260,7 +255,7 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
     //    continue;
     $ok_com = function () use (&$out, &$y) {
         $pos = strrpos($out, "\n", -2);
-        if (!$len = strlen(trim(substr($out, $pos)))) // empty prev line
+        if (!$len = strlen(trim(substr($out, $pos)))) # empty prev line
             return false;
         return $len + strlen($y->str) < 90 && $len > 3;
     };
@@ -294,15 +289,19 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
 - on: $oc || ',' == $y->str
   do: |
     if ($at) {
-        if ($oc > 0) { // opening
-            //$x = $this->x($y->i);
+        if ($oc > 0) { # open
             if ($y->len > 80 || '{' == $y->str)
                 return [$y, $out . $line];
-        } elseif ($y->i >= $to) { // close or comma
+        } elseif ($y->i >= $to) { # close or comma
             return [$y, $out . $line];
         }
         $line .= $y->str . ($oc ? '' : ' ');
     } else {
+        if ('(' == $y->str && in_array($pv->tok, $this->_altsyntax)) {
+            $ary = $this->x[$y->i];
+            $ary[0] = 0; # len=0
+            $this->x[$ary[1]] = $ary;
+        }
         $y->line =& $line;
         $line .= $this->indents($oc, $y, $pv->tok, $depth, $put);
         if ($dar == $y->i) {
