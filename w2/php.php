@@ -23,8 +23,8 @@ class PHP
     public $in_par = 0;
     public $pos = 0;
     public $curly = 0;
-    public $html_cnt = 0;
-    public $max_length = 0;
+    public $in_html = 0;
+    public $max_length = [0, 0];
 
     private $stack = [];
     private $x = [];
@@ -37,7 +37,7 @@ class PHP
 
     static function ary(array $in, $return = false) {
         $php = new self("<?php " . var_export($in, true) . ';', 2);
-        $php->max_length = 80;
+        $php->max_length[0] = 80;
         if ($return)
             return (string)$php;
         echo $php;
@@ -92,7 +92,7 @@ class PHP
                 continue;
             if (T_OPEN_TAG == $y->tok) {
                 $echo = in_array($new->tok, [T_ECHO, T_PRINT]) && ($new = $this->tok($y->i + 2));
-                $y->str = $echo ? '<?=' : ($this->html_cnt > 1 ? '<?' : '<?php ');
+                $y->str = $echo ? '<?=' : ($this->in_html ? '<?' : '<?php ');
             }
             if (!$y->i)
                 $y->str .= "/* Minified with Coresky framework, https://coresky.net */";
@@ -114,12 +114,13 @@ class PHP
 
     private function left_bracket($y) {
         $len = strlen($y->line);
-        if ($len + $y->len < $this->max_length) // $y->comma > 2
+        $max_length = $this->max_length[$this->in_html];
+        if ($len + $y->len < $max_length) // $y->comma > 2
             return true; # continue line
         [$new, $str] = $this->wind_nice_php($y->new->i, $y->close);
         if (!$new->len || '[' == $y->str && '[' == $new->str)
             return false; # add new line
-        if ($len + strlen($str) < $this->max_length) {
+        if ($len + strlen($str) < $max_length) {
             [, $distance] = $this->wind_nice_php($new->close, $y->close);
             if (strlen($distance) > 20)
                 return false; # add new line
@@ -180,8 +181,8 @@ class PHP
         return false;
     }
 
-    function del_arrow(&$y, &$prev, &$key, $ignore) {
-        if (!$ignore && in_array($prev, ['[', ','], true)) {
+    function del_arrow(&$y, &$pv, &$key, $ignore) {
+        if (!$ignore && in_array($pv->str, ['[', ','], true)) {
             if ($y->str === (string)($key++ - 1)) {
                 $new = $this->tok($y->i, true);
                 if (T_DOUBLE_ARROW == $new->tok) {
@@ -189,8 +190,7 @@ class PHP
                         $new = $this->tok($new->i + 1);
                     $this->count -= $len = 1 + $new->i - $y->i;
                     array_splice($this->tok, $y->i, $len); # modify code
-                    $prev = T_DOUBLE_ARROW;
-                    return $y->new = $this->tok($y->i);
+                    return $y->new = $pv = $this->tok($y->i);
                 }
             }
             $key = 0; # off
@@ -204,13 +204,13 @@ class PHP
         if (!isset(PHP::$data->not_open_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $stk =& $this->stack;
-        $reason = $prev = $key = $_key = 0;
-        for ($y = $this->tok(); $y; $y = $y->new) { # step 1
+        $reason = $key = $_key = $rsn = 0;
+        for ($y = $pv = $this->tok(); $y; $y = $y->new) { # step 1
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $ignore = in_array($y->tok, $this->_tokens_ign);
             if (!$this->in_str && '[' === $y->str) {
                 [$_key, $key] = [$key, 1];
-            } elseif ($key && $this->del_arrow($y, $prev, $key, $ignore)) {
+            } elseif ($key && $this->del_arrow($y, $pv, $key, $ignore)) {
                 continue;
             }
             if ($stk) {
@@ -223,13 +223,11 @@ class PHP
             $oc = $this->int_bracket($y, true);
             if ($oc > 0) {
                 $stk[] = [$y->i, $mod, $_key];
-                $rsn = in_array($prev, $this->_not_open_curly) ? $prev : $reason;
-                if (!$rsn && '{' == $y->str)
-                    $rsn = $_rsn;
-                $this->x[$y->i] = [1, 0, 1, $rsn];
+                if ('{' == $y->str && T_SWITCH == $rsn)
+                    $reason = $rsn;
+                $this->x[$y->i] = [1, 0, 1, in_array($pv->tok, $this->_not_open_curly) ? $pv->tok : $reason];
                 # len, close, comma, reason
-                if (T_SWITCH == $reason)
-                    [$_rsn, $reason] = [$reason, 0];
+                $reason = $rsn = 0;
             } elseif ($oc < 0) {
                 [$i, $mod, $_key] = array_pop($stk);
                 if ('[' === $this->tok[$i])
@@ -239,12 +237,16 @@ class PHP
                 $this->x[$i][1] = $y->i;
                 if ($stk)
                     $this->x[end($stk)[0]][0] += $this->x[$i][0] - 1;
+                if ('}' != $y->str) {
+                    $reason = $rsn = $this->x[$i][3];
+                    in_array($reason, $this->_double_nl_after) or $reason = 0;
+                }
             }
-            T_INLINE_HTML == $y->tok && $this->html_cnt++;
             $y->new = $this->tok($y->i + 1);
-            $ignore or $prev = $y->tok ?: $y->str;
+            $ignore or $pv = $y;
         }
-        $this->max_length or $this->max_length = $this->html_cnt > 1 ? 320 : 120;
+        $this->max_length[0] or $this->max_length[0] = 130;
+        $this->max_length[1] or $this->max_length[1] = 320;
     }
 
     function int_bracket($y, $is_nice = false) {
