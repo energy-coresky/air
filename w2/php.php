@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.541;
+    const version = 0.550;
 
     use Processor;
 
@@ -135,7 +135,7 @@ class PHP
         $stk =& $this->stack;
 
         if ($oc > 0) { # open
-            $curly = '{' == $y->str && !in_array($y->reason, $this->_not_open_curly);
+            $curly = '{' == $y->str && !in_array($y->reason, $this->_not_nl_curly);
             if (!$curly && $this->left_bracket($y)) {
                 if ($for = T_FOR == $prev)
                     $this->in_par = true;
@@ -201,7 +201,7 @@ class PHP
     }
 
     function nice() {
-        if (!isset(PHP::$data->not_open_curly))
+        if (!isset(PHP::$data->not_nl_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $stk =& $this->stack;
         $reason = $key = $_key = $rsn = 0;
@@ -213,20 +213,17 @@ class PHP
             } elseif ($key && $this->del_arrow($y, $pv, $key)) {
                 continue;
             }
-            if ($stk) {
+            if ($stk)
                 $this->x[$i = end($stk)[0]][0] += strlen(' ' == $y->str ? ' ' : trim($y->str));
-                ',' != $y->str or $this->x[$i][2]++;/// comas?
-            }
-            if (in_array($y->tok = $this->_not_open_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
+            if (in_array($y->tok = $this->_not_nl_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
 
             $oc = $this->int_bracket($y, true);
             if ($oc > 0) {
                 $stk[] = [$y->i, $mod, $_key];
                 if ('{' == $y->str && T_SWITCH == $rsn)
-                    $reason = $rsn;
-                $this->x[$y->i] = [1, 0, 1, in_array($pv->tok, $this->_not_open_curly) ? $pv->tok : $reason];
-                # len, close, comma, reason
+                    $reason = $rsn; # len, close, reason
+                $this->x[$y->i] = [1, 0, in_array($pv->tok, $this->_not_nl_curly) ? $pv->tok : $reason];
                 $reason = $rsn = 0;
             } elseif ($oc < 0) {
                 [$i, $mod, $_key] = array_pop($stk);
@@ -238,7 +235,7 @@ class PHP
                 if ($stk)
                     $this->x[end($stk)[0]][0] += $this->x[$i][0] - 1;
                 if ('}' != $y->str) {
-                    $reason = $rsn = $this->x[$i][3];
+                    $reason = $rsn = $this->x[$i][2];
                     in_array($reason, $this->_double_nl_after) or $reason = 0;
                 }
             }
@@ -449,7 +446,7 @@ class PHP
     }
 
     function tok($i = 0, $new = false) {
-        static $keys = ['len', 'close', 'comma', 'reason'];
+        static $keys = ['len', 'close', 'reason'];
         if ($new)
             while (is_array($this->tok[++$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign));
         if ($i < 0 || $i >= $this->count)
@@ -463,7 +460,7 @@ class PHP
         $is_array ? ($p =& $tok) : ($p =& $ary);
         $y->tok =& $p[0];
         $y->str =& $p[1];
-        $y->line = $p[2] ?? fn() => $this->char_line($i);
+        $y->line = $p[2] ?? 0;
         return $y;
     }
 }

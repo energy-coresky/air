@@ -317,6 +317,7 @@ class Plan
         if ($context) {
             $vars = "\n";
             foreach ($context as $k => $v) //2do details for stdClass
+                //$vars .= "\$$k = " . self::var($v, '', false, '?') . ";\n";
                 $vars .= "\$$k = " . self::var($v) . ";\n";
         }
         $p =& SKY::$errors;
