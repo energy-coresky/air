@@ -204,7 +204,7 @@ class PHP
         if (!isset(PHP::$data->not_nl_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $stk =& $this->stack;
-        $reason = $key = $_key = $rsn = 0;
+        $reason = $key = $_key = 0;
         for ($y = $pv = $this->tok(); $y; $y = $y->new) { # step 1
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
@@ -221,10 +221,8 @@ class PHP
             $oc = $this->int_bracket($y, true);
             if ($oc > 0) {
                 $stk[] = [$y->i, $mod, $_key];
-                if ('{' == $y->str && T_SWITCH == $rsn)
-                    $reason = $rsn; # len, close, reason
                 $this->x[$y->i] = [1, 0, in_array($pv->tok, $this->_not_nl_curly) ? $pv->tok : $reason];
-                $reason = $rsn = 0;
+                $reason = 0; # len, close, reason
             } elseif ($oc < 0) {
                 [$i, $mod, $_key] = array_pop($stk);
                 if ('[' === $this->tok[$i])
@@ -234,10 +232,10 @@ class PHP
                 $this->x[$i][1] = $y->i;
                 if ($stk)
                     $this->x[end($stk)[0]][0] += $this->x[$i][0] - 1;
-                if ('}' != $y->str) {
-                    $reason = $rsn = $this->x[$i][2];
-                    in_array($reason, $this->_double_nl_after) or $reason = 0;
-                }
+                if (')' == $y->str)
+                    $reason = $this->x[$i][2];
+            } elseif (!$y->tok && in_array($y->str, [':', ';'])) {
+                T_FUNCTION == $reason or $reason = 0;
             }
             $y->new = $this->tok($y->i + 1);
             $y->ignore or $pv = $y;
@@ -260,6 +258,7 @@ class PHP
 
     function rank() {
         $uei = fn($tok, &$use) => ($use = T_USE == $tok) || T_EXTENDS == $tok || T_IMPLEMENTS == $tok;
+        $stk =& $this->stack;
         for ($y = $this->tok($prev = $ux = $dar = 0, true); $y; $y = $y->new) {
             $skip = false;
             $this->curly += $y->curly = $this->int_bracket($y);
@@ -268,8 +267,8 @@ class PHP
                 if ($uei($prev, $use))
                     $skip = ',' === $y->next;
                 $use && $this->prev_use($y, $ux, $skip);
-            } elseif (-1 == $y->curly && $this->stack && $this->curly == end($this->stack)[1]) {
-                $this->pos &= ~array_pop($this->stack)[0];
+            } elseif (-1 == $y->curly && $stk && $this->curly == end($stk)[1]) {
+                $this->pos &= ~array_pop($stk)[0];
             } elseif (T_NAMESPACE == $prev && (';' == $y->str || 1 == $y->curly)) {
                 $this->head = [[], [], [], '']; # return to global namespace
             } elseif (T_FUNCTION == $prev && '&' === $y->str
@@ -279,7 +278,7 @@ class PHP
                     $skip = true;
             } elseif (T_FUNCTION == $prev && '(' == $y->str || T_NEW == $prev && T_CLASS == $y->tok) {
                 $this->in_par = PHP::_ANONYM;
-                $this->pos or array_push($this->stack, [$this->pos = PHP::_ANONYM, $this->curly]);
+                $this->pos or array_push($stk, [$this->pos = PHP::_ANONYM, $this->curly]);
             } elseif (1 == $y->curly || $dar == $y->i) {
                 $this->in_par = 0;
             } elseif (T_FN == $y->tok) { # arrow function

@@ -202,12 +202,10 @@ class Language
         $id = $this->id($in);
         return [
             'id' => $in,
-            'e_list' => ['row_c' => function() use ($id) {
-                return !$this->langs ? false : [
-                    'lg' => $lg = array_shift($this->langs),
-                    'val' => $id ? $this->act($lg, $id) : ['', ''],
-                ];
-            }],
+            'e_list' => ['row_c' => fn() => !$this->langs ? false : [
+                'lg' => $lg = array_shift($this->langs),
+                'val' => $id ? $this->act($lg, $id) : ['', ''],
+            ]],
         ];
     }
 
