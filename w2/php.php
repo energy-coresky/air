@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.550;
+    const version = 0.777;
 
     use Processor;
 
