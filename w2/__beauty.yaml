@@ -7,16 +7,16 @@
 #.nice_php ///////////////////////////////////////////////////////////////////////////////////
 body:
   rules:
-    + @inc(.tag_rules)        # <? ?>
-    + @inc(.multilines)       # <div, "A\nB"
-    + @inc(.elseifelse)       # elseif else
-    + @inc(.endword)          # endif,..
-    + @inc(.casecolon)        # : switch case default
-    + @inc(.chars)            # ; & ? =
-    + @inc(.comments)         # //,..
-    + @inc(.whitespace_both)  # + - += -= => ..
-    + @inc(.whitespace_after) # for,.. if catch echo match do
-    + @inc(.brackets_or_comma) # {[(,)]}
+    + @inc(.tag_rules)  # <? ?>
+    + @inc(.multilines) # <div, "A\nB"
+    + @inc(.elseifelse) # elseif else
+    + @inc(.endwords)   # endif,..
+    + @inc(.casecolon)  # : switch case default
+    + @inc(.chars)      # ; & ? =
+    + @inc(.comments)   # //,..
+    + @inc(.space_lr)   # + - += -= => ..
+    + @inc(.ctrl_mains) # for,.. if catch echo match
+    + @inc(.brackets)   # {[(,)]}
     default: |
       if ($line !== '' && $alfa($line[-1]) && $alfa($y->str[0]))
           $line .= ' ';
@@ -24,18 +24,21 @@ body:
 head:
   param: $at, $to = 0
   code: |
-    $depth = $dar = $d1 = $d2 = $d3 = $s5 = $c7 = $in_php = $else = 0;
+    $depth = $dar = $d1 = $d2 = $s5 = $c7 = $in_php = 0;
     $out = $line = $last_pv_semi = '';
-    $put = function ($s1, $s2 = '') use (&$out, &$line, &$depth) {
+    $put = function (...$in) use (&$out, &$line, &$depth) {
+        if (is_int($in[0]))
+            $depth += array_shift($in);
+        [$s1, $s2] = $in + ['', ''];
         '' === $s1 or $out .= $line . $s1;
         $line = str_pad('', $depth * $this->tab) . $s2;
     };
     $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
     $fnew = fn($y) => is_int($y) ? $this->tok($y, true) : ($y->new->com ? $this->tok($y->new->i, true) : $y->new);
     $stk = [];
-    $reset_stk = function ($y) use (&$stk, &$depth, &$d1, &$d2, &$else) {
-        if (';' == $y->str || in_array($y->tok, $this->_ctrl_ee[(int)$else]))
-            return;
+    $reset_stk = function ($y) use (&$stk, &$depth, &$d1, &$d2) {
+        if (in_array($y->tok, [T_ELSE, T_ELSEIF, T_FINALLY]))
+            return; // ';' == $y->str || 
         array_splice($stk, $d2);
         [$depth, $d1] = [$depth - $d1, 0];
     };
@@ -118,7 +121,6 @@ ws_both: [
 semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
 double_nl_after: [@@inc(.newdn), $T_NAMESPACE]
 ctrl_d1: [@@inc(.loops), $T_IF]
-ctrl_ee: [[$T_ELSE, $T_ELSEIF, $T_FINALLY], [$T_ELSEIF, $T_FINALLY]]
 multilines: [$T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING]
 comments: @inc(.com3)
 endword: @inc(.ends)
@@ -164,35 +166,29 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
 #.multilines
 
 #.elseifelse
-- on: in_array($y->tok, [T_ELSE, T_ELSEIF])
+- on: ($else = T_ELSE == $y->tok) || T_ELSEIF == $y->tok
   do: |
-    $else = T_ELSE == $y->tok;
-    if ($this->in_html) {
+    if ($this->in_html) {//////////////////////////////////////////////////////////////
         $line .= $else ? $y->str : "$y->str ";
     } else {
         $new = $fnew($y);
         $else or $new = $fnew($close = $new->close);
-        if ($_ = $d1) {
-            [$depth, $d1] = end($stk);
-            if ($d1 < $_ && '}' == $pv->str)
-                $put("\n");
-            $else && array_pop($stk);
-        }
-        if (':' == $new->str) { # altsyntax
-            $depth--;
-            if ($d2 && $d3 == end($stk)[3]) {
-                $d3++;
-                [$depth, $d1, $d2] = array_pop($stk);
-            }
+        $no_nl = false;
+        if (!$alt = ':' == $new->str)
+            $no_nl = in_array($new->tok ?: $new->str, $this->_no_nl_before, true);
+        $_depth = $depth;
+        [$depth, $d1, $d2] = $alt || $else ? array_pop($stk) : end($stk);
+        if ('}' == $pv->str && ($depth < $_depth || !$no_nl))
+            $put("\n");
+        if ($alt) { # altsyntax
             $put('' === trim($line) ? '' : "\n", $else ? $y->str : "$y->str ");
-        } elseif (in_array($new->tok ?: $new->str, $this->_no_nl_before, true)) {
+        } elseif ($no_nl) {
             '' === trim($line) ? $put('') : ($line .= ' ');
             $line .= $else && !$new->tok ? $y->str : "$y->str ";
         } elseif ($else) {
             $put('' === trim($line) ? '' : "\n", $y->str);
-            $depth++;
             $d1++;
-            $put("\n");
+            $put(1, "\n");
         } else { # T_ELSEIF
             '' === trim($line) ? $put('', "$y->str ") : ($line .= "$y->str ");
             $dar = $close;
@@ -200,43 +196,37 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
     }
 #.elseifelse
 
-#.endword
+#.endwords
 - on: in_array($y->tok, $this->_endword)
   do: |
-    if ($swt = T_ENDSWITCH == $y->tok)
-        $depth--;
-    if ($this->in_html && !$swt) {
+    [$depth, $d1, $d2] = array_pop($stk);
+    if (T_ENDIF == $y->tok)
+        array_pop($stk);
+    if ($this->in_html) {
         $line .= $y->str;
     } else {
-        $this->in_html or $depth--;
-        if ($d2 && $d3 == end($stk)[3]) {
-            $d3++;
-            [$depth, $d1, $d2] = array_pop($stk);
-        }
         $put('' === trim($line) ? '' : "\n", $y->str);
     }
-#.endword
+#.endwords
 
 #.casecolon
 - on: ':' == $y->str
   do: |
     if ($c7) {
         $c7 = false;
-        $s5 = ++$depth;
-        $put(":\n");
+        $put($s5 = 1, ":\n");
     } elseif (T_ELSE == $pv->tok) {
-        if (!$this->in_html)
-            goto altelse;
-        $line .= ':';
+        goto altelse; # ELSE:
     } elseif (')' == $pv->str) {
-        if (isset($pv->reason) && in_array($pv->reason, $this->_altsyntax) && !$this->in_html) {
+        if (in_array($pv->reason ?? 0, $this->_altsyntax)) {
             altelse:
-            if ($d1) {
-                $stk[] = [$depth, $d1, $d2, --$d3];
-                [$d1, $d2] = [0, count($stk)];
+            $stk[] = [$depth, $d1, $d2];
+            [$d1, $d2] = [0, count($stk)];
+            if ($this->in_html) {
+                $line .= ':';
+            } else {
+                $put(1, ":\n");
             }
-            ++$depth;
-            $put(":\n");
         } else {
             $line .= ' : ';
         }
@@ -250,8 +240,7 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
     } else {
         $c7 = true;
         if ($s5) {
-            $depth--;
-            $put('', $y->str);
+            $put(-1, '', $y->str);
         } else {
             $line .= $y->str;
         }
@@ -303,26 +292,25 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
     }
 #.comments
 
-#.whitespace_both
+#.space_lr
 - on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
   do: $line .= $line === '' || ' ' == $line[-1] ? "$y->str " : " $y->str ";
-#.whitespace_both
+#.space_lr
 
-#.whitespace_after
+#.ctrl_mains
 - on: in_array($y->tok, $this->_ws_tail)
   do: |
-    $line .= $y->str . ' ';
+    $line .= $y->str . " ";
     if (in_array($y->tok, $this->_ctrl_d1)) {
+        if (T_IF == $y->tok)
+            $stk[] = [$depth, $d1, $d2];
         $new = $fnew($dar = $fnew($y)->close);
-        if (in_array($new->tok ?: $new->str, $this->_no_nl_before, true)) {
+        if (in_array($new->tok ?: $new->str, $this->_no_nl_before, true))
             $dar = 0;
-        } elseif (!$this->in_html && T_IF == $y->tok) {
-            $stk[] = [$depth, $d1, 0, 0];
-        }
     }
-#.whitespace_after
+#.ctrl_mains
 
-#.brackets_or_comma
+#.brackets
 - on: $oc || ',' == $y->str
   do: |
     if ($at) {
@@ -341,16 +329,14 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
         $y->line =& $line;
         $line .= $this->indents($oc, $y, $pv->tok, $depth, $put);
         if ($dar == $y->i) { # )
-            $depth++;
-            $put("\n");
+            $put(1, "\n");
             $d1++;
-            $else = 0;
-        } elseif ($d1 && '{' == $y->str && in_array($y->reason, $this->_curly_reason)) {
-            $stk[] = [$depth - 1, $d1, $d2, $y->close];
+        } elseif ('{' == $y->str && in_array($y->reason, $this->_curly_reason)) {
+            $stk[] = [$depth - 1, $d1, $d2];
             [$d1, $d2] = [0, count($stk)];
-        } elseif ($stk && end($stk)[3] == $y->i) {
+        } elseif ('}' == $y->str && in_array($y->reason ?? 0, $this->_curly_reason)) {
             [$depth, $d1, $d2] = array_pop($stk);
             in_array($y->reason, [T_TRY, T_DO]) or $y->new && $reset_stk($fnew($y));
         }
     }
-#.brackets_or_comma
+#.brackets
