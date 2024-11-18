@@ -14,7 +14,8 @@ body:
     + @inc(.casecolon)  # : switch case default
     + @inc(.chars)      # ; & ? =
     + @inc(.comments)   # //,..
-    + @inc(.space_lr)   # + - += -= => ..
+    - on: in_array($y->tok ?: $y->str, $this->_ws_both, true) # + - += -= => ..
+      do: $line .= $line === '' || ' ' == $line[-1] ? "$y->str " : " $y->str ";
     + @inc(.ctrl_mains) # for,.. if catch echo match
     + @inc(.brackets)   # {[(,)]}
     default: |
@@ -26,6 +27,8 @@ head:
   code: |
     $depth = $dar = $d1 = $d2 = $s5 = $c7 = $in_php = 0;
     $out = $line = $last_pv_semi = '';
+    $stk = [];
+
     $put = function (...$in) use (&$out, &$line, &$depth) {
         if (is_int($in[0]))
             $depth += array_shift($in);
@@ -33,9 +36,10 @@ head:
         '' === $s1 or $out .= $line . $s1;
         $line = str_pad('', $depth * $this->tab) . $s2;
     };
+
     $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
     $fnew = fn($y) => is_int($y) ? $this->tok($y, true) : ($y->new->com ? $this->tok($y->new->i, true) : $y->new);
-    $stk = [];
+
     $reset_stk = function ($y) use (&$stk, &$depth, &$d1, &$d2) {
         if (in_array($y->tok, [T_ELSE, T_ELSEIF, T_FINALLY]))
             return; // ';' == $y->str || 
@@ -168,17 +172,17 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
 #.elseifelse
 - on: ($else = T_ELSE == $y->tok) || T_ELSEIF == $y->tok
   do: |
-    if ($this->in_html) {//////////////////////////////////////////////////////////////
+    $new = $fnew($y);
+    $else or $new = $fnew($close = $new->close);
+    $alt = ':' == $new->str;
+    $prev = $depth;
+    [$depth, $d1, $d2] = $alt || $else ? array_pop($stk) : end($stk);
+
+    if ($this->in_html) {
         $line .= $else ? $y->str : "$y->str ";
     } else {
-        $new = $fnew($y);
-        $else or $new = $fnew($close = $new->close);
-        $no_nl = false;
-        if (!$alt = ':' == $new->str)
-            $no_nl = in_array($new->tok ?: $new->str, $this->_no_nl_before, true);
-        $_depth = $depth;
-        [$depth, $d1, $d2] = $alt || $else ? array_pop($stk) : end($stk);
-        if ('}' == $pv->str && ($depth < $_depth || !$no_nl))
+        $no_nl = $alt ? false : in_array($new->tok ?: $new->str, $this->_no_nl_before, true);
+        if ('}' == $pv->str && ($depth < $prev || !$no_nl))
             $put("\n");
         if ($alt) { # altsyntax
             $put('' === trim($line) ? '' : "\n", $else ? $y->str : "$y->str ");
@@ -239,11 +243,7 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
         $line .= $y->str . ' ';
     } else {
         $c7 = true;
-        if ($s5) {
-            $put(-1, '', $y->str);
-        } else {
-            $line .= $y->str;
-        }
+        $s5 ? $put(-1, '', $y->str) : ($line .= $y->str);
         T_DEFAULT == $y->tok or $line .= ' ';
     }
     $s5 = 0;
@@ -291,11 +291,6 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
         $line .= $y->str;
     }
 #.comments
-
-#.space_lr
-- on: in_array($y->tok ?: $y->str, $this->_ws_both, true)
-  do: $line .= $line === '' || ' ' == $line[-1] ? "$y->str " : " $y->str ";
-#.space_lr
 
 #.ctrl_mains
 - on: in_array($y->tok, $this->_ws_tail)
