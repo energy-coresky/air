@@ -25,7 +25,7 @@ body:
 head:
   param: $at, $to = 0
   code: |
-    $depth = $dar = $d1 = $d2 = $s5 = $c7 = $in_php = 0;
+    $depth = $dar = $d1 = $d2 = $s5 = $s3 = $in_php = 0;
     $out = $line = $last_pv_semi = '';
     $stk = [];
 
@@ -50,24 +50,21 @@ head:
     for ($y = $pv = $this->tok($at); $y; $y = $y->new) {
         if (($y->new = $this->tok($y->i + 1)) && T_WHITESPACE == $y->new->tok)
             $y->new = $this->tok($y->i + 2); # next is NOT WHITESPACE
-        if ($y->new)
-            $y->new->com = in_array($y->new->tok, $this->_comments);
+        if ($y->new && ($y->new->com = in_array($y->new->tok, $this->_comments))) {
+            $c2 = $y->new->str[1] ?? '#';
+            $y->new->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->new->str[0] ? 2 : 1); # (->com & 1) - is nl required
+            $y->new->str = rtrim($y->new->str); # (->com == 5) - attribute, nl required
+            if (2 == $y->new->com && (strpos($y->new->str, "\n") || '' === $line))
+                $y->new->com = 3; # multiline comment
+        }
         $oc = $this->int_bracket($y, true);
         if ($this->in_str) {
             $line .= $y->str;
             continue;
         }
 
-        if ($y->com) {
-            $c2 = $y->str[1] ?? '#';
-            $y->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->str[0] ? 2 : 1); # (->com & 1) - is nl required
-            $y->str = rtrim($y->str); # (->com == 5) - attribute, nl required
-            if (2 == $y->com && (strpos($y->str, "\n") || '' === $line))
-                $y->com = 3; # multiline comment
-        }
-
-        if (T_RETURN == $pv->tok && ';' != $y->str)
-            $line .= ' ';
+        if (T_RETURN == $y->tok && ';' != $y->new->str)
+            $y->str .= ' ';
         if (')' == $pv->str && in_array($y->tok, [T_USE, T_AS]))
             $y->str = " $y->str ";
 
@@ -119,7 +116,7 @@ not_nl_after_curly: [
 ]
 ws_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH]
 ws_both: [
-  /, %, *, ., >, <, +, -, $T_DOUBLE_ARROW, $T_POW,
+  /, %, *, ., >, <, +, $T_DOUBLE_ARROW, $T_POW,
   @@inc(.logic), @@inc(.bools), @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)
 ]
 semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
@@ -130,6 +127,7 @@ comments: @inc(.com3)
 endword: @inc(.ends)
 altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
 no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
+minus: [@@path(ws_both), '[', '(', ',', ':', '?']
 #.ary_nice_php
 
 # =====================================================================================
@@ -216,8 +214,8 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
 #.casecolon
 - on: ':' == $y->str
   do: |
-    if ($c7) {
-        $c7 = false;
+    if ($s3) {
+        $s3 = false;
         $put($s5 = 1, ":\n");
     } elseif (T_ELSE == $pv->tok) {
         goto altelse; # ELSE:
@@ -226,11 +224,7 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
             altelse:
             $stk[] = [$depth, $d1, $d2];
             [$d1, $d2] = [0, count($stk)];
-            if ($this->in_html) {
-                $line .= ':';
-            } else {
-                $put(1, ":\n");
-            }
+            $this->in_html ? ($line .= ':') : $put(1, ":\n");
         } else {
             $line .= ' : ';
         }
@@ -242,7 +236,7 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
     if (T_SWITCH == $y->tok) {
         $line .= $y->str . ' ';
     } else {
-        $c7 = true;
+        $s3 = true;
         $s5 ? $put(-1, '', $y->str) : ($line .= $y->str);
         T_DEFAULT == $y->tok or $line .= ' ';
     }
@@ -271,6 +265,9 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
 - on: '=' == $y->str
   do: |
     $line .= ' =' . ('&' == $y->new->str ? '' : ' ');
+- on: '-' == $y->str
+  do: |
+    $line .= in_array($pv->str, $this->_minus) ? '-' : ' - ';
 #.chars
 
 #.comments
@@ -319,10 +316,10 @@ no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
     } else {
         if ('(' == $y->str && in_array($pv->tok, $this->_altsyntax)) {
             [, $close, $reason] = $this->x[$y->i];
-            $this->x[$close] = [0, 0, $reason];
+            $this->x[$close] = [0, 0, $reason, 0];
         }
         $y->line =& $line;
-        $line .= $this->indents($oc, $y, $pv->tok, $depth, $put);
+        $line .= $this->indents($oc, $y, $pv->tok, $put);
         if ($dar == $y->i) { # )
             $put(1, "\n");
             $d1++;
