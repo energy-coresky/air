@@ -103,7 +103,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
             } else {
                 $out = '';
                 while (preg_match('/^(.*?)(~|@|#)(\w+)(.*)$/s', $v, $m)) {
-                    $out .= $fu($m[1],1);
+                    $out .= $fu($m[1], 1);
                     $v = substr($m[4], strlen($br = Rare::bracket($m[4])));
                     $out .= self::span('#' == $m[2] ? (in_array($m[3], $pp) ? '#090' : '') : 'd', $m[2] . $m[3]);
                     if ($br && '`' != $br[1] && in_array($m[3], ['inc', 'use', 'block']))
@@ -111,8 +111,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     elseif ($br)
                         $out .= self::span('#00b', $br, 'font-weight:bold');
                 }
-                $v = $out . $fu($v,1);
-                if (in_array($i, $yellow)) {// || '' === $marker
+                $v = $out . $fu($v, 1);
+                if (in_array($i, $yellow)) { // || '' === $marker
                     $v = '<div class="code" style="background:#ffd;">' . "$v</div>";
                 } elseif (array_intersect($mname, $blue)) {
                     $v = '<div class="code" style="background:#eff;">' . "$v</div>";
@@ -132,7 +132,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     $out .= self::span('m', $m[2]);
                 elseif ('#' == $m[2][0])
                     $out .= self::span('c', $m[2]); # YML comment
-                else $out .= self::span('g', $m[2]);
+                else
+                    $out .= self::span('g', $m[2]);
             }
             return $out . html($v);
         });
@@ -203,8 +204,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 $n++;
                 $l++;
             } elseif ($V[$n] !== '?') do {
-                    $rN .= '.';
-                } while ($V[$n] > ++$l);
+                $rN .= '.';
+            } while ($V[$n] > ++$l);
             else {
                 $cp = false;
                 for ($p = 1; $n + $p < $c; $p++)
@@ -380,13 +381,16 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     $out .= self::span('r', '?>');
                     $ct = substr($t[1], 2);
                     break;
-                case T_OPEN_TAG: case T_OPEN_TAG_WITH_ECHO:
+                case T_OPEN_TAG:
+                case T_OPEN_TAG_WITH_ECHO:
                     '' === $out or $out = self::bg($out, self::$bg['_0']);
                     $sq = strlen($out);
-                case T_ENCAPSED_AND_WHITESPACE: case T_CONSTANT_ENCAPSED_STRING:
+                case T_ENCAPSED_AND_WHITESPACE:
+                case T_CONSTANT_ENCAPSED_STRING:
                     $out .= self::span('r', $t[1]);
                     break;
-                case T_COMMENT: case T_DOC_COMMENT:
+                case T_COMMENT:
+                case T_DOC_COMMENT:
                     $out .= self::span('c', $t[1]);
                     break;
                 case T_VARIABLE:
@@ -493,6 +497,6 @@ class Display # php jet yaml html bash || php_method md || var diff log
             $html = substr($html, 0, $p);
         if ($p = strrpos($html, '<span'))
             $html = substr($html, 0, $p);
-        return '<pre>' . $html. '</pre>';
+        return '<pre>' . $html . '</pre>';
     }
 }

@@ -3,6 +3,12 @@
 trait Processor
 {
     protected $_marker = '';
+    static $winds = [];
+
+    function unbind() {
+        foreach (self::$winds as &$closure)
+            $closure[1] = false;
+    }
 
     function __call($name, $args) {
         if ('wind_' == substr($name, 0, 5)) {
@@ -21,12 +27,11 @@ trait Processor
             $fn = "$ware::$fn";
         }
 
-        static $cached = [];
         $dst = ['main', $name = 'wind_' . $ware . "_$this->_marker.php"];
-        $closure =& $cached[$name];
-        $ok = (bool)$closure;//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
+        self::$winds[$name] ?? self::$winds[$name] = [false, false];
+        $closure =& self::$winds[$name];
+        $ok = (bool)$closure[0];//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
         if (!$ok) {
-            $closure = false;
             $y = yml("+ @inc($this->_marker) $fn");
             $param = $y['head']['param'];
             $php = "<?php\n\nreturn function ($param) {\n";
@@ -51,10 +56,11 @@ trait Processor
                 }
             }
             Plan::cache_s($dst, "$php\n};\n\n");
+            $closure[0] = Plan::cache_r($dst);
         }
-        $closure or $closure = Closure::bind(Plan::cache_r($dst), $this, $this);
+        $closure[1] or $closure[1] = Closure::bind($closure[0], $this, $this);
 
-        return call_user_func_array($closure, $in);
+        return call_user_func_array($closure[1], $in);
     }
 
     private function preprocessor($in) {

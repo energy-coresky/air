@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = 0.777;
+    const version = 0.778;
 
     use Processor;
 
@@ -44,28 +44,28 @@ class PHP
     }
 
     static function ini_once() {
-        PHP::$data = Plan::php();
-        if (PHP_VERSION_ID !== PHP::$data->version) { # different console's and web versions
-            PHP::$warning = 'PHP version do not match: ' . PHP_VERSION_ID . ' !== ' . PHP::$data->version;
+        self::$data = Plan::php();
+        if (PHP_VERSION_ID !== self::$data->version) { # different console's and web versions
+            self::$warning = 'PHP version do not match: ' . PHP_VERSION_ID . ' !== ' . self::$data->version;
             Plan::cache_d(['main', 'yml_main_php.php']);
-            PHP::$data = Plan::php(false);
+            self::$data = Plan::php(false);
         }
-        foreach (PHP::$data->gt_74 as $i => $str)
+        foreach (self::$data->gt_74 as $i => $str)
             defined($const = "T_$str") or define($const, $i + 0x10000);
-        (PHP::$data->ini_once)();
-        $p =& PHP::$data->tokens_name;
+        (self::$data->ini_once)();
+        $p =& self::$data->tokens_name;
         $p[0] += [2 => T_NAME_QUALIFIED, T_NAME_FULLY_QUALIFIED, T_NAME_RELATIVE];
         $p[1] = $p[0] + [5 => T_NAMESPACE];
-        return PHP::$data;
+        return self::$data;
     }
 
     function __construct(string $in, $tab = 4) {
-        PHP::$data or PHP::ini_once();
+        self::$data or self::ini_once();
         $this->tab = $tab;
         try {
             $this->tok = token_get_all(unl($in), TOKEN_PARSE);
         } catch (Throwable $e) {
-            PHP::$warning = 'Line ' . $e->getLine() . ', ' . $e->getMessage();
+            self::$warning = 'Line ' . $e->getLine() . ', ' . $e->getMessage();
             $this->tok = token_get_all(unl($in));
         }
         $this->count = count($this->tok);
@@ -74,12 +74,12 @@ class PHP
     function __get($name) {
         if ('ns' == $name)
             return $this->head[3];
-        return PHP::$data->{substr($name, 1)};
+        return self::$data->{substr($name, 1)};
     }
 
-    function __toString() {
-        if (PHP::$warning)
-            throw new Error(PHP::$warning);
+   function __toString() {
+        if (self::$warning)
+            throw new Error(self::$warning);
         $this->nice(); # step 1
         if ($this->tab)
             return $this->wind_nice_php(0); # step 2
@@ -175,6 +175,15 @@ class PHP
         return '';
     }
 
+    function mod_attribute($y) {
+        $i = $y->i;
+        do {
+            $y->str .= $str = is_array($this->tok[++$i]) ? $this->tok[$i][1] : $this->tok[$i];
+        } while (']' !== $str);
+        $this->count -= $len = $i - $y->i;
+        array_splice($this->tok, 1 + $y->i, $len); # modify tokens
+    }
+
     function mod_array(&$y) {
         $new = $this->tok($y->i, true);
         if ('(' == $new->str) {
@@ -205,7 +214,7 @@ class PHP
     }
 
     function nice() {
-        if (!isset(PHP::$data->not_nl_curly))
+        if (!isset(self::$data->not_nl_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
         $this->max_length or $this->max_length = 130;
         $this->stack[] = [0, 0, 0, 0, $reason = $key = $_key = $si = $_si = 0];
@@ -227,7 +236,9 @@ class PHP
                 $reason = $y->tok;
 
             $oc = $this->int_bracket($y, true);
-            if ($oc > 0) {
+            if (T_ATTRIBUTE == $y->tok) {
+                $this->mod_attribute($y);
+            } elseif ($oc > 0) {
                 if ('{' == $y->str && isset($this->stack[$_si]))
                     $this->stack[$_si][3] = 0;
                 $this->stack[++$si] = [$i = $y->i, $mod, $_key, 0, 0];
@@ -311,13 +322,13 @@ class PHP
                 || $this->in_par && '?' == $y->str) {
                     $skip = true;
             } elseif (T_FUNCTION == $prev && '(' == $y->str || T_NEW == $prev && T_CLASS == $y->tok) {
-                $this->in_par = PHP::_ANONYM;
-                $this->pos or array_push($stk, [$this->pos = PHP::_ANONYM, $this->curly]);
+                $this->in_par = self::_ANONYM;
+                $this->pos or array_push($stk, [$this->pos = self::_ANONYM, $this->curly]);
             } elseif (1 == $y->curly || $dar == $y->i) {
                 $this->in_par = 0;
             } elseif (T_FN == $y->tok) { # arrow function
                 $dar = $this->get_close($y, $y->new);
-                for ($this->in_par = PHP::ARRF; T_DOUBLE_ARROW !== $this->tok[++$dar][0]; );
+                for ($this->in_par = self::ARRF; T_DOUBLE_ARROW !== $this->tok[++$dar][0]; );
             } elseif (T_USE == $y->tok) {
                 $ux = 0;
             } elseif (T_USE == $prev) {
@@ -339,24 +350,24 @@ class PHP
             if (T_NAMESPACE == $prev) {
                 $this->head = [[], [], [], $y->str];
             } elseif (T_CONST == $prev) {
-                if (PHP::_CLASS & $this->pos) {
+                if (self::_CLASS & $this->pos) {
                     $y->rank = 'CLASS-CONST';
                 } elseif ($this->ns) {
                     $this->head[2][$y->str] = "$this->ns\\$y->str";
                 }
             } elseif (T_FUNCTION == $prev) {
-                if (PHP::_CLASS & $this->pos) {
+                if (self::_CLASS & $this->pos) {
                     $y->rank = 'METHOD';
-                    $this->pos |= $this->in_par = PHP::_METH;
+                    $this->pos |= $this->in_par = self::_METH;
                 } else {
                     if ($this->ns)
                         $this->head[1][$y->str] = "$this->ns\\$y->str";
-                    $this->pos |= $this->in_par = PHP::_FUNC;
+                    $this->pos |= $this->in_par = self::_FUNC;
                 }
                 array_push($this->stack, [$this->in_par, $this->curly]);
             } else { # class-like definition
-                $this->pos |= PHP::_CLASS;
-                array_push($this->stack, [PHP::_CLASS, $this->curly]);
+                $this->pos |= self::_CLASS;
+                array_push($this->stack, [self::_CLASS, $this->curly]);
             }
         } elseif ($y->rank = $this->_tokens_use[$prev] ?? false) {
             if (is_array($y->rank))
@@ -479,14 +490,13 @@ class PHP
     }
 
     function tok($i = 0, $new = false) {
-        static $keys = ['len', 'close', 'reason', 'comma'];
         if ($new)
             while (is_array($this->tok[++$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign));
         if ($i < 0 || $i >= $this->count)
             return false;
         $ary = ['len' => 0, 'com' => 0];
         if ($v = $this->x[$i] ?? false)
-            $ary = array_combine($keys, is_array($v) ? $v : $this->x[$v]) + $ary;
+            $ary = array_combine(['len', 'close', 'reason', 'comma'], is_array($v) ? $v : $this->x[$v]) + $ary;
         $y = (object)$ary;
         $tok =& $this->tok[$y->i = $i];
         $is_array = is_array($tok) or $ary = [0, &$tok];

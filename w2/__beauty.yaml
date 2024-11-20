@@ -166,7 +166,7 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
 - on: in_array($y->tok, $this->_multilines)
   do: |
     if (T_INLINE_HTML == $y->tok)
-        $this->in_html = 1;
+        $this->in_html = $y->i;
     if (false !== ($pos = strrpos($y->str, "\n"))) {
         $put(substr($y->str, 0, $pos + 1));
         $line = substr($y->str, $pos + 1);
