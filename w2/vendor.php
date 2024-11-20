@@ -157,7 +157,7 @@ class Vendor
         $ary = unserialize(SKY::w($var = "history_$var") ?: 'a:0:{}');
         if ($in) { # add to history
             $ary = (is_array($in) ? $in : [$in => $in]) + $ary;
-            SKY::w($var, serialize(array_slice($ary, 0, 19, true)));
+            SKY::w($var, serialize(array_slice($ary, 0, 27, true)));
         }
         return $ary; # return history list
     }

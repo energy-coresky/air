@@ -113,8 +113,6 @@ class PHP
     }
 
     private function left_bracket($y) {
-        #if ($y->new->com & 1)
-        #    return false; # add new line
         $len = strlen($y->line);
         if ($this->in_html || $len + $y->len < $this->max_length)
             return true; # continue line
@@ -161,7 +159,7 @@ class PHP
             if (']' == $y->str && $y->line && ' ' != $y->line[-1]) # modify source
                 $put(",\n");
             $put(T_SWITCH == $y->reason ? -2 : -1, '' === trim($y->line) ? '' : "\n", $y->str);
-        } elseif (!$stk || !($end =& $stk[array_key_last($stk)])) { # comma
+        } elseif (!$end =& $stk[array_key_last($stk)]) { # comma
             return ', ';
         } elseif (true === $end) { # comma
             $put(",\n");
@@ -209,8 +207,10 @@ class PHP
     function nice() {
         if (!isset(PHP::$data->not_nl_curly))
             Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
-        $stk =& $this->stack;
-        $reason = $key = $_key = 0;
+        $this->max_length or $this->max_length = 130;
+        $this->stack[] = [0, 0, 0, 0, $reason = $key = $_key = $si = $_si = 0];
+        $this->x[$i = 0] = [0, 0, 0, 0];
+        $x =& $this->x[0];
         for ($y = $pv = $this->tok(); $y; $y = $y->new) {
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
@@ -219,47 +219,63 @@ class PHP
             } elseif ($key && $this->del_arrow($y, $pv, $key)) {
                 continue;
             }
-            if ($stk) {
-                $this->x[$i = end($stk)[0]][0] += strlen(' ' == $y->str ? ' ' : trim($y->str));
-                if (',' == $y->str && $this->x[$i][3])
-                    $this->x[$i][3]++;
-            }
+            $x[0] += $len = strlen(' ' == $y->str ? ' ' : trim($y->str));
+            $this->stack[$si][4] += $len;
+            if (',' == $y->str && $x[3])
+                $x[3]++;
             if (in_array($y->tok = $this->_not_nl_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
 
             $oc = $this->int_bracket($y, true);
             if ($oc > 0) {
-                $stk[] = [$y->i, $mod, $_key];
-                $this->x[$y->i] = [1, 0, in_array($pv->tok, $this->_not_nl_curly) ? $pv->tok : $reason, 1];
-                $reason = 0; # len, close, reason, comma
+                if ('{' == $y->str && isset($this->stack[$_si]))
+                    $this->stack[$_si][3] = 0;
+                $this->stack[++$si] = [$i = $y->i, $mod, $_key, 0, 0];
+                [$reason, $rsn] = [0, in_array($pv->tok, $this->_not_nl_curly) ? $pv->tok : $reason];
+                $this->x[$i] = [1, 0, $rsn, 1]; # len, close, reason, comma
+                $x =& $this->x[$i];
             } elseif ($oc < 0) {
-                [$i, $mod, $_key] = array_pop($stk);
-                if ($stk && $this->x[$i][0] > 32)
-                    $this->x[end($stk)[0]][3] = 0; # reset commas
-                if ('[' === $this->tok[$i])
+                [$_i, $mod, $_key] = array_pop($this->stack);
+                $z =& $this->x[$_i];
+                $x =& $this->x[$i = $this->stack[--$si][0]];
+                $z[1] = $y->i; # set close
+                $x[0] += $len = $z[0] - 1;
+                $this->stack[$si][4] += $len;
+                if ($z[0] > 32)
+                    $x[3] = 0; # reset commas
+                if ('[' === $this->tok[$_i])
                     $key = $_key;
                 if ($mod)
                     $y->str = ']'; # modify code
-                $this->x[$i][1] = $y->i;
-                if ($stk)
-                    $this->x[end($stk)[0]][0] += $this->x[$i][0] - 1;
                 if (')' == $y->str)
-                    $reason = $this->x[$i][2];
-            } elseif ($stk) {
-                if (T_DOUBLE_ARROW == $y->tok) {
-                    $p =& $this->x[end($stk)[0]];
-                    $p[3] = 0; # reset commas
-                    $p[0] += 3; # add len
-                } elseif (T_COMMENT == $y->tok && '/*' != substr($y->str, 0, 2)) {
-                    $this->x[end($stk)[0]][0] += 900; # reset commas
-                }
-            } elseif (!$y->tok && in_array($y->str, [':', ';'])) {
-                T_FUNCTION == $reason or $reason = 0;
+                    $reason = $z[2];
+            } elseif (T_DOUBLE_ARROW == $y->tok) {
+                $x[3] = 0; # reset commas
+                $x[0] += 3; # add len
+            } elseif (T_COMMENT == $y->tok && '/*' != substr($y->str, 0, 2)) {
+                $x[0] += 900; # set many commas
+            } elseif (!$y->tok) {
+                $this->chars($y, $reason, $si, $_si);
             }
             $y->new = $this->tok($y->i + 1);
             $y->ignore or $pv = $y;
         }
-        $this->max_length or $this->max_length = 130;
+    }
+
+    function chars($y, &$reason, $si, &$_si) {
+        $stk =& $this->stack[$si];
+        if (';' == $y->str) {
+            if ($stk[3] && $stk[4] > 34)
+                $this->x[$stk[3]] = [$stk[4], 0, 0, 0];
+            $_si = $reason = $stk[3] = 0;
+        } elseif (':' == $y->str) {
+            $stk[4] > 24 or $stk[3] = 0; # reset short
+            T_FUNCTION == $reason or $reason = 0;
+        } elseif (in_array($y->str, ['.', '?']) && !$stk[3]) {
+            $stk[3] = $y->i;
+            $stk[4] = 1;
+            $_si = $si;
+        }
     }
 
     function int_bracket($y, $is_nice = false) {
@@ -468,7 +484,7 @@ class PHP
             while (is_array($this->tok[++$i] ?? 0) && in_array($this->tok[$i][0], $this->_tokens_ign));
         if ($i < 0 || $i >= $this->count)
             return false;
-        $ary = ['len' => false, 'com' => 0];
+        $ary = ['len' => 0, 'com' => 0];
         if ($v = $this->x[$i] ?? false)
             $ary = array_combine($keys, is_array($v) ? $v : $this->x[$v]) + $ary;
         $y = (object)$ary;
