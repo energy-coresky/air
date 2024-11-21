@@ -222,12 +222,20 @@ class Console
 
     /** Show Coresky versions */
     function c_v() {
-        class_exists('SKY', false) or require DIR_S . '/sky.php';
+        $main = ['core', 'sql', 'mvc', 'processor'];
+        if (!$exist = class_exists('SKY', false)) {
+            require DIR_S . '/sky.php';
+            foreach ($main as $bn)
+                require DIR_S . "/w2/$bn.php";
+        }
         echo '  Coresky: ' . SKY::CORE . ' path:' . realpath(DIR_S);
         foreach (glob(DIR_S . '/w2/*.php') as $fn) {
-            $class = ucfirst(basename($fn, '.php'));
-            if ('Core' != $class && isset((new ReflectionClass($class))->getConstants()['version']))
-                echo "\n  $class::version - " . $class::version;
+            if ('core' == ($bn = basename($fn, '.php')))
+                continue;
+            $exist or in_array($bn, [-1 => 'console'] + $main) or require $fn;
+            $reflection = new ReflectionClass($bn);
+            if (isset($reflection->getConstants()['version']))
+                echo "\n  {$reflection->getName()}::version - " . $bn::version;
         }
     }
 
@@ -312,9 +320,8 @@ class Console
 
     /** Show controllers */
     function c_c() {
-        echo "Rescanned:\n  " . unbang(Boot::controllers(), function($k, $v) {
-            return "$k: " . ($v[0] ? '' : 'not ') . 'exist'; # 2do: red
-        }, "\n  ");
+        # 2do: red
+        echo "Rescanned:\n  " . unbang(Boot::controllers(), fn($k, $v) => "$k: " . ($v[0] ? '' : 'not ') . 'exist', "\n  ");
         echo "\nFrom SKY::\$plans:\n  " . unbang(SKY::$plans['main']['ctrl'], ' => ', "\n  ");
     }
 

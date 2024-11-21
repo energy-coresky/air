@@ -42,10 +42,10 @@ class Gate
         return substr_replace($code, '', strpos($code, '<br />'), 6);
     }
 
-    function get_methods($content) { // $class_name
+    function get_methods($content) { // 2do: $class_name
         $php = new PHP($content);
         if (PHP::$warning)
-            throw new Error(PHP::$warning);
+            throw new Error(PHP::$warning); // 2do: chk for child::__call refer to parent::__call
         $list = [];
         foreach ($php->rank() as $y) {
             if ('METHOD' === $y->rank) {

@@ -4,16 +4,58 @@ trait Processor
 {
     static $winds = [];
 
-    protected $_marker = '';
+    protected $w_marker = '';
+    protected $wn_input = '';
 
     function unbind() {
         foreach (self::$winds as &$closure)
             $closure[1] = false;
     }
 
+    function tokens($y = false) {
+        //2do: #.markers, #if(..) .. #end, {{ }} echo's like
+        // @verb, disable PHP tags, #use
+        $re = [
+            "/^(\#\.\w+(\.\w+)*)/", # markers 0
+            "/^(\#((if\(|elseif\(|use\()|(end|else)\b))/", # pre-proc 1
+            "/^([~@]\w+)/", # ~word or @word
+        ];
+        $y or $y = (object)['typ' => 0, 'pt' => "\n"];
+        $len = strlen($in =& $this->wn_input);
+        $cspn = fn($s, $j) => substr($in, $j, strcspn($in, $s, $j));
+        $match = fn($s, &$m, $x) => preg_match($re[$x], $s, $m);
+        for ($j = 0; $j < $len; $j += $y->len) {
+            if ("\n" == ($t = $in[$j])) {
+                $y->typ = 0; # new line
+            } elseif(1 == $y->typ) {
+                $y->typ = 4; # commment (right from marker)
+                $t = $cspn("\n", $j);
+            } elseif(($y->typ = 2) && "#" == $t) {
+                if ($match($line = $cspn(" \t\n", $j), $m, 1)) {
+                    $t = '(' == $m[1][-1] ? substr($m[1], 0, -1) : $m[1];
+                } elseif ("\n" == $y->pt && $match($line, $m, 0)) {
+                    $y->typ = 1; # markers
+                    $t = $m[1];
+                }
+            } elseif("@" == $t || "~" == $t) {
+                if ($match($cspn(" \t\n", $j), $m, 2))
+                    $t = $m[1];
+            } elseif ($sz = strspn($in, "\t ", $j)) {
+                $y->typ = 0; # spaces
+                $t = substr($in, $j, $sz);
+            } else {
+                $t = $cspn("\n\t #~@", $j);
+                $y->typ = 3;
+            }
+            $y->len = strlen($t);
+            yield $t => $y;
+            $y->pt = $t;
+        }
+    }
+
     function __call($name, $args) {
         if ('wind_' == substr($name, 0, 5)) {
-            $this->_marker = substr($name, 5);
+            $this->w_marker = substr($name, 5);
             return $this->wind(...$args);
         }
     }
@@ -28,12 +70,12 @@ trait Processor
             $fn = "$ware::$fn";
         }
 
-        $dst = ['main', $name = 'wind_' . $ware . "_$this->_marker.php"];
+        $dst = ['main', $name = 'wind_' . $ware . "_$this->w_marker.php"];
         self::$winds[$name] ?? self::$winds[$name] = [false, false];
         $closure =& self::$winds[$name];
         $ok = (bool)$closure[0];//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
         if (!$ok) {
-            $y = yml("+ @inc($this->_marker) $fn");
+            $y = yml("+ @inc($this->w_marker) $fn");
             $param = $y['head']['param'];
             $php = "<?php\n\nreturn function ($param) {\n";
             foreach (['head', 'body', 'tail'] as $section) {
@@ -162,7 +204,7 @@ trait Processor
         return $crop($ary);
     }
 
-    private function echos($str) {
+    private function echos($in) {
         return preg_replace_callback('/[~@]?{[{!\-](.*?)[\-!}]}/s', function ($m) {
             if ('@' == $m[0][0])
                 return substr($m[0], 1); # verbatim
@@ -205,6 +247,6 @@ trait Processor
                     : "isset($left) ? $left : $right";
                 return sprintf("<?php echo $esc ?>", $op);
             }
-        }, $str);
+        }, $in);
     }
 }
