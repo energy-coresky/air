@@ -220,10 +220,15 @@ class Console
         }
     }
 
-    /** Show Coresky version */
+    /** Show Coresky versions */
     function c_v() {
         class_exists('SKY', false) or require DIR_S . '/sky.php';
-        echo SKY::CORE . ' path:' . realpath(DIR_S);
+        echo '  Coresky: ' . SKY::CORE . ' path:' . realpath(DIR_S);
+        foreach (glob(DIR_S . '/w2/*.php') as $fn) {
+            $class = ucfirst(basename($fn, '.php'));
+            if ('Core' != $class && isset((new ReflectionClass($class))->getConstants()['version']))
+                echo "\n  $class::version - " . $class::version;
+        }
     }
 
     static function test($m1 = 5, $m2 = 100) {

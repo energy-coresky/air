@@ -2,8 +2,9 @@
 
 trait Processor
 {
-    protected $_marker = '';
     static $winds = [];
+
+    protected $_marker = '';
 
     function unbind() {
         foreach (self::$winds as &$closure)

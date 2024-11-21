@@ -2,7 +2,7 @@
 
 class YML
 {
-    const version = 0.958;
+    const version = '0.958';
 
     static $boot = 0;
     static $custom = [];

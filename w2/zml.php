@@ -2,7 +2,7 @@
 
 class ZML # universal descriptor
 {
-    const version = 0.101;
+    const version = '0.101';
     const chunk = 8192;
 
     static $zml;

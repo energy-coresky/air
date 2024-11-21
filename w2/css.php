@@ -2,7 +2,7 @@
 
 class CSS
 {
-    const version = 0.777;
+    const version = '0.777';
 
     public $in;
     public $array = [];

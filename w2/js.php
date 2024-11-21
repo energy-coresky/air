@@ -2,7 +2,7 @@
 
 class JS // T_COMMENT
 {
-    const version = 0.001;
+    const version = '0.001';
 
     static $js;
 

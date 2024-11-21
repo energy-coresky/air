@@ -2,7 +2,7 @@
 
 class XML
 {
-    const version = 0.777;
+    const version = '0.777';
 
     static $html;
 

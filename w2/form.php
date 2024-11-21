@@ -15,6 +15,7 @@ class xForm
 class Form
 {
     const version = '0.501';
+
     const OPT_TABLE = 1;
     const OPT_DIV   = 2;
     const TPL_CHK = '<li class="elm-chk"><label><ul class="row"><li class="elm">%s</li><li class="desc-chk">%s</li></ul></label></li>';

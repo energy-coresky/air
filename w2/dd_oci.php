@@ -39,6 +39,9 @@ class dd_oci implements DriverDatabase
         //return $quote ? "'" . ($this->conn, $s) . "'" : ($this->conn, $s);////////////////
     }
 
+    function unescape($s, $quote = true) {
+    }
+
     function error() {
         return $this->error['message'];
     }
@@ -112,6 +115,15 @@ class dd_oci implements DriverDatabase
     function f_dt($column = false, $sign = false, $n = 0, $period = 'day') {
         false !== $column or $column = "'now'";
         return $sign ? "datetime($column, '$sign$n $period')" : "datetime($column)";
+    }
+
+    function _xtrace() {
+    }
+
+    function _tables($table = false) {
+    }
+
+    function _rows_count($table) {
     }
 
     function build($type) {
