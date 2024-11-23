@@ -81,34 +81,34 @@ class Rare
         return $out;
     }
 
-    static function bracket(string $in, $b = '(') {
-        if ('' === $in || $b != $in[0])
+    static function bracket(string &$in, $b = '(', $from = 0) {
+        if ($b != ($in[$from] ?? ''))
             return '';
         $close = ['(' => ')', '[' => ']', '{' => '}', '<' => '>'];
-        $quot = $b . $close[$b] . '\'"';
-        for ($p = $z = 1, $len = strlen($in); true; ) {
-            $p += strcspn($in, $quot, $p);
-            if ($p >= $len) {
+        $set = $b . $close[$b] . '\'"';
+        for ($j = $from + ($z = 1), $len = strlen($in); true; ) {
+            $j += strcspn($in, $set, $j);
+            if ($j >= $len) {
                 return '';
-            } elseif ("'" == $in[$p] || '"' == $in[$p]) {
-                if (!$p = self::str($in, $p, $len))
+            } elseif ("'" == $in[$j] || '"' == $in[$j]) {
+                if (!$j = self::str($in, $j, $len))
                     return '';
             } else {
-                $b == $in[$p++] ? $z++ : $z--;
+                $b == $in[$j++] ? $z++ : $z--;
                 if (!$z)
-                    return substr($in, 0, $p);
+                    return substr($in, $from, $j - $from);
             }
         }
     }
 
-    static function str(string &$in, $p, $len) {
-        for ($quot = $in[$p++] . '\\'; true; $p += $bs % 2) {
-            $p += strcspn($in, $quot, $p);
-            if ($p >= $len)
+    static function str(string &$in, $j, $len) {
+        for ($quot = $in[$j++] . '\\'; true; $j += $bs % 2) {
+            $j += strcspn($in, $quot, $j);
+            if ($j >= $len)
                 return false;
-            if ('\\' != $in[$p])
-                return ++$p;
-            $p += ($bs = strspn($in, '\\', $p));
+            if ('\\' != $in[$j])
+                return ++$j;
+            $j += ($bs = strspn($in, '\\', $j));
         }
     }
 

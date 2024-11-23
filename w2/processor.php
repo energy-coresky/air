@@ -16,38 +16,44 @@ trait Processor
         //2do: #.markers, #if(..) .. #end, {{ }} echo's like
         // @verb, disable PHP tags, #use
         $re = [
-            "/^(\#\.\w+(\.\w+)*)/", # markers 0
-            "/^(\#((if\(|elseif\(|use\()|(end|else)\b))/", # pre-proc 1
+            "/^(#\.\w+(\.\w+)*)/", # markers 0
+            "/^((#if|#elseif|#use)\(|(#end\b|#else\b))/", # pre-proc 1
             "/^([~@]\w+)/", # ~word or @word
         ];
-        $y or $y = (object)['typ' => 0, 'pt' => "\n"];
+        $y or $y = (object)['typ' => 9, 'pt' => "\n"];
         $len = strlen($in =& $this->wn_input);
         $cspn = fn($s, $j) => substr($in, $j, strcspn($in, $s, $j));
         $match = fn($s, &$m, $x) => preg_match($re[$x], $s, $m);
-        for ($j = 0; $j < $len; $j += $y->len) {
-            if ("\n" == ($t = $in[$j])) {
-                $y->typ = 0; # new line
-            } elseif(1 == $y->typ) {
-                $y->typ = 4; # commment (right from marker)
-                $t = $cspn("\n", $j);
-            } elseif(($y->typ = 2) && "#" == $t) {
-                if ($match($line = $cspn(" \t\n", $j), $m, 1)) {
-                    $t = '(' == $m[1][-1] ? substr($m[1], 0, -1) : $m[1];
-                } elseif ("\n" == $y->pt && $match($line, $m, 0)) {
-                    $y->typ = 1; # markers
+        for ($j = 0; $j < $len; $j += strlen($t . $y->bracket)) {
+            $y->bracket = '';
+            if (!$y->typ) {
+                $y->typ = 9; # commment (right from marker)
+                $t = $cspn("\n", $j) . "\n";
+            } elseif("#" == ($t = $in[$j])) {
+                if ($match($line = $cspn(" \t\n", $j), $m, $y->typ = 1)) { # pre-proc
+                    if ($m[2]) {
+                        $br = Rare::bracket($in, '(', $j + strlen($m[2]));
+                        if (!$br || '' == trim(substr($br, 1, -1)))
+                            goto typ7;
+                        if ('#use' == ($t = $m[2]))
+                            $y->typ = 2;
+                        $y->bracket = $br;
+                    } else {
+                        $t = $m[3];
+                    }
+                } elseif ("\n" == $y->pt[-1] && $match($line, $m, $y->typ = 0)) { # markers
                     $t = $m[1];
+                } else {
+                    goto typ7;
                 }
-            } elseif("@" == $t || "~" == $t) {
-                if ($match($cspn(" \t\n", $j), $m, 2))
-                    $t = $m[1];
-            } elseif ($sz = strspn($in, "\t ", $j)) {
-                $y->typ = 0; # spaces
-                $t = substr($in, $j, $sz);
-            } else {
-                $t = $cspn("\n\t #~@", $j);
+            } elseif(in_array($t, ['@', '~']) && $match($cspn(" \t\n", $j), $m, 2)) {
+                $y->bracket = Rare::bracket($in, '(', $j + strlen($t = $m[1]));
                 $y->typ = 3;
+            } else {
+                typ7:
+                $t .= $cspn("#~@", $j + 1); # <? @verb 
+                $y->typ = 7;
             }
-            $y->len = strlen($t);
             yield $t => $y;
             $y->pt = $t;
         }
@@ -106,37 +112,32 @@ trait Processor
         return call_user_func_array($closure[1], $in);
     }
 
-    private function preprocessor($in) {
+    private function preprocessor() {
         $ary = [];
         $p =& $ary;
         $d = [&$p];
         $tmp = '';
-        while (preg_match("/^(.*?)\#((if\(|elseif\()|(end|else)\b)(.*)$/s", $in, $m)) {
-            $in = $m[5];
-            $arg = ($br = '(' == $m[2][-1]) ? Rare::bracket('(' . $m[5]) : false;
-            $if = 'if(' == $m[2];
-            if (count($d) < 2 && !$if || '()' == $arg || $br && !$arg) {
-                $tmp .= $m[1] . '#' . $m[2];
+        foreach ($this->tokens() as $t => $y) {
+            if (1 != $y->typ || !($if = '#if' == $t) && count($d) < 2) {
+                $tmp .= $t . $y->bracket;
                 continue;
             }
-            if ('end' == $m[2]) {
-                array_push($p, $tmp . $m[1], 'end');
+            if ('#end' == $t) {
+                array_push($p, $tmp, 'end');
                 array_pop($d);
                 $p =& $d[count($d) - 1];
             } else {
-                if ($arg)
-                    $in = substr($m[5], strlen($arg) - 1);
                 if ($if) {
-                    array_push($p, $tmp . $m[1], []);
-                    $tmp = $m[1] = '';
+                    array_push($p, $tmp, []);
+                    $tmp = '';
                     $p =& $p[count($p) - 1];
                     $d[] =& $p;
                 }
-                array_push($p, $tmp . $m[1], $arg ?: 'else');
+                array_push($p, $tmp, $y->bracket ?: 'else');
             }
             $tmp = '';
         }
-        $p[] = $tmp . $in;
+        $p[] = $tmp;
 
         $eval = function ($arg, $out) {
             static $ary;

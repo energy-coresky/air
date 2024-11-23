@@ -283,9 +283,9 @@ class Jet
                 throw new Error("Jet: cannot use PHP tags, apply @php(..) instead");
         }
         # delete nested part markers
-        $in = preg_replace('/(\r?\n|\r|\A)#\.\w[\.\w]*.*?(\r?\n|\r|\z)/s', '$2', $in);
+        $this->wn_input = unl(preg_replace('/(\r?\n|\r|\A)#\.\w[\.\w]*.*?(\r?\n|\r|\z)/s', '$2', $in));
         # preprocessor
-        $in = $this->preprocessor($in);
+        $in = $this->preprocessor();
         # the main parser
         $offset = 0;
         while (false !== ($pos = strpos($in, '#use(', $offset)))

@@ -144,7 +144,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return '<div class="php">' . $table . '</div>';
     }
 
-    static function diff($new, $old, $mode = false) {
+    static function diff(string $new, string $old, $mode = false) {
         $V = [];
         $N = count($new = explode("\n", str_replace(["\r\n", "\r"], "\n", $new)));
         $L = count($old = explode("\n", str_replace(["\r\n", "\r"], "\n", $old)));

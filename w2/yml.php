@@ -225,7 +225,8 @@ class YML
         [,$name, $q, $rest] = $match;
         if (!$q)
             return $t = '@' == $name ? '@' : '@' . $name;
-        if ($br = Rare::bracket("($rest"))
+        $tmp = "($rest";
+        if ($br = Rare::bracket($tmp))
             $t = "@$name$br";
         return $br ? [$name, substr($br, 1, -1), $this->at[1]] : false;
     }

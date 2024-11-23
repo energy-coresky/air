@@ -135,6 +135,7 @@ comments: @inc(.com3)
 endword: @inc(.ends)
 altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
 no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
+no_nl_before_else: [@@path(no_nl_before), @@inc(.loops), $T_IF]
 minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
 #.ary_nice_php
 
@@ -187,7 +188,11 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
     if ($this->in_html) {
         $line .= $else ? $y->str : "$y->str ";
     } else {
-        $no_nl = $alt ? false : in_array($new->tok ?: $new->str, $this->_no_nl_before, true);
+        $no_nl = $alt ? false : in_array(
+            $new->tok ?: $new->str,
+            $else ? $this->_no_nl_before_else : $this->_no_nl_before,
+            true
+        );
         if ('}' == $pv->str && ($depth < $prev || !$no_nl))
             $put("\n");
         if ($alt) { # altsyntax
@@ -266,13 +271,19 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
     }
 - on: '.' == $y->str
   do: |
+    $len = $this->tab + strlen($line . $y->new->str);
     if ($q7) {
-        $put("\n", '. ');
+        $len > $q7 ? $put("\n", '. ') : ($line .= $ws($y));
     } elseif ($y->len + strlen($line) < $this->max_length) {
         $line .= $ws($y);
     } else {
-        $d1++;
-        $put($q7 = 1, "\n", '. ');
+        if (!$this->stack || !end($this->stack)) {
+            $d1++;
+            $depth++;
+        }
+        $n = ceil($y->len / ($this->max_length - $this->tab * $depth)) ?: 1;
+        $q7 = round($y->len / $n) + $this->tab * $depth;
+        $len > $q7 ? $put("\n", '. ') : ($line .= $ws($y));
     }
 - on: ';' == $y->str
   do: |
@@ -351,6 +362,9 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
         } elseif ('}' == $y->str && in_array($y->reason ?? 0, $this->_curly_reason)) {
             [$depth, $d1, $d2] = array_pop($stk);
             in_array($y->reason, [T_TRY, T_DO]) or $y->new && $reset_stk($fnew($y));
+        } elseif (',' == $y->str && true === end($this->stack)) {
+            $d2 or [$depth, $d1] = [$depth - $d1, 0];
+            $put(",\n");
         }
     }
 #.brackets

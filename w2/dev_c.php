@@ -351,20 +351,18 @@ class dev_c extends Controller
             if ($is_addr)
                 $out .= hidden('cnt-addr', count($ary));
             $out .= a('add parameter', 'javascript:;', 'onclick="sky.g.tpl(this,' . $is_addr . ')"');
-        } else {
-            foreach ($ary as $v) {
-                trace($v, 'x1');
-                $v += ['', '', '', '', 0];
-                $re_val = !preg_match("/^\w*$/", $v[3]);
-                $val = $re_val ? "/^$v[3]$/" . ($v[2] ? " ($v[2])" : '') : $v[3];
-                $re_key = !preg_match("/^\w*$/", $v[1]);
-                $key = $re_key ? "/^$v[1]$/" . ($v[0] ? " ($v[0])" : '') : $v[1];
-                $out .= view('c23_view', [
-                    'data' => "$key => $val",
-                    'isaddr' => $is_addr,
-                    'ns' => $v[4] ? 'ns&nbsp;' : '',
-                ]);
-            }
+        } else foreach ($ary as $v) {
+            trace($v, 'x1');
+            $v += ['', '', '', '', 0];
+            $re_val = !preg_match("/^\w*$/", $v[3]);
+            $val = $re_val ? "/^$v[3]$/" . ($v[2] ? " ($v[2])" : '') : $v[3];
+            $re_key = !preg_match("/^\w*$/", $v[1]);
+            $key = $re_key ? "/^$v[1]$/" . ($v[0] ? " ($v[0])" : '') : $v[1];
+            $out .= view('c23_view', [
+                'data' => "$key => $val",
+                'isaddr' => $is_addr,
+                'ns' => $v[4] ? 'ns&nbsp;' : '',
+            ]);
         }
         return $out;
     }

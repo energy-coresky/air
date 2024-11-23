@@ -161,9 +161,9 @@ class PHP
             $put(T_SWITCH == $y->reason ? -2 : -1, '' === trim($y->line) ? '' : "\n", $y->str);
         } elseif (!$end =& $stk[array_key_last($stk)]) { # comma
             return ', ';
-        } elseif (true === $end) { # comma
-            $put(",\n");
-        } else { # comma
+        } elseif (true !== $end) { # comma
+        #    $put(",\n");
+        #} else { # comma
             if ($end[0]++ < $end[1]) {
                 if (strlen($y->line) < $this->max_length)
                     return ', ';
@@ -230,7 +230,7 @@ class PHP
             }
             $x[0] += $len = strlen(' ' == $y->str ? ' ' : trim($y->str));
             $this->stack[$si][4] += $len;
-            if (',' == $y->str && $x[3])
+            if (',' == $y->str && $x[3]) # calc commas
                 $x[3]++;
             if (in_array($y->tok = $this->_not_nl_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
@@ -275,17 +275,19 @@ class PHP
 
     function chars($y, &$reason, $si, &$_si) {
         $stk =& $this->stack[$si];
-        if (';' == $y->str) {
+        if (in_array($y->str, [';', ','])) {
             if ($stk[3] && $stk[4] > 34)
                 $this->x[$stk[3]] = [$stk[4], 0, 0, 0];
             $_si = $reason = $stk[3] = 0;
         } elseif (':' == $y->str) {
             $stk[4] > 24 or $stk[3] = 0; # reset short
             T_FUNCTION == $reason or $reason = 0;
-        } elseif (in_array($y->str, ['.', '?']) && !$stk[3]) {
-            $stk[3] = $y->i;
-            $stk[4] = 1;
-            $_si = $si;
+        } elseif (in_array($y->str, ['.', '?'])) {
+            if (!$stk[3]) {
+                $stk[3] = $y->i;
+                $stk[4] = 1;
+                $_si = $si;
+            }
         }
     }
 
