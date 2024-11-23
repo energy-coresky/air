@@ -264,6 +264,31 @@ class Debug
         }
     }
 
+    static function file($name) {
+        $php = PHP::file($name);
+        $pos = -1;
+        $ary = $use = [];
+        foreach ($php->rank() as $prev => $y) {
+            if ('CLASS' == $y->rank) {
+                echo "class `$y->str`:\n";
+                $pos = $php->pos;
+            }
+            if (T_VARIABLE == $y->tok) {
+                if ($php->pos == $pos) { # definitions
+                    $ary[] = $y->str;
+                } elseif (T_DOUBLE_COLON == $prev) { # usage
+                    $use[$y->str] = 1;
+                }
+            } elseif (T_VAR == $y->rank) {
+                $use['$' . $y->str] = 1;
+            }
+            if ($php->pos & PHP::_CLASS)
+                continue;
+            $pos = -1;
+        }
+        print_r(array_diff(array_keys($use), $ary));
+    }
+
     static function drop_all_cache() {
         global $sky;
         $result = 1;

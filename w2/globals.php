@@ -1,6 +1,5 @@
 <?php
 
-#[\AllowDynamicProperties]
 class Globals
 {
     private static $functions = []; // 2do: detect SKY::$vars collisions

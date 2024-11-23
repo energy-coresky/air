@@ -25,8 +25,8 @@ body:
 head:
   param: $at, $to = 0
   code: |
-    $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $in_php = 0;
-    $out = $line = $last_pv_semi = '';
+    $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $in_php = $reason = 0;
+    $out = $line = $last_mod = '';
     $stk = [];
 
     $put = function (...$in) use (&$out, &$line, &$depth) {
@@ -55,7 +55,7 @@ head:
         [$depth, $d1] = [$depth - $d1, 0];
     };
 
-    for ($y = $pv = $this->tok($at); $y; $y = $y->new) {
+    for ($y = $pv = $pv_nc = $this->tok($at); $y; $y = $y->new) {
         if (($y->new = $this->tok($y->i + 1)) && T_WHITESPACE == $y->new->tok)
             $y->new = $this->tok($y->i + 2); # next is NOT WHITESPACE
         if ($y->new && ($y->new->com = in_array($y->new->tok, $this->_comments))) {
@@ -78,7 +78,7 @@ head:
 
         if (in_array($y->tok, [T_CATCH, T_FINALLY])
             || T_WHILE == $y->tok && $pv->len && T_DO == $pv->reason
-            || ')' == $pv->str && in_array($y->tok, $this->_no_nl_before, true)
+            || ')' == $pv->str && in_array($y->tok, $this->_no_nl_after, true)
             ) {
             $y->str = ' ' . $y->str;
         } elseif (T_WHILE == $y->tok && '}' == $pv->str) {
@@ -87,15 +87,19 @@ head:
             $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
         }
 
-        if (';' == $pv->str && in_array($y->tok, $this->_semicolon_prev)) {
-            $last_pv_semi == $y->tok or $line = '' or $put("\n");
-            $last_pv_semi = $y->tok;
+        if ($y->len && $y->reason) {
+            in_array($reason = $y->reason, $this->_double_nl_after) or $last_mod = '';
+        }
+        if (in_array($reason, $this->_double_nl_after) && in_array($pv_nc->str, [';', '{']) && in_array($y->tok, $this->_semicolon_prev)) {
+            !$last_mod or $last_mod == $y->tok or $line = '' or $put("\n");
+            $last_mod = $y->tok;
         }
 
 tail:
   code: |
     unset($new);
     $pv = $y;
+    $y->com or $pv_nc = $y;
     }
     return $out . $line . ($in_php ? "\n" : '');
 #.nice_php
@@ -134,8 +138,8 @@ multilines: [$T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING]
 comments: @inc(.com3)
 endword: @inc(.ends)
 altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE]
-no_nl_before: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
-no_nl_before_else: [@@path(no_nl_before), @@inc(.loops), $T_IF]
+no_nl_after: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
+no_nl_after_else: [@@path(no_nl_after), @@inc(.loops), $T_IF]
 minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
 #.ary_nice_php
 
@@ -190,7 +194,7 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
     } else {
         $no_nl = $alt ? false : in_array(
             $new->tok ?: $new->str,
-            $else ? $this->_no_nl_before_else : $this->_no_nl_before,
+            $else ? $this->_no_nl_after_else : $this->_no_nl_after,
             true
         );
         if ('}' == $pv->str && ($depth < $prev || !$no_nl))
@@ -330,7 +334,7 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
         if (T_IF == $y->tok)
             $stk[] = [$depth, $d1, $d2];
         $new = $fnew($dar = $fnew($y)->close);
-        if (in_array($new->tok ?: $new->str, $this->_no_nl_before, true))
+        if (in_array($new->tok ?: $new->str, $this->_no_nl_after, true))
             $dar = 0;
     }
 #.ctrl_mains
@@ -348,8 +352,8 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
         $line .= $y->str . ($oc ? '' : ' ');
     } else {
         if ('(' == $y->str && in_array($pv->tok, $this->_altsyntax)) {
-            [, $close, $reason] = $this->x[$y->i];
-            $this->x[$close] = [0, 0, $reason, 0];
+            [, $close, $_reason] = $this->x[$y->i];
+            $this->x[$close] = [0, 0, $_reason, 0];
         }
         $y->line =& $line;
         $line .= $this->indents($oc, $y, $pv->tok, $put);
@@ -357,9 +361,11 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
             $put(1, "\n");
             $d1++;
         } elseif ('{' == $y->str && in_array($y->reason, $this->_curly_reason)) {
+            $last_mod = '';
             $stk[] = [$depth - 1, $d1, $d2];
             [$d1, $d2] = [0, count($stk)];
         } elseif ('}' == $y->str && in_array($y->reason ?? 0, $this->_curly_reason)) {
+            $last_mod = '';
             [$depth, $d1, $d2] = array_pop($stk);
             in_array($y->reason, [T_TRY, T_DO]) or $y->new && $reset_stk($fnew($y));
         } elseif (',' == $y->str && true === end($this->stack)) {

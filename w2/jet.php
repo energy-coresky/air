@@ -1,27 +1,38 @@
 <?php
-#[\AllowDynamicProperties]
+
 class Jet
 {
     use Processor;
 
-    const version = '1.09';
+    const version = '1.1';
 
+    static private $custom = [];
+    static private $verb;
+    static private $inc;
+    static private $block;
+    static private $use;
+    static private $ptr;
+    static private $top;
+    static private $id;
+    static private $empty = [];
+    static private $if = [];
+    static private $depth = [];
+    static private $wares = [];
+
+    private $marker;
     private $parsed = [];
     private $files = [];
     private $loop = [];
-
-    private static $custom = [];
-    private static $verb;
-    private static $inc;
-    private static $block;
-    private static $use;
-    private static $ptr;
-    private static $top;
-    private static $id;
-    private static $empty = [];
-    private static $if = [];
-    private static $depth = [];
-    private static $wares = [];
+    private $tailed;
+    private $occupied;
+    private $first;
+    private $u_last;
+    private $b_id;
+    private $b_loop;
+    private $b_if;
+    private $u_if;
+    private $body;
+    private $pf;
 
     static $tpl = [];
     static $fn;

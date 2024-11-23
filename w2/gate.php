@@ -1,5 +1,5 @@
 <?php
-#[\AllowDynamicProperties]
+
 class Gate
 {
     const HAS_T3     = 1;
@@ -27,6 +27,15 @@ class Gate
     private $eq_z;
     private $ra;
     private $ns;
+    private $raw_input;
+    private $sz_surl;
+    private $sz_ary;
+    private $start;
+    private $cnt_ary;
+    private $addr_c;
+    private $current;
+    private $ary_as_object;
+    private $key;
 
     static function instance() {
         static $gate;
