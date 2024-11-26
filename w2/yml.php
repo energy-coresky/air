@@ -552,7 +552,7 @@ class YML
                 return fn($v, $x) => $v . $x;
             case 'const':
                 return fn($v, $x) => constant($x . $v);
-            #case 'flip':
+            #case 'flip': todo: @diff array_diff(..)
             #    return fn($v) => array_flip($v);
             case 'keys':
                 return fn($v, $x) => $x ? array_combine(array_keys($v), array_keys($v)) : array_keys($v);

@@ -229,11 +229,9 @@ class Language
             }
         } elseif ('~' == $_POST['const-prev']) {
             $this->act($lng, $id, 'text', escape($_POST['s']));
-        } else {
-            foreach ($this->langs as $lg) {
-                if ($this->act($lg, $id, 'const', strtoupper($_POST['s'])))
-                    return true;
-            }
+        } else foreach ($this->langs as $lg) {
+            if ($this->act($lg, $id, 'const', strtoupper($_POST['s'])))
+                return true;
         }
         return ['e_list' => $this->listing($lng, [$in])];
     }

@@ -6,6 +6,14 @@ trait Processor
 
     protected $w_marker = '';
     protected $wn_input = '';
+    protected $wn_tokens = [
+        'Marker',
+        '#if..#end',
+        '#use',
+        'Operator',
+        7 => 'Data',
+        9 => 'Comment',
+    ];
 
     function unbind() {
         foreach (self::$winds as &$closure)

@@ -108,12 +108,11 @@ function jump($uri = '', $code = 302, $exit = true) {
 function trace($var, $is_error = false, $line = 0, $file = '', $context = false) {
     global $sky;
 
-    //$sky->bootstrap or define('NOW', );
     if ($err = true === $is_error) {
         $sky->was_error |= SKY::ERR_DETECT;
         if (null === SKY::$dd && $sky->bootstrap)
             $sky->open(is_array($var) ? $var[1] : $var);
-        if (SKY::$debug && SKY::$errors[0]++ > 49)
+        if (SKY::$debug && SKY::$errors[0]++ > 49)// throw new error, SKY::$throw_after_err_cnt
             return;
     }
     if (SKY::$debug || $sky->log_error && $err) {
