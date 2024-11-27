@@ -297,7 +297,7 @@ class Globals
         return $this->c_nmand($extns) + [
             'defs' => self::$definitions,
             'e_idents' => [
-                'max_i' => -1, // infinite
+                'max_i' => -1, # infinite
                 'row_c' => function($in, $evar = false) use ($nap) {
                     static $ary, $gt, $id, $num, $err_msg, $def_prev = '';
                     if ($evar) {
@@ -354,7 +354,7 @@ class Globals
         return [
             'show_emp' => SKY::i('gr_snu'),
             'e_usage' => [
-                'max_i' => -1, // infinite
+                'max_i' => -1, # infinite
                 'row_c' => function($ext, $evar = false) use ($nap) {
                     static $p, $i, $j = 0, $defs = 0, $ary = [];
                     if ($evar) {

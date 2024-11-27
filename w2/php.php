@@ -29,7 +29,7 @@ class PHP
     private $stack = [];
     private $x = [];
     private $part = '';
-    private $wind_cfg = '~/w2/__beauty.yaml';
+    private $wind_cfg = '~/w2/_nice_php.yaml';
 
     static function file(string $name, $tab = 4) {
         return new self(file_get_contents($name), $tab);
@@ -139,8 +139,7 @@ class PHP
                 $stk[] = [$for ? 0 : false, $exp];
                 return $y->line .= $y->str; # continue line
             }
-            $is = '[' == $y->str && ($y->cnt[','] ?? 0) > 9;
-            $stk[] = [$is ? [0, floor($y->cnt[','] / 2) - 1] : !$curly, $exp];
+            $stk[] = [$y->cnt[','] ?? !$curly, $exp, $y->str, $y->len];
             $this->x[$y->close] = $y->i;
             if ($y->new->i == $y->close)
                 $y->new = $this->tok($y->new->i);
@@ -210,17 +209,17 @@ class PHP
         for ($y = $pv = $this->tok(); $y; $y = $y->new) {
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
-            if (!$this->in_str && '[' === $y->str) {
+            $chr = $y->tok || $this->in_str ? '' : $y->str;
+            if ('[' == $chr) {
                 [$_key, $key] = [$key, 1];
             } elseif ($key && $this->del_arrow($y, $pv, $key)) {
                 continue;
             }
-            $x[0] += $len = strlen(' ' == $y->str ? ' ' : trim($y->str));
-            $this->stack[$si][4] += $len;
-            if (',' == $y->str && ($x[1][','] ?? false))
+            $x[0] += $len = ' ' == $y->str ? 1 : (strlen(trim($y->str)) ?: 0);
+            $stk =& $this->stack[$si];
+            $stk[4] += $len;
+            if (',' == $chr && ($x[1][','] ?? false))
                 $x[1][',']++; # calc commas
-            if (in_array($y->str, ['.', '?']))
-                $this->stack[$si][5][$y->str]++; # calc
             if (in_array($y->tok = $this->_not_nl_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
 
@@ -228,15 +227,15 @@ class PHP
             if (T_ATTRIBUTE == $y->tok) {
                 $this->mod_attribute($y);
             } elseif ($oc > 0) {
-                if ('(' == $y->str)
-                    $this->expr_head($y, $si, $_si);
-                if ('{' == $y->str && isset($this->stack[$_si]))
+                if ('(' == $chr)
+                    $this->expr_head($y->i, $stk, $_si);
+                if ('{' == $chr && isset($this->stack[$_si]))
                     $this->stack[$_si][3] = 0;
                 $this->stack[++$si] = [$i = $y->i, $mod, $_key, 0, 0, $cnt]; # i(open), mod, key, i(expr), len, cnt
                 $this->x[$i] = [1, [',' => 1], $reason, $reason = 0]; # len, cnt, reason, close
                 $x =& $this->x[$i];
             } elseif ($oc < 0) {
-                $this->expr_tail($si, $_si);
+                $this->expr_tail($stk, $_si);
                 [$_i, $mod, $_key] = array_pop($this->stack);
                 $z =& $this->x[$_i];
                 $x =& $this->x[$i = $this->stack[--$si][0]];
@@ -251,40 +250,50 @@ class PHP
                     $key = $_key;
                 if ($mod)
                     $y->str = ']'; # modify code
-                if (')' == $y->str && in_array($reason = $pvr = $z[2], $this->_expr_reset)) // 2del curly_reason expr_reset
+                if (')' == $chr && in_array($reason = $pvr = $z[2], $this->_expr_reset)) // 2del curly_reason expr_reset
                     $this->stack[$si][3] = $this->stack[$si][4] = 0;
-                if ('}' == $y->str && in_array($z[2], $this->_expr_reset))
+                if ('}' == $chr && in_array($z[2], $this->_expr_reset))
                     $this->stack[$si][3] = $this->stack[$si][4] = 0;
+            } elseif ('.' == $chr) {
+                $stk[5]['.']++;
+            } elseif ('?' == $chr) {
+                $stk[5]['?'] = $stk[4];
+                $stk[5][':'] = false;
+            } elseif (':' == $chr && $stk[5]['?'] && 0 == $stk[5][':']) {
+                $stk[5]['?'] = $stk[4] - $stk[5]['?'];
+                $stk[5][':'] = true;
             } elseif (T_DOUBLE_ARROW == $y->tok) {
                 unset($x[1][',']); # reset cnts commas
                 $x[0] += 3; # add len
             } elseif (T_OBJECT_OPERATOR == $y->tok) { # in cnt "->" as '-'
-                $p =& $this->stack[$si][5];
-                $p['-'] = 1 + ($y->tok == $pvr ? $p['-'] : 0);
+                $stk[5]['-'] = 1 + ($y->tok == $pvr ? $stk[5]['-'] : 0);
             } elseif (T_COMMENT == $y->tok && '/*' != substr($y->str, 0, 2)) {
                 $x[0] += 150; # set big len
-            } elseif (T_CLOSE_TAG == $y->tok || !$y->tok && in_array($y->str, [';', ','])) {
-                $this->expr_tail($si, $_si);
+            } elseif (T_CLOSE_TAG == $y->tok || in_array($chr, [';', ','])) {
+                $this->expr_tail($stk, $_si);
             } elseif (T_WHITESPACE !== $y->tok && T_OPEN_TAG !== $y->tok) {
-                $this->expr_head($y, $si, $_si);
+                $this->expr_head($y->i, $stk, $_si);
                 $y->tok or T_FUNCTION == $reason or $reason = 0;
             }
             $y->new = $this->tok($y->i + 1);
             $y->ignore or $pv = $y;
-            $y->ignore or ')' == $y->str or $pvr = 0;
+            $y->ignore or ')' == $chr or $pvr = 0;
         }
     }
 
-    function expr_head($y, $si, &$_si) {
-        $stk =& $this->stack[$si];
+    function expr_head($i, &$stk, &$_si) {
         if (!$stk[3]) {
-            $stk[3] = $y->i;
+            $stk[3] = $i;
             $_si = -1;
         }
     }
 
-    function expr_tail($si, &$_si) { # -> ?-> T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR replaced!
-        $stk =& $this->stack[$si];
+    function expr_tail(&$stk, &$_si) { # -> ?-> T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR replaced!
+        if ($stk[5]['?']) {
+            if (!$stk[5][':'] || $stk[5]['?'] < 25)
+                $stk[3] = false;
+            unset($stk[5][':']);
+        }
         if ($stk[3] && $stk[4] > 55) //  && $stk[5] > 1
             $this->x[$stk[3]] = [$stk[4], $stk[5], 0,
                 isset($this->x[$stk[3]][3]) ? -$this->x[$stk[3]][3] : 0

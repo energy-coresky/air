@@ -445,7 +445,7 @@ class YML
     static function inc($name, $ware = false, $marker = '', $yml = null) {
         $empty = '' === $name;
         if ($empty || '~' == $name[0]) {
-            $name = DIR_S . ($empty ? '/w2/__data.yaml' : substr($name, 1));
+            $name = DIR_S . ($empty ? '/w2/_data.yaml' : substr($name, 1));
             $ware = true;
         }
         if (false !== strpos($marker, '.')) {

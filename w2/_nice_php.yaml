@@ -59,6 +59,12 @@ head:
             'cnt' => $cnt + ['?' => 0, '.' => 0, '-' => 0],
         ];
     };
+
+    $calc_max = function ($len) use (&$depth) {
+        $max = $this->max_length - $depth * $this->tab;
+        $max > 10 or $max = 10;
+        return ceil($len / ceil($len / $max)) + $depth * $this->tab;
+    };
     $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
     $fnew = fn($y) => is_int($y) ? $this->tok($y, true) : ($y->new->com ? $this->tok($y->new->i, true) : $y->new);
 
@@ -283,7 +289,7 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
     }
 - on: '?' == $y->str
   do: |
-    if ($exp->len < $this->max_length) { //$y->len + strlen($line)
+    if (!$exp->cnt['?'] || $exp->len < $this->max_length) { //$y->len + strlen($line)
         $line .= ':' == $y->new->str ? ' ?' : ' ? ';
     } else {
         $exp->len = 0;
@@ -330,6 +336,8 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
 #.comments
 - on: $y->com
   do: |
+    if ($at && 1 & $y->com)
+        return [$y, str_pad('', $this->max_length)];
     if ('' === trim($line) && !$pv->com && (!$y->new || !in_array($y->new->tok, $this->_comments)) && $ok_com($y)) {
         $out = substr($out, 0, -1) . " $y->str\n";
         $put('');
@@ -372,19 +380,27 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
             [$q7] = [0, $depth--, $d1--];
         }
         if (',' == $y->str) { # comma
-            $comma =& $stk[array_key_last($stk)][0];
-            if (true === $comma) {
+            $top =& $stk[array_key_last($stk)];
+            top:
+            if (!$top[0]) {
+                $line .= ', ';
+            } elseif (true === $top[0]) {
                 if ($q7)
                     [$q7] = [0, $depth--, $d1--];
                 $put(",\n");
-            } elseif (!$comma || $comma[0]++ < $comma[1] && strlen($line) < $this->max_length) {
-                $line .= ', ';
+                $exp = $get_exp($y);
+            } elseif (1 == $top[0]) {
+                strlen($line) < $top[2] ? ($line .= ', ') : $put(",\n");
+            } elseif ('[' != $top[2] || $top[0] < 10) {
+                $top[0] = '{' != $top[2];
+                goto top;
             } else {
-                $comma = [0, $comma[1] * 2];
-                $put(",\n");
+                $top = [1, $top[1], $calc_max($top[3])];
+                goto top;
             }
         } else {
             $y->line =& $line;
+            $_depth = $depth;
             $this->indents($oc, $y, $pv->tok, $put, $exp);
             if ($oc > 0)
                 $exp = $get_exp($y);
@@ -392,11 +408,11 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
         if ($dar == $y->i) { # )
             $put(1, "\n");
             $d1++;
-        } elseif ('{' == $y->str && in_array($y->reason, $this->_curly_reason)) {
+        } elseif ('{' == $y->str && $_depth != $depth) {
             $last_mod = '';
-            $ifs[] = [$depth - 1, $d1, $d2];
+            $ifs[] = [$_depth, $d1, $d2];
             [$d1, $d2] = [0, count($ifs)];
-        } elseif ('}' == $y->str && in_array($y->reason ?? 0, $this->_curly_reason)) {
+        } elseif ('}' == $y->str && $_depth != $depth) {
             $last_mod = '';
             [$depth, $d1, $d2] = array_pop($ifs);
             in_array($y->reason, [T_TRY, T_DO]) or $y->new && $reset_ifs($fnew($y));
