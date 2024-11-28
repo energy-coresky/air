@@ -47,7 +47,7 @@ head:
         return $len + strlen($y->str) < 90 && $len > 3;
     };
     $reset_ifs = function ($y) use (&$ifs, &$depth, &$d1, &$d2) {
-        if (in_array($y->tok, [T_ELSE, T_ELSEIF, T_FINALLY]))
+        if (!$y || in_array($y->tok, [T_ELSE, T_ELSEIF, T_FINALLY]))
             return; // ';' == $y->str || 
         array_splice($ifs, $d2);
         [$depth, $d1] = [$depth - $d1, 0];
@@ -130,8 +130,8 @@ tail:
 
 tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT] # step1
 curly_reason: [ # step1
-  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO,     $T_FN,
-  @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try),         $T_OBJECT_OPERATOR, $T_NS_SEPARATOR
+  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO, $T_FN,
+  @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try),         $T_OBJECT_OPERATOR  #, $T_NS_SEPARATOR
 ]
 optim_key: [ # step1
   @@inc(.com3), $T_WHITESPACE, $T_VARIABLE,
@@ -391,11 +391,9 @@ minus: [@@path(ws_both), ., '[', '(', ',', ':', '?']
                 $exp = $get_exp($y);
             } elseif (1 == $top[0]) {
                 strlen($line) < $top[2] ? ($line .= ', ') : $put(",\n");
-            } elseif ('[' != $top[2] || $top[0] < 10) {
-                $top[0] = '{' != $top[2];
-                goto top;
             } else {
-                $top = [1, $top[1], $calc_max($top[3])];
+                $easy = '[' != $top[2] || $top[0] < 10;
+                $top = [$easy ? '{' != $top[2] : 1, $top[1], $easy ? 0 : $calc_max($top[3])];
                 goto top;
             }
         } else {

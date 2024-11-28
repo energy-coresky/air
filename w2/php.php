@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = '0.778';
+    const version = '0.808';
 
     use Processor;
 
@@ -48,6 +48,7 @@ class PHP
         if (PHP_VERSION_ID !== self::$data->version) { # different console's and web versions
             self::$warning = 'PHP version do not match: ' . PHP_VERSION_ID . ' !== ' . self::$data->version;
             Plan::cache_d(['main', 'yml_main_php.php']);
+            Plan::cache_dq(['main', 'yml_main_nice_php.php']);
             self::$data = Plan::php(false);
         }
         foreach (self::$data->gt_74 as $i => $str)
@@ -271,6 +272,7 @@ class PHP
                 $x[0] += 150; # set big len
             } elseif (T_CLOSE_TAG == $y->tok || in_array($chr, [';', ','])) {
                 $this->expr_tail($stk, $_si);
+                $reason = 0;
             } elseif (T_WHITESPACE !== $y->tok && T_OPEN_TAG !== $y->tok) {
                 $this->expr_head($y->i, $stk, $_si);
                 $y->tok or T_FUNCTION == $reason or $reason = 0;
