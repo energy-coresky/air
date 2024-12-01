@@ -4,7 +4,7 @@ class PHP
 {
     const version = '0.808';
 
-    use Processor;
+    use Saw;
 
     const _ANONYM  = 1; # anonymous func, class
     const ARRF  = 3; # arrow func (for ->in_par and NOT for ->pos)
@@ -14,6 +14,7 @@ class PHP
 
     static $data = false;
     static $warning = false;
+    static $php_fn;
 
     public $tab; # 0 for minified PHP
     public $head = [[]/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
@@ -29,10 +30,10 @@ class PHP
     private $stack = [];
     private $x = [];
     private $part = '';
-    private $wind_cfg = '~/w2/_nice_php.yaml';
+    private $saw_fn = '~/w2/_nice_php.yaml';
 
     static function file(string $name, $tab = 4) {
-        return new self(file_get_contents($name), $tab);
+        return new self(file_get_contents(self::$php_fn = $name), $tab);
     }
 
     static function ary(array $in, $return = false) {
@@ -48,7 +49,7 @@ class PHP
         if (PHP_VERSION_ID !== self::$data->version) { # different console's and web versions
             self::$warning = 'PHP version do not match: ' . PHP_VERSION_ID . ' !== ' . self::$data->version;
             Plan::cache_d(['main', 'yml_main_php.php']);
-            Plan::cache_dq(['main', 'yml_main_nice_php.php']);
+            Plan::cache_dq(['main', 'saw_main_php.php']);
             self::$data = Plan::php(false);
         }
         foreach (self::$data->gt_74 as $i => $str)
@@ -82,51 +83,18 @@ class PHP
         if (self::$warning)
             throw new Error(self::$warning);
         $this->nice(); # step 1
-        if ($this->tab)
-            return $this->wind_nice_php(0); # step 2
-
-        # else minifier
-        $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
-        for ($out = '', $y = $this->tok(); $y; $y = $new) { //2do 1+++$a;
-            $new = $this->tok($y->i + 1);
-            if (T_COMMENT == $y->tok || T_DOC_COMMENT == $y->tok) # 2do ->save_comment
-                continue;
-            if (T_OPEN_TAG == $y->tok) {
-                $echo = in_array($new->tok, [T_ECHO, T_PRINT]) && ($new = $this->tok($y->i + 2));
-                $y->str = $echo ? '<?=' : ($this->in_html ? '<?' : '<?php ');
-            }
-            if (!$y->i)
-                $y->str .= "/* Minified with Coresky framework, https://coresky.net */";
-            
-            if (T_WHITESPACE == $y->tok) {//2do
-                if ($not($pv->str[-1]) || !$new || $not($new->str[0]))
-                    continue;
-                $y->str = ' ';
-            }
-            $this->int_bracket($y);
-            if (!$this->in_str && ']' == $y->str && ',' == $pv->str)
-                $out = substr($out, 0, -1);
-
-            $out .= $y->str;
-            $pv = $y;
-        }
-        return $out;
+        return $this->_saw($this->tab ? 'nice' : 'minify'); # step 2
     }
 
     private function left_bracket($y) {
         $len = strlen($y->line);
         if ($this->in_html || $len + $y->len < $this->max_length || $y->close < 0)
             return true; # continue line
-        [$new, $str] = $this->wind_nice_php($y->new->i, $y->close);
+        [$new, $str] = $this->_saw('nice', $y->new->i, $y->close);
         if (!$new->len || '[' == $y->str && '[' == $new->str)
             return false; # add new line
-        if ($len + strlen($str) < $this->max_length) {
-            if (strlen($this->str($new->close, $y->close)) > 20)
-                return false; # add new line
-            $y->new = $new;
-            $y->str .= $str;
-            return true; # continue line
-        }
+        if ($len + strlen($str) < $this->max_length) # add/continue new line
+            return strlen($this->_saw('minify', $new->close, $y->close)) < 21;
         return false; # add new line
     }
 
@@ -140,7 +108,7 @@ class PHP
                 $stk[] = [$for ? 0 : false, $exp];
                 return $y->line .= $y->str; # continue line
             }
-            $stk[] = [$y->cnt[','] ?? !$curly, $exp, $y->str, $y->len];
+            $stk[] = [$y->cnt[0] ?? !$curly, $exp, $y->str, $y->len];
             $this->x[$y->close] = $y->i;
             if ($y->new->i == $y->close)
                 $y->new = $this->tok($y->new->i);
@@ -201,13 +169,12 @@ class PHP
     }
 
     function nice() {
-        if (!isset(self::$data->not_nl_curly))
-            Plan::set('main', fn() => yml($fn = 'nice_php', "+ @inc(ary_$fn) $this->wind_cfg"));
+        isset(self::$data->not_nl_curly) or $this->load($this->saw_fn, 'php');
         $this->max_length or $this->max_length = 130;
-        $this->stack[] = [0, 0, 0, 0, 0, $cnt = ['?' => 0, '.' => 0, '-' => 0]];
-        $this->x[$i = 0] = [0, [',' => 1], 0, $reason = $key = $_key = $si = $_si = $pvr = 0];
+        $this->stack[] = [0, 0, 0, 0, 0, []];
+        $this->x[$i = 0] = [0, [1], 0, $reason = $key = $_key = $si = $pvr = 0];
         $x =& $this->x[0];
-        for ($y = $pv = $this->tok(); $y; $y = $y->new) {
+        for ($y = $pv = $this->tok(); $y; $y = $y->new):
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
             $chr = $y->tok || $this->in_str ? '' : $y->str;
@@ -216,11 +183,11 @@ class PHP
             } elseif ($key && $this->del_arrow($y, $pv, $key)) {
                 continue;
             }
-            $x[0] += $len = ' ' == $y->str ? 1 : (strlen(trim($y->str)) ?: 0);
+            $x[0] += $len = ' ' == $y->str ? 1 : strlen(trim($y->str));
             $stk =& $this->stack[$si];
             $stk[4] += $len;
-            if (',' == $chr && ($x[1][','] ?? false))
-                $x[1][',']++; # calc commas
+            if (',' == $chr && ($x[1][0] ?? false))
+                $x[1][0]++; # calc commas
             if (in_array($y->tok = $this->_not_nl_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
 
@@ -228,15 +195,14 @@ class PHP
             if (T_ATTRIBUTE == $y->tok) {
                 $this->mod_attribute($y);
             } elseif ($oc > 0) {
+                //$stk[5][$y->i] = $len;
                 if ('(' == $chr)
-                    $this->expr_head($y->i, $stk, $_si);
-                if ('{' == $chr && isset($this->stack[$_si]))
-                    $this->stack[$_si][3] = 0;
-                $this->stack[++$si] = [$i = $y->i, $mod, $_key, 0, 0, $cnt]; # i(open), mod, key, i(expr), len, cnt
-                $this->x[$i] = [1, [',' => 1], $reason, $reason = 0]; # len, cnt, reason, close
+                    $stk[3] or $stk[3] = $y->i;
+                $this->stack[++$si] = [$i = $y->i, $mod, $_key, 0, 0, []]; # i(open), mod, key, i(expr), len, cnt
+                $this->x[$i] = [1, [1], $reason, $reason = 0]; # len, cnt, reason, close
                 $x =& $this->x[$i];
             } elseif ($oc < 0) {
-                $this->expr_tail($stk, $_si);
+                $this->push_x($stk);
                 [$_i, $mod, $_key] = array_pop($this->stack);
                 $z =& $this->x[$_i];
                 $x =& $this->x[$i = $this->stack[--$si][0]];
@@ -244,9 +210,9 @@ class PHP
                 $x[0] += $len = $z[0] - 1;
                 $this->stack[$si][4] += $len;
                 if ($z[0] > 32)
-                    unset($x[1][',']);
-                if (($z[1][','] ?? 3) < 2)
-                    unset($z[1][',']);
+                    unset($x[1][0]);
+                if (($z[1][0] ?? 3) < 2)
+                    unset($z[1][0]);
                 if ('[' === $this->tok[$_i])
                     $key = $_key;
                 if ($mod)
@@ -255,54 +221,36 @@ class PHP
                     $this->stack[$si][3] = $this->stack[$si][4] = 0;
                 if ('}' == $chr && in_array($z[2], $this->_expr_reset))
                     $this->stack[$si][3] = $this->stack[$si][4] = 0;
-            } elseif ('.' == $chr) {
-                $stk[5]['.']++;
-            } elseif ('?' == $chr) {
-                $stk[5]['?'] = $stk[4];
-                $stk[5][':'] = false;
-            } elseif (':' == $chr && $stk[5]['?'] && 0 == $stk[5][':']) {
-                $stk[5]['?'] = $stk[4] - $stk[5]['?'];
-                $stk[5][':'] = true;
+            } elseif (in_array($chr, $this->_expr_chr)) { // $this->_expr_tok 
+                $stk[5][$y->i] = $len;
+            } elseif (!$this->in_str && in_array($y->tok, $this->_expr_tok)) {
+                $stk[5][$y->i] = $len;
             } elseif (T_DOUBLE_ARROW == $y->tok) {
-                unset($x[1][',']); # reset cnts commas
+                unset($x[1][0]); # reset cnts commas
                 $x[0] += 3; # add len
-            } elseif (T_OBJECT_OPERATOR == $y->tok) { # in cnt "->" as '-'
-                $stk[5]['-'] = 1 + ($y->tok == $pvr ? $stk[5]['-'] : 0);
             } elseif (T_COMMENT == $y->tok && '/*' != substr($y->str, 0, 2)) {
                 $x[0] += 150; # set big len
             } elseif (T_CLOSE_TAG == $y->tok || in_array($chr, [';', ','])) {
-                $this->expr_tail($stk, $_si);
+                $this->push_x($stk);
                 $reason = 0;
             } elseif (T_WHITESPACE !== $y->tok && T_OPEN_TAG !== $y->tok) {
-                $this->expr_head($y->i, $stk, $_si);
+                $stk[3] or $stk[3] = $y->i;
                 $y->tok or T_FUNCTION == $reason or $reason = 0;
             }
             $y->new = $this->tok($y->i + 1);
             $y->ignore or $pv = $y;
             $y->ignore or ')' == $chr or $pvr = 0;
-        }
+        endfor;
     }
 
-    function expr_head($i, &$stk, &$_si) {
-        if (!$stk[3]) {
-            $stk[3] = $i;
-            $_si = -1;
+    function push_x(&$stk) { # -> ?-> T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR replaced!
+        $s3 = $stk[3];
+        if ($s3 && $stk[5] && $stk[4] > 55) {
+            $close = isset($this->x[$s3][3]) ? -$this->x[$s3][3] : 0;
+            $this->x[$s3] = [$stk[4], $stk[5], 0, $close];
         }
-    }
-
-    function expr_tail(&$stk, &$_si) { # -> ?-> T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR replaced!
-        if ($stk[5]['?']) {
-            if (!$stk[5][':'] || $stk[5]['?'] < 25)
-                $stk[3] = false;
-            unset($stk[5][':']);
-        }
-        if ($stk[3] && $stk[4] > 55) //  && $stk[5] > 1
-            $this->x[$stk[3]] = [$stk[4], $stk[5], 0,
-                isset($this->x[$stk[3]][3]) ? -$this->x[$stk[3]][3] : 0
-            ];
-        $_si = -1;
         $stk[3] = $stk[4] = 0;
-        $stk[5] = ['?' => 0, '.' => 0, '-' => 0];
+        $stk[5] = [];
     }
 
     function int_bracket($y, $is_nice = false) {
@@ -332,11 +280,13 @@ class PHP
                 $this->pos &= ~array_pop($stk)[0];
             } elseif (T_NAMESPACE == $prev && (';' == $y->str || 1 == $y->curly)) {
                 $this->head = [[], [], [], '']; # return to global namespace
-            } elseif (T_FUNCTION == $prev && '&' === $y->str
-                || ',' === $y->str && $uei($prev, $use)
-                || '' != $this->part
-                || $this->in_par && '?' == $y->str) {
-                    $skip = true;
+            } elseif (
+                T_FUNCTION == $prev && '&' === $y->str
+                    || ',' === $y->str && $uei($prev, $use)
+                    || '' != $this->part
+                    || $this->in_par && '?' == $y->str
+            ) {
+                $skip = true;
             } elseif (T_FUNCTION == $prev && '(' == $y->str || T_NEW == $prev && T_CLASS == $y->tok) {
                 $this->in_par = self::_ANONYM;
                 $this->pos or array_push($stk, [$this->pos = self::_ANONYM, $this->curly]);
@@ -482,7 +432,7 @@ class PHP
 
     function get_modifiers($y, $i = 4, $add_public = false) {
         static $list;
-        $list or $list = Plan::set('main', fn() => yml('modifiers', "+ @inc(modifiers) $this->wind_cfg"));
+        $list or $list = Plan::set('main', fn() => yml('modifiers', "+ @inc(modifiers) $this->saw_fn"));
         for ($ary = [], $i = $y->i - $i; $y = $this->tok($i--); ) {
             if (in_array($y->tok, $this->_tokens_ign)) # T_ATTRIBUTE not ignore
                 continue;

@@ -1,10 +1,9 @@
 <?php
 
-trait Processor
+trait Saw
 {
-    static $winds = [];
+    static $saws = [];
 
-    protected $w_marker = '';
     protected $wn_input = '';
     protected $wn_tokens = [
         'Marker',
@@ -15,9 +14,69 @@ trait Processor
         9 => 'Comment',
     ];
 
-    function unbind() {
-        foreach (self::$winds as &$closure)
-            $closure[1] = false;
+    private function _saw(...$in) {
+        $saw =& self::$saws[array_shift($in)];
+        if (isset($saw['array']))
+            return $saw['array'];
+        $saw['bind'] or $saw['bind'] = Closure::bind($saw['closure'], $this, $this);
+        return call_user_func_array($saw['bind'], $in);
+    }
+
+    function unbind($list = []) {
+        foreach (self::$saws as $name => &$saw)
+            if (in_array($name, $list))
+                $saw['bind'] = false;
+    }
+
+    function load($src, $dst) {
+        if ('~' == $src[0]) {
+            $ware = 'main';
+        } else {
+            $ware = Plan::$ware;
+            $src = "$ware::$src";
+        }
+        $dst = ['main', $name = "saw_$ware" . "_$dst.php"];
+        //Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
+        if (1) { //!$saw = Plan::cache_rq($dst)) {
+            $init = '';
+            $php = '$array = [';
+            foreach (yml("+ @inc(saw) $src") as $k => $saw) {
+                if (isset($saw['array'])) {
+                    $php .= "'$k' => ['array' => " . var_export($saw['array'], true) . "],\n\n";
+                    if ($saw['init'])
+                        $init .= $saw['init'];
+                    continue;
+                }
+                $php .= "'$k' => ['bind' => false, 'closure' => function ($saw[param]) {\n";
+                foreach (['head', 'body', 'tail'] as $section) {
+                    if (!$section = $saw['closure'][$section] ?? false)
+                        continue;
+                    foreach ($section as $k => $v) {
+                        if ('code' == $k) {
+                            $php .= "$v\n\n";
+                        } elseif ('vars' == $k) {
+                            foreach ($v as $var => $is)
+                                $php .= "\$$var = " . var_export($is, true) . ";\n";
+                        } elseif ('rules' == $k) {
+                            foreach ($v as $n => $rule) {
+                                if ('default' === $n) {
+                                    $php .= " else { $rule }\n";
+                                } elseif ($n > 0) {
+                                    $php .= " elseif ($rule[on]) {\n$rule[do]\n}";
+                                } else {
+                                    $php .= "if ($rule[on]) {\n$rule[do]\n}";
+                                }
+                            }
+                        }
+                    }
+                }
+                $php .= "}],\n\n";
+            }
+            $php .= "];\n\n";
+            Plan::cache_s($dst, "<?php\n\n$php\n\n$init\n\nreturn \$array;");
+            $saw = Plan::cache_r($dst);
+        }
+        self::$saws += $saw;
     }
 
     function tokens($y = false) {
@@ -65,59 +124,6 @@ trait Processor
             yield $t => $y;
             $y->pt = $t;
         }
-    }
-
-    function __call($name, $args) {
-        if ('wind_' == substr($name, 0, 5)) {
-            $this->w_marker = substr($name, 5);
-            return $this->wind(...$args);
-        }
-    }
-
-    private function wind(...$in) {
-        $fn = $this->wind_cfg;
-
-        if ('~' == $fn[0]) {
-            $ware = 'main';
-        } else {
-            $ware = Plan::$ware;
-            $fn = "$ware::$fn";
-        }
-
-        $dst = ['main', $name = 'wind_' . $ware . "_$this->w_marker.php"];
-        self::$winds[$name] ?? self::$winds[$name] = [false, false];
-        $closure =& self::$winds[$name];
-        $ok = (bool)$closure[0];//Plan::_m([$ware, $fn]) < Plan::cache_mq($dst)
-        if (!$ok) {
-            $y = yml("+ @inc($this->w_marker) $fn");
-            $param = $y['head']['param'];
-            $php = "<?php\n\nreturn function ($param) {\n";
-            foreach (['head', 'body', 'tail'] as $section) {
-                foreach ($y[$section] as $k => $v) {
-                    if ('code' == $k) {
-                        $php .= "$v\n\n";
-                    } elseif ('vars' == $k) {
-                        foreach ($v as $var => $is)
-                            $php .= "\$$var = " . var_export($is, true) . ";\n";
-                    } elseif ('rules' == $k) {
-                        foreach ($v as $n => $rule) {
-                            if ('default' === $n) {
-                                $php .= " else { $rule }\n";
-                            } elseif ($n > 0) {
-                                $php .= " elseif ($rule[on]) {\n$rule[do]\n}";
-                            } else {
-                                $php .= "if ($rule[on]) {\n$rule[do]\n}";
-                            }
-                        }
-                    }
-                }
-            }
-            Plan::cache_s($dst, "$php\n};\n\n");
-            $closure[0] = Plan::cache_r($dst);
-        }
-        $closure[1] or $closure[1] = Closure::bind($closure[0], $this, $this);
-
-        return call_user_func_array($closure[1], $in);
     }
 
     private function preprocessor() {
