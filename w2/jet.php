@@ -2,9 +2,9 @@
 
 class Jet
 {
-    use Saw;
-
     const version = '1.1';
+
+    use SAW;
 
     static private $custom = [];
     static private $verb;

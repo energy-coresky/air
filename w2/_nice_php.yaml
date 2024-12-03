@@ -4,15 +4,15 @@
 #._
 
 #.saw
+minify:
+  closure: @inc(.minify)
+  param: $at = 0, $to = false
+  bind:
 nice:
   closure: @inc(.nice)
   param: $at = 0, $to = 0
   bind: # `$this` by default
   #init:
-minify:
-  closure: @inc(.minify)
-  param: $at = 0, $to = false
-  bind:
 data:
   array: @inc(.data)
   init: |
@@ -27,7 +27,7 @@ data:
   #preflight:
 expr_nl:
   closure: @inc(.expr_nl)
-  param: $y, $depth
+  param: $y, $depth, $calc_max
   bind:
 #.saw
 
@@ -80,10 +80,13 @@ head:
     $trim = function () use (&$line) {
         return '' === trim($line);
     };
-    $calc_max = function ($len) use (&$depth) {
+    $calc_max = function ($len, &$n = null) use (&$depth) {
         $max = $this->max_length - $depth * $this->tab;
         $n = ceil($len / ($max < 10 ? 10 : $max));
-        return 1 == $n ? $this->max_length : ceil($len / $n) + $depth * $this->tab + 0/* calc precision!!*/;
+        return 1 == $n ? $this->max_length : ceil($len / $n) + $depth * $this->tab;
+    };
+    $correct = function ($y, $mem) {
+        $y->len or [$y->len, $y->cnt, $y->corr, $y->close, $y->reason] = $mem + [3 => 0, 0];
     };
 
     $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
@@ -101,7 +104,7 @@ head:
         }
         $oc = $this->int_bracket($y, true);
         if ($y->len && $y->close < 1)
-            $exp = $this->_saw('expr_nl', $y, $depth);
+            $exp = $this->_saw('expr_nl', $y, $depth, $calc_max);
         if ($this->in_str) {
             $line .= $y->str;
             continue;
@@ -293,10 +296,12 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
   do: |
     if (T_SWITCH == $y->tok) {
         $line .= $y->str . ' ';
+        $exp = [];
     } else {
         $s3 = true;
         $s5 ? $put(-1, '', $y->str) : ($line .= $y->str);
         T_DEFAULT == $y->tok or $line .= ' ';
+        $mem = $y->len ? [$y->len, $y->cnt] : false;
     }
     $s5 = 0;
 - on: ':' == $y->str
@@ -305,9 +310,11 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
         $put("\n", ': ');
         [$q8] = [0, $depth--, $d1--];
     } elseif ($s3) { # after T_CASE, T_DEFAULT
-        $s3 = false;
-      //$exp->len < 10 or $exp->len -= strlen(trim($line)) - 1;
+        if ($mem)
+            $correct($y->new, $mem + [2 => strlen(trim($line)) + 1]);
+        $exp = [];
         $put($s5 = 1, ":\n");
+        $s3 = false;
     } elseif (T_ELSE == $pv->tok) {
         goto altelse; # ELSE:
     } elseif (')' == $pv->str) {
@@ -338,7 +345,7 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
   do: $line .= $ws($y);
 - on: in_array($y->tok, $this->_expr_tok) # -> ||.. or..
   do: |
-    $space = '->' == $y->str ? '' : ' '; # T_OBJECT_OPERATOR == $y->tok
+    $space = T_OBJECT_OPERATOR == $y->tok ? '' : ' '; # nullsafe ?-> also work
     if (in_array($y->i, $exp)) {
         $q7 or [$q7 = ++$d1, ++$depth];
         $put("\n", $y->str . $space);
@@ -386,6 +393,8 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
         $out = substr($out, 0, -1) . " $y->str\n";
         $put('');
     } elseif (1 & $y->com || T_DOC_COMMENT == $y->tok) { # new line
+        if ($y->len)
+            $correct($y->new, [$y->len, $y->cnt, strlen($y->str)]);
         $put("$y->str\n");
     } else {
         $line .= $y->str;
@@ -408,36 +417,41 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
 #.expr_nl
 head:
   code: |
-    if (!$y->cnt || $depth * $this->tab + $y->len < $this->max_length)
+    $len = $y->len;
+    if ($y->close < 0) {
+        $y->close = -$y->close;
+        $y->len = $y->cnt[-1];
+    }
+    if (isset($y->corr)) { # correction
+        foreach ($y->cnt as &$val)
+            $val -= $y->corr;
+        $len -= $y->corr;
+    }
+    $max = $calc_max($len, $n); # -> ?: ./%*+- ||&& and or xor
+    if (!$y->cnt || $depth * $this->tab + $len < $max)
         return [];
-    $last = array_key_last($y->cnt);
-    $i = $y->i;
-    if (in_array($y->tok, [T_CASE, T_DEFAULT])) { # correction
-        for ($i = $s = $x = 0, $z = $y; $z->i <= $last; $z = $this->tok($z->i + 1)) {
-            if ($x) {
-                if (isset($y->cnt[$z->i]))
-                    $y->cnt[$z->i] -= $s;
-                $i or $i = $z->i;
-            } else {
-                $s += ' ' == $z->str ? 1 : strlen(trim($z->str));
-                unset($y->cnt[$z->i]);
-                if (':' == $z->str)
-                    $x = true; // 2do chk case ($a ? 1 : 2):
-            }
-        }
-        $y->len -= $s;
-        $depth++;
-    }
-    $pad = $depth * $this->tab;
     $exp = [];
-    for ($s = 0; $i <= $last; $i++) {
-        if (!isset($y->cnt[$i]))
+    $sz = 0;
+    $pad = $depth * $this->tab;
+    $stm = '';
+    foreach ($y->cnt as $i => $val) {
+        if ($i < $y->i)
             continue;
-        is_string($chr = $this->tok[$i]) or $chr = $chr[1];
-        if ('->' == $chr)
+        is_string($str = $this->tok[$i]) or $str = $str[1];
+        $stm .= $str[0];
+        $x= false;
+        if ('?' == $str || ':' == $str)
+            $x= 1;
+        if ('.' == $str && ($pad + $val - $sz > $max))
+            $x= 1;
+        if ($x) {
             $exp[] = $i;
+            $sz += $val;
+        }
     }
-    return $exp; //$y->close < 1
+    #if (preg_match()) # nullsafe ?-> also work
+    #    $exp[] = $i;
+    return $exp;
 #.expr_nl
 
 #.brackets
@@ -455,8 +469,8 @@ head:
         if ('(' == $y->str && in_array($pv->tok, $this->_altsyntax)) {
             [,, $_reason, $close] = $this->x[$y->i];
             $this->x[$close] = [0, 0, $_reason, $close];
-        } elseif (')' == $y->str && $q7) {
-            [$q7] = [0, $depth--, $d1--];
+        #} elseif (')' == $y->str && $q7) {
+        #    [$q7] = [0, $depth--, $d1--];
         }
         if ($oc) {
             $y->line =& $line;
@@ -484,11 +498,11 @@ head:
             $d1++;
         } elseif ('{' == $y->str && $_depth != $depth) {
             $last_mod = '';
-            $ifs[] = [$_depth, $d1, $d2];
-            [$d1, $d2] = [0, count($ifs)];
+            $ifs[] = [$_depth, $d1, $d2, $q7];
+            [$d1, $d2, $q7] = [0, count($ifs), 0];
         } elseif ('}' == $y->str && $_depth != $depth) {
             $last_mod = '';
-            [$depth, $d1, $d2] = array_pop($ifs);
+            [$depth, $d1, $d2, $q7] = array_pop($ifs);
             in_array($y->reason, [T_TRY, T_DO]) or $y->new && $reset_ifs($fnew($y));
         }
     }

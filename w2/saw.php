@@ -1,6 +1,6 @@
 <?php
 
-trait Saw
+trait SAW
 {
     static $saws = [];
 

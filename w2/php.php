@@ -4,7 +4,7 @@ class PHP
 {
     const version = '0.808';
 
-    use Saw;
+    use SAW;
 
     const _ANONYM  = 1; # anonymous func, class
     const ARRF  = 3; # arrow func (for ->in_par and NOT for ->pos)
@@ -79,11 +79,13 @@ class PHP
         return self::$data->{substr($name, 1)};
     }
 
-   function __toString() {
+    function __toString() {
         if (self::$warning)
             throw new Error(self::$warning);
         $this->nice(); # step 1
-        return $this->_saw($this->tab ? 'nice' : 'minify'); # step 2
+        $out = $this->_saw($this->tab ? 'nice' : 'minify'); # step 2
+        $this->unbind(['nice', 'minify', 'expr_nl']);
+        return $out;
     }
 
     private function left_bracket($y) {
@@ -108,6 +110,8 @@ class PHP
                 $stk[] = [$for ? 0 : false, $exp];
                 return $y->line .= $y->str; # continue line
             }
+            if ($curly && T_MATCH == $y->reason)
+                $curly = false;
             $stk[] = [$y->cnt[0] ?? !$curly, $exp, $y->str, $y->len];
             $this->x[$y->close] = $y->i;
             if ($y->new->i == $y->close)
@@ -171,31 +175,25 @@ class PHP
     function nice() {
         isset(self::$data->not_nl_curly) or $this->load($this->saw_fn, 'php');
         $this->max_length or $this->max_length = 130;
-        $this->stack[] = [0, 0, 0, 0, 0, []];
-        $this->x[$i = 0] = [0, [1], 0, $reason = $key = $_key = $si = $pvr = 0];
+        $this->stack[] = [0, 0, 0, 0, $si = 0, []];
+        $this->x[$i = 0] = [0, [1], 0, $reason = $key = $_key = $pvr = 0];
         $x =& $this->x[0];
         for ($y = $pv = $this->tok(); $y; $y = $y->new):
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
-            $chr = $y->tok || $this->in_str ? '' : $y->str;
-            if ('[' == $chr) {
+            if ('[' == ($chr = $y->tok || $this->in_str ? '' : $y->str)) {
                 [$_key, $key] = [$key, 1];
             } elseif ($key && $this->del_arrow($y, $pv, $key)) {
                 continue;
             }
-            $x[0] += $len = ' ' == $y->str ? 1 : strlen(trim($y->str));
             $stk =& $this->stack[$si];
+            $x[0] += $len = ' ' == $y->str ? 1 : strlen(trim($y->str));
             $stk[4] += $len;
-            if (',' == $chr && ($x[1][0] ?? false))
-                $x[1][0]++; # calc commas
             if (in_array($y->tok = $this->_not_nl_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
                 $reason = $y->tok;
-
             $oc = $this->int_bracket($y, true);
-            if (T_ATTRIBUTE == $y->tok) {
-                $this->mod_attribute($y);
-            } elseif ($oc > 0) {
-                //$stk[5][$y->i] = $len;
+            if ($oc > 0) {
+                //$stk[5][$y->i] = $stk[4];
                 if ('(' == $chr)
                     $stk[3] or $stk[3] = $y->i;
                 $this->stack[++$si] = [$i = $y->i, $mod, $_key, 0, 0, []]; # i(open), mod, key, i(expr), len, cnt
@@ -204,6 +202,8 @@ class PHP
             } elseif ($oc < 0) {
                 $this->push_x($stk);
                 [$_i, $mod, $_key] = array_pop($this->stack);
+                if ($mod)
+                    $y->str = ']'; # modify code
                 $z =& $this->x[$_i];
                 $x =& $this->x[$i = $this->stack[--$si][0]];
                 $z[3] = $y->i; # set close
@@ -215,27 +215,29 @@ class PHP
                     unset($z[1][0]);
                 if ('[' === $this->tok[$_i])
                     $key = $_key;
-                if ($mod)
-                    $y->str = ']'; # modify code
-                if (')' == $chr && in_array($reason = $pvr = $z[2], $this->_expr_reset)) // 2del curly_reason expr_reset
+                if (in_array($z[2], $this->_expr_reset))
                     $this->stack[$si][3] = $this->stack[$si][4] = 0;
-                if ('}' == $chr && in_array($z[2], $this->_expr_reset))
-                    $this->stack[$si][3] = $this->stack[$si][4] = 0;
-            } elseif (in_array($chr, $this->_expr_chr)) { // $this->_expr_tok 
-                $stk[5][$y->i] = $len;
+                if (')' == $chr)
+                    $reason = $pvr = $z[2];
+            } elseif (in_array($chr, $this->_expr_chr)) {
+                $stk[5][$y->i] = $stk[4];
             } elseif (!$this->in_str && in_array($y->tok, $this->_expr_tok)) {
-                $stk[5][$y->i] = $len;
+                $stk[5][$y->i] = $stk[4];
             } elseif (T_DOUBLE_ARROW == $y->tok) {
                 unset($x[1][0]); # reset cnts commas
                 $x[0] += 3; # add len
-            } elseif (T_COMMENT == $y->tok && '/*' != substr($y->str, 0, 2)) {
-                $x[0] += 150; # set big len
             } elseif (T_CLOSE_TAG == $y->tok || in_array($chr, [';', ','])) {
+                if (',' == $chr && ($x[1][0] ?? false))
+                    $x[1][0]++; # calc commas
                 $this->push_x($stk);
                 $reason = 0;
             } elseif (T_WHITESPACE !== $y->tok && T_OPEN_TAG !== $y->tok) {
                 $stk[3] or $stk[3] = $y->i;
                 $y->tok or T_FUNCTION == $reason or $reason = 0;
+                if (T_COMMENT == $y->tok && '/*' != substr($y->str, 0, 2))
+                    $x[0] += $this->max_length; # set big len
+                if (T_ATTRIBUTE == $y->tok)
+                    $this->mod_attribute($y);
             }
             $y->new = $this->tok($y->i + 1);
             $y->ignore or $pv = $y;
@@ -246,7 +248,8 @@ class PHP
     function push_x(&$stk) { # -> ?-> T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR replaced!
         $s3 = $stk[3];
         if ($s3 && $stk[5] && $stk[4] > 55) {
-            $close = isset($this->x[$s3][3]) ? -$this->x[$s3][3] : 0;
+            if ($close = isset($this->x[$s3][3]) ? -$this->x[$s3][3] : 0)
+                $stk[5] = [-1 => $this->x[$s3][0]] + $stk[5];
             $this->x[$s3] = [$stk[4], $stk[5], 0, $close];
         }
         $stk[3] = $stk[4] = 0;
