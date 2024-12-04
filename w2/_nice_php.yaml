@@ -422,31 +422,35 @@ head:
         $y->close = -$y->close;
         $y->len = $y->cnt[-1];
     }
-    if (isset($y->corr)) { # correction
-        foreach ($y->cnt as &$val)
-            $val -= $y->corr;
-        $len -= $y->corr;
-    }
-    $max = $calc_max($len, $n); # -> ?: ./%*+- ||&& and or xor
-    if (!$y->cnt || $depth * $this->tab + $len < $max)
-        return [];
-    $exp = [];
-    $sz = 0;
-    $pad = $depth * $this->tab;
+    $exp = $cnt = [];
+    $sz = $pv = $nx = $ter = 0;
     $stm = '';
-    foreach ($y->cnt as $i => $val) {
+    $len -= ($corr = $y->corr ?? 0); # correction
+    foreach ($y->cnt as $i => &$val) {
         if ($i < $y->i)
             continue;
-        is_string($str = $this->tok[$i]) or $str = $str[1];
-        $stm .= $str[0];
-        $x= false;
-        if ('?' == $str || ':' == $str)
-            $x= 1;
-        if ('.' == $str && ($pad + $val - $sz > $max))
-            $x= 1;
-        if ($x) {
+        $z = is_array($a = $this->tok[$i]) ? $a[1] : $a;
+        $z = '>' == $z[-1] ? '>' : $z[0]; // ?->,-> as >  || as |  xor as x
+        $stm .= " $z";
+        $cnt[$i] = [$pv, $len, $pv = $nx = $val -= $corr, $z, 0];
+        $nx =& $cnt[$i][1];
+        if ('?' == $z)
+            $ter =& $cnt[$i][4];
+        if (':' == $z)
+            $ter = $i;
+    }
+    unset($nx, $ter);
+    $max = $calc_max($len, $n) - $depth * $this->tab; # ?->-> ?: ./%*+- ||&& and or xor
+    if (!$cnt || $len < $max)
+        return [];
+    foreach ($cnt as $i => $ary) {
+        [$pv, $nx, $cur, $z, $ter] = $ary;
+        if ($ter && $cnt[$ter][2] - $cur > 25) { ///// trace($cnt,"$len $nx");
             $exp[] = $i;
-            $sz += $val;
+            $sz += $cnt[$ter][2];
+        } elseif ('.' == $z && ($cur - $sz > $max)) {
+            $exp[] = $i;
+            $sz += $cur;
         }
     }
     #if (preg_match()) # nullsafe ?-> also work

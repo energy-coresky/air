@@ -14,7 +14,7 @@ class PHP
 
     static $data = false;
     static $warning = false;
-    static $php_fn;
+    static $php_fn = false;
 
     public $tab; # 0 for minified PHP
     public $head = [[]/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
@@ -67,7 +67,8 @@ class PHP
         try {
             $this->tok = token_get_all(unl($in), TOKEN_PARSE);
         } catch (Throwable $e) {
-            self::$warning = 'Line ' . $e->getLine() . ', ' . $e->getMessage();
+            $fn = self::$php_fn ? 'File ' . self::$php_fn . ', ' : '';
+            self::$warning = $fn . 'Line ' . $e->getLine() . ', ' . $e->getMessage();
             $this->tok = token_get_all(unl($in));
         }
         $this->count = count($this->tok);
@@ -176,8 +177,7 @@ class PHP
         isset(self::$data->not_nl_curly) or $this->load($this->saw_fn, 'php');
         $this->max_length or $this->max_length = 130;
         $this->stack[] = [0, 0, 0, 0, $si = 0, []];
-        $this->x[$i = 0] = [0, [1], 0, $reason = $key = $_key = $pvr = 0];
-        $x =& $this->x[0];
+        $this->x[$i = 0] = [0, [1], 0, $reason = $key = $_key = 0];
         for ($y = $pv = $this->tok(); $y; $y = $y->new):
             $mod = in_array($y->tok, [T_ARRAY, T_LIST]) && $this->mod_array($y);
             $y->ignore = in_array($y->tok, $this->_tokens_ign);
@@ -187,6 +187,7 @@ class PHP
                 continue;
             }
             $stk =& $this->stack[$si];
+            $x =& $this->x[$i];
             $x[0] += $len = ' ' == $y->str ? 1 : strlen(trim($y->str));
             $stk[4] += $len;
             if (in_array($y->tok = $this->_not_nl_curly[$y->tok] ?? $y->tok, $this->_curly_reason))
@@ -198,10 +199,11 @@ class PHP
                     $stk[3] or $stk[3] = $y->i;
                 $this->stack[++$si] = [$i = $y->i, $mod, $_key, 0, 0, []]; # i(open), mod, key, i(expr), len, cnt
                 $this->x[$i] = [1, [1], $reason, $reason = 0]; # len, cnt, reason, close
-                $x =& $this->x[$i];
             } elseif ($oc < 0) {
                 $this->push_x($stk);
                 [$_i, $mod, $_key] = array_pop($this->stack);
+                if ('[' === $this->tok[$_i])
+                    $key = $_key;
                 if ($mod)
                     $y->str = ']'; # modify code
                 $z =& $this->x[$_i];
@@ -213,12 +215,10 @@ class PHP
                     unset($x[1][0]);
                 if (($z[1][0] ?? 3) < 2)
                     unset($z[1][0]);
-                if ('[' === $this->tok[$_i])
-                    $key = $_key;
                 if (in_array($z[2], $this->_expr_reset))
                     $this->stack[$si][3] = $this->stack[$si][4] = 0;
                 if (')' == $chr)
-                    $reason = $pvr = $z[2];
+                    $reason = $z[2];
             } elseif (in_array($chr, $this->_expr_chr)) {
                 $stk[5][$y->i] = $stk[4];
             } elseif (!$this->in_str && in_array($y->tok, $this->_expr_tok)) {
@@ -241,7 +241,6 @@ class PHP
             }
             $y->new = $this->tok($y->i + 1);
             $y->ignore or $pv = $y;
-            $y->ignore or ')' == $chr or $pvr = 0;
         endfor;
     }
 
