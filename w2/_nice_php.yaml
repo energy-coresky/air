@@ -445,7 +445,7 @@ head:
         return [];
     foreach ($cnt as $i => $ary) {
         [$pv, $nx, $cur, $z, $ter] = $ary;
-        if ($ter && $cnt[$ter][2] - $cur > 25) { ///// trace($cnt,"$len $nx");
+        if ($ter && $cnt[$ter][2] - $cur > 25) { //// trace($cnt,"$len $nx");
             $exp[] = $i;
             $sz += $cnt[$ter][2];
         } elseif ('.' == $z && ($cur - $sz > $max)) {

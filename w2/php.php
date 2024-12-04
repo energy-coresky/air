@@ -17,7 +17,7 @@ class PHP
     static $php_fn = false;
 
     public $tab; # 0 for minified PHP
-    public $head = [[]/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
+    public $head = [ []/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
     public $tok;
     public $count;
     public $in_str = false;
