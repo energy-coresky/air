@@ -51,7 +51,7 @@ body:
 head:
   code: |
     $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $in_php = $reason = 0;
-    $out = $line = $last_mod = '';
+    $out = $line = $last_mod = $pv_exp = '';
     $ifs = $exp = [];
     $stk =& $this->stack;
 
@@ -62,8 +62,8 @@ head:
         '' === $s1 or $out .= $line . $s1;
         $line = str_pad('', $depth * $this->tab) . $s2;
     };
-    $ws = function ($y) use (&$line) {
-        return $line === '' || ' ' == $line[-1] ? "$y->str " : " $y->str ";
+    $ws = function ($y, $after = ' ') use (&$line) {
+        return $line === '' || ' ' == $line[-1] ? $y->str . $after : " $y->str" . $after;
     };
     $ok_com = function ($y) use (&$out) {
         $pos = strrpos($out, "\n", -2);
@@ -86,7 +86,9 @@ head:
         return 1 == $n ? $this->max_length : ceil($len / $n) + $depth * $this->tab;
     };
     $correct = function ($y, $mem) {
-        $y->len or [$y->len, $y->cnt, $y->corr, $y->close, $y->reason] = $mem + [3 => 0, 0];
+        if ($y->len)
+            $mem = [1 => [-1 => $y->len] + $mem[1]] + $mem + [3 => -$y->close, $y->reason];
+        [$y->len, $y->cnt, $y->corr, $y->close, $y->reason] = $mem + [3 => 0, 0];
     };
 
     $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
@@ -103,8 +105,11 @@ head:
                 $y->new->com = 3; # multiline comment
         }
         $oc = $this->int_bracket($y, true);
-        if ($y->len && $y->close < 1)
+        if ($y->len && $y->close < 1) {
             $exp = $this->_saw('expr_nl', $y, $depth, $calc_max);
+            if (in_array($pv->str, [';', '{', '(', '[']))
+                $pv_exp = $pv->str;
+        }
         if ($this->in_str) {
             $line .= $y->str;
             continue;
@@ -199,11 +204,10 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE, $T_CASE, $T_
 no_nl_after: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
 no_nl_after_else: [@@path(no_nl_after), @@inc(.loops), $T_IF]
 space_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH]
-space_both: [>, <, $T_DOUBLE_ARROW, $T_POW, @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)]
+space_both: [>, <, /, %, *, +, -, $T_DOUBLE_ARROW, $T_POW, @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)]
 expr_reset: [@@path(altsyntax), $T_ELSE, $T_FUNCTION]
-expr_chr: [?, :, ., /, %, *, +, -]
 expr_tok: [$T_OBJECT_OPERATOR, @@inc(.logic), @@inc(.bools)]
-minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #., 
+minus: [@@path(space_both), @@path(expr_tok), ?, :, ., '[', '(', ','] #.,
 #.data
 
 # =====================================================================================
@@ -347,16 +351,19 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
   do: |
     $space = T_OBJECT_OPERATOR == $y->tok ? '' : ' '; # nullsafe ?-> also work
     if (in_array($y->i, $exp)) {
-        $q7 or [$q7 = ++$d1, ++$depth];
-        $put("\n", $y->str . $space);
+        if ($space && '(' != $pv_exp && !$q7) {
+            $q7 = ++$d1;
+            ++$depth;
+        }
+        $trim() ? ($line .= $y->str . $space) : $put("\n", $y->str . $space);
     } else {
         $line .= $space . $y->str . $space;
     }
-- on: in_array($y->str, $this->_expr_chr) # . / % * + - (? : see upper!)
+- on: '.' == $y->str
   do: |
     if (in_array($y->i, $exp)) {
         $q7 or [$q7 = ++$d1, ++$depth];
-        $put("\n", "$y->str ");
+        $put("\n", '. ');
     } else {
         $line .= $ws($y);
     }
@@ -392,10 +399,12 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
     if ($trim() && !$pv->com && (!$y->new || !in_array($y->new->tok, $this->_comments)) && $ok_com($y)) {
         $out = substr($out, 0, -1) . " $y->str\n";
         $put('');
+        if ($y->len)
+            $correct($y->new, [$y->len, $y->cnt, strlen($y->str)]);
     } elseif (1 & $y->com || T_DOC_COMMENT == $y->tok) { # new line
         if ($y->len)
             $correct($y->new, [$y->len, $y->cnt, strlen($y->str)]);
-        $put("$y->str\n");
+        $put($ws($y, '') . "\n");
     } else {
         $line .= $y->str;
     }
@@ -418,43 +427,58 @@ minus: [@@path(space_both), @@path(expr_tok), @@path(expr_chr), '[', '(', ','] #
 head:
   code: |
     $len = $y->len;
-    if ($y->close < 0) {
+    if ($bkt = $y->close < 0) {
         $y->close = -$y->close;
         $y->len = $y->cnt[-1];
     }
+    # if($len==206) { trace($y,'===='); }
+    $len -= ($corr = $y->corr ?? 0); # correction
+    $bkt or $y->len = $len;
     $exp = $cnt = [];
     $sz = $pv = $nx = $ter = 0;
     $stm = '';
-    $len -= ($corr = $y->corr ?? 0); # correction
     foreach ($y->cnt as $i => &$val) {
         if ($i < $y->i)
             continue;
         $z = is_array($a = $this->tok[$i]) ? $a[1] : $a;
         $z = '>' == $z[-1] ? '>' : $z[0]; // ?->,-> as >  || as |  xor as x
-        $stm .= " $z";
-        $cnt[$i] = [$pv, $len, $pv = $nx = $val -= $corr, $z, 0];
-        $nx =& $cnt[$i][1];
+        if (!$stm || '>' != $stm[-1] || $val - $pv > 9)
+            $stm .= $z;
+        $cnt[$i] = [$len, $pv = $nx = $val -= $corr, $z, 0];
+        $nx =& $cnt[$i][0];
         if ('?' == $z)
-            $ter =& $cnt[$i][4];
+            $ter =& $cnt[$i][3];
         if (':' == $z)
-            $ter = $i;
+            $ter = $val;
     }
     unset($nx, $ter);
     $max = $calc_max($len, $n) - $depth * $this->tab; # ?->-> ?: ./%*+- ||&& and or xor
     if (!$cnt || $len < $max)
         return [];
+    $obj = strlen($stm) > 1 && '' === trim($stm, '>');
     foreach ($cnt as $i => $ary) {
-        [$pv, $nx, $cur, $z, $ter] = $ary;
-        if ($ter && $cnt[$ter][2] - $cur > 25) { //// trace($cnt,"$len $nx");
+        [$nx, $cur, $z, $ter] = $ary;
+        if ($obj) {
             $exp[] = $i;
-            $sz += $cnt[$ter][2];
-        } elseif ('.' == $z && ($cur - $sz > $max)) {
-            $exp[] = $i;
-            $sz += $cur;
+        } elseif ($ter) {
+            $ter - $cur < 26 or $exp[] = $i;
+            $sz = $ter;
+        } elseif (!in_array($z, ['>', '?', ':']) && ($nx - $sz > $max)) {
+            $nn = true;
+            for ($j = $i + 1, $sm = $cur; $nn && $sm < $nx; $j++) {
+                is_string($str = $this->tok[$j]) or $str = $str[1];
+                if ('{' == $str)
+                    $nn = false;
+                $sm += ' ' == $str ? 1 : strlen(trim($str));
+            }
+            if ($nn) {
+                $exp[] = $i;
+                $sz = $cur;
+            } else {
+                $sz = $nx;
+            }
         }
     }
-    #if (preg_match()) # nullsafe ?-> also work
-    #    $exp[] = $i;
     return $exp;
 #.expr_nl
 

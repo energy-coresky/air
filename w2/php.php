@@ -90,15 +90,17 @@ class PHP
     }
 
     private function left_bracket($y) {
-        $len = strlen($y->line);
-        if ($this->in_html || $len + $y->len < $this->max_length || $y->close < 0)
+        if (
+            $y->close < 0 || $y->len < 7 || $this->in_html
+            || ($len = strlen($y->line)) + $y->len < $this->max_length
+        )
             return true; # continue line
         [$new, $str] = $this->_saw('nice', $y->new->i, $y->close);
         if (!$new->len || '[' == $y->str && '[' == $new->str)
             return false; # add new line
-        if ($len + strlen($str) < $this->max_length) # add/continue new line
-            return strlen($this->_saw('minify', $new->close, $y->close)) < 21;
-        return false; # add new line
+        if ($len + strlen($str) > $this->max_length)
+            return false; # add new line
+        return strlen($this->_saw('minify', $new->close, $y->close)) < 21;
     }
 
     private function indents($oc, $y, $prev, $put, &$exp) {
@@ -219,7 +221,7 @@ class PHP
                     $this->stack[$si][3] = $this->stack[$si][4] = 0;
                 if (')' == $chr)
                     $reason = $z[2];
-            } elseif (in_array($chr, $this->_expr_chr)) {
+            } elseif (in_array($chr, ['?', ':', '.'])) {
                 $stk[5][$y->i] = $stk[4];
             } elseif (!$this->in_str && in_array($y->tok, $this->_expr_tok)) {
                 $stk[5][$y->i] = $stk[4];

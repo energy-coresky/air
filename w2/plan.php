@@ -434,9 +434,11 @@ class Plan
                 $name .= ' implements ' . implode(', ', $x);
             $name = 2 == $pp ? '' : "$name\n";
 
-            $data = $obj ? [] : array_map(function ($v, $k) {
-                return "const $k = " . self::var($v, '  ');
-            }, $c = $cls->getConstants(), array_keys($c));
+            $data = $obj ? [] : array_map(
+                fn($v, $k) => "const $k = " . self::var($v, '  '),
+                $c = $cls->getConstants(),
+                array_keys($c)
+            );
             $props = $cls->getProperties($pp ? null : ReflectionProperty::IS_PUBLIC);
             $defs = $obj ? [] : $cls->getDefaultProperties();
             global $sky;
