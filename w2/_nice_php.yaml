@@ -132,9 +132,8 @@ head:
             $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
         }
 
-        if ($y->len && $y->reason) {
+        if ($y->len && $y->reason)
             in_array($reason = $y->reason, $this->_double_nl_after) or $last_mod = '';
-        }
         if (in_array($reason, $this->_double_nl_after) && in_array($pv_nc->str, [';', '{']) && in_array($y->tok, $this->_semicolon_prev)) {
             !$last_mod or $last_mod == $y->tok or $line = '' or $put("\n");
             $last_mod = $y->tok;
@@ -204,10 +203,10 @@ altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE, $T_CASE, $T_
 no_nl_after: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
 no_nl_after_else: [@@path(no_nl_after), @@inc(.loops), $T_IF]
 space_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH]
-space_both: [>, <, /, %, *, +, -, $T_DOUBLE_ARROW, $T_POW, @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)]
+space_both: [>, <, /, %, *, +, $T_DOUBLE_ARROW, $T_POW, @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)]
 expr_reset: [@@path(altsyntax), $T_ELSE, $T_FUNCTION]
 expr_tok: [$T_OBJECT_OPERATOR, @@inc(.logic), @@inc(.bools)]
-minus: [@@path(space_both), @@path(expr_tok), ?, :, ., '[', '(', ','] #.,
+minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
 #.data
 
 # =====================================================================================
@@ -345,6 +344,9 @@ minus: [@@path(space_both), @@path(expr_tok), ?, :, ., '[', '(', ','] #.,
     } else {
         $line .= ':' == $y->new->str ? ' ?' : ' ? ';
     }
+- on: '-' == $y->str
+  do: |
+    $line .= in_array($pv->tok ?: $pv->str, $this->_minus, true) ? ' - ' : '-';
 - on: in_array($y->tok ?: $y->str, $this->_space_both, true) # > < => ..
   do: $line .= $ws($y);
 - on: in_array($y->tok, $this->_expr_tok) # -> ||.. or..
@@ -386,9 +388,6 @@ minus: [@@path(space_both), @@path(expr_tok), ?, :, ., '[', '(', ','] #.,
 - on: '=' == $y->str
   do: |
     $line .= ' =' . ('&' == $y->new->str ? '' : ' ');
-- on: '-' == $y->str
-  do: |
-    $line .= in_array($pv->str, $this->_minus) ? '-' : ' - ';
 #.chars
 
 #.comments

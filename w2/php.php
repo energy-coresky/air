@@ -120,7 +120,7 @@ class PHP
             if ($y->new->i == $y->close)
                 $y->new = $this->tok($y->new->i);
             if ($class = $curly && in_array($y->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
-                $put("\n") or $put('{');
+                $y->line && "\n" != $y->line[-1] && $put("\n") or $put('{');
             $class ? $put(1, "\n") : $put(1, $curly ? " {\n" : "$y->str\n");
         } else { # close
             [$comma, $exp] = array_pop($stk);
