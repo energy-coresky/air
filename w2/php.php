@@ -2,7 +2,7 @@
 
 class PHP
 {
-    const version = '0.808';
+    const version = '0.888';
 
     use SAW;
 
@@ -85,7 +85,7 @@ class PHP
             throw new Error(self::$warning);
         $this->nice(); # step 1
         $out = $this->_saw($this->tab ? 'nice' : 'minify'); # step 2
-        $this->unbind(['nice', 'minify', 'expr_nl']);
+        $this->unbind(['nice', 'minify', 'expr_nl', 'double_nl']);
         return $out;
     }
 
