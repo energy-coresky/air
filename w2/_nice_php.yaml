@@ -31,7 +31,7 @@ expr_nl:
   bind:
 double_nl:
   closure: @inc(.double_nl)
-  param: $y, $reason
+  param: $y, $reason, $open
   bind:
 #.saw
 
@@ -130,9 +130,9 @@ head:
         } elseif ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
             $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
         }
-        if ($y->len && $y->reason)
+        if ($y->len && $y->reason && $oc > 0)
             $reason = $y->reason;
-        if (in_array($pv_nc->str, [';', '{']) && $this->_saw('double_nl', $y, $reason))
+        if (in_array($pv_nc->str, [';', '{']) && $this->_saw('double_nl', $y, $reason, '{' == $pv_nc->str))
             $line = '' or $put("\n");
 
 tail:
@@ -319,6 +319,8 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
             $ifs[] = [$depth, $d1, $d2];
             [$d1, $d2] = [0, count($ifs)];
             $this->in_html ? ($line .= ':') : $put(1, ":\n");
+        } elseif (T_FUNCTION == $reason) { # function return type
+            $line .= ': ';
         } else {
             $line .= ' : ';
         }
@@ -334,6 +336,8 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
         $d1++;
         $put(1, "\n", '? ');
         $q8 = count($stk);
+    } elseif (T_FUNCTION == $reason) {
+        $line .= '?';
     } else {
         $line .= ':' == $y->new->str ? ' ?' : ' ? ';
     }
@@ -479,7 +483,11 @@ head:
 head:
   code: |
     static $last = '';
-    if (in_array($reason, $this->_double_nl_after)) {
+    if ('}' == $y->str) {
+        $last = '';
+    } else {
+        if ($open)
+            $last = '';
         for ($str = '', $z = $y; in_array($z->tok, $this->_semicolon_prev); ) {
             $str .= $z->str;
             $z = $this->tok($z->i, true);
@@ -488,9 +496,6 @@ head:
             $nl = $last && $last != $str;
             $last = $str;
         }
-    }
-    if ('{' == $y->str || '}' == $y->str) {
-        $last = '';
     }
     return $nl ?? false;
 #.double_nl
