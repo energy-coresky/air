@@ -11,7 +11,7 @@ class SKY implements PARADISE
     const ERR_SUPPRESSED = 4;
     const CORE = '0.571 2024-12-09T20:50:56+02:00 energy';
 
-    var $tracing = '';
+    public $tracing = '';
     public $error_prod = '';
     public $error_no = 0;
     public $error_last = 0;
@@ -46,7 +46,6 @@ class SKY implements PARADISE
         require DIR_S . '/w2/core.php';
         require DIR_S . '/w2/plan.php';
         ini_set('error_reporting', $this->log_error = -1);
-        srand(microtime(true) * 1e6);//srand((double)microtime() * 1e6);
 
         set_error_handler(function ($no, $message, $file, $line, $context = null) {
             $amp = '';

@@ -110,7 +110,7 @@ class PHP
             if (!$curly && $this->left_bracket($y)) {
                 if ($for = T_FOR == $prev)
                     $this->in_par = true;
-                $stk[] = [$for ? 0 : false, $exp];
+                $stk[] = [$for ? 0 : false, $exp, $y->str, $y->len];
                 return $y->line .= $y->str; # continue line
             }
             if ($curly && T_MATCH == $y->reason)

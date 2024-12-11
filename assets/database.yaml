@@ -7,7 +7,7 @@
 #.ifels.modifiers
 + [$T_VAR, $T_PUBLIC, $T_PROTECTED, $T_PRIVATE, $T_STATIC, $T_ABSTRACT, $T_FINAL, $T_READONLY]
 #.modifiers.sets
-+ [$T_PUBLIC_SET, $T_PROTECTED_SET, $T_PRIVATE_SET] # хуки свойств (доступно с PHP 8.4.0)
++ [$T_PUBLIC_SET, $T_PROTECTED_SET, $T_PRIVATE_SET] # хуки свойств (PHP 8.4.0)
 #.sets.try
 + [$T_TRY, $T_CATCH, $T_FINALLY]
 #.try.casts
@@ -41,7 +41,7 @@
 #.in_str.names8
 + [$T_NAME_FULLY_QUALIFIED, $T_NAME_QUALIFIED, $T_NAME_RELATIVE]
 #.names8.amp8 FOLLOWED: fn(&$r) => $r =& $x; NOT: public int|(A&B) $q = 1 & 0;
-+ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (доступно с PHP 8.1.0)
++ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (PHP 8.1.0)
 #.amp8.newdn
 + [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
 #.newdn.words
@@ -49,7 +49,7 @@
   $T_EXIT, $T_RETURN, $T_YIELD, $T_YIELD_FROM, $T_ARRAY, $T_EXTENDS, $T_IMPLEMENTS,
   $T_GLOBAL, $T_GOTO, $T_HALT_COMPILER, $T_INSTANCEOF, $T_INSTEADOF, $T_DECLARE,
   $T_ISSET, $T_UNSET, $T_LIST, $T_EMPTY, $T_EVAL, # isset() unset() list() empty() eval()
-  $T_DO, $T_AS, $T_CONTINUE, $T_BREAK, $T_SWITCH, $T_MATCH, $T_DEFAULT, $T_CASE, # match (доступно с PHP 8.0.0)
+  $T_DO, $T_AS, $T_CONTINUE, $T_BREAK, $T_SWITCH, $T_MATCH, $T_DEFAULT, $T_CASE, # match (PHP 8.0.0)
   $T_ECHO, $T_PRINT, $T_CALLABLE,
   $T_THROW, $T_NEW, $T_CLONE,
   $T_NAMESPACE, $T_USE, $T_FN, $T_CONST

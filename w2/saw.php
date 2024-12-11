@@ -52,12 +52,10 @@ trait SAW
                     if (!$section = $saw['closure'][$section] ?? false)
                         continue;
                     foreach ($section as $k => $v) {
-                        if ('code' == $k) {
-                            $php .= "$v\n\n";
-                        } elseif ('vars' == $k) {
+                        if ('vars' === $k) {
                             foreach ($v as $var => $is)
                                 $php .= "\$$var = " . var_export($is, true) . ";\n";
-                        } elseif ('rules' == $k) {
+                        } elseif ('if' === $k) {
                             foreach ($v as $n => $rule) {
                                 if ('default' === $n) {
                                     $php .= " else { $rule }\n";
@@ -67,6 +65,8 @@ trait SAW
                                     $php .= "if ($rule[on]) {\n$rule[do]\n}";
                                 }
                             }
+                        } else {
+                            $php .= "$v\n\n";
                         }
                     }
                 }

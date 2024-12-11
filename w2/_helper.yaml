@@ -1,0 +1,80 @@
+#.yaml ///////////////////////////////////////////////////////////////////////////////////////
+#._
++ @inc(.) ~/assets/database.yaml
+#._
+
+#.php_closures
++ |
+  $put = function (...$in) use (&$out, &$line, &$depth) {
+      if (is_int($in[0]))
+          $depth += array_shift($in);
+      [$s1, $s2] = $in + ['', ''];
+      '' === $s1 or $out .= $line . $s1;
+      $line = str_pad('', $depth * $this->tab) . $s2;
+  };
+  $ws = function ($y, $after = ' ') use (&$line) {
+      return $line === '' || ' ' == $line[-1] ? $y->str . $after : " $y->str" . $after;
+  };
+  $ok_com = function ($y) use (&$out) {
+      $pos = strrpos($out, "\n", -2);
+      if (!$len = strlen(trim(substr($out, $pos)))) # empty prev line
+          return false;
+      return $len + strlen($y->str) < 90 && $len > 3;
+  };
+  $reset_ifs = function ($y) use (&$ifs, &$depth, &$d1, &$d2) {
+      if (!$y || in_array($y->tok, [T_ELSE, T_ELSEIF, T_FINALLY]))
+          return; # ';' == $y->str || 
+      array_splice($ifs, $d2);
+      [$depth, $d1] = [$depth - $d1, 0];
+  };
+  $trim = function () use (&$line) {
+      return '' === trim($line);
+  };
+  $calc_max = function ($len, &$n = null) use (&$depth) {
+      $max = $this->max_length - $depth * $this->tab;
+      $n = ceil($len / ($max < 10 ? 10 : $max));
+      return 1 == $n ? $this->max_length : ceil($len / $n) + $depth * $this->tab;
+  };
+  $correct = function ($y, $mem) {
+      if ($y->len)
+          $mem = [1 => [-1 => $y->len] + $mem[1]] + $mem + [3 => -$y->close, $y->reason];
+      [$y->len, $y->cnt, $y->corr, $y->close, $y->reason] = $mem + [3 => 0, 0];
+  };
+  $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
+  $fnew = fn($y) => is_int($y) ? $this->tok($y, true) : ($y->new->com ? $this->tok($y->new->i, true) : $y->new);
+  $x = (object)[
+    'last' => '',
+    'reason' => 0,
+  ];
+#.php_closures
+
+#.php_y_new
++ |
+  if (($y->new = $this->tok($y->i + 1)) && T_WHITESPACE == $y->new->tok)
+      $y->new = $this->tok($y->i + 2); # next is NOT WHITESPACE
+  if ($y->new && ($y->new->com = in_array($y->new->tok, $this->_comments))) {
+      $c2 = $y->new->str[1] ?? '#';
+      $y->new->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->new->str[0] ? 2 : 1); # (->com & 1) - is nl required
+      $y->new->str = rtrim($y->new->str); # (->com == 5) - attribute, nl required
+      if (2 == $y->new->com && (strpos($y->new->str, "\n") || '' === $line))
+          $y->new->com = 3; # multiline comment
+  }
+#.php_y_new
+
+#.php_before_if
++ |
+  if (in_array($y->tok, [T_CATCH, T_FINALLY])
+      || T_WHILE == $y->tok && $pv->len && T_DO == $pv->reason
+      || ')' == $pv->str && in_array($y->tok, $this->_no_nl_after, true)
+  ) {
+      $y->str = ' ' . $y->str;
+  } elseif (T_WHILE == $y->tok && '}' == $pv->str) {
+      $put("\n");
+  } elseif ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
+      $put(in_array($pv->reason, $this->_double_nl) ? "\n\n" : "\n");
+  }
+  if ($y->len && $y->reason && $oc > 0)
+      $x->reason = $y->reason;
+  if ((T_DECLARE == $y->tok || in_array($pv_nc->str, [';', '{'])) && $this->_saw('double_nl', $y, $x))
+      $line = '' or $put("\n");
+#.php_before_if

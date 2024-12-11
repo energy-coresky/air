@@ -1,6 +1,6 @@
 #.yaml ///////////////////////////////////////////////////////////////////////////////////////
 #._
-+ @inc(.) ~/assets/database.yaml
++ @inc(.) ~/w2/_helper.yaml
 #._
 
 #.saw
@@ -31,14 +31,34 @@ expr_nl:
   bind:
 double_nl:
   closure: @inc(.double_nl)
-  param: $y, $reason, $open
+  param: $y, $x
   bind:
 #.saw
 
 # ////////////////////////////////////////////////////////////////////////////////////////////
 #.nice ///////////////////////////////////////////////////////////////////////////////////////
-body:
-  rules:
+head:
+  - |
+    $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $q9 = $in_php = 0;
+    $out = $line = $pv_exp = '';
+    $ifs = $exp = [];
+    $stk =& $this->stack;
+  - @inc(.php_closures)
+  - 'for ($y = $pv = $pv_nc = $this->tok($at); $y; $y = $y->new):'
+  - @inc(.php_y_new)
+  - |
+    $oc = $this->int_bracket($y, true);
+    if ($y->len && $y->close < 1) {
+        $exp = $this->_saw('expr_nl', $y, $depth, $calc_max);
+        if (in_array($pv->str, [';', '{', '(', '[']))
+            $pv_exp = $pv->str;
+    }
+    if ($this->in_str) {
+        $line .= $y->str;
+        continue;
+    }
+  - @inc(.php_before_if)
+  if:
     + @inc(.tag_rules)  # <? ?>
     + @inc(.multilines) # <div, "A\nB"
     + @inc(.elseifelse) # elseif else
@@ -52,91 +72,7 @@ body:
       if ($line !== '' && $alfa($line[-1]) && $alfa($y->str[0]))
           $line .= ' ';
       $line .= $y->str;
-head:
-  code: |
-    $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $in_php = $reason = 0;
-    $out = $line = $pv_exp = '';
-    $ifs = $exp = [];
-    $stk =& $this->stack;
-
-    $put = function (...$in) use (&$out, &$line, &$depth) {
-        if (is_int($in[0]))
-            $depth += array_shift($in);
-        [$s1, $s2] = $in + ['', ''];
-        '' === $s1 or $out .= $line . $s1;
-        $line = str_pad('', $depth * $this->tab) . $s2;
-    };
-    $ws = function ($y, $after = ' ') use (&$line) {
-        return $line === '' || ' ' == $line[-1] ? $y->str . $after : " $y->str" . $after;
-    };
-    $ok_com = function ($y) use (&$out) {
-        $pos = strrpos($out, "\n", -2);
-        if (!$len = strlen(trim(substr($out, $pos)))) # empty prev line
-            return false;
-        return $len + strlen($y->str) < 90 && $len > 3;
-    };
-    $reset_ifs = function ($y) use (&$ifs, &$depth, &$d1, &$d2) {
-        if (!$y || in_array($y->tok, [T_ELSE, T_ELSEIF, T_FINALLY]))
-            return; # ';' == $y->str || 
-        array_splice($ifs, $d2);
-        [$depth, $d1] = [$depth - $d1, 0];
-    };
-    $trim = function () use (&$line) {
-        return '' === trim($line);
-    };
-    $calc_max = function ($len, &$n = null) use (&$depth) {
-        $max = $this->max_length - $depth * $this->tab;
-        $n = ceil($len / ($max < 10 ? 10 : $max));
-        return 1 == $n ? $this->max_length : ceil($len / $n) + $depth * $this->tab;
-    };
-    $correct = function ($y, $mem) {
-        if ($y->len)
-            $mem = [1 => [-1 => $y->len] + $mem[1]] + $mem + [3 => -$y->close, $y->reason];
-        [$y->len, $y->cnt, $y->corr, $y->close, $y->reason] = $mem + [3 => 0, 0];
-    };
-
-    $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
-    $fnew = fn($y) => is_int($y) ? $this->tok($y, true) : ($y->new->com ? $this->tok($y->new->i, true) : $y->new);
-
-    for ($y = $pv = $pv_nc = $this->tok($at); $y; $y = $y->new):
-        if (($y->new = $this->tok($y->i + 1)) && T_WHITESPACE == $y->new->tok)
-            $y->new = $this->tok($y->i + 2); # next is NOT WHITESPACE
-        if ($y->new && ($y->new->com = in_array($y->new->tok, $this->_comments))) {
-            $c2 = $y->new->str[1] ?? '#';
-            $y->new->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->new->str[0] ? 2 : 1); # (->com & 1) - is nl required
-            $y->new->str = rtrim($y->new->str); # (->com == 5) - attribute, nl required
-            if (2 == $y->new->com && (strpos($y->new->str, "\n") || '' === $line))
-                $y->new->com = 3; # multiline comment
-        }
-        $oc = $this->int_bracket($y, true);
-        if ($y->len && $y->close < 1) {
-            $exp = $this->_saw('expr_nl', $y, $depth, $calc_max);
-            if (in_array($pv->str, [';', '{', '(', '[']))
-                $pv_exp = $pv->str;
-        }
-        if ($this->in_str) {
-            $line .= $y->str;
-            continue;
-        }
-
-        if (
-            in_array($y->tok, [T_CATCH, T_FINALLY])
-                || T_WHILE == $y->tok && $pv->len && T_DO == $pv->reason
-                || ')' == $pv->str && in_array($y->tok, $this->_no_nl_after, true)
-        ) {
-            $y->str = ' ' . $y->str;
-        } elseif (T_WHILE == $y->tok && '}' == $pv->str) {
-            $put("\n");
-        } elseif ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
-            $put(in_array($pv->reason, $this->_double_nl_after) ? "\n\n" : "\n");
-        }
-        if ($y->len && $y->reason && $oc > 0)
-            $reason = $y->reason;
-        if (in_array($pv_nc->str, [';', '{']) && $this->_saw('double_nl', $y, $reason, '{' == $pv_nc->str))
-            $line = '' or $put("\n");
-
-tail:
-  code: |
+  - |
     unset($new);
     $pv = $y;
     $y->com or $pv_nc = $y;
@@ -146,7 +82,7 @@ tail:
 
 #.minify
 head:
-  code: |
+  - |
     $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
     for ($out = '', $y = $pv = $this->tok($at); $y; $y = $new) { //2do 1+++$a;
         if ($to && $y->i > $to)
@@ -186,8 +122,8 @@ optim_key: [ # step1
   $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENCAPSED_STRING
 ]
 not_nl_after_curly: [',', '(', ')', ']', '}', ;, $T_CATCH, $T_FINALLY, $T_ELSE, $T_ELSEIF]
-semicolon_prev: [@@inc(.modifiers), $T_CONST, $T_USE, $T_FUNCTION]
-double_nl_after: [@@inc(.newdn), $T_NAMESPACE]
+double_nl: [@@inc(.newdn), $T_NAMESPACE]
+semicolon_prev: [@@inc(.modifiers), @@inc(.sets), @@path(double_nl), $T_CONST, $T_USE, $T_FUNCTION, $T_DECLARE]
 ctrl_d1: [@@inc(.loops), $T_IF]
 multilines: [$T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING]
 comments: @inc(.com3)
@@ -302,7 +238,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     $s5 = 0;
 - on: ':' == $y->str
   do: |
-    if ($q8 == count($stk)) {
+    if ($q8 == count($stk)) { # ternary with nl
         $put("\n", ': ');
         [$q8] = [0, $depth--, $d1--];
     } elseif ($s3) { # after T_CASE, T_DEFAULT
@@ -319,13 +255,18 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
             $ifs[] = [$depth, $d1, $d2];
             [$d1, $d2] = [0, count($ifs)];
             $this->in_html ? ($line .= ':') : $put(1, ":\n");
-        } elseif (T_FUNCTION == $reason) { # function return type
+        } elseif (T_FUNCTION == $x->reason) { # function return type
             $line .= ': ';
         } else {
-            $line .= ' : ';
+            $line .= ' : '; # ternary
         }
+    } elseif ('?' == $pv->str) { # ?:
+        $line .= ': ';
+    } elseif ($q9) { # ternary
+        $line .= ' : ';
     } else {
-        $line .= '?' == $pv->str ? ': ' : ' : ';
+        $top =& $stk[array_key_last($stk)];
+        '{' == $top[2] ? $put(":\n") : ($line .= ': '); # goto-label : named-param
     }
 #.casecolon
 
@@ -336,9 +277,10 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
         $d1++;
         $put(1, "\n", '? ');
         $q8 = count($stk);
-    } elseif (T_FUNCTION == $reason) {
-        $line .= '?';
+    } elseif (T_FUNCTION == $x->reason || $x->last) { # nullsafe
+        $line .= $x->last ? ' ?' : '?';
     } else {
+        $q9 = true; # ternary
         $line .= ':' == $y->new->str ? ' ?' : ' ? ';
     }
 - on: '-' == $y->str
@@ -368,7 +310,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     }
 - on: ';' == $y->str
   do: |
-    $q7 = 0;
+    $q7 = $q9 = 0;
     if ($this->in_html || $this->in_par) {
         $line .= '; ';
     } else {
@@ -377,7 +319,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     }
 - on: '&' == $y->str
   do: |
-    $space = T_FUNCTION != $pv->tok && ('$' != $y->new->str[0] || T_VARIABLE == $pv->tok || T_LNUMBER == $pv->tok || T_STRING == $pv->tok && T_FUNCTION != $reason || '=' == $pv->str);
+    $space = T_FUNCTION != $pv->tok && ('$' != $y->new->str[0] || T_VARIABLE == $pv->tok || T_LNUMBER == $pv->tok || T_STRING == $pv->tok && T_FUNCTION != $x->reason || '=' == $pv->str);
     $line .= $alfa($pv->str[-1]) ? $ws($y, $space ? ' ' : '') : ($space ? '& ' : '&');
 - on: '=' == $y->str
   do: $line .= ' =' . ('&' == $y->new->str ? '' : ' ');
@@ -419,32 +361,33 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
 
 #.expr_nl
 head:
-  code: |
+  - |
     $len = $y->len;
     if ($bkt = $y->close < 0) {
         $y->close = -$y->close;
         $y->len = $y->cnt[-1];
     }
-    # if($len==206) { trace($y,'===='); }
     $len -= ($corr = $y->corr ?? 0); # correction
     $bkt or $y->len = $len;
     $exp = $cnt = [];
-    $sz = $pv = $nx = $ter = 0;
+    $sz = $pv = $nx = $ter = $or = 0;
     $stm = '';
     foreach ($y->cnt as $i => &$val) {
         if ($i < $y->i)
             continue;
+        $val -= $corr;
         $z = is_array($a = $this->tok[$i]) ? $a[1] : $a;
-        $z = '>' == $z[-1] ? '>' : $z[0]; // ?->,-> as >  || as |  xor as x
-        if (!$stm || '>' != $stm[-1] || $val - $pv > 9)
+        $z = '>' == $z[-1] ? '>' : $z[0];
+        if (!$stm || '>' != $z || $val - $pv > 9)
             $stm .= $z;
-        $cnt[$i] = [$len, $pv = $nx = $val -= $corr, $z, 0];
+        $cnt[$i] = [$len, $pv = $nx = $val, $z, 0];
         $nx =& $cnt[$i][0];
         if ('?' == $z)
             $ter =& $cnt[$i][3];
         if (':' == $z)
             $ter = $val;
     }
+    //if (3977 == $y->i) { trace($cnt, '==='); }
     unset($nx, $ter);
     $max = $calc_max($len, $n) - $depth * $this->tab; # ?->-> ?: ./%*+- ||&& and or xor
     if (!$cnt || $len < $max)
@@ -464,7 +407,7 @@ head:
             $nl = $nx != $len || $nx - $sz > $this->max_length;
             for ($j = $i + 1, $sm = $cur; $nl && $sm < $nx; $j++) {
                 is_string($str = $this->tok[$j]) or $str = $str[1];
-                if ('{' == $str)
+                if ('{' == $str || '(' == $str && $nx == $len && $nx - $cur > 0.8 * $this->max_length)
                     $nl = false;
                 $sm += ' ' == $str ? 1 : strlen(trim($str));
             }
@@ -481,23 +424,14 @@ head:
 
 #.double_nl
 head:
-  code: |
-    static $last = '';
-    if ('}' == $y->str) {
-        $last = '';
-    } else {
-        if ($open)
-            $last = '';
-        for ($str = '', $z = $y; in_array($z->tok, $this->_semicolon_prev); ) {
-            $str .= $z->str;
-            $z = $this->tok($z->i, true);
-        }
-        if ($str) {
-            $nl = $last && $last != $str;
-            $last = $str;
-        }
+  - |
+    for ($str = '', $z = $y; in_array($z->tok, $this->_semicolon_prev); ) {
+        $str .= $z->str;
+        $z = $this->tok($z->i, true);
     }
-    return $nl ?? false;
+    $nl = $str && $x->last && $x->last != $str;
+    $y->com or $x->last = $str;
+    return $nl;
 #.double_nl
 
 #.brackets
@@ -544,11 +478,14 @@ head:
             $d1++;
         } elseif ('{' == $y->str && $_depth != $depth) {
             $ifs[] = [$_depth, $d1, $d2, $q7];
-            [$d1, $d2, $q7] = [0, count($ifs), 0];
-            T_FUNCTION != $reason or $reason = 0;
+            [$d1, $d2, $q7] = [0, count($ifs), $q9 = 0];
+            if (T_FUNCTION == $x->reason)
+                $x->reason = 0;
+            $x->last = '';
         } elseif ('}' == $y->str && $_depth != $depth) {
             [$depth, $d1, $d2, $q7] = array_pop($ifs);
             in_array($y->reason, [T_TRY, T_DO]) or $y->new && $reset_ifs($fnew($y));
+            $x->last = '';
         }
     }
 #.brackets
