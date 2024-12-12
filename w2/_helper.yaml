@@ -53,11 +53,15 @@
   if (($y->new = $this->tok($y->i + 1)) && T_WHITESPACE == $y->new->tok)
       $y->new = $this->tok($y->i + 2); # next is NOT WHITESPACE
   if ($y->new && ($y->new->com = in_array($y->new->tok, $this->_comments))) {
-      $c2 = $y->new->str[1] ?? '#';
-      $y->new->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->new->str[0] ? 2 : 1); # (->com & 1) - is nl required
-      $y->new->str = rtrim($y->new->str); # (->com == 5) - attribute, nl required
-      if (2 == $y->new->com && (strpos($y->new->str, "\n") || '' === $line))
-          $y->new->com = 3; # multiline comment
+      $y->new->str = rtrim($y->new->str);
+      if (T_DOC_COMMENT == $y->new->tok) {
+          $y->new->com = 9; # doc comment
+      } else {
+          $c2 = $y->new->str[1] ?? '#'; # (->com == 5) - attribute, nl required
+          $y->new->com = '[' == $c2 ? 5 : ('*' == $c2 && '/' == $y->new->str[0] ? 2 : 1); # (->com & 1) - is nl required
+          if (2 == $y->new->com && (strpos($y->new->str, "\n") || '' === $line))
+              $y->new->com = 3; # multiline comment
+      }
   }
 #.php_y_new
 
@@ -75,6 +79,14 @@
   }
   if ($y->len && $y->reason && $oc > 0)
       $x->reason = $y->reason;
-  if ((T_DECLARE == $y->tok || in_array($pv_nc->str, [';', '{'])) && $this->_saw('double_nl', $y, $x))
-      $line = '' or $put("\n");
+  if ((T_DECLARE == $y->tok || in_array($pv_nc->str, [';', '{', '}'])) && $this->_saw('double_nl', $y, $x)) {
+      if ($pv->com && '; ' != substr($out, -strlen($pv->str) - 3, 2)) {
+          for ($j = 0, $i = $pv->i; in_array($tok = $this->tok[$i][0], $this->_tokens_ign); $i--)
+              T_WHITESPACE == $tok or $j += 1 + strlen($this->tok[$i][1]) + $depth * $this->tab;
+          $out = substr($out, 0, -$j) . "\n" . substr($out, -$j);
+      } else {
+          $line = '';
+          $put("\n");
+      }
+  }
 #.php_before_if

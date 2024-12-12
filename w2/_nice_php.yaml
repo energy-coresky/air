@@ -7,11 +7,10 @@
 minify:
   closure: @inc(.minify)
   param: $at = 0, $to = false
-  bind:
 nice:
   closure: @inc(.nice)
   param: $at = 0, $to = 0
-  bind: # `$this` by default
+  #bind: `$this` by default
   #init:
 data:
   array: @inc(.data)
@@ -28,11 +27,9 @@ data:
 expr_nl:
   closure: @inc(.expr_nl)
   param: $y, $depth, $calc_max
-  bind:
 double_nl:
   closure: @inc(.double_nl)
   param: $y, $x
-  bind:
 #.saw
 
 # ////////////////////////////////////////////////////////////////////////////////////////////
@@ -59,19 +56,24 @@ head:
     }
   - @inc(.php_before_if)
   if:
-    + @inc(.tag_rules)  # <? ?>
-    + @inc(.multilines) # <div, "A\nB"
+    + @inc(.tag_rules)  # <? ?> T_HALT_COMPILER
+    + @inc(.multilines) # <div, "A\nB" T_INLINE_HTML, T_CONSTANT_ENCAPSED_STRING
     + @inc(.elseifelse) # elseif else
     + @inc(.endwords)   # endif,..
     + @inc(.casecolon)  # : switch case default
-    + @inc(.chars)      # . ; & ? = ...$this->_space_both
+    + @inc(.expr_tok)   # -> ?-> and or xor && ||
+    + @inc(.chars)      # ?-.;|&=T_RETURN
     + @inc(.comments)   # //,..
-    + @inc(.ctrl_mains) # for,.. if catch echo match
+    + @inc(.space_tail) # T_FOR, T_FOREACH, T_WHILE, T_IF, T_CATCH, T_ECHO, T_MATCH + _ctrl_d1 ($ifs)
+    - on: in_array($y->tok, $this->_space_head, true)
+      do: $line .= $line !== '' && $alfa($line[-1]) ? " $y->str" : $y->str; # ...(T_ELLIPSIS)
+    - on: in_array($y->tok ?: $y->str, $this->_space_both, true)
+      do: $line .= $ws($y); # > < / % * + T_USE T_AS ..and_so_on
     + @inc(.brackets)   # {[(,)]}
     default: |
       if ($line !== '' && $alfa($line[-1]) && $alfa($y->str[0]))
           $line .= ' ';
-      $line .= $y->str;
+      $line .= $y->str . (in_array($y->tok, $this->_space_tail_2) ? ' ' : '');
   - |
     unset($new);
     $pv = $y;
@@ -125,14 +127,15 @@ not_nl_after_curly: [',', '(', ')', ']', '}', ;, $T_CATCH, $T_FINALLY, $T_ELSE, 
 double_nl: [@@inc(.newdn), $T_NAMESPACE]
 semicolon_prev: [@@inc(.modifiers), @@inc(.sets), @@path(double_nl), $T_CONST, $T_USE, $T_FUNCTION, $T_DECLARE]
 ctrl_d1: [@@inc(.loops), $T_IF]
-multilines: [$T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING]
 comments: @inc(.com3)
 endword: @inc(.ends)
 altsyntax: [@@inc(.loops), $T_IF, $T_ELSEIF, $T_SWITCH, $T_DECLARE, $T_CASE, $T_DEFAULT]
 no_nl_after: [$T_TRY, $T_DO, $T_SWITCH, $T_MATCH, '{', ';', ':']
 no_nl_after_else: [@@path(no_nl_after), @@inc(.loops), $T_IF]
+space_head: [$T_ELLIPSIS]
 space_tail: [@@inc(.loops), $T_IF, $T_CATCH, $T_ECHO, $T_MATCH]
-space_both: [>, <, /, %, *, +, |, $T_USE, $T_AS, $T_DOUBLE_ARROW, $T_POW, @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)]
+space_tail_2: [$T_NEW, $T_INSTANCEOF, $T_EXTENDS, $T_IMPLEMENTS]
+space_both: [>, <, /, %, *, +, $T_USE, $T_AS, $T_DOUBLE_ARROW, $T_POW, @@inc(.op_eq), @@inc(.op_is), @@inc(.shift)]
 expr_reset: [@@path(altsyntax), $T_ELSE, $T_FUNCTION]
 expr_tok: [$T_OBJECT_OPERATOR, @@inc(.logic), @@inc(.bools)]
 minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
@@ -163,7 +166,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
 #.tag_rules
 
 #.multilines
-- on: in_array($y->tok, $this->_multilines)
+- on: in_array($y->tok, [T_INLINE_HTML, T_CONSTANT_ENCAPSED_STRING])
   do: |
     if (T_INLINE_HTML == $y->tok)
         $this->in_html = $y->i;
@@ -270,25 +273,8 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     }
 #.casecolon
 
-#.chars
-- on: '?' == $y->str
-  do: |
-    if (in_array($y->i, $exp)) {
-        $d1++;
-        $put(1, "\n", '? ');
-        $q8 = count($stk);
-    } elseif (T_FUNCTION == $x->reason || $x->last) { # nullsafe
-        $line .= $x->last ? ' ?' : '?';
-    } else {
-        $q9 = true; # ternary
-        $line .= ':' == $y->new->str ? ' ?' : ' ? ';
-    }
-- on: '-' == $y->str
-  do: |
-    $line .= in_array($pv->tok ?: $pv->str, $this->_minus, true) ? ' - ' : '-';
-- on: in_array($y->tok ?: $y->str, $this->_space_both, true) # > < => ..
-  do: $line .= $ws($y);
-- on: in_array($y->tok, $this->_expr_tok) # -> ||.. or..
+#.expr_tok
+- on: in_array($y->tok, $this->_expr_tok) # -> ?-> and or xor && ||
   do: |
     $space = T_OBJECT_OPERATOR == $y->tok ? '' : ' '; # nullsafe ?-> also work
     if (in_array($y->i, $exp)) {
@@ -300,6 +286,24 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     } else {
         $line .= $space . $y->str . $space;
     }
+#.expr_tok
+
+#.chars
+- on: '?' == $y->str
+  do: |
+    if (in_array($y->i, $exp)) {
+        $d1++;
+        $put(1, "\n", '? ');
+        $q8 = count($stk);
+    } elseif (T_FUNCTION == $x->reason || $x->last) { # nullsafe
+        $line .= T_FUNCTION == $x->reason ? '?' : ' ?';
+    } else {
+        $q9 = true; # ternary
+        $line .= ':' == $y->new->str ? ' ?' : ' ? ';
+    }
+- on: '-' == $y->str
+  do: |
+    $line .= in_array($pv->tok ?: $pv->str, $this->_minus, true) ? ' - ' : '-';
 - on: '.' == $y->str
   do: |
     if (in_array($y->i, $exp)) {
@@ -317,6 +321,8 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
         $d1 && $y->new && $reset_ifs($fnew($y));
         $put(";\n");
     }
+- on: '|' == $y->str
+  do: $line .= T_FUNCTION == $x->reason ? '|' : $ws($y);
 - on: '&' == $y->str
   do: |
     $space = T_FUNCTION != $pv->tok && ('$' != $y->new->str[0] || T_VARIABLE == $pv->tok || T_LNUMBER == $pv->tok || T_STRING == $pv->tok && T_FUNCTION != $x->reason || '=' == $pv->str);
@@ -332,12 +338,12 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
   do: |
     if ($at && 1 & $y->com)
         return [$y, str_pad('', $this->max_length)];
-    if ($trim() && !$pv->com && (!$y->new || !in_array($y->new->tok, $this->_comments)) && $ok_com($y)) {
+    if ($trim() && !$pv->com && !(8 & $y->com) && (!$y->new || !in_array($y->new->tok, $this->_comments)) && $ok_com($y)) {
         $out = substr($out, 0, -1) . " $y->str\n";
         $put('');
         if ($y->len)
             $correct($y->new, [$y->len, $y->cnt, strlen($y->str)]);
-    } elseif (1 & $y->com || T_DOC_COMMENT == $y->tok) { # new line
+    } elseif (1 & $y->com) { # new line
         if ($y->len)
             $correct($y->new, [$y->len, $y->cnt, strlen($y->str)]);
         $put($ws($y, '') . "\n");
@@ -346,10 +352,10 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     }
 #.comments
 
-#.ctrl_mains
+#.space_tail
 - on: in_array($y->tok, $this->_space_tail)
   do: |
-    $line .= $y->str . " ";
+    $line .= $y->str . ' ';
     if (in_array($y->tok, $this->_ctrl_d1)) {
         if (T_IF == $y->tok)
             $ifs[] = [$depth, $d1, $d2];
@@ -357,7 +363,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
         if (in_array($new->tok ?: $new->str, $this->_no_nl_after, true))
             $dar = 0;
     }
-#.ctrl_mains
+#.space_tail
 
 #.expr_nl
 head:

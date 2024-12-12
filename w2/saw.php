@@ -58,7 +58,7 @@ trait SAW
                         } elseif ('if' === $k) {
                             foreach ($v as $n => $rule) {
                                 if ('default' === $n) {
-                                    $php .= " else { $rule }\n";
+                                    $php .= " else {\n$rule\n}\n";
                                 } elseif ($n > 0) {
                                     $php .= " elseif ($rule[on]) {\n$rule[do]\n}";
                                 } else {

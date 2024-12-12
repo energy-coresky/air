@@ -5,7 +5,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
-    const style = 'style="width:100%%; margin:0; color:%s; background-color:%s"';
+    const style = 'style="width:100%%; tab-size:4; margin:0; color:%s; background-color:%s"';
 
     private static $bg;
     private static $clr;

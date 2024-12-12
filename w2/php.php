@@ -15,6 +15,7 @@ class PHP
     static $data = false;
     static $warning = false;
     static $php_fn = false;
+    static $autocomma = true;
 
     public $tab; # 0 for minified PHP
     public $head = [ []/*class-like*/, []/*function*/, []/*const*/, ''/*namespace name*/];
@@ -52,6 +53,8 @@ class PHP
             Plan::cache_dq(['main', 'saw_main_php.php']);
             self::$data = Plan::php(false);
         }
+        if (PHP_VERSION_ID < 80000)
+            self::$autocomma = false;
         foreach (self::$data->gt_74 as $i => $str)
             defined($const = "T_$str") or define($const, $i + 0x10000);
         (self::$data->ini_once)();
@@ -90,6 +93,8 @@ class PHP
     }
 
     private function left_bracket($y) {
+        if (1 & $y->new->com)
+            return false; # add new line
         if (
             $y->close < 0 || $y->len < 7 || $this->in_html
             || ($len = strlen($y->line)) + $y->len < $this->max_length
@@ -127,11 +132,11 @@ class PHP
             if (0 === $comma)
                 $this->in_par = false;
             if (!$y->len) {
-                if (']' == $y->str && ', ' == substr($y->line, -2))
-                    $y->line = substr($y->line, 0, -2); # modify source
+                if (in_array($y->str, [']', ')']) && ', ' == substr($y->line, -2))
+                    $y->line = substr($y->line, 0, -2); # modify source (delete comma)
                 return $y->line .= $y->str;
             }
-            if (']' == $y->str && $y->line && ' ' != $y->line[-1]) # modify source
+            if ($y->line && ' ' != $y->line[-1] && in_array($y->str, self::$autocomma ? [']', ')'] : [']'])) # modify source (add comma)
                 $put(",\n");
             $put(T_SWITCH == $y->reason ? -2 : -1, '' === trim($y->line) ? '' : "\n", $y->str);
         }

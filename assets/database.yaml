@@ -7,7 +7,7 @@
 #.ifels.modifiers
 + [$T_VAR, $T_PUBLIC, $T_PROTECTED, $T_PRIVATE, $T_STATIC, $T_ABSTRACT, $T_FINAL, $T_READONLY]
 #.modifiers.sets
-+ [$T_PUBLIC_SET, $T_PROTECTED_SET, $T_PRIVATE_SET] # хуки свойств (PHP 8.4.0)
++ [$T_PUBLIC_SET, $T_PROTECTED_SET, $T_PRIVATE_SET] # property hooks (PHP 8.4.0)
 #.sets.try
 + [$T_TRY, $T_CATCH, $T_FINALLY]
 #.try.casts
@@ -27,7 +27,7 @@
   $T_IS_GREATER_OR_EQUAL, $T_IS_SMALLER_OR_EQUAL, $T_COALESCE, $T_SPACESHIP
 ]
 #.op_is.op_obj
-+ [$T_OBJECT_OPERATOR, $T_NULLSAFE_OBJECT_OPERATOR] # ?-> классы и объекты
++ [$T_OBJECT_OPERATOR, $T_NULLSAFE_OBJECT_OPERATOR] # ?-> nullsafe
 #.op_obj.bools
 + [$T_BOOLEAN_AND, $T_BOOLEAN_OR] # && ||
 #.bools.logic
@@ -41,7 +41,7 @@
 #.in_str.names8
 + [$T_NAME_FULLY_QUALIFIED, $T_NAME_QUALIFIED, $T_NAME_RELATIVE]
 #.names8.amp8 FOLLOWED: fn(&$r) => $r =& $x; NOT: public int|(A&B) $q = 1 & 0;
-+ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & Объявления типов (PHP 8.1.0)
++ [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & (PHP 8.1.0)
 #.amp8.newdn
 + [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
 #.newdn.words
@@ -61,15 +61,15 @@
 #.heredoc.com3
 + [$T_COMMENT, $T_DOC_COMMENT, $T_ATTRIBUTE] ### // # /* */ #[ attributes (PHP 8.0)
 #.com3.tags
-+ [$T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO, $T_CLOSE_TAG] # <?php <? или <%, <?= или <%=, ?> или %>
++ [$T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO, $T_CLOSE_TAG] # <?php <? or <%, <?= or <%=, ?> or %>
 #.tags.other
 + [        # ::(T_DOUBLE_COLON=T_PAAMAYIM_NEKUDOTAYIM), =>(T_DOUBLE_ARROW)
   $T_WHITESPACE, $T_STRING, $T_VARIABLE, $T_DOUBLE_COLON, $T_DOUBLE_ARROW,
-  $T_NS_SEPARATOR, $T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING, # "foo" or 'bar' строка
-  $T_POW, $T_ELLIPSIS, # ** ... аргументы функции
-  $T_LNUMBER, # 123, 012, 0x1ac и т.д.  целые числа
-  $T_DNUMBER, # 0.12 и т.д. числа с плавающей точкой
-  $T_BAD_CHARACTER, # все, что ниже ASCII 32 исключая \t (0x09), \n (0x0a) и \r (0x0d)
+  $T_NS_SEPARATOR, $T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING, # "foo" or 'bar' string
+  $T_POW, $T_ELLIPSIS, # ** ...
+  $T_LNUMBER, # 123, 012, 0x1ac integers
+  $T_DNUMBER, # 0.12 floats
+  $T_BAD_CHARACTER, # all < ASCII 32 exclude \t (0x09), \n (0x0a) and \r (0x0d)
 ]
 #.other
 
