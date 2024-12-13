@@ -3,14 +3,84 @@
 + @inc(.) ~/assets/database.yaml
 #._
 
-#.php_closures
+#.php_nice_start
 + |
+  $stk =& $this->stack;
+  $x = new stdClass;
+  $x->exp = $ifs = [];
+  $x->last = $out = $line = $pv_exp = $pv_nc = '';
+  $x->reason = $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $q9 = $in_php = 0;
+  $x->for = $x->dnl = false;
+  $x->pv_nc =& $pv_nc;
+  $double_nl = function ($y, $x) {
+      for ($str = '', $z = $y; in_array($z->tok, $this->_semicolon_prev); ) {
+          $str .= $z->str;
+          $z = $this->tok($z->i, true);
+      }
+      //$nl = $str && $x->last && $x->last != $str;
+      $nl = ($x->last || $str && in_array($x->pv_nc->str, ['}', ';'])) && $x->last != $str;
+      $y->com or $x->last = $str;
+      return $nl;
+  };
   $put = function (...$in) use (&$out, &$line, &$depth) {
       if (is_int($in[0]))
           $depth += array_shift($in);
       [$s1, $s2] = $in + ['', ''];
       '' === $s1 or $out .= $line . $s1;
       $line = str_pad('', $depth * $this->tab) . $s2;
+  };
+  $indents = function ($oc, $y, $x) use (&$stk, &$line, $put) {
+      $left_bracket = function () use ($y, &$line) {
+          if (1 & $y->new->com)
+              return false; # add new line
+          if (
+              $y->close < 0 || $y->len < 7 || $this->in_html
+              || ($len = strlen($line)) + $y->len < $this->max_length
+          )
+              return true; # continue line
+          [$new, $str] = $this->_saw('nice', $y->new->i, $y->close);
+          if (!$new->len || '[' == $y->str && '[' == $new->str)
+              return false; # add new line
+          if ($len + strlen($str) > $this->max_length)
+              return false; # add new line
+          return strlen($this->_saw('minify', $new->close, $y->close)) < 21;
+      };
+
+      if ($oc > 0) { # open
+          $curlyshort = PHP::$curlyshort || in_array($y->reason, $this->_curly_short);
+          if ($close = '}' == $y->new->str && $curlyshort && 2 == $y->len)
+              [$y->new->len, $y->new->reason, $y->new->close] = [2, $y->reason, $y->close];
+          $curly = '{' == $y->str && !$close && !in_array($y->reason, $this->_not_nl_curly);
+          if (!$curly && $left_bracket()) {
+              if ($for = T_FOR == $x->pv_nc->tok)
+                  $x->for = true;
+              $stk[] = [$for ? 0 : false, $x->exp, $y->str, $y->len];
+              return $line .= $close ? ' {' : $y->str; # continue line
+          }
+          if ($curly && T_MATCH == $y->reason)
+              $curly = false;
+          $stk[] = [$y->cnt[0] ?? !$curly, $x->exp, $y->str, $y->len];
+          $this->x[$y->close] = $y->i;
+          if ($y->new->i == $y->close)
+              $y->new = $this->tok($y->new->i);
+          if ($class = $curly && in_array($y->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
+              $line && "\n" != $line[-1] && $put("\n") or $put('{');
+          $class ? $put(1, "\n") : $put(1, $curly ? " {\n" : "$y->str\n");
+      } else { # close
+          [$comma, $x->exp] = array_pop($stk);
+          if (0 === $comma)
+              $x->for = false;
+          if (!$y->len) {
+              if (in_array($y->str, [']', ')']) && ', ' == substr($line, -2))
+                  $line = substr($line, 0, -2); # modify source (delete comma)
+              return $line .= $y->str;
+          }
+          if ($line && ' ' != $line[-1] && in_array($y->str, $this->in_par && self::$autocomma ? [']', ')'] : [']']))
+              $put(",\n"); # modify source (add comma)
+          '{' == $x->pv_nc->str && (PHP::$curlyshort || in_array($y->reason, $this->_curly_short)) && 2 == $y->len
+              ? ($line .= '}')
+              : $put(T_SWITCH == $y->reason ? -2 : -1, '' === trim($line) ? '' : "\n", $y->str);
+      }
   };
   $ws = function ($y, $after = ' ') use (&$line) {
       return $line === '' || ' ' == $line[-1] ? $y->str . $after : " $y->str" . $after;
@@ -42,11 +112,7 @@
   };
   $alfa = fn($chr) => preg_match("/[a-z_\d\$]/i", $chr);
   $fnew = fn($y) => is_int($y) ? $this->tok($y, true) : ($y->new->com ? $this->tok($y->new->i, true) : $y->new);
-  $x = (object)[
-    'last' => '',
-    'reason' => 0,
-  ];
-#.php_closures
+#.php_nice_start
 
 #.php_y_new
 + |
@@ -75,18 +141,22 @@
   } elseif (T_WHILE == $y->tok && '}' == $pv->str) {
       $put("\n");
   } elseif ('}' == $pv->str && $pv->len && !in_array($y->tok ?: $y->str, $this->_not_nl_after_curly)) {
-      $put(in_array($pv->reason, $this->_double_nl) ? "\n\n" : "\n");
+      $put($x->dnl = in_array($pv->reason, $this->_double_nl) ? "\n\n" : "\n");
   }
-  if ($y->len && $y->reason && $oc > 0)
-      $x->reason = $y->reason;
-  if ((T_DECLARE == $y->tok || in_array($pv_nc->str, [';', '{', '}'])) && $this->_saw('double_nl', $y, $x)) {
+  if ($oc > 0 && $y->reason)
+      $this->in_par = T_FUNCTION == ($x->reason = $y->reason);
+  if (!$x->dnl && (T_DECLARE == $y->tok || in_array($pv_nc->str, [';', '{', '}'])) && $double_nl($y, $x) 
+        && T_COMMENT != $y->tok
+    ) {
       if ($pv->com && '; ' != substr($out, -strlen($pv->str) - 3, 2)) {
           for ($j = 0, $i = $pv->i; in_array($tok = $this->tok[$i][0], $this->_tokens_ign); $i--)
               T_WHITESPACE == $tok or $j += 1 + strlen($this->tok[$i][1]) + $depth * $this->tab;
           $out = substr($out, 0, -$j) . "\n" . substr($out, -$j);
-      } else {
+          $x->dnl = true;
+      } elseif ($trim() && $y->str != '}') {
           $line = '';
           $put("\n");
+          //$x->dnl = true;
       }
   }
 #.php_before_if

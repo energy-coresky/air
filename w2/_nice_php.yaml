@@ -3,50 +3,15 @@
 + @inc(.) ~/w2/_helper.yaml
 #._
 
-#.saw
-minify:
-  closure: @inc(.minify)
-  param: $at = 0, $to = false
-nice:
-  closure: @inc(.nice)
-  param: $at = 0, $to = 0
-  #bind: `$this` by default
-  #init:
-data:
-  array: @inc(.data)
-  init: |
-    $array['data']['array']['not_nl_curly'] = [ # step1,2
-      T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR,
-      T_NAME_QUALIFIED => T_NS_SEPARATOR,
-    ];
-    foreach ($array['data']['array'] as $key => $val)
-        PHP::$data->{$key} = $val;
-    unset($array['data']);
-  #use: preprocessor, echo
-  #preflight:
-expr_nl:
-  closure: @inc(.expr_nl)
-  param: $y, $depth, $calc_max
-double_nl:
-  closure: @inc(.double_nl)
-  param: $y, $x
-#.saw
-
-# ////////////////////////////////////////////////////////////////////////////////////////////
 #.nice ///////////////////////////////////////////////////////////////////////////////////////
 head:
-  - |
-    $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $q9 = $in_php = 0;
-    $out = $line = $pv_exp = '';
-    $ifs = $exp = [];
-    $stk =& $this->stack;
-  - @inc(.php_closures)
+  - @inc(.php_nice_start)
   - 'for ($y = $pv = $pv_nc = $this->tok($at); $y; $y = $y->new):'
   - @inc(.php_y_new)
   - |
     $oc = $this->int_bracket($y, true);
     if ($y->len && $y->close < 1) {
-        $exp = $this->_saw('expr_nl', $y, $depth, $calc_max);
+        $x->exp = $this->_saw('expr_nl', $y, $depth, $calc_max);
         if (in_array($pv->str, [';', '{', '(', '[']))
             $pv_exp = $pv->str;
     }
@@ -82,7 +47,33 @@ head:
     return $out . $line . ($in_php ? "\n" : '');
 #.nice
 
-#.minify
+#.saw ///////////////////////////////////////////////////////////////////////////////////
+minify:
+  closure: @inc(.minify)
+  param: $at = 0, $to = false
+nice:
+  closure: @inc(.nice)
+  param: $at = 0, $to = 0
+  #bind: `$this` by default
+  #init:
+data:
+  array: @inc(.data)
+  init: |
+    $array['data']['array']['not_nl_curly'] = [ # step1,2
+      T_NULLSAFE_OBJECT_OPERATOR => T_OBJECT_OPERATOR,
+      T_NAME_QUALIFIED => T_NS_SEPARATOR,
+    ];
+    foreach ($array['data']['array'] as $key => $val)
+        PHP::$data->{$key} = $val;
+    unset($array['data']);
+  #use: preprocessor, echo
+  #preflight:
+expr_nl:
+  closure: @inc(.expr_nl)
+  param: $y, $depth, $calc_max
+#.saw
+
+#.minify ///////////////////////////////////////////////////////////////////////////////////
 head:
   - |
     $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
@@ -116,7 +107,7 @@ head:
 #.data ///////////////////////////////////////////////////////////////////////////////////
 tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT] # step1
 curly_reason: [ # step1
-  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO, $T_FN, $T_OBJECT_OPERATOR,
+  $T_DECLARE, $T_NAMESPACE, $T_USE, $T_SWITCH, $T_MATCH, $T_DO, $T_FN, $T_OBJECT_OPERATOR, $T_FUNCTION,
   @@inc(.loops), @@inc(.ifels), @@inc(.newdn), @@inc(.try)
 ]
 optim_key: [ # step1
@@ -124,8 +115,9 @@ optim_key: [ # step1
   $T_LNUMBER, $T_DNUMBER, $T_CONSTANT_ENCAPSED_STRING
 ]
 not_nl_after_curly: [',', '(', ')', ']', '}', ;, $T_CATCH, $T_FINALLY, $T_ELSE, $T_ELSEIF]
-double_nl: [@@inc(.newdn), $T_NAMESPACE]
-semicolon_prev: [@@inc(.modifiers), @@inc(.sets), @@path(double_nl), $T_CONST, $T_USE, $T_FUNCTION, $T_DECLARE]
+curly_short: [@@inc(.newdn)]
+double_nl: [@@inc(.newdn), $T_FUNCTION, $T_NAMESPACE]
+semicolon_prev: [@@inc(.modifiers), @@inc(.sets), @@path(double_nl), $T_CONST, $T_USE, $T_FUNCTION, $T_DECLARE, $T_GLOBAL]
 ctrl_d1: [@@inc(.loops), $T_IF]
 comments: @inc(.com3)
 endword: @inc(.ends)
@@ -231,7 +223,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
   do: |
     if (T_SWITCH == $y->tok) {
         $line .= $y->str . ' ';
-        $exp = [];
+        $x->exp = [];
     } else {
         $s3 = true;
         $s5 ? $put(-1, '', $y->str) : ($line .= $y->str);
@@ -247,7 +239,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     } elseif ($s3) { # after T_CASE, T_DEFAULT
         if ($mem)
             $correct($y->new, $mem + [2 => strlen(trim($line)) + 1]);
-        $exp = [];
+        $x->exp = [];
         $put($s5 = 1, ":\n");
         $s3 = false;
     } elseif (T_ELSE == $pv->tok) {
@@ -258,7 +250,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
             $ifs[] = [$depth, $d1, $d2];
             [$d1, $d2] = [0, count($ifs)];
             $this->in_html ? ($line .= ':') : $put(1, ":\n");
-        } elseif (T_FUNCTION == $x->reason) { # function return type
+        } elseif ($this->in_par) { # function return type
             $line .= ': ';
         } else {
             $line .= ' : '; # ternary
@@ -277,7 +269,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
 - on: in_array($y->tok, $this->_expr_tok) # -> ?-> and or xor && ||
   do: |
     $space = T_OBJECT_OPERATOR == $y->tok ? '' : ' '; # nullsafe ?-> also work
-    if (in_array($y->i, $exp)) {
+    if (in_array($y->i, $x->exp)) {
         if ($space && '(' != $pv_exp && !$q7) {
             $q7 = ++$d1;
             ++$depth;
@@ -291,12 +283,12 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
 #.chars
 - on: '?' == $y->str
   do: |
-    if (in_array($y->i, $exp)) {
+    if (in_array($y->i, $x->exp)) {
         $d1++;
         $put(1, "\n", '? ');
         $q8 = count($stk);
-    } elseif (T_FUNCTION == $x->reason || $x->last) { # nullsafe
-        $line .= T_FUNCTION == $x->reason ? '?' : ' ?';
+    } elseif ($this->in_par || $x->last) { # nullsafe
+        $line .= $this->in_par ? '?' : ' ?';
     } else {
         $q9 = true; # ternary
         $line .= ':' == $y->new->str ? ' ?' : ' ? ';
@@ -306,7 +298,7 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
     $line .= in_array($pv->tok ?: $pv->str, $this->_minus, true) ? ' - ' : '-';
 - on: '.' == $y->str
   do: |
-    if (in_array($y->i, $exp)) {
+    if (in_array($y->i, $x->exp)) {
         $q7 or [$q7 = ++$d1, ++$depth];
         $put("\n", '. ');
     } else {
@@ -315,17 +307,20 @@ minus: [@@inc(.id), $T_LNUMBER, $T_DNUMBER, $T_VARIABLE, $T_STRING, ')', ']']
 - on: ';' == $y->str
   do: |
     $q7 = $q9 = 0;
-    if ($this->in_html || $this->in_par) {
+    if ($this->in_html || $x->for) {
         $line .= '; ';
     } else {
         $d1 && $y->new && $reset_ifs($fnew($y));
         $put(";\n");
     }
 - on: '|' == $y->str
-  do: $line .= T_FUNCTION == $x->reason ? '|' : $ws($y);
+  do: $line .= $this->in_par ? '|' : $ws($y);
 - on: '&' == $y->str
   do: |
-    $space = T_FUNCTION != $pv->tok && ('$' != $y->new->str[0] || T_VARIABLE == $pv->tok || T_LNUMBER == $pv->tok || T_STRING == $pv->tok && T_FUNCTION != $x->reason || '=' == $pv->str);
+    $space = T_FUNCTION != $pv->tok && (
+        '$' != $y->new->str[0] || T_VARIABLE == $pv->tok || T_LNUMBER == $pv->tok
+        || T_STRING == $pv->tok && T_FUNCTION != $x->reason || '=' == $pv->str
+    );
     $line .= $alfa($pv->str[-1]) ? $ws($y, $space ? ' ' : '') : ($space ? '& ' : '&');
 - on: '=' == $y->str
   do: $line .= ' =' . ('&' == $y->new->str ? '' : ' ');
@@ -428,18 +423,6 @@ head:
     return $exp;
 #.expr_nl
 
-#.double_nl
-head:
-  - |
-    for ($str = '', $z = $y; in_array($z->tok, $this->_semicolon_prev); ) {
-        $str .= $z->str;
-        $z = $this->tok($z->i, true);
-    }
-    $nl = $str && $x->last && $x->last != $str;
-    $y->com or $x->last = $str;
-    return $nl;
-#.double_nl
-
 #.brackets
 - on: $oc || ',' == $y->str
   do: |
@@ -459,9 +442,8 @@ head:
         #    [$q7] = [0, $depth--, $d1--];
         }
         if ($oc) {
-            $y->line =& $line;
             $_depth = $depth;
-            $this->indents($oc, $y, $pv->tok, $put, $exp);
+            $indents($oc, $y, $x);
         } else { # comma
             $top =& $stk[array_key_last($stk)];
             top:
@@ -485,9 +467,9 @@ head:
         } elseif ('{' == $y->str && $_depth != $depth) {
             $ifs[] = [$_depth, $d1, $d2, $q7];
             [$d1, $d2, $q7] = [0, count($ifs), $q9 = 0];
-            if (T_FUNCTION == $x->reason)
-                $x->reason = 0;
-            $x->last = '';
+            if ($this->in_par)
+                $this->in_par = $x->reason = 0;
+            $x->last = $x->dnl = '';
         } elseif ('}' == $y->str && $_depth != $depth) {
             [$depth, $d1, $d2, $q7] = array_pop($ifs);
             in_array($y->reason, [T_TRY, T_DO]) or $y->new && $reset_ifs($fnew($y));

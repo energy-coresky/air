@@ -15,6 +15,7 @@ class PHP
     static $data = false;
     static $warning = false;
     static $php_fn = false;
+    static $curlyshort = false;
     static $autocomma = true;
 
     public $tab; # 0 for minified PHP
@@ -88,58 +89,8 @@ class PHP
             throw new Error(self::$warning);
         $this->nice(); # step 1
         $out = $this->_saw($this->tab ? 'nice' : 'minify'); # step 2
-        $this->unbind(['nice', 'minify', 'expr_nl', 'double_nl']);
+        $this->unbind(['nice', 'minify', 'expr_nl']);
         return $out;
-    }
-
-    private function left_bracket($y) {
-        if (1 & $y->new->com)
-            return false; # add new line
-        if (
-            $y->close < 0 || $y->len < 7 || $this->in_html
-            || ($len = strlen($y->line)) + $y->len < $this->max_length
-        )
-            return true; # continue line
-        [$new, $str] = $this->_saw('nice', $y->new->i, $y->close);
-        if (!$new->len || '[' == $y->str && '[' == $new->str)
-            return false; # add new line
-        if ($len + strlen($str) > $this->max_length)
-            return false; # add new line
-        return strlen($this->_saw('minify', $new->close, $y->close)) < 21;
-    }
-
-    private function indents($oc, $y, $prev, $put, &$exp) {
-        $stk =& $this->stack;
-        if ($oc > 0) { # open
-            $curly = '{' == $y->str && !in_array($y->reason, $this->_not_nl_curly);
-            if (!$curly && $this->left_bracket($y)) {
-                if ($for = T_FOR == $prev)
-                    $this->in_par = true;
-                $stk[] = [$for ? 0 : false, $exp, $y->str, $y->len];
-                return $y->line .= $y->str; # continue line
-            }
-            if ($curly && T_MATCH == $y->reason)
-                $curly = false;
-            $stk[] = [$y->cnt[0] ?? !$curly, $exp, $y->str, $y->len];
-            $this->x[$y->close] = $y->i;
-            if ($y->new->i == $y->close)
-                $y->new = $this->tok($y->new->i);
-            if ($class = $curly && in_array($y->reason, [T_CLASS, T_INTERFACE, T_TRAIT]))
-                $y->line && "\n" != $y->line[-1] && $put("\n") or $put('{');
-            $class ? $put(1, "\n") : $put(1, $curly ? " {\n" : "$y->str\n");
-        } else { # close
-            [$comma, $exp] = array_pop($stk);
-            if (0 === $comma)
-                $this->in_par = false;
-            if (!$y->len) {
-                if (in_array($y->str, [']', ')']) && ', ' == substr($y->line, -2))
-                    $y->line = substr($y->line, 0, -2); # modify source (delete comma)
-                return $y->line .= $y->str;
-            }
-            if ($y->line && ' ' != $y->line[-1] && in_array($y->str, self::$autocomma ? [']', ')'] : [']'])) # modify source (add comma)
-                $put(",\n");
-            $put(T_SWITCH == $y->reason ? -2 : -1, '' === trim($y->line) ? '' : "\n", $y->str);
-        }
     }
 
     function mod_attribute($y) {

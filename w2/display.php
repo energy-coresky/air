@@ -145,98 +145,54 @@ class Display # php jet yaml html bash || php_method md || var diff log
     }
 
     static function diff(string $new, string $old, $mode = false) {
-        $N = count($new = explode("\n", str_replace(["\r\n", "\r"], "\n", $new)));
-        $L = count($old = explode("\n", str_replace(["\r\n", "\r"], "\n", $old)));
-
-        for ($D = [], $n = $l = 0; $n < $N && $l < $L; ) {
-            $sn = current($new);
-            $sl = current($old);
+        $N = count($new = explode("\n", unl($new)));
+        $L = count($old = explode("\n", unl($old)));
+        for ($diff = [], $rN = '', $n = $l = 0; $n < $N && $l < $L; ) {
+            $sn = pos($new);
+            $sl = pos($old);
             if ($sn === $sl) {
-                $D[$n++] = $l++;
+                $n++;
+                $l++;
+                $rN .= '=';
                 array_shift($new);
                 array_shift($old);
             } else {
                 $fn = array_keys($old, $sn);
                 $fl = array_keys($new, $sl);
                 if (!$fn && !$fl) {
-                    $D[$n++] = '*';
-                    $l++;
+                    $rN .= '*';
+                    $diff[] = ['*', ++$n, $sn, ++$l, $sl];
                     array_shift($new);
                     array_shift($old); # optimize?
                 } elseif (!$fn) {
-                    $D[$n++] = '?';
+                    $rN .= '+';
+                    $diff[] = ['+', ++$n, $sn, 0, ''];
                     array_shift($new);
                 } elseif (!$fl) {
-                    $l++;
+                    $rN .= '.';
+                    $diff[] = ['.', 0, '', ++$l, $sl];
                     array_shift($old);
                 } else { # cross
-                    $tn = current($fn);
-                    $tl = current($fl);
-                    for ($in = 1; isset($new[$in]) && isset($old[$tn + $in]) && $new[$in] === $old[$tn + $in]; $in++);
-                    for ($il = 1; isset($old[$il]) && isset($new[$tl + $il]) && $old[$il] === $new[$tl + $il]; $il++);
-                    if ($in / $tn < $il / $tl) {
-                        $D[$n++] = '?';
+                    $tn = pos($fn);
+                    $tl = pos($fl);
+                    for ($in = 1; ($new[$in] ?? 0) === ($old[$tn + $in] ?? 1); $in++);
+                    for ($il = 1; ($old[$il] ?? 0) === ($new[$tl + $il] ?? 1); $il++);
+                    if ($in / ++$tn < $il / ++$tl) {
+                        $rN .= '+';
+                        $diff[] = ['+', ++$n, $sn, 0, ''];
                         array_shift($new);
                     } else {
-                        $l++;
+                        $rN .= '.';
+                        $diff[] = ['.', 0, '', ++$l, $sl];
                         array_shift($old);
                     }
                 }
             }
         }
-        if ($mode)
-            return $D;
-
-        for ($n = $l = 0, $rN = '', $c = count($D); $n < $N || $l < $L; ) {
-            if ($n >= $N) {
-                $rN .= '.';
-                $l++;
-            } elseif ($l >= $L) {
-                $rN .= '+';
-                $n++;
-            } elseif ($n >= $c || $D[$n] === '*') {
-                $rN .= '*';
-                $n++;
-                $l++;
-            } elseif ($D[$n] === $l) {
-                $rN .= '=';
-                $n++;
-                $l++;
-            } elseif ($D[$n] !== '?') do {
-                $rN .= '.';
-            } while ($D[$n] > ++$l);
-            else {
-                $cp = false;
-                for ($p = 1; $n + $p < $c; $p++)
-                    if (is_int($D[$n + $p])) {
-                        $cp = true;
-                        break;
-                    }
-                if ($cp) {
-                    $q = $D[$n + $p] - $l;
-                    while ($q && $p) {
-                        $rN .= "*";
-                        $n++;
-                        $l++;
-                        $q--;
-                        $p--;
-                    }
-                    while ($p--) {
-                        $rN .= "+";
-                        $n++;
-                    }
-                    while ($q--) {
-                        $rN .= ".";
-                        $l++;
-                    }
-                } else do {
-                    $rN .= '*';
-                    $n++;
-                    $l++;
-                } while ($n < $N && $l < $L);
-            }
-        }
-        return $rN;
+        $rest = -min($n -= $N, $l -= $L);
+        if (!$mode)
+            return $rN . str_pad('', $rest, $n < $l ? '+' : '.');
+        return $rest ? array_merge([[$n < $l ? $N : $L, $new, $old]], $diff) : $diff;
     }
 
     static function var($in) {

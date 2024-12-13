@@ -43,7 +43,7 @@
 #.names8.amp8 FOLLOWED: fn(&$r) => $r =& $x; NOT: public int|(A&B) $q = 1 & 0;
 + [$T_AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG, $T_AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG] # & (PHP 8.1.0)
 #.amp8.newdn
-+ [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM, $T_FUNCTION] # enum from 8.1
++ [$T_INTERFACE, $T_CLASS, $T_TRAIT, $T_ENUM] # enum from 8.1
 #.newdn.words
 + [
   $T_EXIT, $T_RETURN, $T_YIELD, $T_YIELD_FROM, $T_ARRAY, $T_EXTENDS, $T_IMPLEMENTS,
@@ -64,7 +64,7 @@
 + [$T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO, $T_CLOSE_TAG] # <?php <? or <%, <?= or <%=, ?> or %>
 #.tags.other
 + [        # ::(T_DOUBLE_COLON=T_PAAMAYIM_NEKUDOTAYIM), =>(T_DOUBLE_ARROW)
-  $T_WHITESPACE, $T_STRING, $T_VARIABLE, $T_DOUBLE_COLON, $T_DOUBLE_ARROW,
+  $T_WHITESPACE, $T_FUNCTION, $T_STRING, $T_VARIABLE, $T_DOUBLE_COLON, $T_DOUBLE_ARROW,
   $T_NS_SEPARATOR, $T_INLINE_HTML, $T_CONSTANT_ENCAPSED_STRING, # "foo" or 'bar' string
   $T_POW, $T_ELLIPSIS, # ** ...
   $T_LNUMBER, # 123, 012, 0x1ac integers
