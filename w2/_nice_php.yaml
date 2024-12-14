@@ -407,7 +407,9 @@ head:
         } elseif (!in_array($z, ['>', '?', ':']) && ($nx - $sz > $max || $nx == $len)) {
             $nl = $nx != $len || $nx - $sz > $this->max_length;
             for ($j = $i + 1, $sm = $cur; $nl && $sm < $nx; $j++) {
-                is_string($str = $this->tok[$j]) or $str = $str[1];
+                if (is_null($str = $this->tok[$j] ?? null))
+                    break;
+                is_string($str) or $str = $str[1];
                 if ('{' == $str || '(' == $str && $nx == $len && $nx - $cur > 0.8 * $this->max_length)
                     $nl = false;
                 $sm += ' ' == $str ? 1 : strlen(trim($str));

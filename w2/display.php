@@ -144,27 +144,33 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return '<div class="php">' . $table . '</div>';
     }
 
-    static function diffx(string $new, string $old, $in = false) {
-        $ary = self::diff($new, $old, true);
-        $in or $in = fn($x, $l, $n, $s) => ('=' == $x ? ' ' : ('+' == $x ? '+' : '-'))
-            . sprintf("%3s|%3s|%s\n", $l, $n, $s);
-        $out = $plus = $diff = '';
-        $add = $sub = 0;
+    static function diffx(string $new, string $old, $boundary = 3, $in = false) {
+        $ary = self::diff($new, $old, true, $boundary);
+        $out = $plus = '';
+        $add = $sub = $j = $last = 0;
         $rest = $ary && is_int($last = $ary[0][0]) ? array_shift($ary) : false;
+        $len = $last > 999 ? 4 : 3;
+        $break = $last > 999 ? " =========\n" : " =======\n";
+        $in or $in = fn($x, $l, $n, $s) => ('=' == $x ? ' ' : ('+' == $x ? '+' : '-'))
+            . sprintf("%{$len}s|%{$len}s %s\n", $l, $n, $s);
         if ($ary || $rest) {
-            foreach ($ary as $v) { // = + . *
+            foreach ($ary as $v) {
                 [$xn, $n, $new, $l, $old] = $v;
                 if ('+' == $xn || '*' == $xn) {
                     $add++;
-                    $plus .= $in('+', '', $n, $new);
+                    $plus .= $in('+', $j = '', $n, $new);
                 }
                 if ('+' != $xn) {
-                    if ('=' == $xn && $plus) {
+                    $eq = '=' == $xn or $sub++;
+                    if ($eq && $plus) {
                         $out .= $plus;
                         $plus = '';
+                    } elseif ($eq) {
+                        if ($j && ++$j != $n)
+                            $out .= $break;
+                        $j = $n;
                     }
-                    $out .= $in($xn, $l, '=' != $xn ? '' : $n, $old);
-                    '=' == $xn or $sub++;
+                    $out .= $in($xn, $l, $eq ? $n : '', $old);
                 }
             }
             $out .= $plus;
@@ -174,12 +180,11 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 foreach ($ary as $i => $v)
                     $out .= $plus ? $in('+', '', $last + $i, $v) : $in('-', $last + $i, '', $v);
             }
-            $diff = "+$add -$sub";
         }
-        return [$out, "@@ -1,$sub +1,$add @@ ", $diff ?: '.'];
+        return [$out, $add, $sub];
     }
 
-    static function diff(string $new, string $old, $mode = false) {
+    static function diff(string $new, string $old, $mode = false, int $boundary = 3) {
         $N = count($new = explode("\n", unl($new)));
         $L = count($old = explode("\n", unl($old)));
         $diff = $eq = [];
@@ -198,16 +203,16 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 array_shift($old);
             } else {
                 if ($eq)
-                    $diff = array_merge($diff, array_slice($eq, -3));
+                    $diff = array_merge($diff, array_slice($eq, -$boundary));
                 $eq = [];
-                $rest = 3;
+                $rest = $boundary;
                 $fn = array_keys($old, $sn);
                 $fl = array_keys($new, $sl);
                 if (!$fn && !$fl) {
                     $rN .= '*';
                     $diff[] = ['*', ++$n, $sn, ++$l, $sl];
                     array_shift($new);
-                    array_shift($old); # optimize?
+                    array_shift($old);
                 } elseif (!$fn) {
                     $rN .= '+';
                     $diff[] = ['+', ++$n, $sn, 0, ''];
@@ -216,12 +221,12 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     $rN .= '.';
                     $diff[] = ['.', 0, '', ++$l, $sl];
                     array_shift($old);
-                } else { # cross
+                } else { # both found
                     $tn = pos($fn);
                     $tl = pos($fl);
                     for ($in = 1; ($new[$in] ?? 0) === ($old[$tn + $in] ?? 1); $in++);
                     for ($il = 1; ($old[$il] ?? 0) === ($new[$tl + $il] ?? 1); $il++);
-                    if ($in / ++$tn < $il / ++$tl) {
+                    if ($in / ++$tn / count($fn) < $il / ++$tl / count($fl)) {
                         $rN .= '+';
                         $diff[] = ['+', ++$n, $sn, 0, ''];
                         array_shift($new);
