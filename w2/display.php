@@ -144,19 +144,63 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return '<div class="php">' . $table . '</div>';
     }
 
+    static function diffx(string $new, string $old, $in = false) {
+        $ary = self::diff($new, $old, true);
+        $in or $in = fn($x, $l, $n, $s) => ('=' == $x ? ' ' : ('+' == $x ? '+' : '-'))
+            . sprintf("%3s|%3s|%s\n", $l, $n, $s);
+        $out = $plus = $diff = '';
+        $add = $sub = 0;
+        $rest = $ary && is_int($last = $ary[0][0]) ? array_shift($ary) : false;
+        if ($ary || $rest) {
+            foreach ($ary as $v) { // = + . *
+                [$xn, $n, $new, $l, $old] = $v;
+                if ('+' == $xn || '*' == $xn) {
+                    $add++;
+                    $plus .= $in('+', '', $n, $new);
+                }
+                if ('+' != $xn) {
+                    if ('=' == $xn && $plus) {
+                        $out .= $plus;
+                        $plus = '';
+                    }
+                    $out .= $in($xn, $l, '=' != $xn ? '' : $n, $old);
+                    '=' == $xn or $sub++;
+                }
+            }
+            $out .= $plus;
+            if ($rest) {
+                $cnt = count($ary = $rest[1] ?: $rest[2]);
+                ($plus = (bool)$rest[1]) ? ($add += $cnt) : ($sub += $cnt);
+                foreach ($ary as $i => $v)
+                    $out .= $plus ? $in('+', '', $last + $i, $v) : $in('-', $last + $i, '', $v);
+            }
+            $diff = "+$add -$sub";
+        }
+        return [$out, "@@ -1,$sub +1,$add @@ ", $diff ?: '.'];
+    }
+
     static function diff(string $new, string $old, $mode = false) {
         $N = count($new = explode("\n", unl($new)));
         $L = count($old = explode("\n", unl($old)));
-        for ($diff = [], $rN = '', $n = $l = 0; $n < $N && $l < $L; ) {
+        $diff = $eq = [];
+        for ($rN = '', $n = $l = $rest = 0; $n < $N && $l < $L; ) {
             $sn = pos($new);
             $sl = pos($old);
             if ($sn === $sl) {
-                $n++;
-                $l++;
+                if ($rest) {
+                    $rest--;
+                    $diff[] = ['=', ++$n, $sn, ++$l, $sl];
+                } else {
+                    $eq[] = ['=', ++$n, $sn, ++$l, $sl];
+                }
                 $rN .= '=';
                 array_shift($new);
                 array_shift($old);
             } else {
+                if ($eq)
+                    $diff = array_merge($diff, array_slice($eq, -3));
+                $eq = [];
+                $rest = 3;
                 $fn = array_keys($old, $sn);
                 $fl = array_keys($new, $sl);
                 if (!$fn && !$fl) {
@@ -189,10 +233,10 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 }
             }
         }
-        $rest = -min($n -= $N, $l -= $L);
+        $rest = max($N -= $n, $L -= $l);
         if (!$mode)
-            return $rN . str_pad('', $rest, $n < $l ? '+' : '.');
-        return $rest ? array_merge([[$n < $l ? $N : $L, $new, $old]], $diff) : $diff;
+            return $rN . str_pad('', $rest, $N > $L ? '+' : '.');
+        return $rest ? array_merge([[$N > $L ? ++$n : ++$l, $new, $old]], $diff) : $diff;
     }
 
     static function var($in) {
