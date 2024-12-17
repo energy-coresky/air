@@ -41,7 +41,32 @@ class Display # php jet yaml html bash || php_method md || var diff log
         self::$bg = ['=' => false] + $pal->background[$name[0]] + array_combine($_key, $_val);
     }
 
-    static function js($in) {
+    static function js($code, $option = '', $no_lines = false) {
+        $x = self::xdata($option);
+        $y = false;
+        $ary = explode("\n", self::highlight_js($code, $y));
+        $x->len = strlen($x->diff);
+        return self::table($ary, $x, $no_lines);
+    }
+
+    static function highlight_js($code, &$y, $u = '') { # r g d c m j - gray
+        $js = new JS($code);
+        $out = '';
+        foreach ($js->tokens($y) as $t => $y) {
+            if (T_COMMENT == $y->tok) { /* js comment */
+                $out .= self::span($u . 'c', $t);
+            } elseif (T_KEYWORD == $y->tok) {
+                $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
+            } elseif ('"' == $t[0] || "'" == $t[0]) {
+                $out .= self::span($u . 'r', $t);
+            } elseif (T_STRING == $y->tok) {
+                $out .= self::span($u . 'j', $t);
+            } else {
+                #$out .= self::span($u . ('k' == $y->mode ? 'r' : 'd'), $t);
+                $out .= $t;
+            }
+        }
+        return $out;
     }
 
     static function bg($str, $bg) {
@@ -182,22 +207,21 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return [$out, $add, $sub, "$z " . round(100 * $z / (($add + $sub) ?: 1)) . '%'];
     }
 
-    static function diff(string $new, string $old, &$mode = null, int $boundary = 3) {
+    static function diff(string $new, string $old, &$mode = null, int $boundary = 0) {
         $new = explode("\n", unl($new));
         $old = explode("\n", unl($old));
         $diff = $eq = [];
-        for ($rN = '', $n = $l = $rest = $z = 0; $new && $old; $rN .= $chr) {
+        for ($rN = '', $n = $l = $z = 0; $new && $old; $rN .= $chr) {
             if (($sn = $new[0]) === $old[0]) {
                 $ary = [$chr = '=', ++$n, $sn, ++$l, $sn];
-                $rest++ ? ($diff[] = $ary) : ($eq[] = $ary);
-                $rest < 1 or $rest = 0;
+                $z++ ? ($diff[] = $ary) : ($eq[] = $ary);
+                $z < 1 or $z = 0;
             } else {
-                $diff = array_merge($diff, array_slice($eq, $rest = -$boundary));
+                $diff = array_merge($diff, array_slice($eq, $z = -$boundary));
                 $eq = [];
-                $fl = array_keys($new, $sl = $old[0]);
-                if (($fn = array_keys($old, $sn)) || $fl) {
-                    $x = !$fn;
-                    if ($fn && $fl) { # both found
+                $x = (bool)$fl = array_keys($new, $sl = $old[0]);
+                if (($fn = array_keys($old, $sn)) || $x) {
+                    if ($fn && $x) { # both found
                         for ($i = 1, $vn = $fn[0]; ($new[$i] ?? 0) === ($old[$vn + $i] ?? 1); $i++);
                         for ($j = 1, $vl = $fl[0]; ($old[$j] ?? 0) === ($new[$vl + $j] ?? 1); $j++);
                         $x = $i / $vn / count($fn) < $j / $vl / count($fl); // ++$vl
@@ -212,7 +236,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         }
         if (null === $mode)
             return $rN . str_pad('', count($new ?: $old), $new ? '+' : '.');
-        $mode = max(++$n, ++$l);
+        $mode = max(++$n + count($new), ++$l + count($old));
         return $new || $old ? array_merge([[$new ? $n : $l, $new, $old]], $diff) : $diff;
     }
 
@@ -302,6 +326,9 @@ class Display # php jet yaml html bash || php_method md || var diff log
             } elseif ('</style>' == $y->found) {
                 isset($y->css) or $y->css = false;
                 $out .= self::highlight_css($t, $y->css, $u);
+            } elseif ('</script>' == $y->found) {
+                isset($y->js) or $y->js = false;
+                $out .= self::highlight_js($t, $y->js, $u);
             } elseif (in_array($y->found, ['-->', ']]>'])) {
                 $out .= self::span($u . 'c', $t . ($y->find ? '' : $y->found));
                 $y->len += $y->find ? 0 : 3; # chars move

@@ -1,8 +1,8 @@
 <?php
 
-class JS // T_COMMENT
+class JS
 {
-    const version = '0.001';
+    const version = '0.002';
 
     static $js;
 
@@ -12,8 +12,7 @@ class JS // T_COMMENT
 
     function __construct(string $in = '') {
         defined('T_KEYWORD') or define('T_KEYWORD', 10001);
-        defined('T_CHAR') or define('T_CHAR', 10002);
-        self::$js or self::$js = yml('+ @inc(js)');
+        self::$js or self::$js = yml('+ @object @inc(js)');
         $this->in = unl($in);
     }
 
@@ -29,22 +28,6 @@ class JS // T_COMMENT
             $this->pad ? "\n" : '',
             $this->pad ? ' ' : '',
         ];
-        $this->walk($this->array, $fn = function ($one, $y) use (&$fn, $x) {
-            if (isset($one[1])) {
-                $this->in .= $y->pad . $this->define($one[0], $x[2]) . "$x[2]{" . $x[1];
-                $last = array_key_last($one[1]);
-                if (is_int($last)) {
-                    $this->walk($one[1], $fn, 1 + $y->depth);
-                } else foreach ($one[1] as $name => $value) {
-                    $this->in .= "$y->pad$x[0]$name:$x[2]$value";
-                    $last == $name && !$this->pad or $this->in .= ";$x[1]";
-                }
-                $this->in .= "$y->pad}" . $x[1];
-                $y->last or $this->in .= $x[1];
-            } else {
-                $this->in .= $y->pad . $this->define($one[0], $x[2]) . ";$x[1]$x[1]";
-            }
-        });
         return $this->in;
     }
 
@@ -58,6 +41,14 @@ class JS // T_COMMENT
             $y->last = $n == $last;
             $fn($one, $y);
         }
+    }
+
+    private function halt(string $error, $space = false, $line = false) {
+        #if (false !== $space && !strpbrk($space, "\t"))
+        #    return $space;
+        #$line or $line = $this->at[1];
+        #$at = (false === $this->at[0] ? 'Line ' : $this->at[0] . ', Line ') . $line;
+        throw new Error("JS: $error");
     }
 
     function mode(&$in, $k, $len, &$mode, $chr, $real = false) {
@@ -74,14 +65,21 @@ class JS // T_COMMENT
                     $t = substr($in, $j, $pos - $j + 2);
                     $y->find = false;
                 }
-            } elseif ('/' == $in[$j] && '*' == $in[$j + 1]) {
-                $t = '/*'; # comment
-                $y->find = '*/';
+                $y->tok = T_COMMENT;
+            } elseif ('/' == $in[$j] && in_array($t2 = $in[$j + 1], ['*', '/'])) {
+                $t = '/' . $t2; # comment
+                $y->find = $t2 == "*" ? '*/' : "\n";
+                $y->tok = T_COMMENT;
             } elseif ($y->space = strspn($in, "\t \n", $j)) {
                 $t = substr($in, $j, $y->space);
-            } else {
-                $k = $this->mode($in, $j, $len, $y->mode, false);
-                $t = rtrim(substr($in, $j, $k - $j));
+                $y->tok = T_WHITESPACE;
+            } elseif (strpbrk($t = $in[$j], self::$js->chars)) {
+                $y->tok = 0;
+            } elseif ('"' == $t || "'" == $t) {
+                $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
+                $t = substr($in, $j, $sz - $j);
+            } elseif ($y->word = preg_match("/^[a-z\n_\$]+/i", substr($in, $j), $m)) {
+                $y->tok = in_array($t = $m[0], self::$js->keywords) ? T_KEYWORD : T_STRING;
             }
             yield $t => $y;
         }

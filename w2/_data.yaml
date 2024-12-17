@@ -92,6 +92,7 @@ other: @csv( )
   enum await implements package protected static interface private public
 old: @csv( )
   abstract boolean byte char double final float goto int long native short synchronized transient volatile
+chars: "!#%&()*+,-./:;<=>?@[\]^`{|}~"
 #.js
 
 #.define ================== this used in the sky_plan.php ========================
