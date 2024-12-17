@@ -12,11 +12,13 @@
   $x->reason = $depth = $dar = $d1 = $d2 = $s3 = $s5 = $q7 = $q8 = $q9 = $in_php = 0;
   $x->for = $x->dnl = false;
   $x->pv_nc =& $pv_nc;
-  $double_nl = function ($y, $x) {
+  $double_nl = function ($y, $x) use (&$stk) {
       for ($str = '', $z = $y; in_array($z->tok, $this->_semicolon_prev); ) {
           $str .= $z->str;
           $z = $this->tok($z->i, true);
       }
+      if (in_array($y->tok, [T_GLOBAL, T_STATIC]) && end($stk)[3] < 200)
+          $str = '';
       //$nl = $str && $x->last && $x->last != $str;
       $nl = ($x->last || $str && in_array($x->pv_nc->str, ['}', ';'])) && $x->last != $str;
       $y->com or $x->last = $str;
@@ -145,8 +147,8 @@
   }
   if ($oc > 0 && $y->reason)
       $this->in_par = T_FUNCTION == ($x->reason = $y->reason);
-  if (!$x->dnl && (T_DECLARE == $y->tok || in_array($pv_nc->str, [';', '{', '}'])) && $double_nl($y, $x) 
-        && T_COMMENT != $y->tok
+  if (!$x->dnl && (T_DECLARE == $y->tok || in_array($pv_nc->str, [';', '{', '}']))
+      && $double_nl($y, $x) && T_COMMENT != $y->tok
     ) {
       if ($pv->com && '; ' != substr($out, -strlen($pv->str) - 3, 2)) {
           for ($j = 0, $i = $pv->i; in_array($tok = $this->tok[$i][0], $this->_tokens_ign); $i--)

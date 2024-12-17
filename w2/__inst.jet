@@ -191,7 +191,7 @@ function index() {
     return ltrim($code);
 }
 
-$ary = {!var_export(explode(' ', $exts), true)!};
+$ary = {!PHP::ary(explode(' ', $exts), true)!};
 $anyway = $_GET && 'anw' == key($_GET) ? $_GET['anw'] : false;
 $tests = [
     function () use ($anyway) {

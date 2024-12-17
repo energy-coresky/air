@@ -41,8 +41,9 @@ class PHP
     static function ary(array $in, $return = false) {
         $php = new self("<?php " . var_export($in, true) . ';', 2);
         $php->max_length = 80;
+        $php = trim(substr($php, 5), "; \n");
         if ($return)
-            return (string)$php;
+            return $php;
         echo $php;
     }
 

@@ -170,7 +170,7 @@ class CSS
                 $p[] = [$push(), []];
                 $ptr[] =& $p[array_key_last($p)][1];
             } elseif ('v' == $y->mode) {
-                $p[$key] = $t;
+                $p[$key] = ':' == $t ? '' : $t;
             } elseif ('k' == $y->mode) {
                 $p[$key = $t] = '';
             } elseif ('}' == $t) {

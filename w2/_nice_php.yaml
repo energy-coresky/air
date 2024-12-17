@@ -77,7 +77,7 @@ expr_nl:
 head:
   - |
     $not = fn($chr) => !preg_match("/[a-z_\d\$]/i", $chr);
-    for ($out = '', $y = $pv = $this->tok($at); $y; $y = $new) { //2do 1+++$a;
+    for ($out = '', $y = $pv = $this->tok($at); $y; $y = $new) { //2do 1+++$a;   . 1 (concat vs real num)
         if ($to && $y->i > $to)
             break;
         $new = $this->tok($y->i + 1);
