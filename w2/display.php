@@ -53,17 +53,17 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $js = new JS($code);
         $out = '';
         foreach ($js->tokens($y) as $t => $y) {
-            if (T_COMMENT == $y->tok) { /* js comment */
-                $out .= self::span($u . 'c', $t);
-            } elseif (T_KEYWORD == $y->tok) {
-                $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
-            } elseif ('"' == $t[0] || "'" == $t[0]) {
+            if (T_COMMENT == $y->tok) {
+                $out .= self::span($u . 'c', html($t));
+            } elseif (T_CONSTANT_ENCAPSED_STRING == $y->tok) {
                 $out .= self::span($u . 'r', $t);
             } elseif (T_STRING == $y->tok) {
                 $out .= self::span($u . 'j', $t);
+            } elseif ($y->tok) {
+                $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
             } else {
                 #$out .= self::span($u . ('k' == $y->mode ? 'r' : 'd'), $t);
-                $out .= $t;
+                $out .= html($t);
             }
         }
         return $out;
@@ -211,7 +211,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $new = explode("\n", unl($new));
         $old = explode("\n", unl($old));
         $diff = $eq = [];
-        for ($rN = '', $n = $l = $z = 0; $new && $old; $rN .= $chr) {
+        for ($rN = '', $n = $l = $z = 0; $new && $old; $rN .= $chr) { # 2do: LCS algo..
             if (($sn = $new[0]) === $old[0]) {
                 $ary = [$chr = '=', ++$n, $sn, ++$l, $sn];
                 $z++ ? ($diff[] = $ary) : ($eq[] = $ary);
@@ -262,6 +262,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
                     return self::php($php = unhtml($m[2]), '<?' == substr($php, 0, 2) ? '' : false, true);
                 if ('css' == $m[1])
                     return self::css(unhtml($m[2]), '', true);
+                if ('js' == $m[1])
+                    return self::js(unhtml($m[2]), '', true);
                 if ('html' == $m[1])
                     return self::html(unhtml($m[2]), '', true);
                 return 'jet' == $m[1] ? self::jet(unhtml($m[2]), '-', true) : pre(html($m[2]), '');
@@ -276,10 +278,10 @@ class Display # php jet yaml html bash || php_method md || var diff log
         if ($exist) {
             $md = new Parsedown;
             $text = preg_replace("~\"https://github.*?/([^/\.]+)[^/\"]+\"~", '"_png?$1=' . Plan::$pngdir . '"', $md->text($text));
-            return $code($text, '<pre><code class="language\-(jet|php|html|css|bash|yaml)">(.*?)</code></pre>');
+            return $code($text, '<pre><code class="language\-(jet|php|html|css|js|bash|yaml)">(.*?)</code></pre>');
         }
         $text = str_replace("\n\n", '<p>', unl($text));
-        return $code($text, "```(jet|php|html|css|bash|yaml|)(.*?)```");
+        return $code($text, "```(jet|php|html|css|js|bash|yaml|)(.*?)```");
     }
 
     static function css($code, $option = '', $no_lines = false) {

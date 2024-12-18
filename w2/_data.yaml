@@ -86,14 +86,14 @@ omis: # tags omission rules
 
 #.js
 keywords: @csv( )
-  break case class catch const continue debugger default delete do else export extends finally for function if import in
+  break case class catch const continue debugger default delete do else export extends finally for function if import in of
   instanceof let new return super switch this throw try typeof var void while with yield
 other: @csv( )
   enum await implements package protected static interface private public
 old: @csv( )
   abstract boolean byte char double final float goto int long native short synchronized transient volatile
-chars: "!#%&()*+,-./:;<=>?@[\]^`{|}~"
-#.js
+chars: "!#%&()*+,-.:;<=>?@[\]^`{|}~"
+#.js /
 
 #.define ================== this used in the sky_plan.php ========================
 ENC:      UTF-8

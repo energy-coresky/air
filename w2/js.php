@@ -12,7 +12,7 @@ class JS
 
     function __construct(string $in = '') {
         defined('T_KEYWORD') or define('T_KEYWORD', 10001);
-        self::$js or self::$js = yml('+ @object @inc(js)');
+        self::$js or self::$js = Plan::set('main', fn() => yml('js', '+ @object @inc(js)'));
         $this->in = unl($in);
     }
 
@@ -55,18 +55,19 @@ class JS
     }
 
     function tokens($y = false) {
-        $y or $y = (object)['mode' => 'd', 'find' => false];
+        $y or $y = (object)['tok' => 0, 'pv' => '', 'find' => false];
         $len = strlen($in =& $this->in);
-        for ($j = 0; $j < $len; $j += strlen($t)) {
+        for ($j = 0, $t = ''; $j < $len; $j += strlen($t)) {
+            T_WHITESPACE == $y->tok or $y->pv = $t;
+            $t2 = $in[$j + 1] ?? '';
             if ($y->found = $y->find) {
                 if (false === ($pos = strpos($in, $y->find, $j))) {
                     $t = substr($in, $j); # /* </style> */ is NOT comment inside <style>!
                 } else {
-                    $t = substr($in, $j, $pos - $j + 2);
+                    $t = substr($in, $j, $pos - $j + strlen($y->find));
                     $y->find = false;
                 }
-                $y->tok = T_COMMENT;
-            } elseif ('/' == $in[$j] && in_array($t2 = $in[$j + 1], ['*', '/'])) {
+            } elseif ('/' == $in[$j] && in_array($t2, ['*', '/'])) {
                 $t = '/' . $t2; # comment
                 $y->find = $t2 == "*" ? '*/' : "\n";
                 $y->tok = T_COMMENT;
@@ -75,11 +76,21 @@ class JS
                 $y->tok = T_WHITESPACE;
             } elseif (strpbrk($t = $in[$j], self::$js->chars)) {
                 $y->tok = 0;
-            } elseif ('"' == $t || "'" == $t) {
-                $sz = Rare::str($in, $j, $len) or $this->halt('Incorrect string');
-                $t = substr($in, $j, $sz - $j);
-            } elseif ($y->word = preg_match("/^[a-z\n_\$]+/i", substr($in, $j), $m)) {
-                $y->tok = in_array($t = $m[0], self::$js->keywords) ? T_KEYWORD : T_STRING;
+            } elseif ('/' == $t && "(" == $y->pv || '"' == $t || "'" == $t) {
+                $y->tok = T_CONSTANT_ENCAPSED_STRING;
+                if ($sz = Rare::str($in, $j, $len)) {// or $this->halt('Incorrect string');
+                    $t = substr($in, $j, $sz - $j);
+                } else {
+                    [$y->find, $t] = [$t, substr($in, $j)];
+                }
+            } elseif ($y->word = preg_match("/^[a-z\d_\$]+/i", substr($in, $j), $m)) {
+                if (is_num($t = $m[0])) {
+                    $y->tok = T_LNUMBER;
+                } else {
+                    $kw = '.' != $y->pv && in_array($t, self::$js->keywords);
+                    $php = defined($c = "T_" . strtoupper($t));
+                    $y->tok = $kw ? ($php ? constant($c) : T_KEYWORD) : T_STRING;
+                }
             }
             yield $t => $y;
         }
