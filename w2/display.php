@@ -62,7 +62,6 @@ class Display # php jet yaml html bash || php_method md || var diff log
             } elseif ($y->tok) {
                 $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
             } else {
-                #$out .= self::span($u . ('k' == $y->mode ? 'r' : 'd'), $t);
                 $out .= html($t);
             }
         }
@@ -170,7 +169,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
     }
 
     static function diffx(string $new, string $old, $boundary = 3, $in = false) {
-        $out = $plus = '';
+        $out = '';
         $add = $sub = $j = $z = $zz = $max = 0;
         $ary = self::diff($new, $old, $max, $boundary);
         $rest = $ary && is_int($last = $ary[0][0]) ? array_shift($ary) : false;
@@ -178,25 +177,24 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $in or $in = fn($l, $n, $s, $x = '+') => sprintf("$x%{$len}s|%{$len}s %s\n", $l, $n, $s);
         if ($ary || $rest) {
             foreach ($ary as $v) {
-                [$chr, $n, $new, $l, $old] = $v;
-                if (!$x = '+' == $chr) {
+                [$chr, $str, $n, $l] = $v;
+                if ('+' == $chr) {
+                    $zz or ++$z && ++$zz;
+                    $add++;
+                    $out .= $in($j = '', $n, $str);
+                } else {
                     if ($eq = '=' == $chr) {
-                        if ($j && ++$j != $n && !$plus)
+                        if ($j && ++$j != $n)
                             $out .= ' =======' . ($gt ? '==' : '') . "\n";
-                        [$out, $plus, $j] = [$out . $plus, $zz = '', $n];
+                        $j = $n;
+                        $zz = '';
                     } else {
                         $zz or ++$z && ++$zz;
                         $sub++;
                     }
-                    $out .= $in($l, $eq ? $n : '', $old, $eq ? ' ' : '-');
-                }
-                if ($x || '*' == $chr) {
-                    $zz or ++$z && ++$zz;
-                    $add++;
-                    $plus .= $in($j = '', $n, $new);
+                    $out .= $in($l, $eq ? $n : '', $str, $eq ? ' ' : '-');
                 }
             }
-            $out .= $plus;
             if ($rest) {
                 $cnt = count($ary = $rest[1] ?: $rest[2]);
                 ($plus = (bool)$rest[1]) ? ($add += $cnt) : ($sub += $cnt);
@@ -207,35 +205,40 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return [$out, $add, $sub, "$z " . round(100 * $z / (($add + $sub) ?: 1)) . '%'];
     }
 
-    static function diff(string $new, string $old, &$mode = null, int $boundary = 0) {
+    static function diff(string $new, string $old, &$mode = null, int $boundary = 1) {
         $new = explode("\n", unl($new));
-        $old = explode("\n", unl($old));
-        $diff = $eq = [];
-        for ($rN = '', $n = $l = $z = 0; $new && $old; $rN .= $chr) { # 2do: LCS algo..
+        $old = explode("\n", unl($old)); # 2do: LCS algo..
+        $pm = fn($p, $m) => str_pad('', min($p, $m), '*') . str_pad('', abs($p - $m), $p > $m ? '+' : '.');
+        $diff = $eq = $plus = [];
+        $n = $l = $b = $p = $m = 0;
+        for ($RR = ''; $new && $old; '.' == $r or array_shift($new), '+' == $r or array_shift($old)) {
             if (($sn = $new[0]) === $old[0]) {
-                $ary = [$chr = '=', ++$n, $sn, ++$l, $sn];
-                $z++ ? ($diff[] = $ary) : ($eq[] = $ary);
-                $z < 1 or $z = 0;
+                $diff = array_merge($diff, array_splice($plus, 0));
+                $RR .= $pm($p, $m) . ($r = '=');
+                $p = $m = 0;
+                $b++ ? ($diff[] = ['=', $sn, ++$n, ++$l]) : ($eq[] = ['=', $sn, ++$n, ++$l]);
+                $b < 1 or $b = 0;
             } else {
-                $diff = array_merge($diff, array_slice($eq, $z = -$boundary));
+                $diff = array_merge($diff, array_slice($eq, $b = -$boundary));
                 $eq = [];
                 $x = (bool)$fl = array_keys($new, $sl = $old[0]);
                 if (($fn = array_keys($old, $sn)) || $x) {
                     if ($fn && $x) { # both found
                         for ($i = 1, $vn = $fn[0]; ($new[$i] ?? 0) === ($old[$vn + $i] ?? 1); $i++);
                         for ($j = 1, $vl = $fl[0]; ($old[$j] ?? 0) === ($new[$vl + $j] ?? 1); $j++);
-                        $x = $i / $vn / count($fn) < $j / $vl / count($fl); // ++$vl
+                        $x = $i / $vn / count($fn) < $j / $vl / count($fl); // ++$vl div by zero
                     }
-                    $diff[] = $x ? [$chr = '+', ++$n, $sn, 0, ''] : [$chr = '.', 0, '', ++$l, $sl];
+                    $x ? ($plus[] = [$r = '+', $sn, ++$n, ++$p]) : ($diff[] = [$r = '.', $sl, ++$m, ++$l]);
                 } else {
-                    $diff[] = [$chr = '*', ++$n, $sn, ++$l, $sl];
+                    $plus[] = ['+', $sn, ++$n, 0];
+                    $diff[] = ['.', $sl, 0, ++$l];
+                    $RR .= $r = '*';
                 }
             }
-            '.' == $chr or array_shift($new);
-            '+' == $chr or array_shift($old);
         }
         if (null === $mode)
-            return $rN . str_pad('', count($new ?: $old), $new ? '+' : '.');
+            return $RR . $pm($p, $m) . str_pad('', count($new ?: $old), $new ? '+' : '.');
+        $diff = array_merge($diff, $plus);
         $mode = max(++$n + count($new), ++$l + count($old));
         return $new || $old ? array_merge([[$new ? $n : $l, $new, $old]], $diff) : $diff;
     }
@@ -470,6 +473,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
             'cut' => $cut,
             '_' => '',
             'prev' => '',
+            'invert' => false,
+            'colors' => 0, # 0: RGY, 1: Y, 2: RG
         ];
     }
 
@@ -477,12 +482,17 @@ class Display # php jet yaml html bash || php_method md || var diff log
         if (-9 != $x->cut[0] && $key < $x->cut[0])
             return $val = '';
         $pad = $c = '';
-        if (!$key) for (; $x->len > $x->disp && $x->diff[$x->disp] == '.'; $x->disp++) {
+        $pt = $x->invert ? '+' : '.';
+        if (!$key) for (; $x->len > $x->disp && $x->diff[$x->disp] == $pt; $x->disp++) {
             $x->lnum .= "<br>";
             $pad .= '<div class="code" style="background:' . self::$bg['.'] . '">&nbsp;</div>';
         }
         if ($x->len > $key + $x->disp) {
             $chr = $x->diff[$key + $x->disp];
+            if ($x->invert)
+                $chr = '.' == $chr ? '-' : ('+' == $chr ? '.' : $chr);
+            if ($x->colors && '=' != $chr)
+                $chr = 1 == $x->colors ? '*' : ($x->invert ? '-' : '+');
             $inner = $x->_[$key] ?? false;
             $c = self::$bg[$inner ? "_$chr" : $chr]; # = - + * .
         }
@@ -490,8 +500,10 @@ class Display # php jet yaml html bash || php_method md || var diff log
 #        if ($x->prev = preg_match("/(<[^\/][^>]+>)([^>]*)$/", $val, $m) ? $m[1] : '')
 #            $val .= '</span>';
         $x->lnum .= str_pad(++$key, 3, 0, STR_PAD_LEFT) . "<br>";
+        if ('' === $val)
+            $val = '&nbsp;';
         $val = $c ? $pad . '<div class="code" style="background:' . "$c\">$val</div>" : "$pad$val\n";
-        for (; $x->len > $key + $x->disp && $x->diff[$key + $x->disp] == '.'; $x->disp++) {
+        for (; $x->len > $key + $x->disp && $x->diff[$key + $x->disp] == $pt; $x->disp++) {
             $x->lnum .= "<br>";
             $val .= '<div class="code" style="background:' . self::$bg['.'] . '">&nbsp;</div>';
         }

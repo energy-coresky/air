@@ -59,8 +59,8 @@ class Console
         $ext = 'Console' == $_cls ? '' : "$cls ";
         $ary = $ext ? [] : [
             's' => 'Run PHP web-server',
-            'd' => 'List dirs (from current dir)',
             'v' => 'Show Coresky version',
+            'dir' => 'List dirs (from current dir)',
             'php' => 'Lint PHP files (from current dir)',
         ];
         $ware = self::$d[1] ? basename(self::$d[1]) : false;
@@ -310,6 +310,12 @@ class Console
         $s = sqlf('+select tmemo from $_memory where id=%d', $id);
         //$id > 3 or $s = strip_tags($s);
         echo !$unhtml ? $s : (1 == $unhtml ? unhtml($s) : unhtml(unhtml($s)));
+    }
+
+    /** Diff text files, example: sky d oldfile newfile */
+    function c_d($fno, $fnn) {
+        [$out, $add, $sub, $z] = Display::diffx(file_get_contents($fnn), file_get_contents($fno));
+        echo '' === $out ? 'Files identical' : "@@ -$sub +$add @@ $z\n$out";
     }
 
     /** Check globals */
