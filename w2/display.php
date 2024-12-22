@@ -41,33 +41,6 @@ class Display # php jet yaml html bash || php_method md || var diff log
         self::$bg = ['=' => false] + $pal->background[$name[0]] + array_combine($_key, $_val);
     }
 
-    static function js($code, $option = '', $no_lines = false) {
-        $x = self::xdata($option);
-        $y = false;
-        $ary = explode("\n", self::highlight_js($code, $y));
-        $x->len = strlen($x->diff);
-        return self::table($ary, $x, $no_lines);
-    }
-
-    static function highlight_js($code, &$y, $u = '') { # r g d c m j - gray
-        $js = new JS($code);
-        $out = '';
-        foreach ($js->tokens($y) as $t => $y) {
-            if (T_COMMENT == $y->tok) {
-                $out .= self::span($u . 'c', html($t));
-            } elseif (T_CONSTANT_ENCAPSED_STRING == $y->tok) {
-                $out .= self::span($u . 'r', $t);
-            } elseif (T_STRING == $y->tok) {
-                $out .= self::span($u . 'j', $t);
-            } elseif ($y->tok) {
-                $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
-            } else {
-                $out .= html($t);
-            }
-        }
-        return $out;
-    }
-
     static function bg($str, $bg) {
         return "<span style=\"background-color:$bg\">$str</span>";
     }
@@ -210,16 +183,16 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $old = explode("\n", unl($old)); # 2do: LCS algo..
         $pm = fn($p, $m) => str_pad('', min($p, $m), '*') . str_pad('', abs($p - $m), $p > $m ? '+' : '.');
         $diff = $eq = $plus = [];
-        $n = $l = $b = $p = $m = 0;
-        for ($RR = ''; $new && $old; '.' == $r or array_shift($new), '+' == $r or array_shift($old)) {
-            if (($sn = $new[0]) === $old[0]) {
+        $n = $l = $z = $p = $m = 0;
+        for ($RR = ''; $new && $old; $a or array_shift($new), $b or array_shift($old)) {
+            if (($sn = $new[0]) === $old[$a = $b = 0]) {
                 $diff = array_merge($diff, array_splice($plus, 0));
-                $RR .= $pm($p, $m) . ($r = '=');
+                $RR .= $pm($p, $m) . '=';
                 $p = $m = 0;
-                $b++ ? ($diff[] = ['=', $sn, ++$n, ++$l]) : ($eq[] = ['=', $sn, ++$n, ++$l]);
-                $b < 1 or $b = 0;
+                $z++ ? ($diff[] = ['=', $sn, ++$n, ++$l]) : ($eq[] = ['=', $sn, ++$n, ++$l]);
+                $z < 1 or $z = 0;
             } else {
-                $diff = array_merge($diff, array_slice($eq, $b = -$boundary));
+                $diff = array_merge($diff, array_slice($eq, $z = -$boundary));
                 $eq = [];
                 $x = (bool)$fl = array_keys($new, $sl = $old[0]);
                 if (($fn = array_keys($old, $sn)) || $x) {
@@ -228,11 +201,11 @@ class Display # php jet yaml html bash || php_method md || var diff log
                         for ($j = 1, $vl = $fl[0]; ($old[$j] ?? 0) === ($new[$vl + $j] ?? 1); $j++);
                         $x = $i / $vn / count($fn) < $j / $vl / count($fl); // ++$vl div by zero
                     }
-                    $x ? ($plus[] = [$r = '+', $sn, ++$n, ++$p]) : ($diff[] = [$r = '.', $sl, ++$m, ++$l]);
+                    $x ? ($plus[] = ['+', $sn, ++$n, $b = ++$p]) : ($diff[] = ['.', $sl, ++$m, $a = ++$l]);
                 } else {
                     $plus[] = ['+', $sn, ++$n, 0];
                     $diff[] = ['.', $sl, 0, ++$l];
-                    $RR .= $r = '*';
+                    $RR .= '*';
                 }
             }
         }
@@ -287,6 +260,24 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return $code($text, "```(jet|php|html|css|js|bash|yaml|)(.*?)```");
     }
 
+    static function md__($text) {
+        return (string)new MD($text);
+    }
+
+    static function highlight_md($code, $u = '') { # r g d c m j - gray
+        self::scheme();
+        $md = new MD($code);
+        $out = '';
+        foreach ($md->tokens() as $t => $y) {
+            if ($y->tok < 10 && 8 !== $y->tok) {
+                $out .= self::span('r', html($t));
+            } else {
+                $out .= html($t);
+            }
+        }
+        return $out;
+    }
+
     static function css($code, $option = '', $no_lines = false) {
         $x = self::xdata($option);
         $y = false;
@@ -295,7 +286,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return self::table($ary, $x, $no_lines);
     }
 
-    static function highlight_css($code, &$y, $u = '') { # r g d c m j - gray
+    static function highlight_css($code, &$y, $u = '') {
         $css = new CSS($code);
         $out = '';
         foreach ($css->tokens($y) as $t => $y) {
@@ -307,6 +298,33 @@ class Display # php jet yaml html bash || php_method md || var diff log
                 $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
             } else {
                 $out .= self::span($u . ('k' == $y->mode ? 'r' : 'd'), $t);
+            }
+        }
+        return $out;
+    }
+
+    static function js($code, $option = '', $no_lines = false) {
+        $x = self::xdata($option);
+        $y = false;
+        $ary = explode("\n", self::highlight_js($code, $y));
+        $x->len = strlen($x->diff);
+        return self::table($ary, $x, $no_lines);
+    }
+
+    static function highlight_js($code, &$y, $u = '') { # r g d c m j - gray
+        $js = new JS($code);
+        $out = '';
+        foreach ($js->tokens($y) as $t => $y) {
+            if (T_COMMENT == $y->tok) {
+                $out .= self::span($u . 'c', html($t));
+            } elseif (T_CONSTANT_ENCAPSED_STRING == $y->tok) {
+                $out .= self::span($u . 'r', $t);
+            } elseif (T_STRING == $y->tok) {
+                $out .= self::span($u . 'j', $t);
+            } elseif ($y->tok) {
+                $out .= self::span($u . ('@' == $t[0] ? 'g' : 'g'), $t);
+            } else {
+                $out .= html($t);
             }
         }
         return $out;

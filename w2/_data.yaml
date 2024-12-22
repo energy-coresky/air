@@ -63,7 +63,7 @@ color: # r g z y m j in sky.css
   x_far:  {r:#f77, g:#fff, d:#7ee, c:#68a, m:#888, j:#962}
 #.schemes
 background: @bang(= )
-  z: 0=#fff -=#fdd +=#dfd *=#ffd .=#eee
+  z: 0=#fff -=#fdd +=#dfd *=#ffa .=#eee
   w: 0=#eee -=#fdd +=#dfd *=#ffd .=#eee
   v: 0=#eee -=#fdd +=#dfd *=#ffd .=#eee
   b: 0=#000 -=#511 +=#151 *=#551 .=#555
