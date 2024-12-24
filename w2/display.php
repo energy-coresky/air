@@ -269,10 +269,16 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $md = new MD($code);
         $out = '';
         foreach ($md->tokens() as $t => $y) {
-            if ($y->tok < 10 && 8 !== $y->tok) {
-                $out .= self::span('r', html($t));
+            if ($y->tok < 11 && 8 !== $y->tok) {
+                $out .= self::span('r', $t);
+            } elseif (15 == $y->tok) {
+                $out .= self::span('g', $t);
+            } elseif (14 == $y->tok) {
+                $out .= self::span("!" != $t[0] ? 'g' : 'c', $t);
             } else {
                 $out .= html($t);
+                if (13 == $y->tok)
+                    $out = substr($out, 0, -1) . self::bg('&nbsp;', self::$clr['r']);
             }
         }
         return $out;
