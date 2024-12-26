@@ -261,7 +261,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
     }
 
     static function md__($text) {
-        return (string)new MD($text);
+        return (string)new MD($text, true);
     }
 
     static function highlight_md($code, $u = '') { # r g d c m j - gray
@@ -271,6 +271,8 @@ class Display # php jet yaml html bash || php_method md || var diff log
         foreach ($md->tokens() as $t => $y) {
             if ($y->tok < 11 && 8 !== $y->tok) {
                 $out .= self::span('r', $t);
+            } elseif (16 == $y->tok) {
+                $out .= self::span('m', $t);
             } elseif (15 == $y->tok) {
                 $out .= self::span('g', $t);
             } elseif (14 == $y->tok) {
@@ -531,6 +533,13 @@ class Display # php jet yaml html bash || php_method md || var diff log
             $x->lnum .= "<br>";
             $val .= '<div class="code" style="background:' . self::$bg['.'] . '">&nbsp;</div>';
         }
+    }
+
+    static function lines($in, $scheme = 'z_php', $option = '', $u = '') {
+        Display::scheme($scheme);
+        $x = Display::xdata($option);
+        $x->len = strlen($option);
+        return Display::table(is_array($in) ? $in : explode("\n", $in), $x, false, $u);
     }
 
     static function log($html) { # 2do

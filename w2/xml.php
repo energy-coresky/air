@@ -14,17 +14,17 @@ class XML
     private $ptr;
     private $root;
 
-    function __construct(string $in = '') {
+    function __construct(string $in = '', $tab = 0) {
+        $this->pad = str_pad('', $tab);
         self::$html or self::$html = yml('+ @inc(html)');
         $this->root = $this->node('#root');
         $this->draw = function ($tag, &$close) {
             if (is_string($tag))
                 return $tag;
-            $close = "</$tag->name>";
-            $open = "<$tag->name";
+            $close = '</' . ($open = $tag->name) . '>';
             foreach ($tag->attr ?? [] as $k => $v)
                 $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-            return $open . '>';
+            return "<$open>";
         };
         $this->in = unl($in);
     }
@@ -93,12 +93,12 @@ class XML
         });
     }
 
-    function beautifier($tag, $pad) {
+    function beautifier($tag, $pad, $in_pre = false) { // 2do CSS: white-space: pre;
         $out = '';
         do {
             if ('#' == $tag->name[0]) {
                 $str = ($this->draw)(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
-                $out .= trim($str);
+                $out .= $in_pre ? $str : trim($str);
                 continue;
             } else {
                 $open = ($this->draw)($tag, $close);
@@ -108,12 +108,12 @@ class XML
                 continue;
             }
             if (is_object($tag->val)) {
-                $inner = $this->beautifier($tag->val, $pad . $this->pad);
-                $out .= strlen(trim($inner)) < 100
+                $inner = $this->beautifier($tag->val, $pad . $this->pad, $in_pre || 'pre' == $tag->name);
+                $out .= $in_pre ? $open . $inner . $close : (strlen(trim($inner)) < 100
                     ? "\n$pad$open" . trim($inner) . $close
-                    : "\n$pad$open" . $inner . "\n$pad$close";
+                    : "\n$pad$open" . $inner . "\n$pad$close");
             } else { # string
-                $out .= "\n$pad$open" . trim($tag->val) . $close;
+                $out .= $in_pre ? $open . $tag->val . $close : "\n$pad$open" . trim($tag->val) . $close;
             }
         } while ($tag = $tag->right);
         $pad or $this->in = $out;
