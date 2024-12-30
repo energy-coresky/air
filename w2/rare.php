@@ -52,64 +52,59 @@ class Rare
         return common_c::mail_h(trim($message), $ary, trim($subject), trim($to));
     }
 
-    //2do rewrite with Rare::str(..)
-    static function split(string $in, $b = ';', $sql_comment = true) {
-        $out = [];
-        $s = $rest = '';
-        foreach (token_get_all("<?php " . trim($in, "\n\r \t$b")) as $i => $v) {
-            if (!$i)
-                continue;
-            is_array($v) or $v = [0, $v];
-            if (T_DEC == $v[0] && $sql_comment || $rest) {
-                $rest .= '' === $rest ? '#' : $v[1]; # replace "--" to "#"
-                continue;
-            }
-            if (!$v[0] && $v[1] === $b) {
-                '' === ($s = trim($s)) or $out[] = $s;
-                $s = '';
-            } else {
-                $s .= $v[1];
-            }
-        }
-        if ($rest) {
-            $rest = self::split($rest, $b);
-            $rest[0] = ltrim($s) . '--' . substr($rest[0], 1);
-            return array_merge($out, $rest);
-        } elseif ('' !== ($s = trim($s))) {
-            $out[] = $s;
-        }
-        return $out;
-    }
-
-    static function bracket(string &$in, $b = '(', $from = 0) {
+    static function bracket(string &$in, $b = '(', $from = 0, $to = 0) {
         if ($b != ($in[$from] ?? ''))
             return '';
         $close = ['(' => ')', '[' => ']', '{' => '}', '<' => '>'];
-        $set = $b . $close[$b] . '\'"';
-        for ($j = $from + ($z = 1), $len = strlen($in); true; ) {
+        [$chr, $len] = is_string($to) ? [$to, strlen($in)] : ['', $to ?: strlen($in)];
+        for ($j = $from + ($z = 1), $set = $close[$b] . "$chr$b'\""; true; ) {
             $j += strcspn($in, $set, $j);
-            if ($j >= $len) {
+            if ($j >= $len || ($ne = '\\' != $in[$j]) && $chr && strpbrk($in[$j], $chr)) {
                 return '';
             } elseif ("'" == $in[$j] || '"' == $in[$j]) {
-                if (!$j = self::str($in, $j, $len))
+                if (!$j = self::str($in, $j, $len, $chr))
                     return '';
-            } else {
+            } elseif ($ne) {
                 $b == $in[$j++] ? $z++ : $z--;
                 if (!$z)
                     return substr($in, $from, $j - $from);
+            } else {
+                $j += ($bs = strspn($in, '\\', $j)) + ($bs % 2);
             }
         }
     }
 
-    static function str(string &$in, $j, $len) {
-        for ($quot = $in[$j++] . '\\'; true; $j += $bs % 2) {
-            $j += strcspn($in, $quot, $j);
-            if ($j >= $len)
+    static function str(string &$in, $j, $len, $chr = '') {
+        for ($set = $in[$j++] . '\\' . $chr; true; ) {
+            $j += strcspn($in, $set, $j);
+            if ($j >= $len || ($ne = '\\' != $in[$j]) && $chr && strpbrk($in[$j], $chr))
                 return false;
-            if ('\\' != $in[$j])
+            if ($ne)
                 return ++$j;
-            $j += ($bs = strspn($in, '\\', $j));
+            $j += ($bs = strspn($in, '\\', $j)) + ($bs % 2);
         }
+    }
+
+    static function split(string $in, $b = ';', $sql_comment = true) {
+        $out = [];
+        $set = "$b'\"" . ($sql_comment ? '-' : '');
+        for ($j = $i = 0, $len = strlen($in); true; ) {
+            $j += strcspn($in, $set, $j);
+            if ($j >= $len) {
+                goto add;
+            } elseif ('-' == $in[$j]) { # sql comment
+                $j += ('-' == $in[$j + 1] ?? '') ? strcspn($in, "\n", $j) : 1;
+            } elseif (strpbrk($in[$j], '`\'"')) {
+                $j = self::str($in, $j, $len) or $j = $len;
+            } else {
+                add:
+                $s = trim(substr($in, $i, $j - $i));
+                '' === $s or $out[] = $s;
+                if (($i = ++$j) >= $len)
+                    break;
+            }
+        }
+        return $out;
     }
 
     static function env($key, $default = 0) {

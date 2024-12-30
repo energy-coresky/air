@@ -522,8 +522,8 @@ class YML
                 return fn($v) => base64_decode($v);
             case 'ini_get':
                 return fn($v) => ini_get($v);
-            case 'csv':
-                return fn($v, $x) => explode($x ?: ';', $v);
+            case 'csv': # space by default !
+                return fn($v, $x) => explode($x ?? ' ', $v);
             case 'join':
                 return fn($v, $x) => implode($x ?? ';', $v);
             case 'space':

@@ -3,12 +3,18 @@
 class MD # the MarkDown
 {
     const version = '0.121';
-    const type = ['jet', 'php', 'css', 'js', 'html', 'yaml', 'bash']; // 2do zml
+
+    static $md;
 
     private $hightlight;
+    private $array = [];
+    private $ref = [];
+    private $j = 0;
+    private $in;
 
     function __toString() {
         $out = $h16 = $paragraph = '';
+        $stk = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->tok < 7) { # h1 h2 h3 h4 h5 h6
                 if ($paragraph)
@@ -22,7 +28,7 @@ class MD # the MarkDown
                 $paragraph = false;
                 'javascript' !== $type = trim($t, "\n `") or $type = 'js';
                 $is_n = $y->n;
-            } elseif (8 == $y->tok && (!$this->hightlight || !in_array($type, self::type))) {
+            } elseif (8 == $y->tok && (!$this->hightlight || !in_array($type, MD::$md->md_type))) {
                 $is_n or $t = preg_replace("/(\A|\n) {4}/s", "$1", $t);
                 $out .= pre(tag($t, $type ? 'class="language-' . $type . '"' : '', 'code'));
             } elseif (8 == $y->tok) {
@@ -38,8 +44,8 @@ class MD # the MarkDown
                     ? sprintf('<img src="%s" alt="%s">', $y->m[1], $y->m[0]) # image
                     : a($y->m[0], $y->m[1]); # link
                 goto paragraph;
-            } elseif (15 == $y->tok) {
-                $out .= a($t, $t); # auto-link
+            } elseif (15 == $y->tok) { # auto-link
+                $out .= a($t, $t);
             //} elseif (12 == $y->tok) {
             } elseif (!in_array($y->tok, [9, 16])) { # not reference
                 if (13 == $y->tok)
@@ -59,19 +65,151 @@ class MD # the MarkDown
         return $out;
     }
 
-    function references($y) {
-        preg_match_all("/(\[\w+\]):([^\n]+)(\n|\z)/s", $this->in, $matches, PREG_SET_ORDER);
+    function _tokens(&$x = null) {
+        $y = new stdClass;
+        //$y->tok = 0;
+        $y->pv = '';
+        foreach ($this->parse($x) as $ary) {
+            [$y->tok, $t] = $ary;
+            yield $t => $y;
+            $y->pv = $t;
+        }
+    }
+
+    function spn($set, $j = 0) {
+        return substr($this->in, $j ?: $this->j, strspn($this->in, $set, $j ?: $this->j));
+    }
+
+    function cspn($set, $j = 0) {
+        return substr($this->in, $j ?: $this->j, strcspn($this->in, $set, $j ?: $this->j));
+    }
+
+    function new_line(&$t, &$nl) {
+        static $pad = 0, $depth = 0;
+        static $fenced = false;
+        $in =& $this->in;
+        $j =& $this->j;
+
+        /** new line */
+        if ("\n" == $t[0]) {
+            $pad = 0;
+            return [12, $t = chop($t, " \t")];
+        /** fenced code start-end */
+        } elseif (preg_match("/^```(\w*)\n/s", $ln15 = substr($in, $j, 15), $m)) {
+            $fenced = !$fenced;
+            return [$fenced ? 7 : 9, $t = substr($m[0], 0, -1)];
+        /** fenced code body */
+        } elseif ($fenced) {
+            return [8, $t = $this->cspn("\n")];
+        /** indent */
+        } elseif (strpbrk($t, " \t")) {
+            $t = $this->spn(" \t");
+            $pad += strlen(str_replace("\t", '1234', $t));
+            if ($pad > 3)
+                ;
+            return [22, $t, $pad];
+        /** blockquote */
+        } elseif ('>' == $t) {
+            return [31, $t, ++$pad];
+        /** ul list */
+        } elseif (strpbrk($t, '+-*') && ' ' == ($in[1 + $j] ?? '')) {
+            return [32, $t .= ' ', $pad += 2];
+        /** ol list */
+        } elseif (preg_match("/^(\d{1,10})(\.|\)) /", $ln15, $m)) {
+            return [33, $t = $m[0], $pad += strlen($t), $m];
+        /** [reference]: or [url].. */
+        } elseif ('[' == $t && ($a = $this->square($j, $tok))) {
+            $nl = false;
+            if (16 == $tok)
+                $this->ref[$a[2]] = trim(substr($a[3], 1));
+            return [$tok, $t = $a[2] . $a[3]] + $a;
+        } else {
+            return $nl = false;
+        }
+    }
+
+    function square($j, &$tok) {
+        if (!$len = strlen($head = Rare::bracket($this->in, '[', $j, "\n\\")))
+            return false;
+        $tok = 14;
+        if (in_array($chr = $this->in[$j += $len], ['[', '('])) {
+            $tail = Rare::bracket($this->in, $chr, $j, "\n\\");
+        } elseif (':' == $chr) {
+            if (':' == trim($tail = $this->cspn("\n", $j)))
+                return false;
+            $tok = 16;
+        }
+        return [2 => $head, $tail ?? ''];
+    }
+
+    # h1============= |table :dl-dt-dd
+    function parse(&$x = null) { # lists: + - *
+        $x = new stdClass;
+        $x->mark = 0;
+        $len = $nl = strlen($in =& $this->in);
+        $j =& $this->j;
+        $char = [
+            "\\`*_{}[]()<>#+-.!|^=~:",
+        ];
+        $chr =& $char[0];
+        $ary =& $this->array;
+        for ($t = ''; $j < $len; $j += strlen($t)) {
+            if ("\n" == ($t = $in[$j])) {
+                $t = $this->spn($nl = "\n \t");
+                $ary[] = $this->new_line($t, $nl);
+            } elseif ($nl && ($tok = $this->new_line($t, $nl))) {
+                $ary[] = $tok;
+            } elseif ("\\" == $t) { # escaped
+                $nl = false;
+                $ary[] = [11, $t .= $in[1 + $j] ?? ''];
+            } elseif (strpbrk($t, $chr)) {
+                $ary[] = [11, $t = $this->spn($t)];
+            } else {
+                $t = substr($in, $j, $n = strcspn($in, "\n$chr", $j));
+                if ('  ' == substr($t, -2) && "\n" == ($in[$j + strlen($t)] ?? '')) {
+                    $ary[] = [13, $t];
+                } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_url($t, $j)) {
+                    $ary[] = [15, $t];
+                } else {
+                    $ary[] = [11, $t];
+                }
+            }
+        }
+        return $ary;
+    }
+
+    function auto_url(&$t, $j) {
+        if (!preg_match("/\bhttps?$/ui", $t, $m1))
+            return false;
+        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($t)), $m2)) //2do substr
+            return false;
+        if ($m1[0] !== $t) {
+            $t = substr($t, 0, -strlen($m1[0]));
+            return false;
+        }
+        $t .= $m2[0];
+        return true;
+    }
+
+    function inline_url(&$t, $j, $y) {
+        if (!preg_match("/\bhttps?$/ui", $t, $m1))
+            return false;
+        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($t)), $m2)) //2do substr
+            return false;
+        $t = substr($t, 0, $m1 = -strlen($m1[0]));
+        $y->n = strlen($m2[0]) - $m1;
+        return true;
+    }
+
+    function tokens() {
+        $y = new stdClass;
+        $len = strlen($in =& $this->in);
+        preg_match_all("/(\[\w+\]):([^\n]+)(\n|\z)/s", $in, $matches, PREG_SET_ORDER);
         $y->ref = [];
         foreach ($matches as $m)
             $y->ref[$m[1]] = trim($m[2]);
         $y->tok = $y->n = 0;
         $y->pv = "\n";
-    }
-
-    function tokens() {
-        $y = new stdClass;
-        $this->references($y);
-        $len = strlen($in =& $this->in);
         for ($j = 0, $t = ''; $j < $len; $j += strlen($t)) {
             if ($y->n) {
                 start:
@@ -108,7 +246,7 @@ class MD # the MarkDown
                 if ("`" == $t && ($p = Rare::str($in, $j, $len))) {
                     $t = substr($in, $j, $p - $j);
                     $y->tok = 10;
-                } elseif (("!" == $t && "[" == $t2 || "[" == $t) && $this->square($t, $j, $y)) {
+                } elseif (("!" == $t && "[" == $t2 || "[" == $t) && $this->_square($t, $j, $y)) {
                     ;
                 } elseif ("\n" == $y->pv[-1]) {
                     if ('```' == $t && ($pos = strpos($in, "\n$t", $j))) { # fenced code
@@ -135,24 +273,14 @@ class MD # the MarkDown
         }
     }
 
-    function inline_url(&$t, $j, $y) {
-        if (!preg_match("/\bhttps?$/ui", $t, $m1))
-            return false;
-        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($t)), $m2)) //2do substr
-            return false;
-        $t = substr($t, 0, $m1 = -strlen($m1[0]));
-        $y->n = strlen($m2[0]) - $m1;
-        return true;
-    }
-
-    function square(&$t, $j, $y) {
+    function _square(&$t, $j, $y) {
         if ($return = preg_match("/!?\[([^\]\n]+)\](\([^\)\n]+\)|\[[^\]\n]+\])/s", $this->in, $match, 0, $j)) {
             [$t, $y->m[0], $y->m[1]] = $match;
             $y->tok = 14; # an img or link
         } elseif ('!' == $t) {
             return false;
         } elseif ($return = preg_match("/\[\^\w+\]:/", $this->in, $match, 0, $j)) {
-            [$t, $y->tok] = [$match[0], 22]; # footnote def
+            [$t, $y->tok] = [$match[0], 17]; # footnote def
         } elseif ($return = preg_match("/\[\w+\]:[^\n]+/s", $this->in, $match, 0, $j)) {
             [$t, $y->tok] = [$match[0], 16]; # reference
         }
@@ -160,6 +288,7 @@ class MD # the MarkDown
     }
 
     function __construct(string $in, $hightlight = false) {
+        MD::$md or MD::$md = Plan::set('main', fn() => yml('md', '+ @object @inc(md)'));
         $this->hightlight = $hightlight;
         $this->in = unl($in);
     }
@@ -167,19 +296,5 @@ class MD # the MarkDown
     const char = '\\`*_{}[]()#+-.!|^=~:'; //    >
 }
 
-__halt_compiler();
 
-#.md '[':a !:img `:code ```:pre-code
-'#': h1  =============
-~~: s
-~: sub
-^: sup
-**: strong
-*:  em
-==: mark
----: hr
->:  blockquote
-|:  table
-'[^1]': footnote
-':': dl dt dd
-#.md
+
