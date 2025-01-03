@@ -2,183 +2,195 @@
 
 class MD # the MarkDown
 {
-    const version = '0.121';
+    const version = '0.232';
+    //const char = '\\`*_{}[]()#+-.!|^=~:'; //    >
 
     static $md;
 
     private $hightlight;
-    private $array = [];
+    private $tok = [];
     private $ref = [];
     private $j = 0;
     private $in;
 
-    function __toString() {
-        $out = $h16 = $paragraph = '';
-        $stk = [];
-        foreach ($this->tokens() as $t => $y) {
-            if ($y->tok < 7) { # h1 h2 h3 h4 h5 h6
-                if ($paragraph)
-                    $out .= "</p>";
-                $paragraph = false;
-                $h16 = "</h$y->tok>";
-                $out .= "<h$y->tok>";
-            } elseif (7 == $y->tok) { # fenced code start
-                if ($paragraph)
-                    $out .= "</p>";
-                $paragraph = false;
-                'javascript' !== $type = trim($t, "\n `") or $type = 'js';
-                $is_n = $y->n;
-            } elseif (8 == $y->tok && (!$this->hightlight || !in_array($type, MD::$md->md_type))) {
-                $is_n or $t = preg_replace("/(\A|\n) {4}/s", "$1", $t);
-                $out .= pre(tag($t, $type ? 'class="language-' . $type . '"' : '', 'code'));
-            } elseif (8 == $y->tok) {
-                $out .= Display::$type($t);
-            } elseif (10 == $y->tok) {
-                $out .= tag(substr($t, 1, -1), '', 'code'); # inline code
-            } elseif (12 == $y->tok) { # NL + space
-                $out .= $h16 ?: ("\n" == $t ? ' ' : '');
-                $h16 = false;
-            } elseif (14 == $y->tok) {
-                $y->m[1] = '[' != $y->m[1][0] ? substr($y->m[1], 1, -1) : $y->ref[$y->m[1]];
-                $t = '!' == $t[0]
-                    ? sprintf('<img src="%s" alt="%s">', $y->m[1], $y->m[0]) # image
-                    : a($y->m[0], $y->m[1]); # link
-                goto paragraph;
-            } elseif (15 == $y->tok) { # auto-link
-                $out .= a($t, $t);
-            //} elseif (12 == $y->tok) {
-            } elseif (!in_array($y->tok, [9, 16])) { # not reference
-                if (13 == $y->tok)
-                    $t = rtrim($t) . '<br>';
-                paragraph:
-                if ("\n\n" == $y->pv && '' !== trim($t)) {
-                    if ($paragraph)
-                        $out .= "</p>";
-                    $out .= "<p>$t";
-                    $paragraph = true;
-                } else {
-                    $out .= $t;
-                }
-            }
-        }
-        //return html($out);
-        return $out;
+    function __construct(string $in, $hightlight = false) {
+        MD::$md or MD::$md = Plan::set('main', fn() => yml('md', '+ @object @inc(md)'));
+        $this->hightlight = $hightlight;
+        $this->in = unl($in);
     }
 
-    function _tokens(&$x = null) {
-        $y = new stdClass;
-        //$y->tok = 0;
-        $y->pv = '';
-        foreach ($this->parse($x) as $ary) {
-            [$y->tok, $t] = $ary;
-            yield $t => $y;
-            $y->pv = $t;
-        }
-    }
-
-    function spn($set, $j = 0) {
+    private function spn($set, $j = 0) {
         return substr($this->in, $j ?: $this->j, strspn($this->in, $set, $j ?: $this->j));
     }
 
-    function cspn($set, $j = 0) {
+    private function cspn($set, $j = 0) {
         return substr($this->in, $j ?: $this->j, strcspn($this->in, $set, $j ?: $this->j));
     }
 
-    function new_line(&$t, &$nl) {
-        static $pad = 0, $depth = 0;
-        static $fenced = false;
+    private function blk_html($x, &$t) {
+        if (!preg_match("/^<(\?|!|\/?[a-z][a-z\-]*)/i", $x->line, $m))
+            return false;
+        if ('?' == $m[1]) {
+            $x->html = '?>';
+        } elseif ('!' == $m[1]) {
+            foreach (MD::$md->typ_1 as $k => $v)
+                if ($k == substr($x->line, 0, strlen($k))) {
+                    $x->html = $v;
+                    $m[0] = $k;
+                    goto end;
+                }
+        } elseif (in_array($v = strtolower($m[1]), MD::$md->typ_2)) {
+            $x->html = "</$v>";
+        } else {
+            $close = '/' == $v[0] ? '/' : '';
+            $y = $close ? $v[1] : $v[0];
+            if (isset(MD::$md->tags[$y])) {
+                foreach (MD::$md->tags[$y] as $tag)
+                    if ($v == $close . $tag) {
+                        $x->html = "\ntags\n";
+                        goto end;
+                    }
+            }
+            $x->html = "\nqqq\n";
+            goto end;
+            //2do return false;
+        }
+        end:
+        $x->nl = false;
+        return [99, $t = $m[0]];
+    }
+
+    private function blk_fenced($x, &$t) {
+        if (preg_match("/^$t$t$t(\w*)$/", $x->line, $m)) {
+            if ($m[1] || $x->fenced !== $t) {
+                $str = $x->fenced ? '</code></pre>' : '';
+                $str .= $m[1] ? "<pre><code class=\"language-$m[1]\">" : "<pre><code>";
+                $x->fenced = $t;
+                return [7, $t = $x->line, $str, $m[1]];
+            } else {
+                $x->fenced = 0;
+                return [9, $t = $x->line, '</code></pre>'];
+            }
+        } elseif ($x->fenced) { # continue
+            return [8, $t = $x->line, false];
+        } else {
+            return false;
+        }
+    }
+
+    private function blk_bq($x, &$t) {
+        return [31, $t, '<blockquote>'];
+    }
+
+    private function blk_h6($x, &$t) {
+        if (!preg_match("/^(#{1,6})\s+(\S.*?)\s*$/", $x->line, $m))
+            return false;
+        return [$sz = strlen($m[1]), $t = $x->line, "<h$sz>$m[2]</h$sz>"];
+    }
+
+    private function blk_h2r($x, &$t) {
+        if (!preg_match("/^\\{$t}[\\$t \t]*$/", $x->line))
+            return false;
+        $z = str_replace(["\t", ' '], '', $x->line);
+        if ($z == chop($x->line)) {
+            if ('=' == $t)
+                return [1, $t = $x->line, '</h1>'];
+            if ('-' == $t)
+                return [2, $t = $x->line, '</h2>'];
+        }
+        if ('=' == $t || strlen($z) < 3)
+            return false;
+        return [19, $t = $x->line, '<hr>'];
+    }
+
+    private function blk_ul($x, &$t) {
+        if (' ' != ($x->line[1] ?? ''))
+            return false;
+        return [32, $t .= ' ', '<ul>'];
+    }
+
+    private function blk_table($x, &$t) {
+    }
+    private function blk_dl($x, &$t) {# :dl-dt-dd
+    }
+
+    private function blk_ol($x, &$t) {
+        if (!preg_match("/^(\d{1,10})(\.|\)) /", $x->line, $m))
+            return false;
+        return [33, $t = $m[0], "<ol start=\"$m[1]\">"];
+    }
+
+    private function new_line($x, &$t) {
+        static $pad = 0, $stk = [];
+        static $fenced = false, $n2 = false;
+
         $in =& $this->in;
         $j =& $this->j;
 
-        /** new line */
         if ("\n" == $t[0]) {
             $pad = 0;
-            return [12, $t = chop($t, " \t")];
-        /** fenced code start-end */
-        } elseif (preg_match("/^```(\w*)\n/s", $ln15 = substr($in, $j, 15), $m)) {
-            $fenced = !$fenced;
-            return [$fenced ? 7 : 9, $t = substr($m[0], 0, -1)];
-        /** fenced code body */
-        } elseif ($fenced) {
-            return [8, $t = $this->cspn("\n")];
-        /** indent */
-        } elseif (strpbrk($t, " \t")) {
+            $n2 = strlen($t = chop($t, " \t")) > 1;
+            return [12, $t];
+        } elseif ('[' == $t && ($a = $this->square($j, $id))) {
+            $x->nl = false;
+            if (16 == $id)
+                $this->ref[$a[3]] = trim(substr($a[4], 1));
+            return [$id, $t = $a[3] . $a[4]] + $a;
+        } elseif (strpbrk($t, " \t")) {/** indent */
             $t = $this->spn(" \t");
             $pad += strlen(str_replace("\t", '1234', $t));
             if ($pad > 3)
                 ;
-            return [22, $t, $pad];
-        /** blockquote */
-        } elseif ('>' == $t) {
-            return [31, $t, ++$pad];
-        /** ul list */
-        } elseif (strpbrk($t, '+-*') && ' ' == ($in[1 + $j] ?? '')) {
-            return [32, $t .= ' ', $pad += 2];
-        /** ol list */
-        } elseif (preg_match("/^(\d{1,10})(\.|\)) /", $ln15, $m)) {
-            return [33, $t = $m[0], $pad += strlen($t), $m];
-        /** [reference]: or [url].. */
-        } elseif ('[' == $t && ($a = $this->square($j, $tok))) {
-            $nl = false;
-            if (16 == $tok)
-                $this->ref[$a[2]] = trim(substr($a[3], 1));
-            return [$tok, $t = $a[2] . $a[3]] + $a;
+            return [22, $t, ''];
         } else {
-            return $nl = false;
+            $x->line = $this->cspn("\n");
+            foreach (MD::$md->blk as $set => $func) {
+                if (strpbrk($t, $set) && ($a = $this->$func($x, $t))) {
+                    //$x->nl = false;
+                    //$pad += strlen($t);
+                    return $a;
+                }
+            }
+            return $x->nl = false;
         }
     }
 
-    function square($j, &$tok) {
-        if (!$len = strlen($head = Rare::bracket($this->in, '[', $j, "\n\\")))
-            return false;
-        $tok = 14;
-        if (in_array($chr = $this->in[$j += $len], ['[', '('])) {
-            $tail = Rare::bracket($this->in, $chr, $j, "\n\\");
-        } elseif (':' == $chr) {
-            if (':' == trim($tail = $this->cspn("\n", $j)))
-                return false;
-            $tok = 16;
-        }
-        return [2 => $head, $tail ?? ''];
-    }
-
-    # h1============= |table :dl-dt-dd
-    function parse(&$x = null) { # lists: + - *
+    function &parse(&$x = null) { # lists: + - *
         $x = new stdClass;
-        $x->mark = 0;
-        $len = $nl = strlen($in =& $this->in);
+        $x->fenced = 0;
+        $len = $x->nl = strlen($in =& $this->in);
         $j =& $this->j;
         $char = [
             "\\`*_{}[]()<>#+-.!|^=~:",
         ];
         $chr =& $char[0];
-        $ary =& $this->array;
+        $tok =& $this->tok;
         for ($t = ''; $j < $len; $j += strlen($t)) {
             if ("\n" == ($t = $in[$j])) {
-                $t = $this->spn($nl = "\n \t");
-                $ary[] = $this->new_line($t, $nl);
-            } elseif ($nl && ($tok = $this->new_line($t, $nl))) {
-                $ary[] = $tok;
+                $t = $this->spn($x->nl = "\n \t");
+                $tok[] = $this->new_line($x, $t);
+            } elseif ($x->nl && ($a = $this->new_line($x, $t))) {
+                $tok[] = $a;
             } elseif ("\\" == $t) { # escaped
-                $nl = false;
-                $ary[] = [11, $t .= $in[1 + $j] ?? ''];
+                $x->nl = false;
+                $tok[] = [11, $t .= $in[1 + $j] ?? ''];
             } elseif (strpbrk($t, $chr)) {
-                $ary[] = [11, $t = $this->spn($t)];
+                $tok[] = [11, $t = $this->spn($t)];
             } else {
                 $t = substr($in, $j, $n = strcspn($in, "\n$chr", $j));
                 if ('  ' == substr($t, -2) && "\n" == ($in[$j + strlen($t)] ?? '')) {
-                    $ary[] = [13, $t];
-                } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_url($t, $j)) {
-                    $ary[] = [15, $t];
+                    $tok[] = [13, $t];
+                } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_link($t, $j)) {
+                    $tok[] = [15, $t];
                 } else {
-                    $ary[] = [11, $t];
+                    $tok[] = [11, $t];
                 }
             }
         }
-        return $ary;
+        return $tok;
     }
 
-    function auto_url(&$t, $j) {
+    private function auto_link(&$t, $j) {
         if (!preg_match("/\bhttps?$/ui", $t, $m1))
             return false;
         if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($t)), $m2)) //2do substr
@@ -191,110 +203,50 @@ class MD # the MarkDown
         return true;
     }
 
-    function inline_url(&$t, $j, $y) {
-        if (!preg_match("/\bhttps?$/ui", $t, $m1))
+    private function square($j, &$id) {
+        if (!$len = strlen($head = Rare::bracket($this->in, '[', $j, "\n\\"))) # 2do  footnote
             return false;
-        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($t)), $m2)) //2do substr
-            return false;
-        $t = substr($t, 0, $m1 = -strlen($m1[0]));
-        $y->n = strlen($m2[0]) - $m1;
-        return true;
+        $id = 14;
+        if (in_array($chr = $this->in[$j += $len], ['[', '('])) {
+            $tail = Rare::bracket($this->in, $chr, $j, "\n\\");
+        } elseif (':' == $chr) {
+            if (':' == trim($tail = $this->cspn("\n", $j)))
+                return false;
+            $id = 16;
+        }
+        return [2 => '', $head, $tail ?? ''];
     }
 
-    function tokens() {
-        $y = new stdClass;
-        $len = strlen($in =& $this->in);
-        preg_match_all("/(\[\w+\]):([^\n]+)(\n|\z)/s", $in, $matches, PREG_SET_ORDER);
-        $y->ref = [];
-        foreach ($matches as $m)
-            $y->ref[$m[1]] = trim($m[2]);
-        $y->tok = $y->n = 0;
-        $y->pv = "\n";
-        for ($j = 0, $t = ''; $j < $len; $j += strlen($t)) {
-            if ($y->n) {
-                start:
-                $t = substr($in, $j, $y->n);
-                if ($y->ntok ?? 0) {
-                    $y->tok = $y->ntok;
-                    $y->n = $y->ntok = 0;
-                } else {
-                    $y->tok = "\n```" == $t ? 9 : 8;
-                    $y->n = 9 == $y->tok ? 0 : 4;
-                }
-            } elseif (7 == $y->tok) { # multiline code by 4-indent
-                $y->tok = 8;
-                for ($t = $nl = '', $i = $j; $i < $len; $i += $sz) {
-                    $tt = substr($in, $i, $sz = strcspn($in, "\n", $i));
-                    if ('    ' != substr($tt, 0, 4))
-                        break;
-                    $t .= $nl . $tt;
-                    $nl = substr($in, $i += $sz, $sz = strspn($in, "\n", $i));
-                }
-            } elseif ("\n" == ($t = $in[$j])) {
-                $t = substr($in, $j, $sz = strspn($in, "\n \t", $j));
-                $y->tok = 12;
-                if ('    ' == substr($t, -4) && "\n" != ($in[$j + $sz] ?? '')) {
-                    $y->tok = 7;
-                    $t = substr($t, 0, -4);
-                }
-            } elseif (strpbrk($t2 = $in[1 + $j] ?? '', MD::char) && "\\" == $t) {
-                $y->tok = 11;
-                $t .= $t2; # escaped
-            } elseif (strpbrk($t, MD::char)) {
-                $y->tok = 11;
-                $t = substr($in, $j, strspn($in, $t, $j));
-                if ("`" == $t && ($p = Rare::str($in, $j, $len))) {
-                    $t = substr($in, $j, $p - $j);
-                    $y->tok = 10;
-                } elseif (("!" == $t && "[" == $t2 || "[" == $t) && $this->_square($t, $j, $y)) {
-                    ;
-                } elseif ("\n" == $y->pv[-1]) {
-                    if ('```' == $t && ($pos = strpos($in, "\n$t", $j))) { # fenced code
-                        $t = substr($in, $j, $p = strpos($in, "\n", $j) - $j + 1);
-                        $y->n = $pos - $j - $p;
-                        $y->tok = 7;
-                    } elseif ('#' == $t[0] && ($sz = strlen($t)) < 7) {
-                        $y->tok = $sz;
-                    }
-                }
+    function __toString() {
+        $out = $tmp = '';
+        foreach ($this->parse() as $ary) {
+            [$tok, $t, $htm, $p3, $p4] = $ary + [2 => $ary[1], 0, 0];
+            if (15 == $tok) { # auto-link
+                $out .= a($t, $t);
+            } elseif (14 == $tok) {
+                if ('' === $p4 || '[]' === $p4)
+                    $p4 = $p3;
+                $p4 = '[' != $p4[0] ? substr($p4, 1, -1) : $this->ref[$p4];
+                $out .= '!' == $t[0]
+                    ? sprintf('<img src="%s" alt="%s">', $p4, substr($p3, 1, -1)) # image
+                    : a(substr($p3, 1, -1), $p4); # link
+            } elseif (true === $htm && $tok > 90) { # close leaf block
+                $out .= $type ? Display::$type($tmp) : $tmp;
+            } elseif (true === $htm) { # open leaf block
+                //(!$this->hightlight || !in_array($type, MD::$md->code_type))
+                //$out .= pre(tag($t, $type ? 'class="language-' . $type . '"' : '', 'code'));
+                # 'javascript' !== $type = trim($t, "\n `") or $type = 'js';
+                $tmp = '';
+            } elseif (false === $htm) {
+                $tmp .= $t;
             } else {
-                $y->tok = 11;
-                $t = substr($in, $j, $n = strcspn($in, "\n" . MD::char, $j));
-                if ('  ' == substr($t, -2) && "\n" == ($in[$j + strlen($t)] ?? '')) {
-                    $y->tok = 13;
-                } elseif (':' == ($in[$j + $n] ?? '') && $this->inline_url($t, $j, $y)) {
-                    $y->ntok = 15;
-                    if ('' === $t && $y->n)
-                        goto start;
-                }
+                $out .= $htm;
             }
-            yield $t => $y;
-            $y->pv = $t;
+            //$is_n or $t = preg_replace("/(\A|\n) {4}/s", "$1", $t);
+            //$out .= tag(substr($t, 1, -1), '', 'code'); # inline code
+            # not reference
+            # fenced code start
         }
+        return $out;
     }
-
-    function _square(&$t, $j, $y) {
-        if ($return = preg_match("/!?\[([^\]\n]+)\](\([^\)\n]+\)|\[[^\]\n]+\])/s", $this->in, $match, 0, $j)) {
-            [$t, $y->m[0], $y->m[1]] = $match;
-            $y->tok = 14; # an img or link
-        } elseif ('!' == $t) {
-            return false;
-        } elseif ($return = preg_match("/\[\^\w+\]:/", $this->in, $match, 0, $j)) {
-            [$t, $y->tok] = [$match[0], 17]; # footnote def
-        } elseif ($return = preg_match("/\[\w+\]:[^\n]+/s", $this->in, $match, 0, $j)) {
-            [$t, $y->tok] = [$match[0], 16]; # reference
-        }
-        return $return;
-    }
-
-    function __construct(string $in, $hightlight = false) {
-        MD::$md or MD::$md = Plan::set('main', fn() => yml('md', '+ @object @inc(md)'));
-        $this->hightlight = $hightlight;
-        $this->in = unl($in);
-    }
-
-    const char = '\\`*_{}[]()#+-.!|^=~:'; //    >
 }
-
-
-

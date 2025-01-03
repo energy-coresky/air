@@ -18,22 +18,22 @@ php:       https://www.php.net/manual/
 packagist: https://repo.packagist.org/p2/
 coresky:   https://coresky.net/api
 
-const: @csv( ) __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
+const: @csv __DIR__ __FILE__ __LINE__ __FUNCTION__ __CLASS__ __METHOD__ __NAMESPACE__ __TRAIT__
 
-spec: @csv( ) STDIN STDOUT STDERR __COMPILER_HALT_OFFSET__
+spec: @csv STDIN STDOUT STDERR __COMPILER_HALT_OFFSET__
 
 definitions: {
   NAMESPACE: [], INTERFACE: [], TRAIT: [], ENUM: [], VAR: [], FUNCTION: [], CONST: [], DEFINE: [], CLASS: [], EVAL: []
 }
 
-types: @csv( ) null bool int float string array object resource never void false true callable mixed iterable
+types: @csv null bool int float string array object resource never void false true callable mixed iterable
 type_alias: # https://www.php.net/manual/ru/language.types.type-system.php#language.types.type-system.alias
   mixed: object|resource|array|string|float|int|bool|null
   iterable: Traversable|array
 
 soft: [enum, resource, numeric] # https://www.php.net/manual/ru/reserved.other-reserved-words.php
 
-gt_74: @csv( ) >
+gt_74: @csv >
   AMPERSAND_FOLLOWED_BY_VAR_OR_VARARG
   AMPERSAND_NOT_FOLLOWED_BY_VAR_OR_VARARG
   NAME_RELATIVE
@@ -42,7 +42,7 @@ gt_74: @csv( ) >
   PUBLIC_SET PROTECTED_SET PRIVATE_SET
   ATTRIBUTE ENUM MATCH READONLY NULLSAFE_OBJECT_OPERATOR
 
-tokens_def: @csv( ) CLASS INTERFACE TRAIT ENUM FUNCTION CONST NAMESPACE
+tokens_def: @csv CLASS INTERFACE TRAIT ENUM FUNCTION CONST NAMESPACE
 tokens_ign: [$T_WHITESPACE, $T_COMMENT, $T_DOC_COMMENT, $T_INLINE_HTML, $T_OPEN_TAG, $T_OPEN_TAG_WITH_ECHO]
 tokens_use: {
   NEW: $T_CLASS, EXTENDS: $T_CLASS, IMPLEMENTS: $T_CLASS, INSTANCEOF: $T_CLASS, # INSTEADOF: $T_TRAIT,
@@ -78,37 +78,43 @@ pairs:
 
 #.html
 spec: {'#text':%s, '#comment':<!--%s-->, '#data':<![CDATA[%s]]>}
-void: @csv( ) !doctype br hr img input link meta area base col embed source track wbr param
+void: @csv !doctype br hr img input link meta area base col embed source track wbr param
 omis: # tags omission rules
-  - @csv( ) li td th tr
-  p: @csv( ) p address article aside blockquote div dl fieldset footer h1 h2 h3 h4 h5 h6 header hr menu nav ol ul pre section table form
+  - @csv li td th tr
+  p: @csv p address article aside blockquote div dl fieldset footer h1 h2 h3 h4 h5 h6 header hr menu nav ol ul pre section table form
 #.html
 
 #.js
-keywords: @csv( )
+keywords: @csv
   break case class catch const continue debugger default delete do else export extends finally for function if import in of
   instanceof let new return super switch this throw try typeof var void while with yield
-other: @csv( )
+other: @csv
   enum await implements package protected static interface private public
-old: @csv( )
+old: @csv
   abstract boolean byte char double final float goto int long native short synchronized transient volatile
 chars: "!#%&()*+,-.:;<=>?@[\]^`{|}~"
-#.js /
+#.js
 
 #.md
-html:
-  '<![CDATA[': ']]>'
-  '<!--':      '-->'
-  '<!':        '>'
-  '<?':        '?>'
-  '<script':   '</script>'
-  '<pre':      '</pre>'
-  '<style':    '</style>'
-md_type: @csv jet php css js html yaml bash
-tags: @csv
-  address article aside base basefont blockquote body caption center col colgroup dd details dialog dir div dl dt
-  fieldset figcaption figure footer form frame frameset h1 h2 h3 h4 h5 h6 head header hr html iframe legend li link
-  main menu menuitem nav noframes ol optgroup option p param section source summary table tbody td tfoot th thead title tr track ul
+code_type: @csv jet php css js html yaml bash
+typ_1: {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
+typ_2: @csv script pre style
+tags: @csv {
+  a: address article aside,        b: base basefont blockquote body,
+  c: caption center col colgroup,  d: dd details dialog dir div dl dt,
+  f: fieldset figcaption figure footer form frame frameset,
+  h: h1 h2 h3 h4 h5 h6 head header hr html,       i: iframe,
+  l: legend li link,               m: main menu menuitem,  n: nav noframes,
+  o: ol optgroup option,   p: p param,     s: section source summary
+  t: table tbody td tfoot th thead title tr track,   u: ul
+}
+blk: {
+  '~`':   blk_fenced,
+  '#':    blk_h6,
+  '-*_=': blk_h2r,
+  '-*+':  blk_ul,    '0123456789': blk_ol,
+  '<':    blk_html,           '>': blk_bq,
+}
 #.md
 
 #.define ================== this used in the sky_plan.php ========================
@@ -164,7 +170,7 @@ clear_ua: ["Visitor's cleaning (authed), days", number, '', 1000]
 
 
 #.zml =========================================================================
-tags: @csv( ) END DIRS FILE
+tags: @csv END DIRS FILE
 #.zml
 
 #.dev_cfg =========================================================================

@@ -268,18 +268,18 @@ class Display # php jet yaml html bash || php_method md || var diff log
         self::scheme();
         $md = new MD($code);
         $out = '';
-        foreach ($md->tokens() as $t => $y) {
-            if ($y->tok < 11 && 8 !== $y->tok) {
+        foreach ($md->parse() as [$tok, $t]) {
+            if ($tok < 11 && 8 !== $tok) {
                 $out .= self::span('r', $t);
-            } elseif (16 == $y->tok) {
+            } elseif (16 == $tok) {
                 $out .= self::span('m', $t);
-            } elseif (15 == $y->tok) {
+            } elseif (15 == $tok) {
                 $out .= self::span('g', $t);
-            } elseif (14 == $y->tok) {
+            } elseif (14 == $tok) {
                 $out .= self::span("!" != $t[0] ? 'g' : 'c', $t);
             } else {
                 $out .= html($t);
-                if (13 == $y->tok)
+                if (13 == $tok)
                     $out = substr($out, 0, -1) . self::bg('&nbsp;', self::$clr['r']);
             }
         }
