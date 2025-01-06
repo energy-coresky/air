@@ -261,7 +261,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
     }
 
     static function md__($text) {
-        return (string)new MD($text, true);
+        return (string)new MD($text);//, true
     }
 
     static function highlight_md($code, $u = '') { # r g d c m j - gray
@@ -269,7 +269,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         $md = new MD($code);
         $out = '';
         foreach ($md->parse() as [$tok, $t]) {
-            if ($tok < 11 && 8 !== $tok) {
+            if ($tok < 11 && 8 !== $tok || $tok > 90) {
                 $out .= self::span('r', $t);
             } elseif (16 == $tok) {
                 $out .= self::span('m', $t);

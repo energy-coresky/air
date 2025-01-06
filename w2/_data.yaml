@@ -99,21 +99,14 @@ chars: "!#%&()*+,-.:;<=>?@[\]^`{|}~"
 code_type: @csv jet php css js html yaml bash
 typ_1: {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
 typ_2: @csv script pre style
-tags: @csv {
-  a: address article aside,        b: base basefont blockquote body,
-  c: caption center col colgroup,  d: dd details dialog dir div dl dt,
-  f: fieldset figcaption figure footer form frame frameset,
-  h: h1 h2 h3 h4 h5 h6 head header hr html,       i: iframe,
-  l: legend li link,               m: main menu menuitem,  n: nav noframes,
-  o: ol optgroup option,   p: p param,     s: section source summary
-  t: table tbody td tfoot th thead title tr track,   u: ul
-}
 blk: {
   '~`':   blk_fenced,
   '#':    blk_h6,
   '-*_=': blk_h2r,
   '-*+':  blk_ul,    '0123456789': blk_ol,
   '<':    blk_html,           '>': blk_bq,
+  '[':    square,
+  '':     blk_p,
 }
 #.md
 
