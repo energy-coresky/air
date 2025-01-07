@@ -57,9 +57,9 @@ class MD # the MarkDown
         $z = str_replace(["\t", ' '], '', $x->line);
         if ($z == chop($x->line) && $x->stk) {
             $h = '=' == $t ? 1 : ('-' == $t ? 2 : 0);
-            if ($h && 20 == $x->tok[0]) { # h1== h2--
-                array_pop($x->stk);
-                $x->tok = [$h, $x->tok[1], "<h$h>" . substr($x->tok[2], 3)];
+            if ($h && 20 == $x->id) { # h1== h2--
+                $tok =& $this->tok[array_pop($x->stk)[1]];
+                $tok = [$h, $tok[1], "<h$h>" . substr($tok[2], 3)];
                 return [$h, $t = $x->line, "</h$h>\n"];
             }
         }
@@ -70,7 +70,7 @@ class MD # the MarkDown
 
     private function blk_p($x, &$t) {
         $id = !$x->stk ? 0 : $this->tok[end($x->stk)[1]][0];
-        if (!preg_match("/^\S/", $t) || in_array($id, [92, 93, 94, 20]))
+        if (!preg_match("/^\S/", $t) || in_array($id, [92, 93, 96, 20]))
             return false;
         $x->stk[] = ["</p>\n", count($this->tok), $x->pad, ''];
         return [20, $t, '\\' == $t ? '<p>' : "<p>$t"];
@@ -90,32 +90,40 @@ class MD # the MarkDown
         return [$sz, $t = $m[1] . $m[2], "$close<h$sz>"];
     }
 
+    private function cont($x, $t, $new_pad = 0) {
+        $stk = $x->stk[$x->v] ?? false;
+        if ($cont = $stk && $x->pad < $stk[2] && $t == $stk[3])
+            $x->stk[$x->v][2] = $new_pad;
+        return $cont;
+    }
+
     private function blk_bq($x, &$t) {
         $_t = ' ' == ($x->line[1] ?? '') ? ' ' : '';
-        if ($x->pv && $t == $x->pv[3])
-            return [95, $t .= $_t, '']; # continue bq
+        if ($this->cont($x, $t)) # continue bq
+            return [95, $t .= $_t, ''];
         $close = $x->id < 90 ? $this->close_blk($x, $x->cnt - 1) : '';
-        $x->stk[] = ["</blockquote>\n", count($this->tok), $x->pad, $t];
+        $x->stk[] = ["</blockquote>\n", count($this->tok), 2 + $x->pad, $t];
         return [91, $t .= $_t, "$close<blockquote>\n"];
     }
 
     private function blk_ul($x, &$t) { // loose<p> tight
         if (!in_array($_t = $x->line[1] ?? '', [' ', ''], true))
             return false;
-        $close = $this->close_blk($x, $x->v);
-        if ($x->pv && $t == $x->pv[3])
-            return [94, $t .= $_t, "$close</li><li>"];
-        $x->stk[] = ["</li></ul>\n", count($this->tok), $x->pad, $t];
+        $close = $this->close_blk($x, 1 + $x->v);
+        if ($this->cont($x, $t, 2 + $x->pad))
+            return [96, $t .= $_t, "$close</li><li>"];
+        $x->stk[] = ["</li></ul>\n", count($this->tok), 2 + $x->pad, $t];
         return [92, $t .= $_t, "$close<ul><li>"];
     }
 
     private function blk_ol($x, &$t) {
-        if (!preg_match("/^(\d{1,9})(\.|\)) /", $x->line, $m))
+        if (!preg_match("/^(\d{1,9})(\.|\))( |\z)/", $x->line, $m))
             return false;
-        $close = $this->close_blk($x, $x->v);
-        if ($x->pv && $m[2] == $x->pv[3])
-            return [94, $t = $m[0], "$close</li><li>"];
-        $x->stk[] = ["</li></ol>\n", count($this->tok), $x->pad, $m[2]];
+        $close = $this->close_blk($x, 1 + $x->v);
+        $pad = $x->pad + strlen($m[0]) + (' ' == $m[3] ? 0 : 1);
+        if ($this->cont($x, $m[2], $pad))
+            return [96, $t = $m[0], "$close</li><li>"];
+        $x->stk[] = ["</li></ol>\n", count($this->tok), $pad, $m[2]];
         $start = 1 == $m[1] ? '' : ' start="' . $m[1] . '"';
         return [93, $t = $m[0], "$close<ol$start><li>"];
     }
@@ -128,9 +136,10 @@ class MD # the MarkDown
             }
             return [$x->id = 8, $t = $x->line];
         } elseif (preg_match("/^($t{3,})\s*(\w*).*$/", $x->line, $m)) {
-            $x->stk[] = ["</code></pre>\n", count($this->tok), $x->pad, $x->grab = $m[1]];
-            $str = $m[2] ? "<pre><code class=\"language-$m[2]\">" : "<pre><code>";
-            return [7, $t = $x->line, $str, $m[2]];
+            $close = $x->id < 90 ? $this->close_blk($x, $x->cnt - 1) : '';
+            $x->stk[] = ["</code></pre>", count($this->tok), $x->pad, $x->grab = $m[1]];
+            $open = $m[2] ? "$close<pre><code class=\"language-$m[2]\">" : "$close<pre><code>";
+            return [7, $t = $x->line, $open, $m[2]];
         }
         return false;
     }
@@ -142,6 +151,9 @@ class MD # the MarkDown
         $x->grab = '';
         $x->id = $x->stk ? $this->tok[end($x->stk)[1]][0] : 0;
         return $close;
+    }
+
+    private function blk_indent($x, &$t) {
     }
 
     private function new_line($x, &$t) {
@@ -164,16 +176,13 @@ class MD # the MarkDown
             $x->pad += strlen(str_replace("\t", '1234', $t));
             if ($x->grab)
                 return [8, $t];
-            if ($x->pad > 3)
-                ;
+            #if ($x->pad > 3 && 20 != $x->id)
+            #    $this->blk_indent($x, $t);
             return [22, $t, ''];/** indent */
         } else {
             $x->line = $this->cspn("\n");
-            if ($x->pv = $x->stk[$x->v++] ?? false) {
-                $x->tok =& $this->tok[$x->pv[1]];
-            }
             if ($x->grab) {
-                if ('>' == $t && '>' == $x->pv[3]) {
+                if ('>' == $t && $this->cont($x, '>')) {
                     return $this->blk_bq($x, $t);
                 }
                 return $this->blk_fenced($x, $t);
@@ -184,11 +193,8 @@ class MD # the MarkDown
                 if ($a = $this->$func($x, $t)) {
                     $a[0] > 90 or $x->nl = false;
                     $x->pad += strlen($t);
-                    $x->id = $a[0];
-                    if (0) {
-                        $close = array_pop($x->stk)[0];
-                        $a[2] = $close . $a[2];
-                    }
+                    $a[0] > 94 or $x->id = $a[0];
+                    $x->v++;
                     return $a;
                 }
             }
@@ -199,7 +205,7 @@ class MD # the MarkDown
     function &parse(&$x = null) { # lists: + - *
         $x = new stdClass;
         $x->grab = $x->html = $x->pad = $x->v = $x->id = 0;
-        $x->stk = $x->tok = [];
+        $x->stk = [];
         $len = $x->nl = strlen($in =& $this->in);
         $j =& $this->j;
         $char = [

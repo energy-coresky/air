@@ -49,18 +49,19 @@ class XML
 
     function dump($root = false) {
         $root or $root = $this->root->val;
+        echo "depth.n.nn [left up right]\n\n";
         $this->walk($root, fn($tag, $walk) => $tag->nn = $walk->nn);
         $this->walk($root, function ($tag, $walk) {
             echo str_pad('', 2 * $walk->depth, ' ') . "$walk->depth.$walk->n.$walk->nn [";
-            echo (isset($tag->left) ? ($tag->left->nn ?? 'X') : '?') . ' ';
-            echo (isset($tag->up) ? ($tag->up->nn ?? 'X') : '?') . ' ';
-            echo isset($tag->right) ? ($tag->right->nn ?? 'X') . "] $tag->name " : "?] $tag->name ";
+            echo (isset($tag->left) ? ($tag->left->nn ?? '.') : '_') . ' ';
+            echo (isset($tag->up) ? ($tag->up->nn ?? '.') : '_') . ' ';
+            echo isset($tag->right) ? ($tag->right->nn ?? '.') . "] $tag->name " : "_] $tag->name ";
             if (is_string($tag->val)) {
                 echo strlen($tag->val) . var_export(preg_replace("/\n/s", ' ', substr($tag->val, 0, 33)), true) . "\n";
             } elseif (0 === $tag->val) {
                 echo ".........VOID\n";
             } else {
-                echo 'object' == ($type = gettype($tag->val)) ? '[' . ($tag->val->nn ?? 'X') . "]\n" : "$type\n";
+                echo 'object' == ($type = gettype($tag->val)) ? '[' . ($tag->val->nn ?? '.') . "]\n" : "$type\n";
             }
         });
     }
@@ -332,7 +333,8 @@ class XML
                     $this->_attr($tag->attr, $t);
                     continue;
                 }
-                if (in_array($tag->name, $this->void)) {
+                $bs = is_array($tag->attr) && '/' == array_key_last($tag->attr) && 0 === $tag->attr['/'];
+                if ($bs || in_array($tag->name, $this->void)) {
                     $tag = $this->push([$tag->name, 0, $tag->attr]);
                     $str = '';
                 } elseif (in_array($tag->name, ['script', 'style'])) {
