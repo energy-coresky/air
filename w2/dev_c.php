@@ -90,7 +90,7 @@ class dev_c extends Controller
         $txt = is_file($file) ? file_get_contents($file) : 'is_file() failed';
         $ary = explode('.', $file);
         in_array($ext = end($ary), ['php', 'css', 'html']) or $ext = 'php';
-        echo call_user_func(['Display', $ext], $txt, [$line, 'true' == $_POST['c'], true]);
+        echo call_user_func(['Show', $ext], $txt, [$line, 'true' == $_POST['c'], true]);
     }
 
     function j_drop() {

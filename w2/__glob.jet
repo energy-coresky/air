@@ -141,7 +141,7 @@
     <td width="3%">{{1 + $_}}</td>
     <td width="97%"><span>{{$pos[0] . '^' . $pos[1]}}</span>
     @if($_ < 20)<div>
-      {!Display::php(file_get_contents($pos[0]), [$pos[1], false, false])!}
+      {!Show::php(file_get_contents($pos[0]), [$pos[1], false, false])!}
     </div>~if
     </td>
   </tr>

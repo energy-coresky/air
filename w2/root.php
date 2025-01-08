@@ -25,7 +25,7 @@ class Root
             $funs[2] = substr($funs[2], 0, 7);
             return call_user_func(['Root', '_' . $funs[$n]], $id);
         } elseif ($n < 11) {
-            echo Display::log(sqlf('+select tmemo from $_memory where id=%d', 14 - $n));
+            echo Show::log(sqlf('+select tmemo from $_memory where id=%d', 14 - $n));
             return 7 == $n ? self::_skylog() : '';
         }
     }
@@ -189,7 +189,7 @@ class Root
             case 'Readme':
                 //$fn = $menu[$i] == 'Readme';
                 $file = file_get_contents(DIR_S . ($fn ?? '/README.md'));
-                echo Display::md($file);
+                echo Show::md($file);
                 break;
         }
         return $top;

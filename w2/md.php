@@ -7,8 +7,9 @@ class MD # the MarkDown
 
     static $md;
 
-    private $hightlight; # if true then work Display::php(..) for ```php
-    private $tok = [];
+    private $hightlight; # if true then work Show::php(..) for ```php
+   private $tok = [];
+    private $xml;
     private $ref = [];
     private $for = [];
     private $j = 0;
@@ -18,6 +19,8 @@ class MD # the MarkDown
         MD::$md or MD::$md = Plan::set('main', fn() => yml('md', '+ @object @inc(md)'));
         $this->hightlight = $hightlight;
         $this->in = unl($in);
+        $this->xml = new XML;
+        $this->xml->draw = [$this, 'html'];
     }
 
     private function spn($set, $j = 0) {
@@ -305,13 +308,42 @@ class MD # the MarkDown
             } elseif (8 == $id) {
                 $sub .= $type ? $htm : html($htm);
             } elseif (9 == $id) {
-                $out .= $type ? Display::$type($sub) : $sub . $htm;
+                $out .= $type ? Show::$type($sub) : $sub . $htm;
             } else {
                 $out .= $htm;
             }
             # not reference
             # fenced code start
         }
+        return $out;
+    }
+
+    function tag($tag, &$close) {
+        $close = '</' . ($open = $tag->name) . '>';
+        foreach ($tag->attr ?? [] as $k => $v)
+            $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+        return "<$open>";
+    }
+
+    function html($tag, $pad) {
+        $out = '';
+        do {
+            if ('#text' == $tag->name) {
+                $out .= $tag->val;
+                continue;
+            } else {
+                $open = "\n$pad" . $this->tag($tag, $close);
+            }
+            if (0 === $tag->val) { # void element
+                $out .= $open;
+                continue;
+            } elseif (is_object($tag->val)) {
+                $lt = strlen($trim = trim($inner = $this->html($tag->val, "$pad  "))) < 90;
+                $out .= $lt ? $open . $trim . $close : $open . $inner . "\n$pad$close";
+            } else { # string
+                $out .= $open . $tag->val . $close;
+            }
+        } while ($tag = $tag->right);
         return $out;
     }
 }

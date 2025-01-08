@@ -314,7 +314,7 @@ class Console
 
     /** Diff text files, example: sky d oldfile newfile */
     function c_d($fno, $fnn) {
-        [$out, $add, $sub, $z] = Display::diffx(file_get_contents($fnn), file_get_contents($fno));
+        [$out, $add, $sub, $z] = Show::diffx(file_get_contents($fnn), file_get_contents($fno));
         echo '' === $out ? 'Files identical' : "@@ -$sub +$add @@ $z\n$out";
     }
 

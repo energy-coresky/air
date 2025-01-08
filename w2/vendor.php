@@ -19,7 +19,7 @@ class Vendor
             $ary = get($fn);
             $fn = $ary['download_url'];
         }
-        echo tag(Display::md(file_get_contents($fn)), 'style="padding-left:10px"');
+        echo tag(Show::md(file_get_contents($fn)), 'style="padding-left:10px"');
         return true;
     }
 

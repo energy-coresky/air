@@ -148,14 +148,14 @@ class DEV
             $php = '<div class="other-task" style="position:sticky; top:0px">Controller: ' . basename($fn)
                 . ", action: $ctrl[1]</div>";
             $we = 'mvc/common_c.php' != $fn ? $ware : 'main';
-            $php .= Display::php_method(Plan::_g([$we, $fn], $w2), substr($ctrl[1], 0, -2));
+            $php .= Show::php_method(Plan::_g([$we, $fn], $w2), substr($ctrl[1], 0, -2));
         } elseif (1 == $sky->_6) {
             $tpl = $list[$nv][3];
             [$lay, $bod] = explode('^', $tpl);
             $fn = MVC::fn_parsed($lay, "_$bod");
             $php = '<div class="other-task" style="position:sticky; top:0px">Parsed: ';
             if (Plan::jet_t($fn)) {
-                $php .= $fn . '</div>' . Display::php(Plan::jet_g($fn));
+                $php .= $fn . '</div>' . Show::php(Plan::jet_g($fn));
             } else {
                 $php .= ' not found</div>';
             }
@@ -169,7 +169,7 @@ class DEV
                     $lay = explode('.', $lay);
                     $fn = '_' == $lay[0][0] ? "$lay[0].jet" : "y_$lay[0].jet";
                     $lay = $fn . (($marker = $lay[1] ?? '') ? ", marker: $marker" : '');
-                    $layout = ">Layout: $lay</div>" . Display::jet(Plan::view_('g', [$ware, $fn]), $marker) . '<br>';
+                    $layout = ">Layout: $lay</div>" . Show::jet(Plan::view_('g', [$ware, $fn]), $marker) . '<br>';
                     if ('' === $bod) {
                         $sb = '"';
                         $body = '>Body: used "echo" in controller</div><br>';
@@ -180,7 +180,7 @@ class DEV
                     $bod = explode('.', $bod);
                     $fn = "_$bod[0].jet";
                     $bod = $fn . (($marker = $bod[1] ?? '') ? ", marker: $marker" : '');
-                    $body = ">Body: $bod</div>" . Display::jet(Plan::view_('g', [$ware, $fn]), $marker) . '<br>';
+                    $body = ">Body: $bod</div>" . Show::jet(Plan::view_('g', [$ware, $fn]), $marker) . '<br>';
                 }
             }
         }
@@ -259,9 +259,9 @@ class DEV
             }
             $cls = [];
             if ('prod' == $type && -2 == $mode) {
-                $doc = is_file($fn = "$dir/README.md") ? Display::md(file_get_contents($fn)) : '';
+                $doc = is_file($fn = "$dir/README.md") ? Show::md(file_get_contents($fn)) : '';
                 if (is_file($fn = "$dir/LICENSE"))
-                    $doc .= Display::bash(file_get_contents($fn));
+                    $doc .= Show::bash(file_get_contents($fn));
                 return [
                     'opt' => $class ? (new $class) : false,
                     'classes' => Globals::def($dir),
@@ -412,9 +412,9 @@ class DEV
 
     function j_readme() {
         Plan::$pngdir = $dir = $_POST['dir'];
-        $html = is_file($fn = "$dir/README.md") ? Display::md(file_get_contents($fn)) : '';
+        $html = is_file($fn = "$dir/README.md") ? Show::md(file_get_contents($fn)) : '';
         if (is_file($fn = "$dir/LICENSE"))
-            $html .= Display::bash(file_get_contents($fn));
+            $html .= Show::bash(file_get_contents($fn));
         return ['html' => $html, 'dir' => $dir];
     }
 

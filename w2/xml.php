@@ -15,18 +15,11 @@ class XML
     private $root;
 
     function __construct(string $in = '', $tab = 0) {
-        $this->pad = str_pad('', $tab);
-        self::$html or self::$html = yml('+ @inc(html)');
-        $this->root = $this->node('#root');
-        $this->draw = function ($tag, &$close) {
-            if (is_string($tag))
-                return $tag;
-            $close = '</' . ($open = $tag->name) . '>';
-            foreach ($tag->attr ?? [] as $k => $v)
-                $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-            return "<$open>";
-        };
         $this->in = unl($in);
+        $this->pad = str_pad('', $tab);
+        $this->draw = [$this, $tab ? 'nice' : 'simple'];
+        $this->root = $this->node('#root');
+        self::$html or self::$html = yml('+ @inc(html)');
     }
 
     function __get($name) {
@@ -36,8 +29,7 @@ class XML
     function __toString() {
         $this->root->val or $this->parse();
         $this->in = '';
-        $fn = $this->pad ? 'beautifier' : 'simple';
-        $this->$fn($this->root->val, '');
+        call_user_func($this->draw, $this->root->val, '');
         return $this->in;
     }
 
@@ -81,35 +73,48 @@ class XML
         return $walk;
     }
 
+    function draw($tag, &$close) {
+        if (is_string($tag))
+            return $tag;
+        $close = '</' . ($open = $tag->name) . '>';
+        foreach ($tag->attr ?? [] as $k => $v)
+            $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+        return "<$open>";
+    }
+
     function simple($tag) {
         $this->walk($tag, function ($tag, $walk) {
             if (!$tag)
                 return $this->in .= array_pop($walk->tail);
             if ('#' == $tag->name[0])
-                return $this->in .= ($this->draw)(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
-            $this->in .= ($this->draw)($tag, $close);
+                return $this->in .= $this->draw(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
+            $this->in .= $this->draw($tag, $close);
             if (!is_string($tag->val)) # childs or void
                 return $tag->val ? ($walk->tail[] = $close) : false;
             $this->in .= "$tag->val$close";
         });
     }
 
-    function beautifier($tag, $pad, $in_pre = false) { // 2do CSS: white-space: pre;
+    function minify($tag, $pad, $in_pre = false) { // 2do
+    # $in_pre -- save whitespaces in text value
+    }
+
+    function nice($tag, $pad, $in_pre = false) { // 2do CSS: white-space: pre;
         $out = '';
         do {
             if ('#' == $tag->name[0]) {
-                $str = ($this->draw)(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
+                $str = $this->draw(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
                 $out .= $in_pre ? $str : trim($str);
                 continue;
             } else {
-                $open = ($this->draw)($tag, $close);
+                $open = $this->draw($tag, $close);
             }
             if (0 === $tag->val) { # void element
                 $out .= "\n$pad$open";
                 continue;
             }
             if (is_object($tag->val)) {
-                $inner = $this->beautifier($tag->val, $pad . $this->pad, $in_pre || 'pre' == $tag->name);
+                $inner = $this->nice($tag->val, $pad . $this->pad, $in_pre || 'pre' == $tag->name);
                 $out .= $in_pre ? $open . $inner . $close : (strlen(trim($inner)) < 100
                     ? "\n$pad$open" . trim($inner) . $close
                     : "\n$pad$open" . $inner . "\n$pad$close");
@@ -234,7 +239,14 @@ class XML
     function parents($query) {
     }
 
-    function attr($name, $val = null) {
+    function attr($tag, string $name, $val = null) {
+        $old = $tag->attr[$name] ?? null;
+        if (false === $val) {
+            unset($tag->attr[$name]);
+        } elseif (is_string($val)) {
+            $tag->attr = [$name => $val] + $tag->attr;
+        }
+        return $old;
     }
 
     function query($q, $is_all = false) {
@@ -305,10 +317,8 @@ class XML
         $push = function () use (&$str, &$tag) {
             if ('' === $tag->name)
                 return;
-            if ('#text' == $tag->name) {
-                $tag->val = $str;
-                $str = '';
-            }
+            if ('#text' == $tag->name)
+                [$tag->val, $str] = [$str, ''];
             $tag = $this->push($tag);
             '' === $str or $tag = $this->push($tag, $str);
         };
@@ -369,7 +379,7 @@ class XML
         $this->ptr = [$parent, &$parent->right, $parent->up];
     }
 
-    private function push($tag, &$str = null) {
+    function push($tag, &$str = null) {
         if (is_array($tag))
             $tag = $this->node($tag[0], $tag[1], $tag[2] ?? null);
         if (null !== $str) {

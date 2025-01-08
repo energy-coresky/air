@@ -1,6 +1,6 @@
 <?php
 
-class Display # php jet yaml html bash || php_method md || var diff log
+class Show # php jet yaml html bash || php_method md || var diff log
 {
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
@@ -260,7 +260,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
         return $code($text, "```(jet|php|html|css|js|bash|yaml|)(.*?)```");
     }
 
-    static function md__($text) {
+    static function doc($text) {
         return (string)new MD($text);//, true
     }
 
@@ -465,7 +465,7 @@ class Display # php jet yaml html bash || php_method md || var diff log
     }
 
     static function table($ary, $x, $no_lines, $u = '') {
-        array_walk($ary, 'Display::highlight_line', $x);
+        array_walk($ary, 'Show::highlight_line', $x);
         $style = sprintf(self::style, self::$clr[$u . 'm'], self::$bg[$u . '0']);
         if ($no_lines)
             return pre(implode('', $ary), $style);
@@ -536,10 +536,10 @@ class Display # php jet yaml html bash || php_method md || var diff log
     }
 
     static function lines($in, $scheme = 'z_php', $option = '', $u = '') {
-        Display::scheme($scheme);
-        $x = Display::xdata($option);
+        self::scheme($scheme);
+        $x = self::xdata($option);
         $x->len = strlen($option);
-        return Display::table(is_array($in) ? $in : explode("\n", $in), $x, false, $u);
+        return self::table(is_array($in) ? $in : explode("\n", $in), $x, false, $u);
     }
 
     static function log($html) { # 2do
