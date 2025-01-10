@@ -340,13 +340,12 @@ class Show # php jet yaml html bash || php_method md || var diff log
 
     static function html($code, $option = '', $no_lines = false) {
         $x = self::xdata($option);
-        $y = false;
-        $ary = explode("\n", self::highlight_html($code, $y));
+        $ary = explode("\n", self::highlight_html($code));
         $x->len = strlen($x->diff);
         return self::table($ary, $x, $no_lines);
     }
 
-    static function highlight_html($code, &$y, $u = '') { # r g d c m j - gray
+    static function highlight_html($code, &$y = null, $u = '') { # r g d c m j - gray
         $xml = new XML($code);
         $out = '';
         $attr = [];
@@ -395,8 +394,9 @@ class Show # php jet yaml html bash || php_method md || var diff log
         if ($tag = false === $option)
             $code = "<?php $code";
         $out = $u = $ct = $halt = '';
-        $ary = $y = [];
+        $ary = [];
         $sq = 0;
+        $y = null;
         foreach (token_get_all($code) as $i => $t) {
             if ($tag && !$i)
                 continue;

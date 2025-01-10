@@ -15,18 +15,22 @@ class XML
     protected $i = 0;
     protected $root;
 
+    static function file($in, $tab = 0) {
+        return new XML(file_get_contents($in), $tab);
+    }
+
     function __construct(string $in = '', $tab = 0) {
         $this->in = unl($in);
         $this->pad = str_pad('', $tab);
         $this->render = [$this, $tab ? 'draw_nice' : 'draw_simple'];
         $this->root = $this->node('#root');
         $this->ptr = [null, &$this->root->val, $this->root]; # setup the cursor: &prev, &place, &parent
-        self::$XML or self::$XML = yml('+ @inc(html)');
+        XML::$XML or XML::$XML = yml('+ @inc(html)');
     }
 
     function __get($name) {
-        //2do self::{get_class()}[$name];
-        return self::$XML[$name];
+        //2do XML::{get_class()}[$name];
+        return XML::$XML[$name];
     }
 
     function __toString() {
@@ -34,17 +38,12 @@ class XML
         return $this->in = call_user_func($this->render, $this->root->val);
     }
 
-    static function file($name, $pad = '  ') {
-        $xml = new self(file_get_contents($name));
-        $xml->pad = $pad;
-        return $xml;
-    }
-
     function dump($in = false) {
         echo "depth.nn [left up right]\n\n";
+        # arrow fn for iterator_apply must return something like true!
         iterator_apply($g = $this->gen($in), fn() => $g->current()->nn = ++$this->i);
         foreach ($this->gen($in) as $depth => $node) {
-            echo str_pad('', 2 * $depth, ' ') . "$depth.$node->nn [";
+            echo str_pad('', 2 * $depth) . "$depth.$node->nn [";
             echo (isset($node->left) ? ($node->left->nn ?? '.') : '_') . ' ';
             echo (isset($node->up) ? ($node->up->nn ?? '.') : '_') . ' ';
             echo isset($node->right) ? ($node->right->nn ?? '.') . "] $node->name " : "_] $node->name ";
@@ -69,24 +68,22 @@ class XML
         }
     }
 
-    function __walk($node, $fn) {
-        $g = $this->gen($node);
-        iterator_apply($g, fn() => $fn($g->key(), $g->current())); # must return true!
-    }
-//2remove :
-    function walk($node, $fn = false, $depth = 0, $walk = false) {
-        $fn or ($fn = $node) && ($node = $this->root->val);
-        $walk or $walk = (object)['nn' => 0, 'tail' => null];
-        $walk->n = $n = 0;
-        do {
-            $walk->depth = $depth;
-            $walk->nn++;
-            $fn($node, $walk);
-            $walk->n = ++$n;
-            is_object($node->val) && $this->walk($node->val, $fn, 1 + $depth, $walk);
-        } while ($node = $node->right);
-        $walk->tail && $fn(false, $walk);
-        return $walk;
+    function clone(?array $ary = null): ?stdClass {
+        $ary or $ary = $this->selected;
+        $new = false;
+        foreach ($ary as $node) {
+            $this->ptr = $new ? [$new, &$new->right, $this->root] : [null, &$this->root->val, $this->root];
+            $this->relations($new = clone $node, true);
+            if (is_object($node->val)) {
+                foreach ($this->gen($node->val) as $node) {
+                    $this->relations(clone $node, is_object($node->val));
+                    if (null === $node->right)
+                        $this->close();
+                }
+            }
+        }
+        $new->right = null;
+        return $this->root->val;
     }
 
     function tag($node, &$close, $allow = false) {
@@ -143,29 +140,9 @@ class XML
         return $out;
     }
 
-    function clone(?array $ary = null) : XML {
-        $ary or $ary = $this->selected;
-        $prev = false;
-        foreach ($ary as $node) $this->walk($node, function ($node, $walk) use (&$prev) {
-            if ($walk->depth) {
-                $this->relations(clone $node, is_object($node->val));
-                return null !== $node->right or $this->close();
-            }
-            if ($walk->n)
-                return;
-            $this->ptr = $prev
-                ? [$prev, &$prev->right, $this->root]
-                : [null, &$this->root->val, $this->root];
-            $this->relations($prev = clone $node, true);
-            $prev->right = null;
-        });
-        return $this;
-    }
-
     function byTag(string $name) {
-        $this->root->val or $this->parse();
         $new = new XML;
-        $this->walk(fn($node) => $name != $node->name or $new->selected[] = $node);
+        iterator_apply($g = $this->gen(), fn() => $name != $g->current()->name or $new->selected[] = $g->current());
         return $new;
     }
 
@@ -174,16 +151,15 @@ class XML
     }
 
     function byAttr(string $val, $attr = 'id', $single = false) {
-        $this->root->val or $this->parse();
         $new = new XML;
-        $this->walk(function ($node) use ($new, $val, $attr, $single) {
-            if (!$node->attr)
-                return;
-            foreach ($node->attr as $k => $v) {
-                if ($attr == $k && ($single ? in_array($val, preg_split("/\s+/s", $v)) : $val == $v))
-                    $new->selected[] = $node;
+        foreach ($this->gen() as $node) {
+            if ($node->attr) {
+                foreach ($node->attr as $k => $v) {
+                    if ($attr == $k && ($single ? in_array($val, preg_split("/\s+/s", $v)) : $val == $v))
+                        $new->selected[] = $node;
+                }
             }
-        });
+        }
         return $new;
     }
 
@@ -198,34 +174,33 @@ class XML
         }
     }
 
-    private function left_up_right($node, $left, $up, $right = null) {
-        $node->left = $left;
-        do {
-            $node->up = $up;
-            $last = $node;
-        } while ($node = $node->right);
+    private function left_up_right($src, $left, $up, $right, &$last = null) {
+        for ($src->left = $left; $src; $src = $src->right) {
+            $src->up = $up;
+            $last = $src;
+        }
         $last->right = $right;
     }
 
-    function inner($xml) {
-        if (!$xml instanceof XML)
-            ($xml = new XML($xml))->parse();
-        $xml->selected or $xml->selected = [$xml->root->val];
-        foreach ($this->selected as $one) {
-            $xml->clone();
-            $one->val = $xml->root->val;
-            $this->left_up_right($xml->root->val, null, $one->val);
+    function inner($src) {
+        if (!$src instanceof XML)
+            ($src = new XML($src))->parse();
+        $src->selected or $src->selected = [$src->root->val];
+        foreach ($this->selected as $dst) {
+            $dst->val = $src->clone();
+            $this->left_up_right($dst->val, null, $dst, null);
         }
     }
 
-    function outer($xml) {
-        if (!$xml instanceof XML)
-            ($xml = new XML($xml))->parse();
-        $xml->selected or $xml->selected = [$xml->root->val];
-        foreach ($this->selected as $one) {
-            $xml->clone();
-            $one->left ? ($one->left->right = $xml->root->val) : ($one->up->val = $xml->root->val);
-            $this->left_up_right($xml->root->val, $one->left, $one->up, $one->right);
+    function outer($src) {
+        if (!$src instanceof XML)
+            ($src = new XML($src))->parse();
+        $src->selected or $src->selected = [$src->root->val];
+        foreach ($this->selected as $dst) {
+            $this->left_up_right($copy = $src->clone(), $dst->left, $dst->up, $dst->right, $last);
+            $dst->left ? ($dst->left->right = $copy) : ($dst->up->val = $copy);
+            if ($dst->right)
+                $dst->right->left = $last;
         }
     }
 
@@ -270,11 +245,11 @@ class XML
     }
 
     function each($fn) {
-        foreach ($this->selected as $n => $one)
-            $fn($one, $n);
+        foreach ($this->selected as $n => $to)
+            $fn($to, $n);
     }
 
-    function tokens($y = false) {
+    function tokens(?stdClass $y = null) {
         $y or $y = (object)['mode' => 'txt', 'find' => false];
         $len = strlen($in =& $this->in);
         for ($j = 0; $j < $len; $j += $y->len) {
