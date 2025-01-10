@@ -141,6 +141,40 @@
   yo.Yoruba za.Zhuang zu.Zulu
 #.languages
 
+#.http_errors
+errors: @sar(|_| ) @each @bang(. ) @sar(| +| ) >
+  100.Continue                 400.Bad_Request                        500.Internal_Server_Error
+  101.Switching_Protocols      401.Unauthorized                       501.Not_Implemented
+  102.Processing               402.Payment_Required                   502.Bad_Gateway_or_Proxy_Error
+  118.Connection_timed_out     403.Forbidden                          503.Service_Unavailable
+  200.OK                       404.Not_Found                          504.Gateway_Time-out
+  201.Created                  405.Method_Not_Allowed                 505.HTTP_Version_not_supported
+  202.Accepted                 406.Not_Acceptable                     507.Insufficient_storage
+  203.Non-Authoritative        407.Proxy_Authentication_Required      508.Loop_Detected
+  204.No_Content               408.Request_Time-out                   509.Bandwidth_Limit_Exceeded
+  205.Reset_Content            409.Conflict                           510.Not_Extended
+  206.Partial_Content          410.Gone                               511.Network_Authentication_Required
+  207.Multi-Status             411.Length_Required
+  208.Already_Reported         412.Precondition_Failed
+  210.Content_Different        413.Request_Entity_Too_Large
+  226.IM_Used                  414.Request-URI_Too_Long
+  300.Multiple_Choices         415.Unsupported_Media_Type
+  301.Moved_Permanently        416.Requested_range_unsatisfiable
+  302.Found                    417.Expectation_failed
+  303.See_Other                418.I`m_a_teapot
+  304.Not_Modified             421.Misdirected_Request
+  305.Use_Proxy                422.Unprocessable_entity
+  306.Reserved                 423.Locked
+  307.Temporary_Redirect       424.Method_failure
+  308.Permanent_Redirect       425.Unordered_Collection
+  310.Too_many_Redirect        426.Upgrade_Required
+                               428.Precondition_Required
+                               429.Too_Many_Requests
+                               431.Request_Header_Fields_Too_Large
+                               449.Retry_With
+                               450.Blocked_by_Windows_Parental_Controls
+                               451.Unavailable_For_Legal_Reasons
+#.http_errors
 
 # =====================================================================================
 # ////////////////////////////////          IMAGES           //////////////////////////

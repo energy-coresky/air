@@ -267,20 +267,20 @@ class Show # php jet yaml html bash || php_method md || var diff log
     static function highlight_md($code, $u = '') { # r g d c m j - gray
         self::scheme();
         $md = new MD($code);
-        $out = '';
-        foreach ($md->parse() as [$tok, $t]) {
-            if ($tok < 11 && 8 !== $tok || $tok > 90) {
-                $out .= self::span('r', $t);
-            } elseif (16 == $tok) {
-                $out .= self::span('m', $t);
-            } elseif (15 == $tok) {
-                $out .= self::span('g', $t);
-            } elseif (14 == $tok) {
-                $out .= self::span("!" != $t[0] ? 'g' : 'c', $t);
-            } else {
-                $out .= html($t);
-                if (13 == $tok)
-                    $out = substr($out, 0, -1) . self::bg('&nbsp;', self::$clr['r']);
+        $out = $node = '';
+        $attr = function ($n) use (&$node, $md) {
+            return $md->attr($node, $n);
+        };
+        foreach ($md->gen() as $node) {//$out = substr($out, 0, -1) . self::bg('&nbsp;', self::$clr['r']);
+            // img or link $out .= self::span("!" != $t[0] ? 'g' : 'c', $t);
+            if ($t = $attr('t')) {//reference $out .= self::span('m', $t);
+                $out .= self::span($attr('c') ?? 'r', $t);
+            } elseif (is_string($node->val)) {
+                if ($c = $attr('c')) {
+                    $out .= self::span($c, $node->val);
+                } else {
+                    $out .= $node->val;
+                }
             }
         }
         return $out;

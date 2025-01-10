@@ -108,6 +108,16 @@ blk: {
   '[':    square,
   '':     blk_p,
 }
+tag:
+  p:
+  ul:
+  ol: {start: %d}
+  li:
+  pre: {class: language-%s} # fenced and indent
+  code:
+  blockquote:
+  hr:
+  hx: # h1..h6
 #.md
 
 #.define ================== this used in the sky_plan.php ========================

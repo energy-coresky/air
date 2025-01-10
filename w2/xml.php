@@ -4,142 +4,159 @@ class XML
 {
     const version = '0.777';
 
-    static $html;
+    static $XML;
 
-    public $pad = '';
-    public $draw;
+    public $pad;
+    public $render;
     public $selected = [];
 
-    private $in;
-    private $ptr;
-    private $root;
+    protected $in;
+    protected $ptr;
+    protected $i = 0;
+    protected $root;
 
     function __construct(string $in = '', $tab = 0) {
         $this->in = unl($in);
         $this->pad = str_pad('', $tab);
-        $this->draw = [$this, $tab ? 'nice' : 'simple'];
+        $this->render = [$this, $tab ? 'draw_nice' : 'draw_simple'];
         $this->root = $this->node('#root');
-        self::$html or self::$html = yml('+ @inc(html)');
+        $this->ptr = [null, &$this->root->val, $this->root]; # setup the cursor: &prev, &place, &parent
+        self::$XML or self::$XML = yml('+ @inc(html)');
     }
 
     function __get($name) {
-        return self::$html[$name];
+        //2do self::{get_class()}[$name];
+        return self::$XML[$name];
     }
 
     function __toString() {
         $this->root->val or $this->parse();
-        $this->in = '';
-        call_user_func($this->draw, $this->root->val, '');
-        return $this->in;
+        return $this->in = call_user_func($this->render, $this->root->val);
     }
 
     static function file($name, $pad = '  ') {
-        $xml = new XML(file_get_contents($name));
+        $xml = new self(file_get_contents($name));
         $xml->pad = $pad;
         return $xml;
     }
 
-    function dump($root = false) {
-        $root or $root = $this->root->val;
-        echo "depth.n.nn [left up right]\n\n";
-        $this->walk($root, fn($tag, $walk) => $tag->nn = $walk->nn);
-        $this->walk($root, function ($tag, $walk) {
-            echo str_pad('', 2 * $walk->depth, ' ') . "$walk->depth.$walk->n.$walk->nn [";
-            echo (isset($tag->left) ? ($tag->left->nn ?? '.') : '_') . ' ';
-            echo (isset($tag->up) ? ($tag->up->nn ?? '.') : '_') . ' ';
-            echo isset($tag->right) ? ($tag->right->nn ?? '.') . "] $tag->name " : "_] $tag->name ";
-            if (is_string($tag->val)) {
-                echo strlen($tag->val) . var_export(preg_replace("/\n/s", ' ', substr($tag->val, 0, 33)), true) . "\n";
-            } elseif (0 === $tag->val) {
+    function dump($in = false) {
+        echo "depth.nn [left up right]\n\n";
+        iterator_apply($g = $this->gen($in), fn() => $g->current()->nn = ++$this->i);
+        foreach ($this->gen($in) as $depth => $node) {
+            echo str_pad('', 2 * $depth, ' ') . "$depth.$node->nn [";
+            echo (isset($node->left) ? ($node->left->nn ?? '.') : '_') . ' ';
+            echo (isset($node->up) ? ($node->up->nn ?? '.') : '_') . ' ';
+            echo isset($node->right) ? ($node->right->nn ?? '.') . "] $node->name " : "_] $node->name ";
+            if (is_string($node->val)) {
+                echo strlen($node->val) . var_export(preg_replace("/\n/s", ' ', substr($node->val, 0, 33)), true) . "\n";
+            } elseif (0 === $node->val) {
                 echo ".........VOID\n";
             } else {
-                echo 'object' == ($type = gettype($tag->val)) ? '[' . ($tag->val->nn ?? '.') . "]\n" : "$type\n";
+                echo 'object' == ($type = gettype($node->val)) ? '[' . ($node->val->nn ?? '.') . "]\n" : "$type\n";
             }
-        });
+        }
     }
 
-    function walk($tag, $fn = false, $depth = 0, $walk = false) {
-        $fn or ($fn = $tag) && ($tag = $this->root->val);
+    function gen($node = false, $run_close = false, $depth = 0) {
+        $node or $node = $this->root->val or $node = $this->parse();
+        for (; $node; $node = $node->right) {
+            yield $depth => $node;
+            if ($obj = is_object($node->val))
+                yield from $this->gen($node->val, $run_close, 1 + $depth);
+            if ($run_close && $obj)
+                yield -$depth - 1 => $node;
+        }
+    }
+
+    function __walk($node, $fn) {
+        $g = $this->gen($node);
+        iterator_apply($g, fn() => $fn($g->key(), $g->current())); # must return true!
+    }
+//2remove :
+    function walk($node, $fn = false, $depth = 0, $walk = false) {
+        $fn or ($fn = $node) && ($node = $this->root->val);
         $walk or $walk = (object)['nn' => 0, 'tail' => null];
         $walk->n = $n = 0;
         do {
             $walk->depth = $depth;
             $walk->nn++;
-            $fn($tag, $walk);
+            $fn($node, $walk);
             $walk->n = ++$n;
-            is_object($tag->val) && $this->walk($tag->val, $fn, 1 + $depth, $walk);
-        } while ($tag = $tag->right);
+            is_object($node->val) && $this->walk($node->val, $fn, 1 + $depth, $walk);
+        } while ($node = $node->right);
         $walk->tail && $fn(false, $walk);
         return $walk;
     }
 
-    function draw($tag, &$close) {
-        if (is_string($tag))
-            return $tag;
-        $close = '</' . ($open = $tag->name) . '>';
-        foreach ($tag->attr ?? [] as $k => $v)
-            $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
+    function tag($node, &$close, $allow = false) {
+        $close = '</' . ($open = $node->name) . '>';
+        foreach ($node->attr ?? [] as $k => $v)
+            if (!$allow || in_array($k, $allow))
+                $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
         return "<$open>";
     }
 
-    function simple($tag) {
-        $this->walk($tag, function ($tag, $walk) {
-            if (!$tag)
-                return $this->in .= array_pop($walk->tail);
-            if ('#' == $tag->name[0])
-                return $this->in .= $this->draw(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
-            $this->in .= $this->draw($tag, $close);
-            if (!is_string($tag->val)) # childs or void
-                return $tag->val ? ($walk->tail[] = $close) : false;
-            $this->in .= "$tag->val$close";
-        });
+    function draw_simple($in, $allow = false) {
+        $out = '';
+        foreach ($this->gen($in, true) as $depth => $node) {
+            if ('#' == $node->name[0]) {
+                $out .= sprintf($this->spec[$node->name], $node->val);
+            } elseif ($depth < 0) {
+                $out .= "</$node->name>";
+            } else {
+                $out .= $this->tag($node, $close, $allow);
+                if (null === $node->val || is_string($node->val))
+                    $out .= $node->val . $close;
+            }
+        }
+        return $out;
     }
 
-    function minify($tag, $pad, $in_pre = false) { // 2do
+    function draw_mini($node, $pad = '', $in_pre = false) { // 2do
     # $in_pre -- save whitespaces in text value
     }
 
-    function nice($tag, $pad, $in_pre = false) { // 2do CSS: white-space: pre;
+    function draw_nice($node, $pad = '', $in_pre = false) { // 2do CSS: white-space: pre;
         $out = '';
         do {
-            if ('#' == $tag->name[0]) {
-                $str = $this->draw(sprintf($this->spec[$tag->name], $tag->val), $tag->name);
+            if ('#' == $node->name[0]) {
+                $str = sprintf($this->spec[$node->name], $node->val);
                 $out .= $in_pre ? $str : trim($str);
                 continue;
             } else {
-                $open = $this->draw($tag, $close);
+                $open = $this->tag($node, $close);
             }
-            if (0 === $tag->val) { # void element
+            if (0 === $node->val) { # void element
                 $out .= "\n$pad$open";
                 continue;
             }
-            if (is_object($tag->val)) {
-                $inner = $this->nice($tag->val, $pad . $this->pad, $in_pre || 'pre' == $tag->name);
+            if (is_object($node->val)) {
+                $inner = $this->draw_nice($node->val, $pad . $this->pad, $in_pre || 'pre' == $node->name);
                 $out .= $in_pre ? $open . $inner . $close : (strlen(trim($inner)) < 100
                     ? "\n$pad$open" . trim($inner) . $close
                     : "\n$pad$open" . $inner . "\n$pad$close");
             } else { # string
-                $out .= $in_pre ? $open . $tag->val . $close : "\n$pad$open" . trim($tag->val) . $close;
+                $out .= $in_pre ? $open . $node->val . $close : "\n$pad$open" . trim($node->val) . $close;
             }
-        } while ($tag = $tag->right);
-        $pad or $this->in = $out;
+        } while ($node = $node->right);
         return $out;
     }
 
     function clone(?array $ary = null) : XML {
         $ary or $ary = $this->selected;
         $prev = false;
-        foreach ($ary as $tag) $this->walk($tag, function ($tag, $walk) use (&$prev) {
+        foreach ($ary as $node) $this->walk($node, function ($node, $walk) use (&$prev) {
             if ($walk->depth) {
-                $this->relations(clone $tag, is_object($tag->val));
-                return null !== $tag->right or $this->close();
+                $this->relations(clone $node, is_object($node->val));
+                return null !== $node->right or $this->close();
             }
             if ($walk->n)
                 return;
             $this->ptr = $prev
                 ? [$prev, &$prev->right, $this->root]
                 : [null, &$this->root->val, $this->root];
-            $this->relations($prev = clone $tag, true);
+            $this->relations($prev = clone $node, true);
             $prev->right = null;
         });
         return $this;
@@ -148,7 +165,7 @@ class XML
     function byTag(string $name) {
         $this->root->val or $this->parse();
         $new = new XML;
-        $this->walk(fn($tag) => $name != $tag->name or $new->selected[] = $tag);
+        $this->walk(fn($node) => $name != $node->name or $new->selected[] = $node);
         return $new;
     }
 
@@ -159,12 +176,12 @@ class XML
     function byAttr(string $val, $attr = 'id', $single = false) {
         $this->root->val or $this->parse();
         $new = new XML;
-        $this->walk(function ($tag) use ($new, $val, $attr, $single) {
-            if (!$tag->attr)
+        $this->walk(function ($node) use ($new, $val, $attr, $single) {
+            if (!$node->attr)
                 return;
-            foreach ($tag->attr as $k => $v) {
+            foreach ($node->attr as $k => $v) {
                 if ($attr == $k && ($single ? in_array($val, preg_split("/\s+/s", $v)) : $val == $v))
-                    $new->selected[] = $tag;
+                    $new->selected[] = $node;
             }
         });
         return $new;
@@ -175,18 +192,18 @@ class XML
 
     function remove($ary = []) {
         $ary or $ary = $this->selected;
-        foreach ($ary as $tag) {
-            $tag->right and $tag->right->left = $tag->left;
-            $tag->left ? ($tag->left->right = $tag->right) : ($tag->up->val = $tag->right ?? '');
+        foreach ($ary as $node) {
+            $node->right and $node->right->left = $node->left;
+            $node->left ? ($node->left->right = $node->right) : ($node->up->val = $node->right ?? '');
         }
     }
 
-    private function left_up_right($tag, $left, $up, $right = null) {
-        $tag->left = $left;
+    private function left_up_right($node, $left, $up, $right = null) {
+        $node->left = $left;
         do {
-            $tag->up = $up;
-            $last = $tag;
-        } while ($tag = $tag->right);
+            $node->up = $up;
+            $last = $node;
+        } while ($node = $node->right);
         $last->right = $right;
     }
 
@@ -214,11 +231,11 @@ class XML
 
     function _move(&$ary, $to, $m = 1, $text = false) {
         $new = [];
-        foreach ($ary as $tag) {
-            for ($n = 0; $tag && $n < $m; !$text && $tag && '#' == $tag->name[0] or $n++)
-                $tag = $tag->$to;
-            if ($tag && $tag->up)
-                $new[] = $tag;
+        foreach ($ary as $node) {
+            for ($n = 0; $node && $n < $m; !$text && $node && '#' == $node->name[0] or $n++)
+                $node = $node->$to;
+            if ($node && $node->up)
+                $new[] = $node;
         }
         $ary = $new;
         return $this;
@@ -239,12 +256,12 @@ class XML
     function parents($query) {
     }
 
-    function attr($tag, string $name, $val = null) {
-        $old = $tag->attr[$name] ?? null;
+    function attr($node, string $name, $val = null) {
+        $old = $node->attr[$name] ?? null;
         if (false === $val) {
-            unset($tag->attr[$name]);
+            unset($node->attr[$name]);
         } elseif (is_string($val)) {
-            $tag->attr = [$name => $val] + $tag->attr;
+            $node->attr = [$name => $val] + $node->attr;
         }
         return $old;
     }
@@ -312,17 +329,17 @@ class XML
         return $_;
     }
 
-    function parse() {
-        $tag = $this->node($str = '');
-        $push = function () use (&$str, &$tag) {
-            if ('' === $tag->name)
+    protected function parse(): ?stdClass {
+        $node = $this->node($str = '');
+        $push = function () use (&$str, &$node) {
+            if ('' === $node->name)
                 return;
-            if ('#text' == $tag->name)
-                [$tag->val, $str] = [$str, ''];
-            $tag = $this->push($tag);
-            '' === $str or $tag = $this->push($tag, $str);
+            if ('#text' == $node->name)
+                [$node->val, $str] = [$str, ''];
+            $node = $this->push($node);
+            '' === $str or [$node, $str] = [$this->push($node, $str), ''];
         };
-        $this->ptr = [null, &$this->root->val, $this->root]; # &prev, &place, &parent
+        $this->ptr = [null, &$this->root->val, $this->root];
         $this->selected = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
@@ -333,30 +350,30 @@ class XML
                 $y->len += $y->find ? 0 : 3; # chars move
             } elseif ('open' == $y->mode) { # sample: <tag
                 $push();
-                $tag->name = rtrim(strtolower(substr($t, 1)), '/');
+                $node->name = rtrim(strtolower(substr($t, 1)), '/');
                 $y->mode = 'attr';
                 continue;
             } elseif ('attr' == $y->mode) {
                 if ($y->space)
                     continue;
                 if ('>' != $t) {
-                    $this->_attr($tag->attr, $t);
+                    $this->_attr($node->attr, $t);
                     continue;
                 }
-                $bs = is_array($tag->attr) && '/' == array_key_last($tag->attr) && 0 === $tag->attr['/'];
-                if ($bs || in_array($tag->name, $this->void)) {
-                    $tag = $this->push([$tag->name, 0, $tag->attr]);
+                $bs = is_array($node->attr) && '/' == array_key_last($node->attr) && 0 === $node->attr['/'];
+                if ($bs || in_array($node->name, $this->void)) {
+                    $node = $this->push([$node->name, 0, $node->attr]);
                     $str = '';
-                } elseif (in_array($tag->name, ['script', 'style'])) {
-                    $y->find = "</$tag->name>";
+                } elseif (in_array($node->name, ['script', 'style'])) {
+                    $y->find = "</$node->name>";
                 }
             } elseif ('close' == $y->mode) { # sample: </tag>
                 $new = strtolower(substr($t, 2, -1));
-                '' === $tag->name or $this->push([$tag->name, $str, $tag->attr]);
-                $new == $tag->name or $this->push([$new, 1]);
-                $tag = $this->node($str = '');
+                '' === $node->name or $this->push([$node->name, $str, $node->attr]);
+                $new == $node->name or $this->push([$new, 1]);
+                $node = $this->node($str = '');
             } else { # text
-                '' !== $tag->name or $tag->name = '#text';
+                '' !== $node->name or $node->name = '#text';
                 $str .= $t;
             }
             $y->mode = 'txt';
@@ -365,42 +382,42 @@ class XML
         return $this->root->val;
     }
 
-    private function relations($tag, $is_parent = false) {
-        $tag->left = $this->ptr[0];
-        $tag->up = $this->ptr[2];
-        $this->ptr[1] = $tag; # add node
-        $this->ptr = $is_parent
-            ? [null, &$tag->val, $tag] # childs: &prev, &place, &parent
-            : [$tag, &$tag->right, $tag->up];
+    protected function relations($node, $is_parent) {
+        $node->left = $this->ptr[0];
+        $node->up = $this->ptr[2];
+        $this->ptr[1] = $node; # add the node
+        $this->ptr = $is_parent ? [null, &$node->val, $node] : [$node, &$node->right, $node->up];
     }
 
-    private function close() {
+    protected function close($cnt = 1) {
         $parent = $this->ptr[2];
-        $this->ptr = [$parent, &$parent->right, $parent->up];
-    }
-
-    function push($tag, &$str = null) {
-        if (is_array($tag))
-            $tag = $this->node($tag[0], $tag[1], $tag[2] ?? null);
-        if (null !== $str) {
-            $tag->name = '#text';
-            $tag->val = $str;
-            $str = '';
+        if ($cnt--) {
+            for (; $cnt--; $parent = $parent->up);
+            $this->ptr = [$parent, &$parent->right, $parent->up];
         }
-        //$prev = $this->ptr[0] ?? $this->ptr[2];
+        return $parent->name;
+    }
+
+    protected function push($node, $str = 0) {
+        if (is_array($node))
+            $node = $this->node(...$node);
+        if (is_string($str)) {
+            $node->name = '#text';
+            $node->val = $str;
+        }
         $parent = $this->ptr[2];
-        if (1 === $tag->val) { # close-tag
-            if ($tag->name == $parent->name)
+        if (1 === $node->val) { # close-tag
+            if ($node->name == $parent->name)
                 $this->close();
         } else {
-            if ('#' != $tag->name[0]) {
+            if ('#' != $node->name[0]) {
                 $om = $this->omis[$parent->name] ?? false;
-                if ($om && in_array($tag->name, $om))
+                if ($om && in_array($node->name, $om))
                     $this->close();
-                if ($parent->name == $tag->name && in_array($tag->name, $this->omis[0]))
+                if ($parent->name == $node->name && in_array($node->name, $this->omis[0]))
                     $this->close();
             }
-            $this->relations($tag, null === $tag->val);
+            $this->relations($node, null === $node->val);
         }
         return $this->node();
     }

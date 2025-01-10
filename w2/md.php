@@ -1,11 +1,13 @@
 <?php
 
-class MD # the MarkDown
+class MD extends XML # the MarkDown
 {
     const version = '0.232';
     //const char = '\\`*_{}[]()#+-.!|^=~:'; //    >
 
-    static $md;
+    static $MD;
+
+    public $tokens = false;
 
     private $hightlight; # if true then work Show::php(..) for ```php
    private $tok = [];
@@ -13,14 +15,19 @@ class MD # the MarkDown
     private $ref = [];
     private $for = [];
     private $j = 0;
-    private $in;
+    private $node;
 
     function __construct(string $in, $hightlight = false) {
-        MD::$md or MD::$md = Plan::set('main', fn() => yml('md', '+ @object @inc(md)'));
+        parent::__construct($in);
         $this->hightlight = $hightlight;
-        $this->in = unl($in);
-        $this->xml = new XML;
-        $this->xml->draw = [$this, 'html'];
+        $this->render = [$this, 'draw_html'];
+        MD::$MD or MD::$MD = Plan::set('main', fn() => yml('md', '+ @object @inc(md)'));
+    }
+
+    static function raw($in) {
+        $md = new self($in);
+        $md->render = [$md, 'draw_raw'];
+        return $md;
     }
 
     private function spn($set, $j = 0) {
@@ -37,13 +44,13 @@ class MD # the MarkDown
         if ('?' == $m[1]) {
             $x->html = '?>';
         } elseif ('!' == $m[1]) {
-            foreach (MD::$md->typ_1 as $k => $v)
+            foreach (MD::$MD->typ_1 as $k => $v)
                 if ($k == substr($x->line, 0, strlen($k))) {
                     $x->html = $v;
                     $m[0] = $k;
                     goto end;
                 }
-        } elseif (in_array($v = strtolower($m[1]), MD::$md->typ_2)) {
+        } elseif (in_array($v = strtolower($m[1]), MD::$MD->typ_2)) {
             $x->html = "</$v>";
         } else {
             $x->html = "\nqqq\n";
@@ -73,8 +80,10 @@ class MD # the MarkDown
 
     private function blk_p($x, &$t) {
         $id = !$x->stk ? 0 : $this->tok[end($x->stk)[1]][0];
-        if (!preg_match("/^\S/", $t) || in_array($id, [92, 93, 96, 20]))
+        if (!preg_match("/^\S/", $t) || in_array($id, [20])) // 92, 93, 96, 
             return false;
+        $this->push([$x->node = 'p', null]);
+        $this->add($t);
         $x->stk[] = ["</p>\n", count($this->tok), $x->pad, ''];
         return [20, $t, '\\' == $t ? '<p>' : "<p>$t"];
     }
@@ -88,7 +97,7 @@ class MD # the MarkDown
         if (!preg_match("/^(#{1,6})(\s+)\S/", $x->line, $m))
             return false;
         $close = 20 == $x->id ? $this->close_blk($x, $x->cnt - 1) : '';
-        $sz = strlen($m[1]);
+        $this->push([($x->node = 'h') . $sz = strlen($m[1]), null, ['t' => $m[1] . $m[2]]]);
         $x->stk[] = ["</h$sz>\n", count($this->tok), $x->pad, $t];
         return [$sz, $t = $m[1] . $m[2], "$close<h$sz>"];
     }
@@ -109,13 +118,34 @@ class MD # the MarkDown
         return [91, $t .= $_t, "$close<blockquote>\n"];
     }
 
+    private function add($val, $name = '#text') {
+        $p =& $this->ptr[0];
+        if ($p && '#text' == $p->name)
+            return $p->val .= $val;
+        $this->push([$name, $val]);
+
+       return;
+        $node =& $this->node;
+        $node->t = $t;
+        if (in_array($node->name = $name, ['ul', 'ol']))
+            $node->tight = true;
+        $this->node = $this->push($node);
+    }
+
     private function blk_ul($x, &$t) { // loose<p> tight
         if (!in_array($_t = $x->line[1] ?? '', [' ', ''], true))
             return false;
         $close = $this->close_blk($x, 1 + $x->v);
-        if ($this->cont($x, $t, 2 + $x->pad))
+
+        if ($this->cont($x, $t, 2 + $x->pad)) {
+            $x->node = $this->close(2);
+            $this->push(['li', $_t ? null : '', ['pad' => 2 + $x->pad, 't' => $t . $_t]]);
             return [96, $t .= $_t, "$close</li><li>"];
+        }
         $x->stk[] = ["</li></ul>\n", count($this->tok), 2 + $x->pad, $t];
+        $this->push(['ul', null, ['tight' => 1, 'd' => $t]]);
+        $this->push(['li', null, ['pad' => 2 + $x->pad, 't' => $t . $_t]]);
+
         return [92, $t .= $_t, "$close<ul><li>"];
     }
 
@@ -162,8 +192,12 @@ class MD # the MarkDown
     private function new_line($x, &$t) {
         $x->cnt = count($x->stk);
         if ("\n" == $t[0]) {
+            if ($x->node == 'h') {
+                $x->node = $this->close();
+            }
             $x->pad = $x->v = 0;
             $n2 = strlen($t = chop($t, " \t")) > 1;
+            $this->add($t);
             if ($x->grab) # fenced indent-code html table?
                 return [8, $t, 7 == $x->id ? '' : $t];
             if ($n2) {
@@ -177,6 +211,7 @@ class MD # the MarkDown
         } elseif (strpbrk($t, " \t")) {
             $t = $this->spn(" \t");
             $x->pad += strlen(str_replace("\t", '1234', $t));
+            $this->push(['skip', $t]);
             if ($x->grab)
                 return [8, $t];
             #if ($x->pad > 3 && 20 != $x->id)
@@ -190,7 +225,7 @@ class MD # the MarkDown
                 }
                 return $this->blk_fenced($x, $t);
             }
-            foreach (MD::$md->blk as $set => $func) {
+            foreach (MD::$MD->blk as $set => $func) {
                 if ($set && !strpbrk($t, $set))
                     continue;
                 if ($a = $this->$func($x, $t)) {
@@ -205,15 +240,16 @@ class MD # the MarkDown
         }
     }
 
-    function &parse(&$x = null) { # lists: + - *
+    protected function parse(): ?stdClass { # lists: + - *
         $x = new stdClass;
-        $x->grab = $x->html = $x->pad = $x->v = $x->id = 0;
+        $x->grab = $x->html = $x->pad = $x->v = $x->id = $x->node = 0;
         $x->stk = [];
         $len = $x->nl = strlen($in =& $this->in);
         $j =& $this->j;
         $char = [
             "\\`*_{}[]()<>#+-.!|^=~:",
         ];
+        $this->node = $this->node();
         $chr =& $char[0];
         $tok =& $this->tok;
         for ($t = ''; $j < $len; $j += strlen($t)) {
@@ -230,6 +266,7 @@ class MD # the MarkDown
                 $tok[] = $a;
             } elseif (strpbrk($t, $chr)) {
                 $tok[] = [11, $t = $this->spn($t)];
+                $this->add($t);
             } else {
                 $t = substr($in, $j, $n = strcspn($in, "\n$chr", $j));
                 if ('  ' == substr($t, -2) && "\n" == ($in[$j + strlen($t)] ?? '')) {
@@ -238,6 +275,7 @@ class MD # the MarkDown
                     $tok[] = [15, $t];
                 } else {
                     $tok[] = [11, $t];
+                    $this->add($t);
                 }
             }
         }
@@ -250,7 +288,7 @@ class MD # the MarkDown
             }
         }
         $tok[] = [11, '', $this->close_blk($x)];
-        return $tok;
+        return $this->root->val;
     }
 
     private function auto_link(&$t, $j) {
@@ -262,14 +300,13 @@ class MD # the MarkDown
             $t = substr($t, 0, -strlen($m1[0]));
             return false;
         }
-        $t .= $m2[0];
+        $this->push(['a', $t .= $m2[0], ['href' => $t, 'c' => 'g']]);
         return true;
     }
 
     private function square($x, &$t) { # 2do  footnote
         if (!$len = strlen($head = Rare::bracket($this->in, '[', $j = $this->j, "\n\\")))
             return false;
-        $id = 14;
         $tail = '';
         if (in_array($chr = $this->in[$j += $len], ['[', '('])) {
             $tail = Rare::bracket($this->in, $chr, $j, "\n\\");
@@ -278,16 +315,50 @@ class MD # the MarkDown
         } elseif (':' == $chr) {
             if (':' == trim($tail = $this->cspn("\n", $j)))
                 return false;
-            $id = 16;
             $this->ref[$head] = trim(substr($tail, 1));
+            $this->push(['skip', 0, ['t' => $head . $tail]]);
+            return [16, $t = $head . $tail, '', $head, $tail];
         } else {
             $this->for[count($this->tok)] = $head;
         }
         $x->nl = false;
-        return [$id, $t = $head . $tail, '', $head, $tail];
+        $this->push(['a', $head, ['href' => $tail, 'c' => 'g', 't' => $head . $tail]]);
+        return [14, $t = $head . $tail, '', $head, $tail];
     }
 
-    function __toString() {
+    function draw_raw($in) {
+        $out = '';
+        foreach ($this->gen($in, true) as $depth => $node) {
+            if ('#' == $node->name[0]) {
+                $out .= sprintf($this->spec[$node->name], $node->val) . "\n";
+            } elseif ($depth < 0) {
+                $out .= str_pad('', -$depth * 2 - 2) . "</$node->name>\n";
+            } else {
+                $out .= str_pad('', $depth * 2) . $this->tag($node, $close);
+                $out .= null === $node->val || is_string($node->val) ? "$node->val$close\n" : "\n";
+            }
+        }
+        return $out;
+    }
+
+    function draw_html($in) {
+        $out = '';
+        foreach ($this->gen($in, true) as $depth => $node) {
+            if ('skip' == $node->name)
+                continue;
+            if ('#' == $node->name[0]) {
+                $out .= sprintf($this->spec[$node->name], $node->val) . "\n";
+            } elseif ($depth < 0) {
+                $out .= str_pad('', -$depth * 2 - 2) . "</$node->name>\n";
+            } else {
+                $out .= str_pad('', $depth * 2) . $this->tag($node, $close, ['href', 'start']);
+                $out .= null === $node->val || is_string($node->val) ? "$node->val$close\n" : "\n";
+            }
+        }
+        return $out;
+    }
+}
+/*
         $out = $sub = '';
         foreach ($this->parse() as $ary) {
             [$id, $t, $htm, $p3, $p4] = $ary + [2 => $ary[1], '', ''];
@@ -302,7 +373,7 @@ class MD # the MarkDown
               # close leaf block [fenced|indent code|html]
               # open leaf block
             } elseif (7 == $id) {
-                in_array($type = $p3, MD::$md->code_type) && $this->hightlight or $type = '';
+                in_array($type = $p3, MD::$MD->code_type) && $this->hightlight or $type = '';
                 'javascript' !== $type or $type = 'js';
                 $sub = $type ? '' : $htm;
             } elseif (8 == $id) {
@@ -316,34 +387,4 @@ class MD # the MarkDown
             # fenced code start
         }
         return $out;
-    }
-
-    function tag($tag, &$close) {
-        $close = '</' . ($open = $tag->name) . '>';
-        foreach ($tag->attr ?? [] as $k => $v)
-            $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
-        return "<$open>";
-    }
-
-    function html($tag, $pad) {
-        $out = '';
-        do {
-            if ('#text' == $tag->name) {
-                $out .= $tag->val;
-                continue;
-            } else {
-                $open = "\n$pad" . $this->tag($tag, $close);
-            }
-            if (0 === $tag->val) { # void element
-                $out .= $open;
-                continue;
-            } elseif (is_object($tag->val)) {
-                $lt = strlen($trim = trim($inner = $this->html($tag->val, "$pad  "))) < 90;
-                $out .= $lt ? $open . $trim . $close : $open . $inner . "\n$pad$close";
-            } else { # string
-                $out .= $open . $tag->val . $close;
-            }
-        } while ($tag = $tag->right);
-        return $out;
-    }
-}
+*/
