@@ -302,11 +302,11 @@ class XML extends CSS
         }
     }
 
-    function _attr(&$attr, $t) {
+    function set_attr(&$attr, $t) {
         static $key = '', $val = false;
-        if (in_array($t[0], ["'", '"']))
+        if ($quot = in_array($t[0], ["'", '"']))
             $t = substr($t, 1, -1);
-        if ('=' == $t) {
+        if ('=' == $t && !$quot) {
             $_ = $val = true;
             $attr[$key] = '';
         } elseif ($_ = $val) {
@@ -319,59 +319,54 @@ class XML extends CSS
     }
 
     protected function parse(): ?stdClass {
-        $node = $this->node($str = '');
-        $push = function () use (&$str, &$node) {
-            if ('' === $node->name)
-                return;
-            if ('#text' == $node->name)
-                [$node->val, $str] = [$str, ''];
-            $node = $this->push($node);
-            if ('' !== $str)
-                [$node, $str] = [$this->push($node, $str), ''];
+        $name = $str = $attr = null;
+        $flush = function () use (&$name, &$str, &$attr) {
+            if ('#text' == $name) {
+                $this->push($name, $str);
+            } elseif (!is_null($name)) {
+                $this->push($name, null, $attr);
+                is_null($str) or $this->push('#text', $str);
+            }
+            $name = $str = $attr = null;
         };
-        $this->ptr = [$this->last = null, &$this->root->val, $this->root]; # setup the cursor: &prev, &place, &parent
+        $this->ptr = [null, &$this->root->val, $this->last = $this->root]; # setup the cursor: &prev, &place, &parent
         $this->selected = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
-                $push();
+                $flush();
                 $y->find = $y->end;
             } elseif (in_array($y->found, ['-->', ']]>'])) {
-                $this->push(['-->' == $y->found ? '#comment' : '#data', $t]);
-                $y->len += $y->find ? 0 : 3; # chars move
+                $this->push('-->' == $y->found ? '#comment' : '#data', $t);
+                $y->len += $y->find ? 0 : 3; # correct $y->len!
             } elseif ('open' == $y->mode) { # sample: <tag
-                $push();
-                $node->name = rtrim(strtolower(substr($t, 1)), '/');
+                $flush();
+                $name = rtrim(strtolower(substr($t, 1)), '/');
                 $y->mode = 'attr';
                 continue;
             } elseif ('attr' == $y->mode) {
-                if ($y->space)
-                    continue;
-                if ('>' != $t) {
-                    $this->_attr($node->attr, $t);
+                if ($y->space || '>' != $t) {
+                    $y->space || $this->set_attr($attr, $t);
                     continue;
                 }
-                $bs = is_array($node->attr) && '/' == array_key_last($node->attr) && 0 === $node->attr['/'];
-                if ($bs || in_array($node->name, $this->void)) {
-                    $node = $this->push([$node->name, 0, $node->attr]);
-                    $str = '';
-                } elseif (in_array($node->name, ['script', 'style'])) {
-                    $y->find = "</$node->name>";
+                if (in_array($name, ['script', 'style'])) {
+                    $y->find = "</$name>";
+                } elseif (in_array($name, $this->void) || $attr && '/' == array_key_last($attr) && 0 === $attr['/']) {
+                    $this->push($name, 0, $attr);
+                    $name = $str = $attr = null;
                 }
             } elseif ('close' == $y->mode) { # sample: </tag>
-                if ('' !== $node->name)
-                    $this->push([$node->name, $str, $node->attr]);
-                $close = strtolower(substr($t, 2, -1));
-                if ($close != $node->name && $close == $this->ptr[2]->name)
+                is_null($name) or $this->push($name, $str ?? '', $attr);
+                if (strtolower(substr($t, 2, -1)) == $this->ptr[2]->name)
                     $this->close();
-                $node = $this->node($str = '');
+                $name = $str = $attr = null;
             } else { # text
-                if ('' === $node->name)
-                    $node->name = '#text';
+                if (is_null($name))
+                    $name = '#text';
                 $str .= $t;
             }
             $y->mode = 'txt';
         }
-        $push();
+        $flush();
         return $this->root->val;
     }
 
@@ -391,22 +386,18 @@ class XML extends CSS
         return $parent->name;///
     }
 
-    protected function push($node, $str = 0) {
-        if (is_array($node))
-            $node = $this->node(...$node);
-        if (is_string($str)) {
-            $node->name = '#text';
-            $node->val = $str;
-        } elseif ('#' != $node->name[0]) {
+    protected function push($name, $val = null, $attr = null) {
+        $node = $this->node($name, $val, $attr);
+        if ('#' != $name[0]) {
             $parent = $this->ptr[2];
             $om = $this->omis[$parent->name] ?? false;
-            if ($om && in_array($node->name, $om))
+            if ($om && in_array($name, $om))
                 $this->close();
-            if ($parent->name == $node->name && in_array($node->name, $this->omis[0]))
+            if ($parent->name == $name && in_array($name, $this->omis[0]))
                 $this->close();
         }
-        $this->relations($node, null === $node->val);
-        return $this->node();
+        $this->relations($node, null === $val);
+        return $node;
     }
 
     function node($name = '', $val = null, $attr = null) {
@@ -414,7 +405,7 @@ class XML extends CSS
             'name' => $name,
             'attr' => $attr,
             'up' => null,
-            'val' => $val, # text | []first-child | 0=void
+            'val' => $val, # text | object=first-child | 0=void | null=not-void
             'left' => null,
             'right' => null,
         ];
