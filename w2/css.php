@@ -4,22 +4,33 @@ class CSS
 {
     const version = '0.777';
 
-    public $in;
-    public $array = [];
-    public $pad = 2; # 0 for minified CSS
+    public $pad; # 0 for minified CSS
+    public $render;
     public $sort = false; # (compare 2 CSS)
 
-    function __construct(string $in = '') {
-     #$this->sort = [$this, '_sort'];
+    protected $in;
+    protected $array = [];
+
+    function __construct(string $in = '', $tab = 2) {
         $this->in = unl($in);
+        $this->pad = str_pad('', $tab);
+        $pfx = strtolower(get_class($this));
+        $this->render = [$this, $tab ? $pfx . '_nice' : $pfx . '_simple'];
     }
 
-    static function file($name) {
-        echo new CSS(file_get_contents($name));
+    static function file($in, $tab = 2) {
+        return new self(file_get_contents($in), $tab);
     }
 
     function __toString() {
         $this->array or $this->parse();
+        return $this->in = call_user_func($this->render, $this->array);
+    }
+
+    function css_mini($node) { // 2do
+    }
+
+    function css_nice($node) {
         $this->in = $this->pad ? '' : "/* Minified with Coresky framework, https://coresky.net */\n";
         $x = [
             str_pad('', $this->pad),
@@ -57,12 +68,13 @@ class CSS
         return $_a != $_b ? ($_a && !$_b ? 1 : -1) : strcmp($a[0], $b[0]);
     }
 
+    //2do gen(..)
     function walk(&$ary, $fn, $depth = 0) {
         if ($this->sort)
             usort($ary, $this->sort);
         $last = array_key_last($ary);
         $y = (object)[
-            'pad' => str_pad('', $this->pad * $depth),
+'pad' => str_pad('', $depth, $this->pad),
             'depth' => $depth,
         ];
         foreach ($ary as $n => $one) {
@@ -91,7 +103,7 @@ class CSS
         }
     }
 
-    function mode(&$in, $k, $len, &$mode, $chr, $real = false) {
+    private function mode(&$in, $k, $len, &$mode, $chr, $real = false) {
         if (strpbrk($t = $in[$k], 'd' == $mode ? '{;,}' : '{:;,}')) {
             if ('}' == $t) {
                 $mode = 'd';
@@ -127,7 +139,7 @@ class CSS
         }
     }
 
-    function tokens($y = false) {
+    function tokens(?stdClass $y = null) {
         $y or $y = (object)['mode' => 'd', 'find' => false];
         $len = strlen($in =& $this->in);
         for ($j = 0; $j < $len; $j += strlen($t)) {
@@ -151,7 +163,7 @@ class CSS
         }
     }
 
-    function parse() {
+    protected function parse(): ?stdClass {
         $define = [];
         $push = function () use (&$define) {
             $v = 1 == count($define) ? $define[0] : $define;

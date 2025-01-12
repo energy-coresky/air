@@ -260,8 +260,11 @@ class Show # php jet yaml html bash || php_method md || var diff log
         return $code($text, "```(jet|php|html|css|js|bash|yaml|)(.*?)```");
     }
 
-    static function doc($text) {
-        return (string)new MD($text);//, true
+    static function doc($markdown, $render = 'md_nice', $hightlight = true) {
+        $md = new MD($markdown);
+        $md->render = [$md, $render];
+        //$md->hightlight = $hightlight;
+        return (string)$md;
     }
 
     static function highlight_md($code, $u = '') { # r g d c m j - gray

@@ -84,17 +84,6 @@ omis: # tags omission rules
   p: @csv p address article aside blockquote div dl fieldset footer h1 h2 h3 h4 h5 h6 header hr menu nav ol ul pre section table form
 #.html
 
-#.js
-keywords: @csv
-  break case class catch const continue debugger default delete do else export extends finally for function if import in of
-  instanceof let new return super switch this throw try typeof var void while with yield
-other: @csv
-  enum await implements package protected static interface private public
-old: @csv
-  abstract boolean byte char double final float goto int long native short synchronized transient volatile
-chars: "!#%&()*+,-.:;<=>?@[\]^`{|}~"
-#.js
-
 #.md
 code_type: @csv jet php css js html yaml bash
 typ_1: {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
@@ -119,6 +108,17 @@ tag:
   hr:
   hx: # h1..h6
 #.md
+
+#.js
+keywords: @csv
+  break case class catch const continue debugger default delete do else export extends finally for function if import in of
+  instanceof let new return super switch this throw try typeof var void while with yield
+other: @csv
+  enum await implements package protected static interface private public
+old: @csv
+  abstract boolean byte char double final float goto int long native short synchronized transient volatile
+chars: "!#%&()*+,-.:;<=>?@[\]^`{|}~"
+#.js
 
 #.define ================== this used in the sky_plan.php ========================
 ENC:      UTF-8

@@ -1,30 +1,21 @@
 <?php
 
-class XML
+class XML extends CSS
 {
     const version = '0.777';
 
     static $XML;
 
-    public $pad;
-    public $render;
     public $selected = [];
 
-    protected $in;
     protected $ptr;
-    protected $i = 0;
     protected $root;
+    protected $i = 0;
+    protected $last;
 
-    static function file($in, $tab = 0) {
-        return new XML(file_get_contents($in), $tab);
-    }
-
-    function __construct(string $in = '', $tab = 0) {
-        $this->in = unl($in);
-        $this->pad = str_pad('', $tab);
-        $this->render = [$this, $tab ? 'draw_nice' : 'draw_simple'];
+    function __construct(string $in = '', $tab = 2) {
+        parent::__construct($in, $tab);
         $this->root = $this->node('#root');
-        $this->ptr = [null, &$this->root->val, $this->root]; # setup the cursor: &prev, &place, &parent
         XML::$XML or XML::$XML = yml('+ @inc(html)');
     }
 
@@ -94,7 +85,7 @@ class XML
         return "<$open>";
     }
 
-    function draw_simple($in, $allow = false) {
+    function xml_simple($in, $allow = false) {
         $out = '';
         foreach ($this->gen($in, true) as $depth => $node) {
             if ('#' == $node->name[0]) {
@@ -110,33 +101,33 @@ class XML
         return $out;
     }
 
-    function draw_mini($node, $pad = '', $in_pre = false) { // 2do
+    function xml_mini($node, $pad = '', $in_pre = false) { // 2do
     # $in_pre -- save whitespaces in text value
     }
 
-    function draw_nice($node, $pad = '', $in_pre = false) { // 2do CSS: white-space: pre;
-        $out = '';
-        do {
+    function xml_nice($node, $pad = '', $in_pre = false) { // 2do CSS: white-space: pre;
+        for ($out = ''; $node; $node = $node->right) {
+            $open = $pad . $this->tag($node, $close);
             if ('#' == $node->name[0]) {
                 $str = sprintf($this->spec[$node->name], $node->val);
-                $out .= $in_pre ? $str : trim($str);
-                continue;
+                $out .= trim($str);
+            } elseif (0 === $node->val) { # void element
+                $out .= "$open\n";
+            } elseif (is_object($node->val)) {
+                $inner = $this->xml_nice(
+                    $node->val,
+                    $pad . $this->pad,
+                    $in_pre || 'pre' == $node->name
+                );
+                if (strlen($trim = trim($inner)) < 100) {
+                    $out .= $open . $trim . $close . "\n";
+                } else {
+                    $out .= "$open\n" . $inner . "$pad$close\n";
+                }
             } else {
-                $open = $this->tag($node, $close);
+                $out .= $open . trim($node->val) . $close;
             }
-            if (0 === $node->val) { # void element
-                $out .= "\n$pad$open";
-                continue;
-            }
-            if (is_object($node->val)) {
-                $inner = $this->draw_nice($node->val, $pad . $this->pad, $in_pre || 'pre' == $node->name);
-                $out .= $in_pre ? $open . $inner . $close : (strlen(trim($inner)) < 100
-                    ? "\n$pad$open" . trim($inner) . $close
-                    : "\n$pad$open" . $inner . "\n$pad$close");
-            } else { # string
-                $out .= $in_pre ? $open . $node->val . $close : "\n$pad$open" . trim($node->val) . $close;
-            }
-        } while ($node = $node->right);
+        }
         return $out;
     }
 
@@ -163,18 +154,29 @@ class XML
         return $new;
     }
 
-    function childs($query) {
+    function has_childs($node, &$obj = null) {
+        $obj = is_object($node->val);
+        return $obj || is_string($node->val) && '' !== $node->val && '#' != $node->name[0];
     }
 
-    function remove($ary = []) {
+    function remove($ary = [], $with_childs = true) {
         $ary or $ary = $this->selected;
-        foreach ($ary as $node) {
-            $node->right and $node->right->left = $node->left;
-            $node->left ? ($node->left->right = $node->right) : ($node->up->val = $node->right ?? '');
+        is_array($ary) or $ary = [$ary];
+        foreach ($ary as $dst) {
+            if ($with_childs || !$this->has_childs($dst, $obj)) {
+                if ($dst->right)
+                    $dst->right->left = $dst->left;
+                $dst->left ? ($dst->left->right = $dst->right) : ($dst->up->val = $dst->right ?? null);
+            } elseif ($obj) {
+                $this->src_relations($firstChild = $dst->val, $dst->left, $dst->up, $dst->right, $lastChild);
+                $this->dst_relations($dst, $firstChild, $lastChild);
+            } else {
+                $dst->name = '#text';
+            }
         }
     }
 
-    private function left_up_right($src, $left, $up, $right, &$last = null) {
+    private function src_relations($src, $left, $up, $right, &$last = null) {
         for ($src->left = $left; $src; $src = $src->right) {
             $src->up = $up;
             $last = $src;
@@ -182,29 +184,38 @@ class XML
         $last->right = $right;
     }
 
+    private function dst_relations($dst, $firstChild, $lastChild) {
+        $dst->left ? ($dst->left->right = $firstChild) : ($dst->up->val = $firstChild);
+        if ($dst->right)
+            $dst->right->left = $lastChild;
+    }
+
     function inner($src) {
-        if (!$src instanceof XML)
-            ($src = new XML($src))->parse();
+        $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $dst->val = $src->clone();
-            $this->left_up_right($dst->val, null, $dst, null);
+            $this->src_relations($dst->val = $src->clone(), null, $dst, null);
         }
     }
 
     function outer($src) {
-        if (!$src instanceof XML)
-            ($src = new XML($src))->parse();
+        $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->left_up_right($copy = $src->clone(), $dst->left, $dst->up, $dst->right, $last);
-            $dst->left ? ($dst->left->right = $copy) : ($dst->up->val = $copy);
-            if ($dst->right)
-                $dst->right->left = $last;
+            $this->src_relations($firstChild = $src->clone(), $dst->left, $dst->up, $dst->right, $lastChild);
+            $this->dst_relations($dst, $firstChild, $lastChild);
         }
     }
 
-    function _move(&$ary, $to, $m = 1, $text = false) {
+    function up($m, $node = false) { # go absolute & relative
+        $node or $node = $this->last;
+        for ($stk = []; $node && '#root' != $node->name; $node = $node->up)
+            $stk[] = $node;
+        $m < 0 ? ($m = -$m) : array_reverse($stk);
+        return $stk[$m] ?? null;
+    }
+
+    function go(&$ary, $to, $m = 1, $text = false) { # go relative
         $new = [];
         foreach ($ary as $node) {
             for ($n = 0; $node && $n < $m; !$text && $node && '#' == $node->name[0] or $n++)
@@ -217,15 +228,21 @@ class XML
     }
 
     function prev($m = 1, $text = false) {
-        return $this->_move($this->selected, 'left', $m, $text);
+        return $this->go($this->selected, 'left', $m, $text);
     }
 
     function next($m = 1, $text = false) {
-        return $this->_move($this->selected, 'right', $m, $text);
+        return $this->go($this->selected, 'right', $m, $text);
     }
 
     function parent($m = 1) {
-        return $this->_move($this->selected, 'up', $m);
+        return $this->go($this->selected, 'up', $m);
+    }
+
+    function query($q, $is_all = false) {
+    }
+
+    function childs($query) {
     }
 
     function parents($query) {
@@ -239,9 +256,6 @@ class XML
             $node->attr = [$name => $val] + $node->attr;
         }
         return $old;
-    }
-
-    function query($q, $is_all = false) {
     }
 
     function each($fn) {
@@ -312,9 +326,10 @@ class XML
             if ('#text' == $node->name)
                 [$node->val, $str] = [$str, ''];
             $node = $this->push($node);
-            '' === $str or [$node, $str] = [$this->push($node, $str), ''];
+            if ('' !== $str)
+                [$node, $str] = [$this->push($node, $str), ''];
         };
-        $this->ptr = [null, &$this->root->val, $this->root];
+        $this->ptr = [$this->last = null, &$this->root->val, $this->root]; # setup the cursor: &prev, &place, &parent
         $this->selected = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
@@ -343,12 +358,15 @@ class XML
                     $y->find = "</$node->name>";
                 }
             } elseif ('close' == $y->mode) { # sample: </tag>
-                $new = strtolower(substr($t, 2, -1));
-                '' === $node->name or $this->push([$node->name, $str, $node->attr]);
-                $new == $node->name or $this->push([$new, 1]);
+                if ('' !== $node->name)
+                    $this->push([$node->name, $str, $node->attr]);
+                $close = strtolower(substr($t, 2, -1));
+                if ($close != $node->name && $close == $this->ptr[2]->name)
+                    $this->close();
                 $node = $this->node($str = '');
             } else { # text
-                '' !== $node->name or $node->name = '#text';
+                if ('' === $node->name)
+                    $node->name = '#text';
                 $str .= $t;
             }
             $y->mode = 'txt';
@@ -360,7 +378,7 @@ class XML
     protected function relations($node, $is_parent) {
         $node->left = $this->ptr[0];
         $node->up = $this->ptr[2];
-        $this->ptr[1] = $node; # add the node
+        $this->ptr[1] = $this->last = $node; # add the node
         $this->ptr = $is_parent ? [null, &$node->val, $node] : [$node, &$node->right, $node->up];
     }
 
@@ -370,7 +388,7 @@ class XML
             for (; $cnt--; $parent = $parent->up);
             $this->ptr = [$parent, &$parent->right, $parent->up];
         }
-        return $parent->name;
+        return $parent->name;///
     }
 
     protected function push($node, $str = 0) {
@@ -379,21 +397,15 @@ class XML
         if (is_string($str)) {
             $node->name = '#text';
             $node->val = $str;
-        }
-        $parent = $this->ptr[2];
-        if (1 === $node->val) { # close-tag
-            if ($node->name == $parent->name)
+        } elseif ('#' != $node->name[0]) {
+            $parent = $this->ptr[2];
+            $om = $this->omis[$parent->name] ?? false;
+            if ($om && in_array($node->name, $om))
                 $this->close();
-        } else {
-            if ('#' != $node->name[0]) {
-                $om = $this->omis[$parent->name] ?? false;
-                if ($om && in_array($node->name, $om))
-                    $this->close();
-                if ($parent->name == $node->name && in_array($node->name, $this->omis[0]))
-                    $this->close();
-            }
-            $this->relations($node, null === $node->val);
+            if ($parent->name == $node->name && in_array($node->name, $this->omis[0]))
+                $this->close();
         }
+        $this->relations($node, null === $node->val);
         return $this->node();
     }
 
