@@ -9,7 +9,7 @@ class CSS
     public $sort = false; # (compare 2 CSS)
 
     protected $in;
-    protected $array = [];
+    protected $stk = [];
 
     function __construct(string $in = '', $tab = 2) {
         $this->in = unl($in);
@@ -23,8 +23,8 @@ class CSS
     }
 
     function __toString() {
-        $this->array or $this->parse();
-        return $this->in = call_user_func($this->render, $this->array);
+        $this->stk or $this->parse();
+        return $this->in = call_user_func($this->render, $this->stk);
     }
 
     function css_mini($node) { // 2do
@@ -37,7 +37,7 @@ class CSS
             $this->pad ? "\n" : '',
             $this->pad ? ' ' : '',
         ];
-        $this->walk($this->array, $fn = function ($one, $y) use (&$fn, $x) {
+        $this->walk($this->stk, $fn = function ($one, $y) use (&$fn, $x) {
             if (isset($one[1])) {
                 $this->in .= $y->pad . $this->define($one[0], $x[2]) . "$x[2]{" . $x[1];
                 $last = array_key_last($one[1]);
@@ -89,16 +89,16 @@ class CSS
     const CLS = 8; # .class
     const ATTR = 16; # [checked]
 
-    const SPACE = 128; # any child
+    const SPACE = 128; # any child (by default)
     const GT = 256; # > ..1 depth childs only
     const PLUS = 512; # + ..next sibling
     const TILDA = 1024; # ~ ..any siblings
     const SEMI = 2048; # : pseudoclass :first :last :eq(n) :prt :prt(n)
     const COMMA = 4096; # , new rule
 
-    function query($str) {
+    function query($q) {
         $ary = [];
-        foreach (preg_split("/\s+/s", $str) as $one) {
+        foreach (preg_split("/\s+/s", $q) as $one) {
             
         }
     }
@@ -170,8 +170,8 @@ class CSS
             $define = [];
             return $v;
         };
-        $this->array = [];
-        $ptr = [&$this->array];
+        $this->stk = [];
+        $ptr = [&$this->stk];
         foreach ($this->tokens() as $t => $y) {
             if ($y->found || $y->find || $y->space)
                 continue;

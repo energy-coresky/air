@@ -382,7 +382,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 if ($y->space) {
                     $out .= $t;
                 } else {
-                    $v = $xml->_attr($attr, $t);
+                    $v = $xml->set_attr($attr, $t);
                     $out .= $v ? html($t) : self::span($u . 'j', $t);
                 }
                 continue;

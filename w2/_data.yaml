@@ -85,28 +85,29 @@ omis: # tags omission rules
 #.html
 
 #.md
-code_type: @csv jet php css js html yaml bash
+code_type: @csv jet php css js html yaml bash # 2do saw
 typ_1: {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
 typ_2: @csv script pre style
-blk: {
-  '~`':   blk_fenced,
-  '#':    blk_h6,
-  '-*_=': blk_h2r,
-  '-*+':  blk_ul,    '0123456789': blk_ol,
-  '<':    blk_html,           '>': blk_bq,
-  '[':    square,
-  '':     blk_p,
+blk_tag: {
+  blockquote: blk_bq, ul: blk_ul, ol: blk_ol,
+  p: leaf_p, table: leaf_table,
+  dl: leaf_dl, x_code: leaf_fenced, x_html: leaf_html,
 }
-tag:
-  p:
-  ul:
-  ol: {start: %d}
-  li:
-  pre: {class: language-%s} # fenced and indent
-  code:
-  blockquote:
-  hr:
-  hx: # h1..h6
+blk_chr: {
+  '#':    leaf_h6,
+  '-*_=': leaf_h2r,
+  '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_bq,
+  '[':    inline_square,
+  '<':    leaf_html,
+  '~`':   leaf_fenced,
+  " \t": bleaf_indent,
+  '':     leaf_p,
+}
+blk_re: [
+  "/^>(\s*)/",           # for blk_bq [0]
+  "/^[\*\-\+](\s+|\z)/", # for blk_ul [1]
+  "/^(\d{1,9})(\.|\))(\s+|\z)/", # for blk_ol [2]
+]
 #.md
 
 #.js

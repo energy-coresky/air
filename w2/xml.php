@@ -63,7 +63,7 @@ class XML extends CSS
         $ary or $ary = $this->selected;
         $new = false;
         foreach ($ary as $node) {
-            $this->ptr = $new ? [$new, &$new->right, $this->root] : [null, &$this->root->val, $this->root];
+            $this->ptr = $new ? [$new, $this->root, &$new->right] : [null, $this->root, &$this->root->val];
             $this->relations($new = clone $node, true);
             if (is_object($node->val)) {
                 foreach ($this->gen($node->val) as $node) {
@@ -207,12 +207,14 @@ class XML extends CSS
         }
     }
 
-    function up($m, $node = false) { # go absolute & relative
-        $node or $node = $this->last;
-        for ($stk = []; $node && '#root' != $node->name; $node = $node->up)
-            $stk[] = $node;
-        $m < 0 ? ($m = -$m) : array_reverse($stk);
-        return $stk[$m] ?? null;
+    function up($m = null) { # go absolute & relative////////////////////////////////////
+        if (is_int($m))
+            return $this->stk[$m < 0 ? count($this->stk) + $m : $m] ?? null;
+        $m or $m = $this->last;
+        is_object($m->val) || null === $m->val or $m = $m->up;
+        for ($this->stk = []; $m; $m = $m->up)
+            array_unshift($this->stk, $m);
+        return count($this->stk);
     }
 
     function go(&$ary, $to, $m = 1, $text = false) { # go relative
@@ -285,7 +287,7 @@ class XML extends CSS
                     $t = substr($in, $j, strcspn($in, "=>\t \n", $j));
                 }
             } elseif ('<' == $t && preg_match("@^(<!\-\-|<!\[CDATA\[|</?[a-z\d\-]+)(\s|>)@is", substr($in, $j, 51), $match)) {
-                [$m0, $t] = $match;
+                [$m0, $t] = $match; // 2do: [a-z\d] ws \w .. what about underscore?
                 $y->mode = '/' == $t[1] ? 'close' : 'open';
                 if ('<!--' == $t) { # comment
                     $y->end = '-->';
@@ -329,7 +331,7 @@ class XML extends CSS
             }
             $name = $str = $attr = null;
         };
-        $this->ptr = [null, &$this->root->val, $this->last = $this->root]; # setup the cursor: &prev, &place, &parent
+        $this->ptr = [null, $this->last = $this->root, &$this->root->val]; # setup the cursor: &prev, &parent, &place
         $this->selected = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
@@ -340,7 +342,7 @@ class XML extends CSS
                 $y->len += $y->find ? 0 : 3; # correct $y->len!
             } elseif ('open' == $y->mode) { # sample: <tag
                 $flush();
-                $name = rtrim(strtolower(substr($t, 1)), '/');
+                $name = rtrim(strtolower(substr($t, 1)), '/'); ///
                 $y->mode = 'attr';
                 continue;
             } elseif ('attr' == $y->mode) {
@@ -356,8 +358,8 @@ class XML extends CSS
                 }
             } elseif ('close' == $y->mode) { # sample: </tag>
                 is_null($name) or $this->push($name, $str ?? '', $attr);
-                if (strtolower(substr($t, 2, -1)) == $this->ptr[2]->name)
-                    $this->close();
+                $tag = strtolower(substr($t, 2, -1));
+                $tag === $name or $this->close($tag);
                 $name = $str = $attr = null;
             } else { # text
                 if (is_null($name))
@@ -370,26 +372,24 @@ class XML extends CSS
         return $this->root->val;
     }
 
-    protected function relations($node, $is_parent) {
-        $node->left = $this->ptr[0];
-        $node->up = $this->ptr[2];
-        $this->ptr[1] = $this->last = $node; # add the node
-        $this->ptr = $is_parent ? [null, &$node->val, $node] : [$node, &$node->right, $node->up];
+    protected function last($node, $down = false) {
+        $this->last = $node;
+        $this->ptr = $down ? [null, $node, &$node->val] : [$node, $node->up, &$node->right];
     }
 
-    protected function close($cnt = 1) {
-        $parent = $this->ptr[2];
-        if ($cnt--) {
-            for (; $cnt--; $parent = $parent->up);
-            $this->ptr = [$parent, &$parent->right, $parent->up];
-        }
-        return $parent->name;///
+    protected function close($tag = null) {
+        (is_null($tag) || $tag === $this->ptr[1]->name) && $this->last($this->ptr[1]);
+    }
+
+    protected function relations($node, $down) {
+        [$node->left, $node->up] = $this->ptr;
+        $this->last($this->ptr[2] = $node/*add the node*/, $down);
     }
 
     protected function push($name, $val = null, $attr = null) {
         $node = $this->node($name, $val, $attr);
         if ('#' != $name[0]) {
-            $parent = $this->ptr[2];
+            $parent = $this->ptr[1]; //2do omission tags & !doctype
             $om = $this->omis[$parent->name] ?? false;
             if ($om && in_array($name, $om))
                 $this->close();
