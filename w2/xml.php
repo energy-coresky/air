@@ -30,20 +30,20 @@ class XML extends CSS
     }
 
     function dump($in = false) {
-        echo "depth.nn [left up right]\n\n";
+        echo "depth.id [left up right]\n\n";
         # arrow fn for iterator_apply must return something like true!
-        iterator_apply($g = $this->gen($in), fn() => $g->current()->nn = ++$this->i);
+        iterator_apply($g = $this->gen($in), fn() => $g->current()->id = ++$this->i);
         foreach ($this->gen($in) as $depth => $node) {
-            echo str_pad('', 2 * $depth) . "$depth.$node->nn [";
-            echo (isset($node->left) ? ($node->left->nn ?? '.') : '_') . ' ';
-            echo (isset($node->up) ? ($node->up->nn ?? '.') : '_') . ' ';
-            echo isset($node->right) ? ($node->right->nn ?? '.') . "] $node->name " : "_] $node->name ";
+            echo str_pad('', 2 * $depth) . "$depth.$node->id [";
+            echo (isset($node->left) ? ($node->left->id ?? '.') : '_') . ' ';
+            echo (isset($node->up) ? ($node->up->id ?? '.') : '_') . ' ';
+            echo isset($node->right) ? ($node->right->id ?? '.') . "] $node->name " : "_] $node->name ";
             if (is_string($node->val)) {
                 echo strlen($node->val) . var_export(preg_replace("/\n/s", ' ', substr($node->val, 0, 33)), true) . "\n";
             } elseif (0 === $node->val) {
                 echo ".........VOID\n";
             } else {
-                echo 'object' == ($type = gettype($node->val)) ? '[' . ($node->val->nn ?? '.') . "]\n" : "$type\n";
+                echo 'object' == ($type = gettype($node->val)) ? '[' . ($node->val->id ?? '.') . "]\n" : "$type\n";
             }
         }
     }
@@ -63,7 +63,7 @@ class XML extends CSS
         $ary or $ary = $this->selected;
         $new = false;
         foreach ($ary as $node) {
-            $this->ptr = $new ? [$new, $this->root, &$new->right] : [null, $this->root, &$this->root->val];
+            $this->last($new ?: $this->root, !$new);
             $this->relations($new = clone $node, true);
             if (is_object($node->val)) {
                 foreach ($this->gen($node->val) as $node) {
@@ -89,7 +89,7 @@ class XML extends CSS
         $out = '';
         foreach ($this->gen($in, true) as $depth => $node) {
             if ('#' == $node->name[0]) {
-                $out .= sprintf($this->spec[$node->name], $node->val);
+                $out .= sprintf($this->spec[$node->name] ?? '%s', $node->val);
             } elseif ($depth < 0) {
                 $out .= "</$node->name>";
             } else {
@@ -109,7 +109,7 @@ class XML extends CSS
         for ($out = ''; $node; $node = $node->right) {
             $open = $pad . $this->tag($node, $close);
             if ('#' == $node->name[0]) {
-                $str = sprintf($this->spec[$node->name], $node->val);
+                $str = sprintf($this->spec[$node->name] ?? '%s', $node->val);
                 $out .= trim($str);
             } elseif (0 === $node->val) { # void element
                 $out .= "$open\n";
@@ -131,9 +131,9 @@ class XML extends CSS
         return $out;
     }
 
-    function byTag(string $name) {
+    function byTag(string $tag) {
         $new = new XML;
-        iterator_apply($g = $this->gen(), fn() => $name != $g->current()->name or $new->selected[] = $g->current());
+        iterator_apply($g = $this->gen(), fn() => $tag != $g->current()->name or $new->selected[] = $g->current());
         return $new;
     }
 
@@ -164,37 +164,33 @@ class XML extends CSS
         is_array($ary) or $ary = [$ary];
         foreach ($ary as $dst) {
             if ($with_childs || !$this->has_childs($dst, $obj)) {
-                if ($dst->right)
-                    $dst->right->left = $dst->left;
-                $dst->left ? ($dst->left->right = $dst->right) : ($dst->up->val = $dst->right ?? null);
+                $this->del_relations($dst, $dst->right, $dst->left);
             } elseif ($obj) {
-                $this->src_relations($firstChild = $dst->val, $dst->left, $dst->up, $dst->right, $lastChild);
-                $this->dst_relations($dst, $firstChild, $lastChild);
+                $this->ins_relations($dst->val, $dst->left, $dst->up, $dst->right, $last);
+                $this->del_relations($dst, $dst->val, $last);
             } else {
                 $dst->name = '#text';
             }
         }
     }
 
-    private function src_relations($src, $left, $up, $right, &$last = null) {
-        for ($src->left = $left; $src; $src = $src->right) {
-            $src->up = $up;
-            $last = $src;
-        }
+    private function ins_relations($ins, $left, $up, $right, &$last = null) {
+        for ($ins->left = $left; $ins; $ins = $ins->right)
+            [$ins->up, $last] = [$up, $ins];
         $last->right = $right;
     }
 
-    private function dst_relations($dst, $firstChild, $lastChild) {
-        $dst->left ? ($dst->left->right = $firstChild) : ($dst->up->val = $firstChild);
-        if ($dst->right)
-            $dst->right->left = $lastChild;
+    private function del_relations($del, $first, $last) {
+        $del->left ? ($del->left->right = $first) : ($del->up->val = $first);
+        if ($del->right)
+            $del->right->left = $last;
     }
 
     function inner($src) {
         $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->src_relations($dst->val = $src->clone(), null, $dst, null);
+            $this->ins_relations($dst->val = $src->clone(), null, $dst, null);
         }
     }
 
@@ -202,8 +198,47 @@ class XML extends CSS
         $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->src_relations($firstChild = $src->clone(), $dst->left, $dst->up, $dst->right, $lastChild);
-            $this->dst_relations($dst, $firstChild, $lastChild);
+            $this->ins_relations($first = $src->clone(), $dst->left, $dst->up, $dst->right, $last);
+            $this->del_relations($dst, $first, $last);
+        }
+    }
+
+    function before($src) {
+        $src instanceof XML or ($src = new XML($src))->parse();
+        $src->selected or $src->selected = [$src->root->val];
+        foreach ($this->selected as $dst) {
+            $this->ins_relations($first = $src->clone(), $dst->left, $dst->up, $dst, $last);
+            $dst->left ? ($dst->left->right = $first) : ($dst->up->val = $first);
+            $dst->left = $last;
+        }
+    }
+
+    function after($src) {
+        $src instanceof XML or ($src = new XML($src))->parse();
+        $src->selected or $src->selected = [$src->root->val];
+        foreach ($this->selected as $dst) {
+            $this->ins_relations($first = $src->clone(), $dst, $dst->up, $dst->right, $last);
+            if ($dst->right)
+                $dst->right->left = $last;
+            $dst->right = $first;
+        }
+    }
+
+    function prepend($src) {
+        $src instanceof XML or ($src = new XML($src))->parse();
+        $src->selected or $src->selected = [$src->root->val];
+        foreach ($this->selected as $dst) {
+            $this->ins_relations($first = $src->clone(), null, $dst, $dst->val, $last);
+            [$dst->val->left, $dst->val] = [$last, $first];
+        }
+    }
+
+    function append($src) {
+        $src instanceof XML or ($src = new XML($src))->parse();
+        $src->selected or $src->selected = [$src->root->val];
+        foreach ($this->selected as $dst) {
+            for ($left = $dst->val; $left->right; $left = $left->right);
+            $this->ins_relations($left->right = $src->clone(), $left, $dst, null);
         }
     }
 
@@ -331,7 +366,7 @@ class XML extends CSS
             }
             $name = $str = $attr = null;
         };
-        $this->ptr = [null, $this->last = $this->root, &$this->root->val]; # setup the cursor: &prev, &parent, &place
+        $this->last($this->root, true);
         $this->selected = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
@@ -372,22 +407,21 @@ class XML extends CSS
         return $this->root->val;
     }
 
-    protected function last($node, $down = false) {
-        $this->last = $node;
+    protected function last($node, $down = false) { # setup the cursor: prev, parent, &place for next
         $this->ptr = $down ? [null, $node, &$node->val] : [$node, $node->up, &$node->right];
+        return $this->last = $node;
     }
 
     protected function close($tag = null) {
-        (is_null($tag) || $tag === $this->ptr[1]->name) && $this->last($this->ptr[1]);
+        return is_null($tag) || $tag === $this->ptr[1]->name ? $this->last($this->ptr[1]) : false;
     }
 
     protected function relations($node, $down) {
         [$node->left, $node->up] = $this->ptr;
-        $this->last($this->ptr[2] = $node/*add the node*/, $down);
+        return $this->last($this->ptr[2] = $node/*add the node*/, $down);
     }
 
     protected function push($name, $val = null, $attr = null) {
-        $node = $this->node($name, $val, $attr);
         if ('#' != $name[0]) {
             $parent = $this->ptr[1]; //2do omission tags & !doctype
             $om = $this->omis[$parent->name] ?? false;
@@ -396,11 +430,10 @@ class XML extends CSS
             if ($parent->name == $name && in_array($name, $this->omis[0]))
                 $this->close();
         }
-        $this->relations($node, null === $val);
-        return $node;
+        return $this->relations($this->node($name, $val, $attr), null === $val);
     }
 
-    function node($name = '', $val = null, $attr = null) {
+    function node($name, $val = null, $attr = null) {
         return (object)[
             'name' => $name,
             'attr' => $attr,

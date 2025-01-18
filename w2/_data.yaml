@@ -85,6 +85,7 @@ omis: # tags omission rules
 #.html
 
 #.md
+chr: "\`*_{}[]()<>#+-.!|^=~:"
 code_type: @csv jet php css js html yaml bash # 2do saw
 typ_1: {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
 typ_2: @csv script pre style
@@ -94,8 +95,7 @@ blk_tag: {
   dl: leaf_dl, x_code: leaf_fenced, x_html: leaf_html,
 }
 blk_chr: {
-  '#':    leaf_h6,
-  '-*_=': leaf_h2r,
+  '-*_=': leaf_h2r, '#': leaf_h6,
   '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_bq,
   '[':    inline_square,
   '<':    leaf_html,
@@ -108,6 +108,12 @@ blk_re: [
   "/^[\*\-\+](\s+|\z)/", # for blk_ul [1]
   "/^(\d{1,9})(\.|\))(\s+|\z)/", # for blk_ol [2]
 ]
+in_tag: {
+  '~': in_del, '`': in_code, '*_': in_ems, '^': in_sup, '=': in_mark, ':': in_emoji_dl, '|': in_table,
+}
+email_re: "/^[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*$/i"
+tagfilter: @csv title textarea style xmp iframe noembed noframes script plaintext
+
 #.md
 
 #.js

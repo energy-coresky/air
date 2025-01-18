@@ -59,7 +59,7 @@ class MD extends XML # the MarkDown
         if ($h12 && 'p' == $p && $z == chop($x->line)) {
             $p = $h12;
             $this->close();
-            return $this->push('skip', $t = $x->line, ['c' => 'r']);
+            return $this->add($t = $x->line, ['c' => 'r']);
         }
         if ('=' == $t || strlen($z) < 3)
             return false;
@@ -67,10 +67,9 @@ class MD extends XML # the MarkDown
     }
 
     private function leaf_p($x, &$t) {
-        if ('p' != $this->ptr[1]->name) {
+        if ('p' != $this->ptr[1]->name && !$x->empty) {
             $this->push('p');
         }
-        $this->add($t);
         return false;
     }
 
@@ -79,22 +78,27 @@ class MD extends XML # the MarkDown
     private function leaf_dl($x, &$t) {# :dl-dt-dd
     }
 
-    private function blk_bq($x, &$t) {
-        if (!$m = $this->x_pad($x, 0))
+    private function blk_bq($x, &$t, $tag = false) {
+        if ($tag) {
+            if ('>' == $t && $x->pad - $x->_pad < 4) {
+                $this->add($t, ['c' => 'r']);
+            }
+        }
+        if (!$m = $this->set_x($x, 0))
             return false;
 
         $_t = ' ' == ($x->line[1] ?? '') ? ' ' : '';
         if ('blockquote' == $x->tag->name) # continue bq
-            return $this->push('skip', $t .= $_t);
+            return $this->add($t .= $_t, ['c' => 'r']);
         if ('p' == $this->ptr[1]->name)
             $this->close();
-        return $this->push('blockquote', null, ['t' => $t .= $_t, 'pad' => 2 + $x->pad]);
+        return $this->push('blockquote', null, ['t' => $t .= $_t, 'pad' => $x->pad]);
     }
 
-    private function blk_ul($x, &$t) {
-        if (!$m = $this->x_pad($x, 1))
+    private function blk_ul($x, &$t, $tag = false) {
+        if (!$m = $this->set_x($x, 1))
             return false;
-        if ('ul' == $x->tag->name && $x->pad < $x->tag->attr['pad']) {
+        /*if ('ul' == $x->tag->name && $x->pad < $x->tag->attr['pad']) {
             if ($t == $x->tag->attr['d']) { # next li
                 $this->last($x->tag);
                 $x->tag->attr['pad'] = 2 + $x->pad;
@@ -102,13 +106,13 @@ class MD extends XML # the MarkDown
             } else { # other marker, close current ul
                 $this->last($x->tag->up);
             }
-        }
+        }*/
         $this->push('ul', null, ['pad' => 2 + $x->pad, 'tight' => '1', 'd' => $t]);
         return $this->push('li', null, ['t' => $t = $m[0]]);
     }
 
-    private function blk_ol($x, &$t) {
-        if (!$m = $this->x_pad($x, 2))
+    private function blk_ol($x, &$t, $tag = false) {
+        if (!$m = $this->set_x($x, 2))
             return false;
         $pad = $x->pad + strlen($m[0]) + (' ' == $m[3] ? 0 : 1);
 
@@ -130,7 +134,7 @@ class MD extends XML # the MarkDown
             if (preg_match("/^$x->grab+\s*$/", $x->line)) {
                 $x->grab = '';
                 $this->last($x->tag->up);
-                return $this->push('skip', $t = $x->line);
+                return $this->add($t = $x->line, ['c' => 'r']);
             }
         } elseif (preg_match("/^($t{3,})\s*(\w*).*$/", $x->line, $m)) {
             $x->grab = $m[1];
@@ -143,90 +147,99 @@ class MD extends XML # the MarkDown
     }
 
     private function bleaf_indent($x, &$t) {
-        $this->x_pad($x, $t = $this->spn(" \t"));
         $diff = $x->pad - $x->_pad;
         if ($diff > 3) {
-            
-            
         }
-        //$this->push('skip', $t);
         return true;
     }
 
-    private function new_line($x, &$t) {
-        if ("\n" == $t) {
-            $x->line = $this->cspn("\n");
-            $x->pad = $x->v = 0;
-            $x->nl = true;
-            if (is_num($this->ptr[1]->name[1] ?? '')) # close h1..h6
-                $this->close();
-            $x->sz = $x->ini = $this->set_up($this->last);
-            if ($x->sz && 'x' == $this->up(-1)->name[0]) { // x_code, x_html
-                $this->add($t);
-            } else {
-                $this->push('skip', $t);
-            }
-        } elseif ($x->ini) {
-            $x->ini = false;
-            foreach ($this->stk as $tag) {
-                //trace($tag);
-            }
-        } else {
-            $x->tag = $this->up(++$x->v);
-            foreach (MD::$MD->blk_chr as $chr => $func) {
-                if ($chr && !strpbrk($t, $chr))
-                    continue;
-                if ($this->$func($x, $t))
-                    return $x->nl = 'b' == $func[0];
-            }
-            return $x->nl = false;
-        }
+    private function left_line($x, &$_t) {
+
+        # add new blocks
+        $x->line = $this->cspn("\n");
+        return $_t = '';
+/*        if ("\n" == $t) {
+            $this->add($t, !$this->stk || 'x' != $this->up(-1)->name[0]); // x_code, x_html
+        } elseif (strpbrk($t, " \t")) {
+            
+        }*/
     }
 
     protected function parse(): ?stdClass { # lists: + - *
         $x = new stdClass;
-        $x->line = $this->cspn("\n", 0);
-        $x->grab = $x->html = $x->pad = $x->v = $x->lazy = 0;
-        $len = $x->nl = $x->ini = strlen($in =& $this->in);
-        $this->ptr = [null, $this->last = $this->root, &$this->root->val]; # setup the cursor: &prev, &parent, &place
-        $j =& $this->j;
-        $char = [
-            "\\`*_{}[]()<>#+-.!|^=~:",
-        ];
-        $this->node = $this->node();
-        $chr =& $char[0];
-        for ($t = ''; $j < $len; $j += strlen($t)) {
-            if ("\n" == ($t = $in[$j]) || $x->nl) {
-                $this->new_line($x, $t);
-            } elseif ("\\" == $t) { # escaped
-                $x->nl = false;
-                $next = $in[1 + $j] ?? '';
-                $this->push('#text', $next, ['t' => $t .= $next]);
-            } elseif ('[' == $t && $this->inline_square($x, $t)) {
-                ;
-            } elseif (strpbrk($t, $chr)) {
-                $this->add($t = $this->spn($t));
-            } else {
-                $t = substr($in, $j, $n = strcspn($in, "\n$chr", $j));
-                if ('  ' == substr($t, -2) && "\n" == ($in[$j + strlen($t)] ?? '')) {
-                    $this->add($_t = chop($t));
-                    $this->push('br', 0, ['t' => substr($t, strlen($_t))]);
-                } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_link($t, $j)) {
-                    
-                } else {
-                    $this->add($t);
+        $x->grab = $x->html = $x->pad = $x->lazy = $jj =0;
+        $this->last($this->root, true);
+        $len = strlen($in =& $this->in);
+        for ($j =& $this->j; $j < $len; $j += strlen($u)) {
+            while ("\n" == ($u = $in[$j] ?? '') || !$j) {
+                if ("\n" == $u) {
+                    $this->add("\n");
+                    $j++;
                 }
+                if (is_num($this->ptr[1]->name[1] ?? '')) # close h1..h6
+                    $this->close();
+                $x->pad = $close = 0;
+                $tag = $this->last;
+                for ($this->stk = []; $tag && '#root' != $tag->name; $tag = $tag->up)
+                    isset(MD::$MD->blk_tag[$tag->name]) && array_unshift($this->stk, $tag);
+                $u = $this->set_x($x);
+                foreach ($this->stk as $tag) { # test continue blocks
+                    if ('blockquote' == $tag->name) {
+                        if ($close = '>' != $u || $x->pad > 3)
+                            break;
+                        $j++;
+                        $u = $this->set_x($x);
+                    } elseif (in_array($tag->name, ['ul', 'ol'])) {
+                        if ($close = !($x->empty || $x->pad < $tag->attr['pad']))
+                            break;
+                    } elseif ('p' == $tag->name && $x->empty) {
+                        $this->last($tag);
+                        goto end;
+                    }
+                }
+                $x->line = $this->cspn("\n");
+                $x->close = $close ? $tag->up : false;
+                foreach (MD::$MD->blk_chr as $chr => $func) { # search for new blocks
+                    if ($chr && !strpbrk($u, $chr) || !$this->$func($x, $u))
+                        continue;
+                    if ('b' == $func[0]) {
+                        $j += strlen($u);
+                        $u = $this->set_x($x);
+                        break;
+                    }
+                }
+                end:
+                if (!$j || $jj++ > 1000)
+                    break;
             }
-        }
-        foreach ($this->for as $i => $for) {
-            if (isset($this->ref[$for])) {
-                #$this->tok[$i][4] = $this->ref[$for];
-            } else {
-                #$this->tok[$i][2] = $this->tok[$i][1];
-                #$this->tok[$i][0] = 11;
-            }
+            $this->inline($x, $u);
+            
+if($jj++ > 1000)break;
         }
         return $this->root->val;
+    }
+
+    private function inline($x, &$u) {
+        $in =& $this->in;
+        $j =& $this->j;
+        if ("\\" == $u) { # escaped
+            $next = $in[1 + $j] ?? '';
+            $this->push('#text', $next, ['t' => $u .= $next]);
+        } elseif ('[' == $u && $this->inline_square($x, $u)) {
+            ;
+        } elseif (strpbrk($u, MD::$MD->chr)) {
+            $this->add($u = $this->spn($u));
+        } else {
+            $u = substr($in, $j, $n = strcspn($in, "\n" . MD::$MD->chr, $j));
+            if ('  ' == substr($u, -2) && "\n" == ($in[$j + strlen($u)] ?? '')) {
+                $this->add($t2 = chop($u));
+                $this->push('br', 0, ['t' => substr($u, strlen($t2))]);
+            } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_link($u, $j)) {
+                
+            } else {
+                $this->add($u);
+            }
+        }
     }
 
     private function auto_link(&$t, $j) {
@@ -254,11 +267,10 @@ class MD extends XML # the MarkDown
             if ($x->lazy || ':' == trim($tail = $this->cspn("\n", $j)))
                 return false;
             $this->ref[$head] = trim(substr($tail, 1));
-            return $this->push('skip', $t = $head . $tail, ['c' => 'm']);
+            return $this->add($t = $head . $tail, ['c' => 'm']);
         } else {
             //$this->for[count()] = $head;
         }
-        $x->nl = false;
         return $this->push('a', substr($head, 1, -1), ['href' => $tail, 'c' => 'g', 't' => $t = $head . $tail]);
     }
 
@@ -280,7 +292,7 @@ class MD extends XML # the MarkDown
     function md_nice($in) { 
         $out = '';
         foreach ($this->gen($in, true) as $depth => $node) {
-            if ('skip' == $node->name)
+            if ('#skip' == $node->name)
                 continue;
             if ('li' == $node->name && 1 == $node->up->attr['tight'] && is_object($node->val))
                 for ($tag = $node->val; $tag; $tag = $tag->right)
@@ -297,41 +309,54 @@ class MD extends XML # the MarkDown
         return $out;
     }
 
-    private function add($str, $name = '#text') {
+    private function add($str, $skip = false) {
+        //$this->j += strlen($str);
+        if (is_array($skip))
+            return $this->push('#skip', $str, $skip);
+        $name = $skip ? '#skip' : '#text';
         if ($name == $this->last->name)
             return $this->last->val .= $str;
-        $this->push($name, $str);
+        return $this->push($name, $str);
     }
 
-    function set_up($node) {
-        for ($this->stk = []; '#root' != $node->name; $node = $node->up)
-            isset(MD::$MD->blk_tag[$node->name]) && array_unshift($this->stk, $node);
-        return count($this->stk);
-    }
-
-    private function x_pad($x, $str) {
+    private function set_x($x, $str = null) {
         if (is_int($str)) {
-            if (!preg_match(MD::$MD->blk_re[$str], $x->line, $match))
+            if (!preg_match(MD::$MD->blk_re[$str], $x->line, $out))
                 return false;
-            $str = $match[0];
+            $str = $out[0];
+        } elseif (is_null($str)) {
+            $str = substr($this->in, $this->j, $sz = strspn($this->in, " \t", $this->j));
+            $x->empty = in_array($out = $this->in[$this->j += $sz] ?? '', ['', "\n"]);
         }
         for ($x->_pad = $x->pad, $i = 0; true; $x->pad += 4 - $x->pad % 4) {
             $i += $len = strcspn($str, "\t", $i);
             $x->pad += $len;
             if ("\t" != ($str[$i++] ?? ''))
-                return $match ?? null;
+                break;
         }
+        return $out ?? null;
     }
 
-    private function spn($set, $j = 0) {
-        return substr($this->in, $j ?: $this->j, strspn($this->in, $set, $j ?: $this->j));
+    private function spn($set, $j = 0, &$sz = null) { # collect $set
+        return substr($this->in, $j ?: $this->j, $sz = strspn($this->in, $set, $j ?: $this->j));
     }
 
-    private function cspn($set, $j = 0) {
-        return substr($this->in, $j ?: $this->j, strcspn($this->in, $set, $j ?: $this->j));
+    private function cspn($set, $j = 0, &$sz = null) { # collect other than $set
+        return substr($this->in, $j ?: $this->j, $sz = strcspn($this->in, $set, $j ?: $this->j));
     }
 }
-/* $out .= a($t, $t);
+/* 
+
+        foreach ($this->for as $i => $for) {
+            if (isset($this->ref[$for])) {
+                #$this->tok[$i][4] = $this->ref[$for];
+            } else {
+                #$this->tok[$i][2] = $this->tok[$i][1];
+                #$this->tok[$i][0] = 11;
+            }
+        }
+
+$out .= a($t, $t);
                 in_array($type = $p3, MD::$MD->code_type) && $this->hightlight or $type = '';
                 'javascript' !== $type or $type = 'js';
                 $sub = $type ? '' : $htm;
