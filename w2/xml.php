@@ -15,7 +15,7 @@ class XML extends CSS
 
     function __construct(string $in = '', $tab = 2) {
         parent::__construct($in, $tab);
-        $this->root = $this->node('#root');
+        $this->root = XML::node('#root');
         XML::$XML or XML::$XML = yml('+ @inc(html)');
     }
 
@@ -60,24 +60,22 @@ class XML extends CSS
     }
 
     function clone(?array $ary = null): ?stdClass {
-        $ary or $ary = $this->selected;
-        $new = false;
-        foreach ($ary as $node) {
-            $this->last($new ?: $this->root, !$new);
-            $this->relations($new = clone $node, true);
+        $last = false;
+        foreach ($ary ?? $this->selected as $node) {
+            $this->last($last ?: $this->root, !$last);
+            $this->relations($last = clone $node, true);
             if (is_object($node->val)) {
                 foreach ($this->gen($node->val) as $node) {
                     $this->relations(clone $node, is_object($node->val));
-                    if (null === $node->right)
-                        $this->close();
+                    is_null($node->right) && $this->close();
                 }
             }
         }
-        $new->right = null;
+        $last->right = null;
         return $this->root->val;
     }
 
-    function tag($node, &$close, $allow = false) {
+    static function tag($node, &$close, $allow = false) {
         $close = '</' . ($open = $node->name) . '>';
         foreach ($node->attr ?? [] as $k => $v)
             if (!$allow || in_array($k, $allow))
@@ -93,7 +91,7 @@ class XML extends CSS
             } elseif ($depth < 0) {
                 $out .= "</$node->name>";
             } else {
-                $out .= $this->tag($node, $close, $allow);
+                $out .= XML::tag($node, $close, $allow);
                 if (null === $node->val || is_string($node->val))
                     $out .= $node->val . $close;
             }
@@ -107,7 +105,7 @@ class XML extends CSS
 
     function xml_nice($node, $pad = '', $in_pre = false) { // 2do CSS: white-space: pre;
         for ($out = ''; $node; $node = $node->right) {
-            $open = $pad . $this->tag($node, $close);
+            $open = $pad . XML::tag($node, $close);
             if ('#' == $node->name[0]) {
                 $str = sprintf($this->spec[$node->name] ?? '%s', $node->val);
                 $out .= trim($str);
@@ -430,10 +428,10 @@ class XML extends CSS
             if ($parent->name == $name && in_array($name, $this->omis[0]))
                 $this->close();
         }
-        return $this->relations($this->node($name, $val, $attr), null === $val);
+        return $this->relations(XML::node($name, $val, $attr), null === $val);
     }
 
-    function node($name, $val = null, $attr = null) {
+    static function node($name, $val = null, $attr = null) {
         return (object)[
             'name' => $name,
             'attr' => $attr,

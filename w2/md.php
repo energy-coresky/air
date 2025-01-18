@@ -63,13 +63,15 @@ class MD extends XML # the MarkDown
         }
         if ('=' == $t || strlen($z) < 3)
             return false;
+        $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
         return $this->push('hr', 0, ['t' => $t = $x->line]);
     }
 
     private function leaf_p($x, &$t) {
-        if ('p' != $this->ptr[1]->name && !$x->empty) {
+        if ($x->close)
+            $this->last('li' == $x->close->name ? $x->close->up : $x->close);
+        if ('p' != $this->ptr[1]->name)
             $this->push('p');
-        }
         return false;
     }
 
@@ -79,54 +81,31 @@ class MD extends XML # the MarkDown
     }
 
     private function blk_bq($x, &$t, $tag = false) {
-        if ($tag) {
-            if ('>' == $t && $x->pad - $x->_pad < 4) {
-                $this->add($t, ['c' => 'r']);
-            }
-        }
-        if (!$m = $this->set_x($x, 0))
-            return false;
-
-        $_t = ' ' == ($x->line[1] ?? '') ? ' ' : '';
-        if ('blockquote' == $x->tag->name) # continue bq
-            return $this->add($t .= $_t, ['c' => 'r']);
-        if ('p' == $this->ptr[1]->name)
-            $this->close();
-        return $this->push('blockquote', null, ['t' => $t .= $_t, 'pad' => $x->pad]);
-    }
-
-    private function blk_ul($x, &$t, $tag = false) {
-        if (!$m = $this->set_x($x, 1))
-            return false;
-        /*if ('ul' == $x->tag->name && $x->pad < $x->tag->attr['pad']) {
-            if ($t == $x->tag->attr['d']) { # next li
-                $this->last($x->tag);
-                $x->tag->attr['pad'] = 2 + $x->pad;
-                return $this->push('li', null, ['t' => $t = $m[0]]);
-            } else { # other marker, close current ul
-                $this->last($x->tag->up);
-            }
-        }*/
-        $this->push('ul', null, ['pad' => 2 + $x->pad, 'tight' => '1', 'd' => $t]);
-        return $this->push('li', null, ['t' => $t = $m[0]]);
-    }
-
-    private function blk_ol($x, &$t, $tag = false) {
         if (!$m = $this->set_x($x, 2))
             return false;
-        $pad = $x->pad + strlen($m[0]) + (' ' == $m[3] ? 0 : 1);
+        $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
+        $x->close = false;
+        return $this->push('blockquote', null, ['t' => $t = $m[0], 'pad' => $x->pad]);
+    }
 
-        if ('ol' == $x->tag->name) {
-            if ($m[2] == $x->tag->attr['d']) { # next li
-                $this->last($x->tag);
-                return $this->push('li', null, ['pad' => $pad, 't' => $t = $m[0]]);
-            } else { # other marker, close current ol
-                $this->last($x->tag->up);
-            }
+    private function blk_ul($x, &$t) {
+        return $this->blk_ol($x, $t, 1);
+    }
+
+    private function blk_ol($x, &$t, $n = 0) {
+        if (!$m = $this->set_x($x, $n))
+            return false;
+        if ($x->close) {
+            $this->last($li = $x->close);
+            $x->close = false;
+            if ($m[2] == $li->up->attr['d']) # next li
+                return $this->push('li', null, ['pad' => $x->pad, 't' => $t = $m[0]]);
+            $this->close(); # ul/ol
         }
-        $attr = 1 == $m[1] ? [] : ['start' => $m[1]];
-        $this->push('ol', null, $attr + ['tight' => '1', 'd' => $m[2]]);
-        return $this->push('li', null, ['pad' => $pad, 't' => $t = $m[0]]);
+        $attr = ['tight' => '1', 'd' => $m[2]];
+        $n or 1 == $m[1] or $attr += ['start' => $m[1]];
+        $this->push($n ? 'ul' : 'ol', null, $attr);
+        return $this->push('li', null, ['pad' => $x->pad, 't' => $t = $m[0]]);
     }
 
     private function leaf_fenced($x, &$t) {
@@ -146,23 +125,10 @@ class MD extends XML # the MarkDown
         return false;
     }
 
-    private function bleaf_indent($x, &$t) {
-        $diff = $x->pad - $x->_pad;
-        if ($diff > 3) {
+    private function leaf_indent($x, &$t) {
+        if ($x->pp > 3) {
         }
         return true;
-    }
-
-    private function left_line($x, &$_t) {
-
-        # add new blocks
-        $x->line = $this->cspn("\n");
-        return $_t = '';
-/*        if ("\n" == $t) {
-            $this->add($t, !$this->stk || 'x' != $this->up(-1)->name[0]); // x_code, x_html
-        } elseif (strpbrk($t, " \t")) {
-            
-        }*/
     }
 
     protected function parse(): ?stdClass { # lists: + - *
@@ -181,30 +147,34 @@ class MD extends XML # the MarkDown
                 $x->pad = $close = 0;
                 $tag = $this->last;
                 for ($this->stk = []; $tag && '#root' != $tag->name; $tag = $tag->up)
-                    isset(MD::$MD->blk_tag[$tag->name]) && array_unshift($this->stk, $tag);
+                    in_array($tag->name, MD::$MD->blk_tag) && array_unshift($this->stk, $tag);
                 $u = $this->set_x($x);
                 foreach ($this->stk as $tag) { # test continue blocks
                     if ('blockquote' == $tag->name) {
                         if ($close = '>' != $u || $x->pad > 3)
                             break;
                         $j++;
+                        $x->pad++;
                         $u = $this->set_x($x);
-                    } elseif (in_array($tag->name, ['ul', 'ol'])) {
-                        if ($close = !($x->empty || $x->pad < $tag->attr['pad']))
+                    } elseif ('li' == $tag->name) {
+                        if ($close = !$x->empty && $x->pad < $tag->attr['pad'])
                             break;
                     } elseif ('p' == $tag->name && $x->empty) {
                         $this->last($tag);
                         goto end;
                     }
                 }
+                $x->close = $close ? $tag : false;
+                add:
                 $x->line = $this->cspn("\n");
-                $x->close = $close ? $tag->up : false;
                 foreach (MD::$MD->blk_chr as $chr => $func) { # search for new blocks
                     if ($chr && !strpbrk($u, $chr) || !$this->$func($x, $u))
                         continue;
-                    if ('b' == $func[0]) {
-                        $j += strlen($u);
-                        $u = $this->set_x($x);
+                    $j += strlen($u);
+                    $u = $this->set_x($x);
+                    if ('b' == $func[0] && !$x->empty) {
+                        goto add;
+                    } else {
                         break;
                     }
                 }
@@ -227,10 +197,10 @@ if($jj++ > 1000)break;
             $this->push('#text', $next, ['t' => $u .= $next]);
         } elseif ('[' == $u && $this->inline_square($x, $u)) {
             ;
-        } elseif (strpbrk($u, MD::$MD->chr)) {
+        } elseif (strpbrk($u, MD::$MD->esc)) {
             $this->add($u = $this->spn($u));
         } else {
-            $u = substr($in, $j, $n = strcspn($in, "\n" . MD::$MD->chr, $j));
+            $u = substr($in, $j, $n = strcspn($in, "\n" . MD::$MD->esc, $j));
             if ('  ' == substr($u, -2) && "\n" == ($in[$j + strlen($u)] ?? '')) {
                 $this->add($t2 = chop($u));
                 $this->push('br', 0, ['t' => substr($u, strlen($t2))]);
@@ -266,6 +236,7 @@ if($jj++ > 1000)break;
         } elseif (':' == $chr) {
             if ($x->lazy || ':' == trim($tail = $this->cspn("\n", $j)))
                 return false;
+            $x->close && $this->last($x->close);
             $this->ref[$head] = trim(substr($tail, 1));
             return $this->add($t = $head . $tail, ['c' => 'm']);
         } else {
@@ -323,17 +294,22 @@ if($jj++ > 1000)break;
         if (is_int($str)) {
             if (!preg_match(MD::$MD->blk_re[$str], $x->line, $out))
                 return false;
+            if ('' === $out[3])
+                $x->pad++;
             $str = $out[0];
         } elseif (is_null($str)) {
             $str = substr($this->in, $this->j, $sz = strspn($this->in, " \t", $this->j));
             $x->empty = in_array($out = $this->in[$this->j += $sz] ?? '', ['', "\n"]);
+            if ($sz)
+                $this->add($str, true);
         }
-        for ($x->_pad = $x->pad, $i = 0; true; $x->pad += 4 - $x->pad % 4) {
+        for ($x->pp = $x->pad, $i = 0; true; $x->pad += 4 - $x->pad % 4) {
             $i += $len = strcspn($str, "\t", $i);
             $x->pad += $len;
             if ("\t" != ($str[$i++] ?? ''))
                 break;
         }
+        $x->pp = $x->pad - $x->pp;
         return $out ?? null;
     }
 
@@ -364,4 +340,4 @@ $out .= a($t, $t);
             # fenced code start           html($htm);
             $out .= $type ? Show::$type($sub) : $sub . $htm;
             sprintf('<img src="%s" alt="%s">', $p4, substr($p3, 1, -1)) # image
-*/
+trace($x->close, '===');*/

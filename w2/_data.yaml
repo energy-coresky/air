@@ -85,28 +85,24 @@ omis: # tags omission rules
 #.html
 
 #.md
-chr: "\`*_{}[]()<>#+-.!|^=~:"
+esc: "\`*_{}[]()<>#+-.!|^=~:"
 code_type: @csv jet php css js html yaml bash # 2do saw
-typ_1: {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
-typ_2: @csv script pre style
-blk_tag: {
-  blockquote: blk_bq, ul: blk_ul, ol: blk_ol,
-  p: leaf_p, table: leaf_table,
-  dl: leaf_dl, x_code: leaf_fenced, x_html: leaf_html,
-}
+typ_1:   {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
+typ_2:   @csv script pre style
+blk_tag: @csv blockquote li p table dl x_code x_html
 blk_chr: {
   '-*_=': leaf_h2r, '#': leaf_h6,
   '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_bq,
   '[':    inline_square,
   '<':    leaf_html,
   '~`':   leaf_fenced,
-  " \t": bleaf_indent,
+  " \t":  leaf_indent,
   '':     leaf_p,
 }
 blk_re: [
-  "/^>(\s*)/",           # for blk_bq [0]
-  "/^[\*\-\+](\s+|\z)/", # for blk_ul [1]
-  "/^(\d{1,9})(\.|\))(\s+|\z)/", # for blk_ol [2]
+  "/^(\d{1,9})(\.|\))(\s+|\z)/", # for blk_ol [0]
+  "/^()([\*\-\+])(\s+|\z)/", # for blk_ul [1]
+  "/^>(\s*)()()/",           # for blk_bq [2]
 ]
 in_tag: {
   '~': in_del, '`': in_code, '*_': in_ems, '^': in_sup, '=': in_mark, ':': in_emoji_dl, '|': in_table,
