@@ -7,9 +7,9 @@ class XML extends CSS
     static $XML;
 
     public $selected = [];
+    public $root;
 
     protected $ptr;
-    protected $root;
     protected $i = 0;
     protected $last;
 
@@ -39,7 +39,7 @@ class XML extends CSS
             echo (isset($node->up) ? ($node->up->id ?? '.') : '_') . ' ';
             echo isset($node->right) ? ($node->right->id ?? '.') . "] $node->name " : "_] $node->name ";
             if (is_string($node->val)) {
-                echo strlen($node->val) . var_export(preg_replace("/\n/s", ' ', substr($node->val, 0, 33)), true) . "\n";
+                echo Plan::str($node->val, 80, true) . "\n";
             } elseif (0 === $node->val) {
                 echo ".........VOID\n";
             } else {
@@ -421,7 +421,7 @@ class XML extends CSS
 
     protected function push($name, $val = null, $attr = null) {
         if ('#' != $name[0]) {
-            $parent = $this->ptr[1]; //2do omission tags & !doctype
+            $parent = $this->ptr[1]; //2do omission tags & !doctype https://html.spec.whatwg.org/dev/syntax.html#syntax-tag-omission
             $om = $this->omis[$parent->name] ?? false;
             if ($om && in_array($name, $om))
                 $this->close();

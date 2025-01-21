@@ -2,7 +2,7 @@
 
 class MD extends XML # the MarkDown
 {
-    const version = '0.232';
+    const version = '0.333';
     //const char = '\\`*_{}[]()#+-.!|^=~:'; //    >
 
     static $MD;
@@ -42,6 +42,11 @@ class MD extends XML # the MarkDown
         return $this->push('raw', html($t = $m[0]));
     }
 
+    private function leaf_table($x, &$t) {
+    }
+    private function leaf_dl($x, &$t) {# :dl-dt-dd
+    }
+
     private function leaf_h6($x, &$t) {
         if (!preg_match("/^(#{1,6})(\s+)\S/", $x->line, $m))
             return false;
@@ -68,24 +73,25 @@ class MD extends XML # the MarkDown
     }
 
     private function leaf_p($x, &$t) {
+        if ('p' == $this->ptr[1]->name)
+            return false; # lazy continue
         if ($x->close)
             $this->last('li' == $x->close->name ? $x->close->up : $x->close);
-        if ('p' != $this->ptr[1]->name)
-            $this->push('p');
+        if ($x->pad > 3) {
+            'x-code' == $this->ptr[1]->name or $this->push('x-code');
+            return $this->add($t = $x->line);
+        }
+        $this->close('x-code');
+        $x->empty or $x->added = $this->push('p');
         return false;
     }
 
-    private function leaf_table($x, &$t) {
-    }
-    private function leaf_dl($x, &$t) {# :dl-dt-dd
-    }
-
-    private function blk_bq($x, &$t, $tag = false) {
+    private function blk_bq($x, &$t, $test = false) {
         if (!$m = $this->set_x($x, 2))
             return false;
         $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
         $x->close = false;
-        return $this->push('blockquote', null, ['t' => $t = $m[0], 'pad' => $x->pad]);
+        return $this->push('blockquote', null, ['t' => $t = $m[0]]);
     }
 
     private function blk_ul($x, &$t) {
@@ -125,15 +131,9 @@ class MD extends XML # the MarkDown
         return false;
     }
 
-    private function leaf_indent($x, &$t) {
-        if ($x->pp > 3) {
-        }
-        return true;
-    }
-
     protected function parse(): ?stdClass { # lists: + - *
         $x = new stdClass;
-        $x->grab = $x->html = $x->pad = $x->lazy = $jj =0;
+        $x->grab = $x->html = $p_empty = 0;
         $this->last($this->root, true);
         $len = strlen($in =& $this->in);
         for ($j =& $this->j; $j < $len; $j += strlen($u)) {
@@ -144,18 +144,19 @@ class MD extends XML # the MarkDown
                 }
                 if (is_num($this->ptr[1]->name[1] ?? '')) # close h1..h6
                     $this->close();
-                $x->pad = $close = 0;
+                $close = $x->added = 0;
                 $tag = $this->last;
                 for ($this->stk = []; $tag && '#root' != $tag->name; $tag = $tag->up)
                     in_array($tag->name, MD::$MD->blk_tag) && array_unshift($this->stk, $tag);
-                $u = $this->set_x($x);
+                $u = $this->set_x($x, 7); # p0 = 0
+                $empty = $x->empty ? $this->last : false;
                 foreach ($this->stk as $tag) { # test continue blocks
                     if ('blockquote' == $tag->name) {
                         if ($close = '>' != $u || $x->pad > 3)
                             break;
-                        $j++;
-                        $x->pad++;
-                        $u = $this->set_x($x);
+                        $u = $this->set_x($x, 5);
+                        if ($x->empty)
+                            $empty = $this->last;
                     } elseif ('li' == $tag->name) {
                         if ($close = !$x->empty && $x->pad < $tag->attr['pad'])
                             break;
@@ -167,24 +168,26 @@ class MD extends XML # the MarkDown
                 $x->close = $close ? $tag : false;
                 add:
                 $x->line = $this->cspn("\n");
+                $last = $this->last;
                 foreach (MD::$MD->blk_chr as $chr => $func) { # search for new blocks
                     if ($chr && !strpbrk($u, $chr) || !$this->$func($x, $u))
                         continue;
-                    $j += strlen($u);
-                    $u = $this->set_x($x);
+                    $x->added = $j += strlen($u);
+                    $u = $this->set_x($x, 3);
                     if ('b' == $func[0] && !$x->empty) {
                         goto add;
                     } else {
                         break;
                     }
                 }
+                if ($p_empty && $x->added)
+                    $this->set_tight($p_empty);
                 end:
-                if (!$j || $jj++ > 1000)
+                $p_empty = $empty;
+                if (!$j)
                     break;
             }
             $this->inline($x, $u);
-            
-if($jj++ > 1000)break;
         }
         return $this->root->val;
     }
@@ -195,7 +198,7 @@ if($jj++ > 1000)break;
         if ("\\" == $u) { # escaped
             $next = $in[1 + $j] ?? '';
             $this->push('#text', $next, ['t' => $u .= $next]);
-        } elseif ('[' == $u && $this->inline_square($x, $u)) {
+        } elseif ('[' == $u && $this->in_square($x, $u)) {
             ;
         } elseif (strpbrk($u, MD::$MD->esc)) {
             $this->add($u = $this->spn($u));
@@ -225,7 +228,7 @@ if($jj++ > 1000)break;
         return true;
     }
 
-    private function inline_square($x, &$t) { # 2do  footnote
+    private function in_square($x, &$t) { # 2do  footnote
         if (!$len = strlen($head = Rare::bracket($this->in, '[', $j = $this->j, "\n\\")))
             return false;
         $tail = '';
@@ -265,7 +268,7 @@ if($jj++ > 1000)break;
         foreach ($this->gen($in, true) as $depth => $node) {
             if ('#skip' == $node->name)
                 continue;
-            if ('li' == $node->name && 1 == $node->up->attr['tight'] && is_object($node->val))
+            if ('li' == $node->name && $node->up->attr['tight'])
                 for ($tag = $node->val; $tag; $tag = $tag->right)
                     'p' != $tag->name or $this->remove($tag, false);
             if ('#' == $node->name[0]) {
@@ -290,27 +293,62 @@ if($jj++ > 1000)break;
         return $this->push($name, $str);
     }
 
-    private function set_x($x, $str = null) {
-        if (is_int($str)) {
-            if (!preg_match(MD::$MD->blk_re[$str], $x->line, $out))
+    private function set_tight($li) {
+        for (; $li && 'li' != $li->name; $li = $li->up);
+        if (!$left = $li)
+            return;
+        for ($li = $this->last; $li && 'li' != $li->name; $li = $li->up);
+        if (!$right = $li)
+            return;
+        for ($j = 1; $li; $j++, $li = $li->up);
+        for ($i = 1, $li = $left; $li; $i++, $li = $li->up);
+        $li = $i < $j ? $left : $right;
+        $li->up->attr['tight'] = '0';
+    }
+
+    private function set_x($x, $n) {
+        static $base, $pad, $u, $pmem;
+
+        if ($n < 3) {
+            if (!preg_match(MD::$MD->blk_re[$n], $x->line, $out))//$x->p1 > 3 || 
                 return false;
-            if ('' === $out[3])
-                $x->pad++;
             $str = $out[0];
-        } elseif (is_null($str)) {
+            $pmem = 0;
+            $n < 2 or $base = $pad + ($out[3] ? 2 : 1);
+            $x->pad = $pad + 2 + strlen($out[1]);
+        } else {
+            if (7 == $n) {
+                $base = $pad = 0;
+            } elseif (5 == $n) {
+                $base = $pad + 1;
+                $pad++;
+                $this->j++;
+                $this->add('>', ['c' => 'r']);
+            }
             $str = substr($this->in, $this->j, $sz = strspn($this->in, " \t", $this->j));
-            $x->empty = in_array($out = $this->in[$this->j += $sz] ?? '', ['', "\n"]);
+            if (5 == $n && $sz)
+                $base++;
+            $x->empty = in_array($out = $u = $this->in[$this->j += $sz] ?? '', ['', "\n"]);
             if ($sz)
                 $this->add($str, true);
         }
-        for ($x->pp = $x->pad, $i = 0; true; $x->pad += 4 - $x->pad % 4) {
+        for ($i = 0; true; $pad += 4 - $pad % 4) {
             $i += $len = strcspn($str, "\t", $i);
-            $x->pad += $len;
+            $pad += $len;
             if ("\t" != ($str[$i++] ?? ''))
                 break;
         }
-        $x->pp = $x->pad - $x->pp;
-        return $out ?? null;
+        if ($n > 3) {
+            $x->pad = $pad - $base;
+        } elseif ($n == 3) {
+            $x->pad = $pmem;
+        } elseif ($x->empty || $pad - $x->pad > 3) {
+            $pmem = $pad - $x->pad;
+            $x->pad = $x->pad - $base;
+        } else {
+            $x->pad = $pad - $base;
+        }
+        return 3 == $n ? $u : $out;
     }
 
     private function spn($set, $j = 0, &$sz = null) { # collect $set

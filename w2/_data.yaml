@@ -89,27 +89,26 @@ esc: "\`*_{}[]()<>#+-.!|^=~:"
 code_type: @csv jet php css js html yaml bash # 2do saw
 typ_1:   {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
 typ_2:   @csv script pre style
-blk_tag: @csv blockquote li p table dl x_code x_html
+blk_tag: @csv blockquote li p table dl x-code x-html
 blk_chr: {
   '-*_=': leaf_h2r, '#': leaf_h6,
   '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_bq,
-  '[':    inline_square,
+  '[':    in_square,
   '<':    leaf_html,
   '~`':   leaf_fenced,
-  " \t":  leaf_indent,
   '':     leaf_p,
 }
 blk_re: [
   "/^(\d{1,9})(\.|\))(\s+|\z)/", # for blk_ol [0]
   "/^()([\*\-\+])(\s+|\z)/", # for blk_ul [1]
-  "/^>(\s*)()()/",           # for blk_bq [2]
+  "/^()(>)(\s*)/",           # for blk_bq [2]
 ]
-in_tag: {
-  '~': in_del, '`': in_code, '*_': in_ems, '^': in_sup, '=': in_mark, ':': in_emoji_dl, '|': in_table,
+in_chr: {
+  '*_': in_ems, '~': in_del, '^': in_sup, '=': in_mark, ':': in_emoji_dl, '|': in_table,
+  '[': in_square, '`': in_code,
 }
 email_re: "/^[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*$/i"
 tagfilter: @csv title textarea style xmp iframe noembed noframes script plaintext
-
 #.md
 
 #.js

@@ -510,6 +510,19 @@ class Plan
             return $obj ? "$out\n}" : pre("$out\n}", '');
         }
     }
+
+    static function str(string $in, $max = 80, $size = false) {
+        $html = [' ' => '·', "\n" => '→', "\r" => '<r>→</r>', "\t" => '<g>→</g>'];
+        $cli = [' ' => '·', "\n" => '→', "\r" => '→', "\t" => '→'];
+        $len = mb_strlen($in);
+        $sub = fn($left) => $left ? mb_substr($in, 0, floor(.66 * $max)) : mb_substr($in, $len - ceil(.33 * $max));
+        CLI or $sub = fn($left) => html($sub($left));
+        if ($size)
+            $size = CLI ? "($len) " : "<r>($len)</r> ";
+        if ($cut = $max && $len > $max)
+            $in = $sub(1) . "&nbsp;<r>+++</r>&nbsp;" . $sub(0);
+        return $size . strtr($cut || CLI ? $in : html($in), CLI ? $cli : $html);
+    }
 }
 
 function e() {
