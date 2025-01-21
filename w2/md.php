@@ -1,9 +1,8 @@
 <?php
 
-class MD extends XML # the MarkDown
+class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.org/
 {
     const version = '0.333';
-    //const char = '\\`*_{}[]()#+-.!|^=~:'; //    >
 
     static $MD;
 
@@ -12,7 +11,6 @@ class MD extends XML # the MarkDown
     private $ref = [];
     private $for = [];
     private $j = 0;
-    private $node;
 
     function __construct(string $in = '', $tab = 2) {
         parent::__construct($in, $tab);
@@ -68,15 +66,14 @@ class MD extends XML # the MarkDown
         }
         if ('=' == $t || strlen($z) < 3)
             return false;
-        $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
+        $this->use_close($x);
         return $this->push('hr', 0, ['t' => $t = $x->line]);
     }
 
     private function leaf_p($x, &$t) {
         if ('p' == $this->ptr[1]->name)
             return false; # lazy continue
-        if ($x->close)
-            $this->last('li' == $x->close->name ? $x->close->up : $x->close);
+        $this->use_close($x);
         if ($x->pad > 3) {
             'x-code' == $this->ptr[1]->name or $this->push('x-code');
             return $this->add($t = $x->line);
@@ -89,8 +86,7 @@ class MD extends XML # the MarkDown
     private function blk_bq($x, &$t, $test = false) {
         if (!$m = $this->set_x($x, 2))
             return false;
-        $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
-        $x->close = false;
+        $this->use_close($x);
         return $this->push('blockquote', null, ['t' => $t = $m[0]]);
     }
 
@@ -145,12 +141,13 @@ class MD extends XML # the MarkDown
                 if (is_num($this->ptr[1]->name[1] ?? '')) # close h1..h6
                     $this->close();
                 $close = $x->added = 0;
+                # test continue blocks
                 $tag = $this->last;
                 for ($this->stk = []; $tag && '#root' != $tag->name; $tag = $tag->up)
                     in_array($tag->name, MD::$MD->blk_tag) && array_unshift($this->stk, $tag);
-                $u = $this->set_x($x, 7); # p0 = 0
+                $u = $this->set_x($x, 7);
                 $empty = $x->empty ? $this->last : false;
-                foreach ($this->stk as $tag) { # test continue blocks
+                foreach ($this->stk as $tag) {
                     if ('blockquote' == $tag->name) {
                         if ($close = '>' != $u || $x->pad > 3)
                             break;
@@ -166,10 +163,9 @@ class MD extends XML # the MarkDown
                     }
                 }
                 $x->close = $close ? $tag : false;
-                add:
+                add: # add new blocks
                 $x->line = $this->cspn("\n");
-                $last = $this->last;
-                foreach (MD::$MD->blk_chr as $chr => $func) { # search for new blocks
+                foreach (MD::$MD->blk_chr as $chr => $func) {
                     if ($chr && !strpbrk($u, $chr) || !$this->$func($x, $u))
                         continue;
                     $x->added = $j += strlen($u);
@@ -239,7 +235,7 @@ class MD extends XML # the MarkDown
         } elseif (':' == $chr) {
             if ($x->lazy || ':' == trim($tail = $this->cspn("\n", $j)))
                 return false;
-            $x->close && $this->last($x->close);
+            $this->use_close($x);
             $this->ref[$head] = trim(substr($tail, 1));
             return $this->add($t = $head . $tail, ['c' => 'm']);
         } else {
@@ -283,8 +279,12 @@ class MD extends XML # the MarkDown
         return $out;
     }
 
+    private function use_close($x) {
+        $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
+        $x->close = false;
+    }
+
     private function add($str, $skip = false) {
-        //$this->j += strlen($str);
         if (is_array($skip))
             return $this->push('#skip', $str, $skip);
         $name = $skip ? '#skip' : '#text';
@@ -293,7 +293,7 @@ class MD extends XML # the MarkDown
         return $this->push($name, $str);
     }
 
-    private function set_tight($li) {
+    private function set_tight($li) { // 2do use $this->stk ?
         for (; $li && 'li' != $li->name; $li = $li->up);
         if (!$left = $li)
             return;
@@ -302,8 +302,8 @@ class MD extends XML # the MarkDown
             return;
         for ($j = 1; $li; $j++, $li = $li->up);
         for ($i = 1, $li = $left; $li; $i++, $li = $li->up);
-        $li = $i < $j ? $left : $right;
-        $li->up->attr['tight'] = '0';
+        $i < $j or $left = $right;
+        $left->up->attr['tight'] = '0';
     }
 
     private function set_x($x, $n) {
