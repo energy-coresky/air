@@ -81,7 +81,7 @@ php moon.php ab.sky root:@localhost/ab:ab_
 # dsn syntax: user:password@databasehost:3306/databasename:tblprefix_
 ```
 
-<hr>
+* * *
 
 Installer **moon.php** uses files with the **.sky** extension. These files contain all the application files and
 database contents. It also contains information about the required modules and versions of PHP, MySQL.
@@ -93,7 +93,7 @@ then **moon.php** - a convenient way to update the site on production for profes
 types of installation. Among them: pre-installation of the application in the **anew** folder, followed by moving
 to production. In this case, the code of the old version is moved to the **aold** folder and it is possible to make a rollback.
 
-<hr>
+* * *
 
 Инсталлятор **moon.php** использует файлы с расширением **.sky**. Эти файлы, содержат все файлы приложения и
 содержимое баз данных. Также в нем содержится информация о требуемых модулях и версиях PHP, MySQL.

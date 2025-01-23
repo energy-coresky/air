@@ -5,7 +5,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
-    const style = 'style="width:100%%; tab-size:4; margin:0; color:%s; background-color:%s"';
+    const style = 'style="tab-size:4; margin:0; color:%s; background-color:%s"';//width:100%%; 
 
     private static $bg;
     private static $clr;
@@ -223,7 +223,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
     static function bash($text) {
         return pre(preg_replace_callback("@(#.*)@m", function ($m) {
             return L::y($m[1]);
-        }, $text), 'style="background:#e0e7ff; padding:5px"');
+        }, $text), 'style="background:#e0e7ff;"');
     }
 
     static function md($text) {
@@ -263,7 +263,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
     static function doc($markdown, $render = 'md_nice', $hightlight = true) {
         $md = new MD($markdown);
         $md->render = [$md, $render];
-        //$md->hightlight = $hightlight;
+        $md->hightlight = $hightlight;
         return (string)$md;
     }
 
@@ -282,7 +282,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 if ($c = $attr('c')) {
                     $out .= self::span($c, $node->val);
                 } else {
-                    $out .= $node->val;
+                    $out .= html($node->val);
                 }
             }
         }

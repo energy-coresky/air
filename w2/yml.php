@@ -36,7 +36,8 @@ class YML
         DEV && trace("$fn[1] IS $query # " . ($out ? 'used cached' : 'recompiled'), 'YAML');
         if ($out)
             return $out;
-        is_string($data = YML::text($query)) or $data = 'return ' . var_export($data, true);
+        $ary_fn = $mode ? 'PHP::ary' : 'var_export';
+        is_string($data = YML::text($query)) or $data = 'return ' . $ary_fn($data, true);
         Plan::cache_s($fn, "<?php\n\n$data;");
         return Plan::cache_r($fn, $vars);
     }

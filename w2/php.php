@@ -38,7 +38,7 @@ class PHP
         return new self(file_get_contents(self::$php_fn = $name), $tab);
     }
 
-    static function ary(array $in, $return = false) {
+    static function ary($in, $return = false) {
         $php = new self("<?php " . var_export($in, true) . ';', 2);
         $php->max_length = 80;
         $php = trim(substr($php, 5), "; \n");

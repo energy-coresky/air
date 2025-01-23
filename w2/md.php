@@ -10,11 +10,10 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
 
     private $ref = [];
     private $for = [];
-    private $j = 0;
 
     function __construct(string $in = '', $tab = 2) {
         parent::__construct($in, $tab);
-        MD::$MD or MD::$MD = Plan::set('main', fn() => yml('md', '+ @object @inc(md)'));
+        MD::$MD or MD::$MD = Plan::set('main', fn() => yml('md', '+ @object @inc(md)', false, true));
     }
 
     private function leaf_html($x, &$t) {
@@ -45,150 +44,167 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
     private function leaf_dl($x, &$t) {# :dl-dt-dd
     }
 
-    private function leaf_h6($x, &$t) {
+    private function leaf_h6($x, &$u) {
         if (!preg_match("/^(#{1,6})(\s+)\S/", $x->line, $m))
             return false;
         if ('p' == $this->ptr[1]->name)
             $this->close();
-        return $this->push('h' . strlen($m[1]), null, ['t' => $t = $m[1] . $m[2]]);
+        return $this->push('h' . strlen($m[1]), null, ['t' => $u = $m[1] . $m[2]]);
     }
 
-    private function leaf_h2r($x, &$t) {
-        if (!preg_match("/^\\{$t}[\\$t \t]*$/", $x->line))
+    private function leaf_h2r($x, &$u) {
+        if (!preg_match("/^\\{$u}[\\$u \t]*$/", $x->line))
             return false;
         $z = str_replace(["\t", ' '], '', $x->line);
         $p =& $this->ptr[1]->name;
-        $h12 = '=' == $t ? 'h1' : ('-' == $t ? 'h2' : false);
+        $h12 = '=' == $u ? 'h1' : ('-' == $u ? 'h2' : false);
         if ($h12 && 'p' == $p && $z == chop($x->line)) {
             $p = $h12;
             $this->close();
-            return $this->add($t = $x->line, ['c' => 'r']);
+            return $this->add($u = $x->line, ['c' => 'r']);
         }
-        if ('=' == $t || strlen($z) < 3)
+        if ('=' == $u || strlen($z) < 3)
             return false;
         $this->use_close($x);
-        return $this->push('hr', 0, ['t' => $t = $x->line]);
+        return $this->push('hr', 0, ['t' => $u = $x->line]);
     }
 
-    private function leaf_p($x, &$t) {
+    private function leaf_p($x, &$u) {
         if ('p' == $this->ptr[1]->name)
             return false; # lazy continue
         $this->use_close($x);
         if ($x->pad > 3) {
-            'x-code' == $this->ptr[1]->name or $this->push('x-code');
-            return $this->add($t = $x->line);
+            'x-code' == $this->ptr[1]->name or $this->push('x-code', null, ['lang' => '']);
+            return $this->add($u = $x->line);
         }
         $this->close('x-code');
         $x->empty or $x->added = $this->push('p');
         return false;
     }
 
-    private function blk_bq($x, &$t, $test = false) {
+    private function blk_bq($x, &$u) {
         if (!$m = $this->set_x($x, 2))
             return false;
         $this->use_close($x);
-        return $this->push('blockquote', null, ['t' => $t = $m[0]]);
+        return $this->push('blockquote', null, ['t' => $u = $m[0]]);
     }
 
-    private function blk_ul($x, &$t) {
-        return $this->blk_ol($x, $t, 1);
+    private function blk_ul($x, &$u) {
+        return $this->blk_ol($x, $u, 1);
     }
 
-    private function blk_ol($x, &$t, $n = 0) {
+    private function blk_ol($x, &$u, $n = 0) {
         if (!$m = $this->set_x($x, $n))
             return false;
         if ($x->close) {
             $this->last($li = $x->close);
             $x->close = false;
             if ($m[2] == $li->up->attr['d']) # next li
-                return $this->push('li', null, ['pad' => $x->pad, 't' => $t = $m[0]]);
+                return $this->push('li', null, ['pad' => $x->pad, 't' => $u = $m[0]]);
             $this->close(); # ul/ol
         }
         $attr = ['tight' => '1', 'd' => $m[2]];
         $n or 1 == $m[1] or $attr += ['start' => $m[1]];
         $this->push($n ? 'ul' : 'ol', null, $attr);
-        return $this->push('li', null, ['pad' => $x->pad, 't' => $t = $m[0]]);
+        return $this->push('li', null, ['pad' => $x->pad, 't' => $u = $m[0]]);
     }
 
-    private function leaf_fenced($x, &$t) {
+    private function leaf_fenced($x, &$u) {
         if ($x->grab) { # already open
             if (preg_match("/^$x->grab+\s*$/", $x->line)) {
-                $x->grab = '';
-                $this->last($x->tag->up);
-                return $this->add($t = $x->line, ['c' => 'r']);
-            }
-        } elseif (preg_match("/^($t{3,})\s*(\w*).*$/", $x->line, $m)) {
-            $x->grab = $m[1];
-            if ('p' == $this->ptr[1]->name)//$x->id < 90
                 $this->close();
-            $lang = $m[2] ? ['lang' => $m[2]] : []; // code class="language-$m[2]"
-            return $this->push('pre', null, $lang + ['pad' => $x->pad, 't' => $t = $x->line]);
+                $x->grab = 0;
+                return $x->nls = $this->add($u = $x->line, ['c' => 'r']);
+            } else {
+                $this->add($u = $x->line);
+            }
+        } elseif (preg_match("/^($u{3,})\s*(\w*).*$/", $x->line, $m)) {
+            $this->use_close($x);
+            $x->grab = $x->nls = $m[1];
+            return $this->push('x-code', null, ['lang' => $m[2], 'pad' => (string)$x->pad, 't' => $u = $x->line]);
         }
         return false;
     }
 
     protected function parse(): ?stdClass { # lists: + - *
         $x = new stdClass;
-        $x->grab = $x->html = $p_empty = 0;
+        $x->grab = $x->html = $x->nls = $prev = 0;
         $this->last($this->root, true);
-        $len = strlen($in =& $this->in);
+        $len = strlen($this->in);
         for ($j =& $this->j; $j < $len; $j += strlen($u)) {
-            while ("\n" == ($u = $in[$j] ?? '') || !$j) {
+            while ("\n" == ($u = $this->in[$j] ?? '') || !$j) { # start new line
                 if ("\n" == $u) {
-                    $this->add("\n");
+                    $this->add("\n", $x->nls);
                     $j++;
+                    if ($x->nls && $x->grab)
+                        $x->nls = false;
                 }
                 if (is_num($this->ptr[1]->name[1] ?? '')) # close h1..h6
                     $this->close();
-                $close = $x->added = 0;
-                # test continue blocks
-                $tag = $this->last;
-                for ($this->stk = []; $tag && '#root' != $tag->name; $tag = $tag->up)
-                    in_array($tag->name, MD::$MD->blk_tag) && array_unshift($this->stk, $tag);
-                $u = $this->set_x($x, 7);
-                $empty = $x->empty ? $this->last : false;
-                foreach ($this->stk as $tag) {
-                    if ('blockquote' == $tag->name) {
-                        if ($close = '>' != $u || $x->pad > 3)
-                            break;
-                        $u = $this->set_x($x, 5);
-                        if ($x->empty)
-                            $empty = $this->last;
-                    } elseif ('li' == $tag->name) {
-                        if ($close = !$x->empty && $x->pad < $tag->attr['pad'])
-                            break;
-                    } elseif ('p' == $tag->name && $x->empty) {
-                        $this->last($tag);
-                        goto end;
-                    }
+                $x->added = false;
+                if ($this->blocks_chk($x, $u, $empty)) {
+                    $this->blocks_add($x, $u);
+                    $prev && $x->added && $this->set_tight($prev);
                 }
-                $x->close = $close ? $tag : false;
-                add: # add new blocks
-                $x->line = $this->cspn("\n");
-                foreach (MD::$MD->blk_chr as $chr => $func) {
-                    if ($chr && !strpbrk($u, $chr) || !$this->$func($x, $u))
-                        continue;
-                    $x->added = $j += strlen($u);
-                    $u = $this->set_x($x, 3);
-                    if ('b' == $func[0] && !$x->empty) {
-                        goto add;
-                    } else {
-                        break;
-                    }
-                }
-                if ($p_empty && $x->added)
-                    $this->set_tight($p_empty);
-                end:
-                $p_empty = $empty;
+                $prev = $empty;
                 if (!$j)
                     break;
             }
-            $this->inline($x, $u);
+            $this->inlines($x, $u);
         }
+        $this->j = 0;
         return $this->root->val;
     }
 
-    private function inline($x, &$u) {
+    private function blocks_chk($x, &$u, &$empty) {
+        $ary = [];
+        $x->close = false;
+        for ($tag = $this->last; $tag && '#root' != $tag->name; $tag = $tag->up)
+            in_array($tag->name, MD::$MD->blk_tag) && array_unshift($ary, $tag);
+        $u = $this->set_x($x, 7);
+        $empty = $x->empty ? $this->last : false;
+        foreach ($ary as $tag) {
+            if ('blockquote' == $tag->name) {
+                if ('>' != $u || $x->pad > 3) {
+                    if ($x->grab) {
+                        $x->grab = false;
+                        return $this->close();
+                    }
+                    return $x->close = $tag;
+                }
+                $u = $this->set_x($x, 5);
+                if ($x->empty)
+                    $empty = $this->last;
+            } elseif ('li' == $tag->name) {
+                if (!$x->empty && $x->pad < $tag->attr['pad'])
+                    return $x->close = $tag;
+            } elseif ('p' == $tag->name && $x->empty) {
+                $this->last($tag);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function blocks_add($x, &$u) {
+        start: # add new blocks
+        $x->line = $this->cspn("\n");
+        if ($x->grab) {
+            $this->leaf_fenced($x, $u);
+            return $this->j += strlen($u);
+        }
+        foreach (MD::$MD->blk_chr as $chr => $func) {
+            if ((!$chr || strpbrk($u, $chr)) && $this->$func($x, $u)) {
+                $x->added = $this->j += strlen($u);
+                $u = $this->set_x($x, 3);
+                if ($x->empty || 'b' != $func[0])
+                    break;
+                goto start;
+            }
+        }
+    }
+
+    private function inlines($x, &$u) {
         $in =& $this->in;
         $j =& $this->j;
         if ("\\" == $u) { # escaped
@@ -233,7 +249,7 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
             #if (!$tail || '[' == $chr)
                 //$this->for[count()] = $tail && '[]' != $tail ? $tail : $head;
         } elseif (':' == $chr) {
-            if ($x->lazy || ':' == trim($tail = $this->cspn("\n", $j)))
+            if (':' == trim($tail = $this->cspn("\n", $j)))//$x->lazy || 
                 return false;
             $this->use_close($x);
             $this->ref[$head] = trim(substr($tail, 1));
@@ -244,11 +260,11 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         return $this->push('a', substr($head, 1, -1), ['href' => $tail, 'c' => 'g', 't' => $t = $head . $tail]);
     }
 
-    function md_raw($in) {return $this->xml_nice($in);
+    function md_raw($in) {//return $this->xml_nice($in);
         $out = '';
         foreach ($this->gen($in, true) as $depth => $node) {
             if ('#' == $node->name[0]) {
-                $out .= sprintf($this->spec[$node->name], $node->val) . "\n";
+                $out .= $node->val;
             } elseif ($depth < 0) {
                 $out .= str_pad('', -$depth * 2 - 2) . "</$node->name>\n";
             } else {
@@ -259,19 +275,33 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         return $out;
     }
 
-    function md_nice($in) { 
-        $out = '';
+    function md_nice($in) {
+        $out = $type = $code = '';
         foreach ($this->gen($in, true) as $depth => $node) {
             if ('#skip' == $node->name)
                 continue;
-            if ('li' == $node->name && $node->up->attr['tight'])
-                for ($tag = $node->val; $tag; $tag = $tag->right)
-                    'p' != $tag->name or $this->remove($tag, false);
-            if ('#' == $node->name[0]) {
-                $out .= sprintf($this->spec[$node->name], $node->val) . "\n";
-            } elseif ($depth < 0) {
-                $out .= str_pad('', -$depth * 2 - 2) . "</$node->name>\n";
+            if ($depth < 0) {
+                if ($code && "\n" == $code[-1])
+                    $code = substr($code, 0, -1);
+                if ('' === $type) {
+                    $out .= str_pad('', -$depth * 2 - 2) . "</$node->name>\n";
+                } elseif ($this->hightlight && in_array($type, MD::$MD->code_type, true)) {
+                    Show::scheme();
+                    $out .= Show::$type($code, '<?' == substr($code, 0, 2) ? '' : false, true);
+                } else {
+                    $out .= pre(tag(html($code), true === $type ? '' : "class=\"language-$type\"", 'code'), '');
+                }
+                $type = '';
+            } elseif ('#' == $node->name[0]) {
+                '' === $type ? ($out .= $node->val . "\n") : ($code .= $node->val);
+            } elseif ('x-code' == $node->name) { // code 
+                $type = $node->attr['lang'] ?: true;
+                'javascript' !== $type or $type = 'js';
+                $code = ''; # fenced code start
             } else {
+                if ('li' == $node->name && $node->up->attr['tight'])
+                    for ($tag = $node->val; $tag; $tag = $tag->right)
+                        'p' != $tag->name or $this->remove($tag, false);
                 $out .= str_pad('', $depth * 2) . $this->tag($node, $close, ['href', 'start']);
                 $out .= null === $node->val || is_string($node->val) ? "$node->val$close\n" : "\n";
             }
@@ -281,6 +311,8 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
 
     private function use_close($x) {
         $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
+        #if ($x->close)
+        #    $x->grab = false;
         $x->close = false;
     }
 
@@ -293,7 +325,7 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         return $this->push($name, $str);
     }
 
-    private function set_tight($li) { // 2do use $this->stk ?
+    private function set_tight($li) {
         for (; $li && 'li' != $li->name; $li = $li->up);
         if (!$left = $li)
             return;
@@ -310,18 +342,16 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         static $base, $pad, $u, $pmem;
 
         if ($n < 3) {
-            if (!preg_match(MD::$MD->blk_re[$n], $x->line, $out))//$x->p1 > 3 || 
+            if ($x->pad > 3 || !preg_match(MD::$MD->blk_re[$n], $x->line, $out)) //
                 return false;
-            $str = $out[0];
-            $pmem = 0;
+            $str = $out[$pmem = 0];
             $n < 2 or $base = $pad + ($out[3] ? 2 : 1);
             $x->pad = $pad + 2 + strlen($out[1]);
         } else {
             if (7 == $n) {
                 $base = $pad = 0;
             } elseif (5 == $n) {
-                $base = $pad + 1;
-                $pad++;
+                $base = ++$pad;
                 $this->j++;
                 $this->add('>', ['c' => 'r']);
             }
@@ -333,22 +363,23 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
                 $this->add($str, true);
         }
         for ($i = 0; true; $pad += 4 - $pad % 4) {
-            $i += $len = strcspn($str, "\t", $i);
-            $pad += $len;
+            $i += $sz = strcspn($str, "\t", $i);
+            $pad += $sz;
             if ("\t" != ($str[$i++] ?? ''))
                 break;
         }
-        if ($n > 3) {
-            $x->pad = $pad - $base;
-        } elseif ($n == 3) {
+        if ($n == 3) {
             $x->pad = $pmem;
+            return $u;
+        } elseif ($n > 3) {
+            $x->pad = $pad - $base;
         } elseif ($x->empty || $pad - $x->pad > 3) {
             $pmem = $pad - $x->pad;
             $x->pad = $x->pad - $base;
         } else {
             $x->pad = $pad - $base;
         }
-        return 3 == $n ? $u : $out;
+        return $out;
     }
 
     private function spn($set, $j = 0, &$sz = null) { # collect $set
@@ -359,9 +390,7 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         return substr($this->in, $j ?: $this->j, $sz = strcspn($this->in, $set, $j ?: $this->j));
     }
 }
-/* 
-
-        foreach ($this->for as $i => $for) {
+/*      foreach ($this->for as $i => $for) {
             if (isset($this->ref[$for])) {
                 #$this->tok[$i][4] = $this->ref[$for];
             } else {
@@ -371,11 +400,5 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         }
 
 $out .= a($t, $t);
-                in_array($type = $p3, MD::$MD->code_type) && $this->hightlight or $type = '';
-                'javascript' !== $type or $type = 'js';
-                $sub = $type ? '' : $htm;
-            # not reference
-            # fenced code start           html($htm);
-            $out .= $type ? Show::$type($sub) : $sub . $htm;
             sprintf('<img src="%s" alt="%s">', $p4, substr($p3, 1, -1)) # image
 trace($x->close, '===');*/

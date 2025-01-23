@@ -10,8 +10,8 @@ class XML extends CSS
     public $root;
 
     protected $ptr;
-    protected $i = 0;
     protected $last;
+    protected $j = 0;
 
     function __construct(string $in = '', $tab = 2) {
         parent::__construct($in, $tab);
@@ -30,20 +30,20 @@ class XML extends CSS
     }
 
     function dump($in = false) {
-        echo "depth.id [left up right]\n\n";
+        echo "depth:ID [left up right] name val\n\n";
         # arrow fn for iterator_apply must return something like true!
-        iterator_apply($g = $this->gen($in), fn() => $g->current()->id = ++$this->i);
+        iterator_apply($g = $this->gen($in), fn() => $g->current()->id = ++$this->j);
         foreach ($this->gen($in) as $depth => $node) {
-            echo str_pad('', 2 * $depth) . "$depth.$node->id [";
-            echo (isset($node->left) ? ($node->left->id ?? '.') : '_') . ' ';
-            echo (isset($node->up) ? ($node->up->id ?? '.') : '_') . ' ';
-            echo isset($node->right) ? ($node->right->id ?? '.') . "] $node->name " : "_] $node->name ";
+            echo str_pad('', 2 * $depth) . "$depth:$node->id [";
+            echo (isset($node->left) ? ($node->left->id ?? '_') : '.') . ' ';
+            echo (isset($node->up) ? ($node->up->id ?? '_') : '.') . ' ';
+            echo isset($node->right) ? ($node->right->id ?? '_') . "] $node->name " : ".] $node->name ";
             if (is_string($node->val)) {
                 echo Plan::str($node->val, 80, true) . "\n";
             } elseif (0 === $node->val) {
                 echo ".........VOID\n";
             } else {
-                echo 'object' == ($type = gettype($node->val)) ? '[' . ($node->val->id ?? '.') . "]\n" : "$type\n";
+                echo 'object' == ($type = gettype($node->val)) ? '[' . ($node->val->id ?? '_') . "]\n" : "$type\n";
             }
         }
     }
