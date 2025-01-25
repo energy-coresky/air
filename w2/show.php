@@ -267,10 +267,11 @@ class Show # php jet yaml html bash || php_method md || var diff log
         return (string)$md;
     }
 
-    static function highlight_md($code, $u = '') { # r g d c m j - gray
+    static function highlight_md($code, &$bg) { # r g d c m j - gray
         self::scheme();
         $md = new MD($code);
-        $out = $node = '';
+        $out = $node = $bg = '';
+        $bgc = '=';
         $attr = function ($n) use (&$node, $md) {
             return $md->attr($node, $n);
         };
@@ -279,6 +280,12 @@ class Show # php jet yaml html bash || php_method md || var diff log
             if ($t = $attr('t')) {//reference $out .= self::span('m', $t);
                 $out .= self::span($attr('c') ?? 'r', $t);
             } elseif (is_string($node->val)) {
+                if ($cnt = substr_count($node->val, "\n")) {
+                    $bg .= str_pad('', $cnt, $bgc);
+                    $bgc = '=';
+                }
+                if (isset($node->attr['bg']))
+                    $bgc = $attr('bg');
                 if ($c = $attr('c')) {
                     $out .= self::span($c, $node->val);
                 } else {

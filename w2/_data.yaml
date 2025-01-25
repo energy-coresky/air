@@ -89,7 +89,6 @@ esc: "\`*_{}[]()<>#+-.!|^=~:"
 code_type: @csv jet php css js html yaml bash # 2do saw
 typ_1:   {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
 typ_2:   @csv script pre style
-blk_tag: @csv blockquote li p table dl
 blk_chr: {
   '-*_=': leaf_h2r, '#': leaf_h6,
   '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_bq,
