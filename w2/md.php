@@ -45,13 +45,12 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
     }
 
     private function leaf_h6($x, &$u) {
-        if (!preg_match("/^(#{1,6})(\s+)\S/", $x->line, $m))
+        if (!preg_match("/^#{1,6}(\s+|\z)/", $x->line, $m, PREG_OFFSET_CAPTURE))
             return false;
         $this->use_close($x);
-        if ('p' == $this->ptr[1]->name)
-            $this->close();
-        $this->j += strlen($m[1] . $m[2]);
-        return $this->push('h' . strlen($m[1]), null, ['t' => $m[1] . $m[2]]);
+        $this->close('p');
+        $this->j += strlen($m[0][0]);
+        return $this->push('h' . $m[1][1], null, ['t' => $m[0][0]]);
     }
 
     private function leaf_h2r($x, &$u) {
@@ -74,8 +73,9 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
 
     private function leaf_code($x, &$u) {
         if ('x-code' != $this->ptr[1]->name)
-            $this->push('x-code', null, ['lang' => '']);
-        $this->add(4, ['bg' => '*']);
+            $x->added = $this->push('x-code', null, ['lang' => '', 't' => '']);
+        $x->nls = false;
+        $this->add(4);
         $x->pad - 4 && $this->push('#text', str_pad('', $x->pad - 4));
         return $this->add($x->line);
     }
@@ -83,7 +83,6 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
     private function leaf_p($x, &$u) {
         $x->pad && $this->add($x->pad);
         $x->pad = 0;
-        
         if ('p' == $this->ptr[1]->name)
             return false; # lazy continue
         $this->use_close($x);
@@ -93,33 +92,37 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
     }
 
     private function blk_bq($x, &$u) {
-        $pp = $x->pad;
+        $prev = $x->pad;
         if (!$this->set_x($x, 2, $u))
             return false;
         $this->use_close($x);
-        return $this->push(...$this->b_tag($x, $pp));
+        return $this->push(...$this->b_tag($x, $prev));
     }
 
-    private function b_tag($x, $pp) {
+    private function b_tag($x, $prev) {
         $bq = '>' == $x->m;
         $x->pad -= $pad = $bq || $x->empty || $x->pad > 4 ? 1 : $x->pad;
-        $t = str_pad('', $pp) . $x->m . str_pad('', $pad);
-        return [$bq ? 'blockquote' : 'li', null, ['t' => $t, 'pad' => strlen($t)]];
+        $pad = $prev + strlen($t = $x->m . str_pad('', $pad));
+        return [$bq ? 'blockquote' : 'li', null, ['t' => $t, 'pad' => $pad]];
     }
 
     private function blk_ol($x, &$u, $n = 0) {
-        $pp = $x->pad;
+        $prev = $x->pad;
         if (!$attr = $this->set_x($x, $n, $u))
             return false;
-        if ($x->close) {
-            $this->last($tag = $x->close);
-            $x->close = false;
-            if ($attr['d'] == $tag->up->attr['d'])
-                return $this->push(...$this->b_tag($x, $pp)); # next li
-            $this->close(); # ul/ol
+        if ($tag = $x->close) {
+            if ('li' == $tag->name) {
+                $this->last($tag);
+                $x->close = false;
+                if ($attr['d'] == $tag->up->attr['d'])
+                    return $this->push(...$this->b_tag($x, $prev)); # next li
+                $this->close(); # ul/ol
+            } else {
+                $this->use_close($x);
+            }
         }
         $this->push($n ? 'ul' : 'ol', null, $attr);
-        return $this->push(...$this->b_tag($x, $pp));
+        return $this->push(...$this->b_tag($x, $prev));
     }
 
     private function blk_ul($x, &$u) {
@@ -133,7 +136,9 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
                 $x->grab = 0;
                 return $x->nls = $this->add($x->line, ['c' => 'r']);
             } else {
+                $x->pad && $this->push('#text', str_pad('', $x->pad));
                 $this->add($x->line);
+                $x->pad = 0;
             }
         } elseif (preg_match("/^($u{3,})\s*(\w*).*$/", $x->line, $m)) {
             $this->use_close($x);
@@ -144,13 +149,12 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         return false;
     }
 
-    protected function parse(): ?stdClass { # lists: + - *
+    protected function parse(): ?stdClass {
         $x = new stdClass;
         $x->grab = $x->html = $x->nls = $prev = false;
         $this->last($this->root, true);
         $len = strlen($this->in);
-    $jj=0;
-        for ($j =& $this->j; $j < $len; ) { //$j += strlen($u)
+        for ($j =& $this->j; $j < $len; ) {
             while ("\n" == ($u = $this->in[$j] ?? '') || !$j) { # start new line
                 if ("\n" == $u) {
                     $this->add("\n", $x->nls);
@@ -164,7 +168,7 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
                 $x->empty && $this->close('p') && $this->use_close($x) or $this->add_new($x, $u);
                 $prev && $x->added && $this->set_tight($prev);
                 $prev = $empty;
-                if (!$j || ++$jj>100)
+                if (!$j)
                     break;
             }
             $this->inlines($x, $u);
@@ -182,7 +186,7 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
         $empty = $x->empty ? $this->last : false;
         foreach ($ary as $tag) {
             if ('li' == $tag->name) {
-                if (!$x->empty && $x->pad < $tag->attr['pad'] + $x->base)
+                if (!$x->empty && $x->pad < ($tag->attr['pad'] + $x->base))
                     return $x->close = $tag;
                 $x->base += $tag->attr['pad'];
             } elseif ('>' != $u || $x->pad > 3) {
@@ -198,7 +202,6 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
                     $empty = $this->last;
                 if ($x->pad) {
                     $this->last->val .= ' ';
-                    $x->pad--;
                     $x->base++;
                 }
             }
@@ -213,16 +216,14 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
             $this->add($x->base);
         }
         if ($x->grab) {
-            $this->leaf_fenced($x, $u);
-            return $this->j += strlen($u);
+            return $this->leaf_fenced($x, $u);
         } elseif ($x->pad > 3) {
+            $this->use_close($x);
             if ('p' == $this->ptr[1]->name)
                 return $this->leaf_p($x, $u);
             return $this->leaf_code($x, $u);
         }
         $x->pad && $this->add($x->pad);
-        $x->pad = 0;
-        $this->use_close($x);
         foreach (MD::$MD->blk_chr as $chr => $func) {
             if ((!$chr || strpbrk($u, $chr)) && $this->$func($x, $u)) {
                 $x->added = true;
@@ -236,40 +237,47 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
     private function inlines($x, &$u) {
         $in =& $this->in;
         $j =& $this->j;
-        if ("\\" == $u) { # escaped
+        if ("\\" == $u) { # escape
             $next = $in[1 + $j] ?? '';
-            $this->push('#text', $next, ['t' => $u .= $next]);
+            $esc = '' !== $next && strpbrk($next, MD::$MD->esc);
+            if ($esc) {
+                $this->add("\\", true);
+                $this->add($next);
+            } else {
+                $this->add("\\");
+            }
         } elseif ('[' == $u && $this->in_square($x, $u)) {
             ;
         } elseif (strpbrk($u, MD::$MD->esc)) {
             $this->add($u = $this->spn($u));
         } else {
             $u = substr($in, $j, $n = strcspn($in, "\n" . MD::$MD->esc, $j));
-            if ('  ' == substr($u, -2) && "\n" == ($in[$j + strlen($u)] ?? '')) {
+            $is_p = 'p' == $this->ptr[1]->name;
+            if ($is_p && '  ' == substr($u, -2) && "\n" == ($in[$j + strlen($u)] ?? '')) {
                 $this->add($t2 = chop($u));
-                $this->push('br', 0, ['t' => substr($u, strlen($t2))]);
-            } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_link($u, $j)) {
-                
+                $this->push('br', 0, ['t' => $rest = substr($u, strlen($t2))]);
+                $j += strlen($rest);
+            } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_link($j, $u)) {
+                $j += strlen($u);
+                $this->push('a', $u, ['href' => $u, 'c' => 'g']);
             } else {
                 $this->add($u);
             }
         }
     }
 
-    private function auto_link(&$t, $j) {
-        if (!preg_match("/\bhttps?$/ui", $t, $m1))
+    private function auto_link($j, &$u) {
+        if (!preg_match("/\bhttps?$/ui", $u, $m1))
             return false;
-        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($t)), $m2)) //2do substr
+        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($u)), $m2)) //2do substr
             return false;
-        if ($m1[0] !== $t) {
-            $t = substr($t, 0, -strlen($m1[0]));
-            return false;
-        }
-        $this->push('a', $t .= $m2[0], ['href' => $t, 'c' => 'g']);
-        return true;
+        if ($m1[0] === $u)
+            return $u .= $m2[0];
+        $u = substr($u, 0, -strlen($m1[0]));
+        return false;
     }
 
-    private function in_square($x, &$t) { # 2do  footnote
+    private function in_square($x, &$u) { # 2do  footnote
         if (!$len = strlen($head = Rare::bracket($this->in, '[', $j = $this->j, "\n\\")))
             return false;
         $tail = '';
@@ -282,14 +290,15 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
                 return false;
             $this->use_close($x);
             $this->ref[$head] = trim(substr($tail, 1));
-            return $this->add($t = $head . $tail, ['c' => 'm']);
+            return $this->add($head . $tail, ['c' => 'm']);
         } else {
             //$this->for[count()] = $head;
         }
-        return $this->push('a', substr($head, 1, -1), ['href' => $tail, 'c' => 'g', 't' => $t = $head . $tail]);
+        $this->j += strlen($head . $tail);
+        return $this->push('a', substr($head, 1, -1), ['href' => $tail, 'c' => 'g', 't' => $head . $tail]);
     }
 
-    function md_raw($in) {//return $this->xml_nice($in);
+    function md_raw($in) {//return $this->xml_mini($in);
         $out = '';
         foreach ($this->gen($in, true) as $depth => $node) {
             if ('#' == $node->name[0]) {
@@ -322,7 +331,7 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
                 }
                 $type = '';
             } elseif ('#' == $node->name[0]) {
-                '' === $type ? ($out .= $node->val . "\n") : ($code .= $node->val);
+                '' === $type ? ($out .= $node->val) : ($code .= $node->val);
             } elseif ('x-code' == $node->name) { // code 
                 $type = $node->attr['lang'] ?: true;
                 'javascript' !== $type or $type = 'js';

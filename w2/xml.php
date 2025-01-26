@@ -99,8 +99,20 @@ class XML extends CSS
         return $out;
     }
 
-    function xml_mini($node, $pad = '', $in_pre = false) { // 2do
-    # $in_pre -- save whitespaces in text value
+    function xml_mini($in, $in_pre = false) { # $in_pre -- save whitespaces in text value
+        $out = '';
+        foreach ($this->gen($in, true) as $depth => $node) {
+            if ('#' == $node->name[0]) {
+                $out .= sprintf($this->spec[$node->name] ?? '%s', trim($node->val));
+            } elseif ($depth < 0) {
+                $out .= "</$node->name>";
+            } else {
+                $out .= $this->tag($node, $close);
+                if (null === $node->val || is_string($node->val))
+                    $out .= trim($node->val) . $close;
+            }
+        }
+        return $out;
     }
 
     function xml_nice($node, $pad = '', $in_pre = false) { // 2do CSS: white-space: pre;

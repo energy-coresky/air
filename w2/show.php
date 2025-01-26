@@ -271,21 +271,22 @@ class Show # php jet yaml html bash || php_method md || var diff log
         self::scheme();
         $md = new MD($code);
         $out = $node = $bg = '';
-        $bgc = '=';
+        $hl = '=';
         $attr = function ($n) use (&$node, $md) {
             return $md->attr($node, $n);
         };
-        foreach ($md->gen() as $node) {//$out = substr($out, 0, -1) . self::bg('&nbsp;', self::$clr['r']);
+        foreach ($md->gen() as $d => $node) {//$out = substr($out, 0, -1) . self::bg('&nbsp;', self::$clr['r']);
             // img or link $out .= self::span("!" != $t[0] ? 'g' : 'c', $t);
-            if ($t = $attr('t')) {//reference $out .= self::span('m', $t);
+            if (!is_null($t = $attr('t'))) {//reference $out .= self::span('m', $t);
                 $out .= self::span($attr('c') ?? 'r', $t);
+                if ('x-code' == $node->name)
+                    $hl = '*';
             } elseif (is_string($node->val)) {
                 if ($cnt = substr_count($node->val, "\n")) {
-                    $bg .= str_pad('', $cnt, $bgc);
-                    $bgc = '=';
+                    $bg .= str_pad('', $cnt, '#skip' == $node->name ? '=' : $hl);
+                    if (is_null($node->right))
+                        $hl = '=';
                 }
-                if (isset($node->attr['bg']))
-                    $bgc = $attr('bg');
                 if ($c = $attr('c')) {
                     $out .= self::span($c, $node->val);
                 } else {

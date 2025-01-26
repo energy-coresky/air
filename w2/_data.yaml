@@ -93,7 +93,7 @@ blk_chr: {
   '-*_=': leaf_h2r, '#': leaf_h6,
   '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_bq,
   '[':    in_square,
-  '<':    leaf_html,
+#  '<':    leaf_html,
   '~`':   leaf_fenced,
   '':     leaf_p,
 }
