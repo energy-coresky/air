@@ -5,6 +5,7 @@ class XML extends CSS
     const version = '0.777';
 
     static $XML;
+    static $void_slash = true; # allow slash in voids: <br />
 
     public $selected = [];
     public $root;
@@ -78,7 +79,7 @@ class XML extends CSS
     static function tag($node, &$close, $allow = false) {
         $close = '</' . ($open = $node->name) . '>';
         foreach ($node->attr ?? [] as $k => $v)
-            if (!$allow || in_array($k, $allow))
+            if ((!$allow || in_array($k, $allow)) && (XML::$void_slash || '/' !== $k))
                 $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
         return "<$open>";
     }
@@ -252,16 +253,6 @@ class XML extends CSS
         }
     }
 
-    function up($m = null) { # go absolute & relative////////////////////////////////////
-        if (is_int($m))
-            return $this->stk[$m < 0 ? count($this->stk) + $m : $m] ?? null;
-        $m or $m = $this->last;
-        is_object($m->val) || null === $m->val or $m = $m->up;
-        for ($this->stk = []; $m; $m = $m->up)
-            array_unshift($this->stk, $m);
-        return count($this->stk);
-    }
-
     function go(&$ary, $to, $m = 1, $text = false) { # go relative
         $new = [];
         foreach ($ary as $node) {
@@ -331,8 +322,8 @@ class XML extends CSS
                 } elseif ('=' != $t) {
                     $t = substr($in, $j, strcspn($in, "=>\t \n", $j));
                 }
-            } elseif ('<' == $t && preg_match("@^(<!\-\-|<!\[CDATA\[|</?[a-z\d\-]+)(\s|>)@is", substr($in, $j, 51), $match)) {
-                [$m0, $t] = $match; // 2do: [a-z\d] ws \w .. what about underscore?
+            } elseif ('<' == $t && preg_match("@^(<!\-\-|<!\[CDATA\[|</?[a-z][a-z\d\-]*)(\s|>)@is", substr($in, $j, 51), $match)) {
+                [$m0, $t] = $match;
                 $y->mode = '/' == $t[1] ? 'close' : 'open';
                 if ('<!--' == $t) { # comment
                     $y->end = '-->';
@@ -349,7 +340,7 @@ class XML extends CSS
         }
     }
 
-    function set_attr(&$attr, $t) {
+    function set_attr(&$attr, $t) { # attr-name= /^[a-z_:][a-z_:\d\.\-]*$/
         static $key = '', $val = false;
         if ($quot = in_array($t[0], ["'", '"']))
             $t = substr($t, 1, -1);
@@ -365,7 +356,7 @@ class XML extends CSS
         return $_;
     }
 
-    protected function parse(): ?stdClass {
+    protected function parse(): ?stdClass { # 2do strict mode
         $name = $str = $attr = null;
         $flush = function () use (&$name, &$str, &$attr) {
             if ('#text' == $name) {

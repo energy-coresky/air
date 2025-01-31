@@ -85,15 +85,16 @@ omis: # tags omission rules
 #.html
 
 #.md
-esc: "\`*_{}[]()<>#+-.!|^=~:"
+esc: "/\"'`*_{}[]()<>#+-.!|^=~:$%&;,?@"
 code_type: @csv jet php css js html yaml bash # 2do saw
 typ_1:   {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
 typ_2:   @csv script pre style
 blk_chr: {
   '-*_=': leaf_h2r, '#': leaf_h6,
   '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_bq,
+  '-:|':  leaf_table,
   '[':    in_square,
-#  '<':    leaf_html,
+  '<':    leaf_html,
   '~`':   leaf_fenced,
   '':     leaf_p,
 }
@@ -117,6 +118,24 @@ tags: @csv {
   o: ol optgroup option,   p: p param,     s: section source summary
   t: table tbody td tfoot th thead title tr track,   u: ul
 }
+attr: @csv href start src alt align
+css: |
+  #md-doc pre, #md-doc code {
+      background-color: #eee;
+  }
+  #md-doc pre {
+      padding: 10px;
+  }
+  #md-doc a {
+      text-decoration: underline;
+      color: blue;
+      border-bottom: 1px solid blue;
+  }
+  #md-doc a:hover {
+      text-decoration: none;
+      background: blue;
+      color: #fff;
+  }
 #.md
 
 #.js

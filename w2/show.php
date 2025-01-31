@@ -275,8 +275,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
         $attr = function ($n) use (&$node, $md) {
             return $md->attr($node, $n);
         };
-        foreach ($md->gen() as $d => $node) {//$out = substr($out, 0, -1) . self::bg('&nbsp;', self::$clr['r']);
-            // img or link $out .= self::span("!" != $t[0] ? 'g' : 'c', $t);
+        foreach ($md->gen() as $d => $node) { // self::bg('&nbsp;', self::$clr['r']);
             if (!is_null($t = $attr('t'))) {//reference $out .= self::span('m', $t);
                 $out .= self::span($attr('c') ?? 'r', $t);
                 if ('x-code' == $node->name)
@@ -284,7 +283,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
             } elseif (is_string($node->val)) {
                 if ($cnt = substr_count($node->val, "\n")) {
                     $bg .= str_pad('', $cnt, '#skip' == $node->name ? '=' : $hl);
-                    if (is_null($node->right))
+                    if (is_null($node->right) && !$attr('last'))
                         $hl = '=';
                 }
                 if ($c = $attr('c')) {
@@ -294,6 +293,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 }
             }
         }
+        $bg .= $hl;
         return $out;
     }
 
