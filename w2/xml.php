@@ -10,8 +10,10 @@ class XML extends CSS
     public $selected = [];
     public $root;
 
-    protected $ptr;
+    protected $up;
+    protected $left;
     protected $last;
+    protected $next;
     protected $j = 0;
 
     function __construct(string $in = '', $tab = 2) {
@@ -63,11 +65,11 @@ class XML extends CSS
     function clone(?array $ary = null): ?stdClass {
         $last = false;
         foreach ($ary ?? $this->selected as $node) {
-            $this->last($last ?: $this->root, !$last);
-            $this->relations($last = clone $node, true);
+            $last ? $this->last($last) : $this->parent($this->root);
+            $this->insert($last = clone $node, true); // is_object($node->val)
             if (is_object($node->val)) {
                 foreach ($this->gen($node->val) as $node) {
-                    $this->relations(clone $node, is_object($node->val));
+                    $this->insert(clone $node, is_object($node->val));
                     is_null($node->right) && $this->close();
                 }
             }
@@ -273,16 +275,15 @@ class XML extends CSS
         return $this->go($this->selected, 'right', $m, $text);
     }
 
-    function parent($m = 1) {
-        return $this->go($this->selected, 'up', $m);
-    }
-
     function query($q, $is_all = false) {
     }
 
     function childs($query) {
     }
 
+    #function parents($m = 1) {
+    #    return $this->go($this->selected, 'up', $m);
+    #}
     function parents($query) {
     }
 
@@ -367,7 +368,7 @@ class XML extends CSS
             }
             $name = $str = $attr = null;
         };
-        $this->last($this->root, true);
+        $this->parent($this->root);
         $this->selected = [];
         foreach ($this->tokens() as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
@@ -408,30 +409,37 @@ class XML extends CSS
         return $this->root->val;
     }
 
-    protected function last($node, $down = false) { # setup the cursor: prev, parent, &place for next
-        $this->ptr = $down ? [null, $node, &$node->val] : [$node, $node->up, &$node->right];
-        return $this->last = $node;
+    protected function last($node) { # setup cursor right
+        $this->up = $node->up;
+        $this->next =& $node->right;
+        return $this->left = $this->last = $node;
+    }
+
+    protected function parent($node) { # setup cursor down
+        $this->left = null;
+        $this->next =& $node->val;
+        return $this->up = $this->last = $node;
     }
 
     protected function close($tag = null) {
-        return is_null($tag) || $tag === $this->ptr[1]->name ? $this->last($this->ptr[1]) : false;
+        return is_null($tag) || $tag === $this->up->name ? $this->last($this->up) : false;
     }
 
-    protected function relations($node, $down) {
-        [$node->left, $node->up] = $this->ptr;
-        return $this->last($this->ptr[2] = $node/*add the node*/, $down);
+    protected function insert($node, $parent) {
+        $node->left = $this->left;
+        $node->up = $this->up;
+        return $parent ? $this->parent($this->next = $node) : $this->last($this->next = $node);
     }
 
     protected function push($name, $val = null, $attr = null) {
-        if ('#' != $name[0]) {
-            $parent = $this->ptr[1]; //2do omission tags & !doctype https://html.spec.whatwg.org/dev/syntax.html#syntax-tag-omission
-            $om = $this->omis[$parent->name] ?? false;
+        if ('#' != $name[0]) { //2do omission tags & !doctype https://html.spec.whatwg.org/dev/syntax.html#syntax-tag-omission
+            $om = $this->omis[$this->up->name] ?? false;
             if ($om && in_array($name, $om))
                 $this->close();
-            if ($parent->name == $name && in_array($name, $this->omis[0]))
+            if ($this->up->name == $name && in_array($name, $this->omis[0]))
                 $this->close();
         }
-        return $this->relations(XML::node($name, $val, $attr), null === $val);
+        return $this->insert(XML::node($name, $val, $attr), null === $val);
     }
 
     static function node($name, $val = null, $attr = null) {
