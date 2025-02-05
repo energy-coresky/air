@@ -66,7 +66,7 @@ class XML extends CSS
         $last = false;
         foreach ($ary ?? $this->selected as $node) {
             $last ? $this->last($last) : $this->parent($this->root);
-            $this->insert($last = clone $node, true); // is_object($node->val)
+            $this->insert($last = clone $node, true);
             if (is_object($node->val)) {
                 foreach ($this->gen($node->val) as $node) {
                     $this->insert(clone $node, is_object($node->val));
@@ -177,33 +177,21 @@ class XML extends CSS
         is_array($ary) or $ary = [$ary];
         foreach ($ary as $dst) {
             if ($with_childs || !$this->has_childs($dst, $obj)) {
-                $this->del_relations($dst, $dst->right, $dst->left);
+                $this->del_topology($dst, $dst->right, $dst->left);
             } elseif ($obj) {
-                $this->ins_relations($dst->val, $dst->left, $dst->up, $dst->right, $last);
-                $this->del_relations($dst, $dst->val, $last);
+                $this->ins_topology($dst->val, $dst->left, $dst->up, $dst->right, $last);
+                $this->del_topology($dst, $dst->val, $last);
             } else {
                 $dst->name = '#text';
             }
         }
     }
 
-    private function ins_relations($ins, $left, $up, $right, &$last = null) {
-        for ($ins->left = $left; $ins; $ins = $ins->right)
-            [$ins->up, $last] = [$up, $ins];
-        $last->right = $right;
-    }
-
-    private function del_relations($del, $first, $last) {
-        $del->left ? ($del->left->right = $first) : ($del->up->val = $first);
-        if ($del->right)
-            $del->right->left = $last;
-    }
-
     function inner($src) {
         $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->ins_relations($dst->val = $src->clone(), null, $dst, null);
+            $this->ins_topology($dst->val = $src->clone(), null, $dst, null);
         }
     }
 
@@ -211,8 +199,8 @@ class XML extends CSS
         $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->ins_relations($first = $src->clone(), $dst->left, $dst->up, $dst->right, $last);
-            $this->del_relations($dst, $first, $last);
+            $this->ins_topology($first = $src->clone(), $dst->left, $dst->up, $dst->right, $last);
+            $this->del_topology($dst, $first, $last);
         }
     }
 
@@ -220,7 +208,7 @@ class XML extends CSS
         $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->ins_relations($first = $src->clone(), $dst->left, $dst->up, $dst, $last);
+            $this->ins_topology($first = $src->clone(), $dst->left, $dst->up, $dst, $last);
             $dst->left ? ($dst->left->right = $first) : ($dst->up->val = $first);
             $dst->left = $last;
         }
@@ -230,7 +218,7 @@ class XML extends CSS
         $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->ins_relations($first = $src->clone(), $dst, $dst->up, $dst->right, $last);
+            $this->ins_topology($first = $src->clone(), $dst, $dst->up, $dst->right, $last);
             if ($dst->right)
                 $dst->right->left = $last;
             $dst->right = $first;
@@ -241,7 +229,7 @@ class XML extends CSS
         $src instanceof XML or ($src = new XML($src))->parse();
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
-            $this->ins_relations($first = $src->clone(), null, $dst, $dst->val, $last);
+            $this->ins_topology($first = $src->clone(), null, $dst, $dst->val, $last);
             [$dst->val->left, $dst->val] = [$last, $first];
         }
     }
@@ -251,7 +239,7 @@ class XML extends CSS
         $src->selected or $src->selected = [$src->root->val];
         foreach ($this->selected as $dst) {
             for ($left = $dst->val; $left->right; $left = $left->right);
-            $this->ins_relations($left->right = $src->clone(), $left, $dst, null);
+            $this->ins_topology($left->right = $src->clone(), $left, $dst, null);
         }
     }
 
@@ -409,20 +397,21 @@ class XML extends CSS
         return $this->root->val;
     }
 
+    protected function close($tag = null) {
+        return is_null($tag) || $tag === $this->up->name ? $this->last($this->up) : false;
+    }
+
     protected function last($node) { # setup cursor right
         $this->up = $node->up;
         $this->next =& $node->right;
         return $this->left = $this->last = $node;
     }
 
-    protected function parent($node) { # setup cursor down
+    protected function parent($node, $name = null) { # setup cursor down
+        is_null($name) or $node->name = $name;
         $this->left = null;
         $this->next =& $node->val;
         return $this->up = $this->last = $node;
-    }
-
-    protected function close($tag = null) {
-        return is_null($tag) || $tag === $this->up->name ? $this->last($this->up) : false;
     }
 
     protected function insert($node, $parent) {
@@ -439,17 +428,31 @@ class XML extends CSS
             if ($this->up->name == $name && in_array($name, $this->omis[0]))
                 $this->close();
         }
-        return $this->insert(XML::node($name, $val, $attr), null === $val);
+        $node = XML::node($name, $val, $attr);
+        is_object($val) && $this->ins_topology($val, null, $node, null);
+        return $this->insert($node, is_null($val));
     }
 
-    static function node($name, $val = null, $attr = null) {
+    protected function ins_topology($ins, $left, $up, $right, &$last = null) {
+        for ($ins->left = $left; $ins; $ins = $ins->right)
+            [$ins->up, $last] = [$up, $ins];
+        $last->right = $right;
+    }
+
+    protected function del_topology($del, $first, $last) {
+        $del->left ? ($del->left->right = $first) : ($del->up->val = $first);
+        if ($del->right)
+            $del->right->left = $last;
+    }
+
+    static function node($name, $val = null, $attr = null, $right = null) {
         return (object)[
             'name' => $name,
             'attr' => $attr,
             'up' => null,
             'val' => $val, # text | object=first-child | 0=void | null=not-void
             'left' => null,
-            'right' => null,
+            'right' => $right,
         ];
     }
 }

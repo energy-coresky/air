@@ -5,7 +5,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
-    const style = 'style="tab-size:4; margin:0; color:%s; background-color:%s"';//width:100%%; 
+    const style = 'style="tab-size:4; line-height:14px; margin:0; color:%s; background-color:%s"';//width:100%%; 
 
     private static $bg;
     private static $clr;
@@ -270,7 +270,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
     static function highlight_md($code, &$bg) { # r g d c m j - gray
         self::scheme();
         $md = new MD($code);
-        $out = $node = $bg = '';
+        $out = $node = $bg = $html = '';
         $hl = '=';
         $attr = function ($n) use (&$node, $md) {
             return $md->attr($node, $n);
@@ -282,7 +282,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
                     $hl = '*';
             } elseif (is_string($node->val)) {
                 if ($cnt = substr_count($node->val, "\n")) {
-                    $bg .= str_pad('', $cnt, '#skip' == $node->name ? '=' : $hl);
+                    $bg .= str_pad('', $cnt, $html ? '+' : ('#skip' == $node->name ? '=' : $hl));
                     if (is_null($node->right) && !$attr('last'))
                         $hl = '=';
                 }
@@ -292,6 +292,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
                     $out .= html($node->val);
                 }
             }
+            $html = 'y-html' == $node->name && '' !== $node->val;
         }
         $bg .= $hl;
         return $out;

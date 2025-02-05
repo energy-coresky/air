@@ -41,8 +41,9 @@ set_time_limit(5);
         if ($blank && $x->empty || !$blank && false !== strpos($x->line, $x->grab))
             $x->grab = false;
         $x->empty or $this->j += strlen($x->line);
-        return $this->push('#raw', $x->line, ['c' => 'r']);
+        return $this->push('y-html', $x->line);//, ['c' => 'r']
     }
+
     private function leaf_dl($x, &$t) {# :dl-dt-dd
     }
 
@@ -61,10 +62,9 @@ set_time_limit(5);
         if (!preg_match("/^\\{$y}[\\$y \t]*$/", $x->line))
             return false;
         $z = str_replace(["\t", ' '], '', $x->line);
-        $p =& $this->up->name;
         $h12 = '=' == $y ? 'h1' : ('-' == $y ? 'h2' : false);
-        if ($h12 && 'p' == $p && $z == chop($x->line) && !$x->close) {
-            $p = $h12;
+        if ($h12 && 'p' == $this->up->name && $z == chop($x->line) && !$x->close) {
+            $this->up->name = $h12;
             $br =& $this->last->left;
             if ($br && $br->name == 'br')
                 $br->name = '#skip';
@@ -80,38 +80,65 @@ set_time_limit(5);
 
     private function leaf_table($x, &$y) {
         if ($x->table) {
-            'tbody' == $this->up->name or $this->push('tbody');
-            $this->push('tr');
-            $line = trim($x->line);
-            if ($line && '|' == $line[0])
-                $line = substr($line, 1);
-            $ary = preg_split("/\s*\|\s*/", $line && '|' == $line[-1] ? substr($line, 0, -1) : $line);
-            foreach ($x->table as $n => $align)
-                $this->push('td', $ary[$n] ?? '', $align);
-            $this->close('tr');
+            $tbody = $this->up->name;
+            if ('tbody' == $tbody) {
+                $tr =& $this->last->right;
+            } else {
+                $tbody = $this->push('tbody');
+                $tr =& $tbody->val;
+            }
+            $this->line($x);
+            $tr = $this->tr('td', $x->table, $tr);
+            return $tr->up = $tbody;
         } elseif ('p' != $this->up->name || '' !== chop($x->line, "\t -:|")) {
-            return $this->leaf_p($x, $y); 
+            return $this->leaf_p($x, $y);
         } else {
             $x->table = array_map(function ($v) {
-                $align = ':' == $v[0] ? ['align' => 'left'] : [];
-                return ':' != $v[-1] ? $align : ['align' => $align ? 'center' : 'right'];
+                $align = ':' == $v[0] ? ' align="left"' : '';
+                return ':' != $v[-1] ? $align : ($align ? ' align="center"' : ' align="right"');
             }, preg_split("/\s*\|\s*/", trim($x->line, "|\t ")));
-            $line = '';
-            foreach ($this->gen($this->up->val) as $node)
-                '#text' != $node->name or $line .= $node->val;
-            $ary = preg_split("/\s*\|\s*/", trim($line, "|\n\t "));
-            if (count($ary) != count($x->table))
+            $first = $this->up->val;
+            $td = 'yd' == $first->name ? 1 : 0;
+            if (end($x->td)->right->val == "\n")
+                $td++;
+            if (count($x->table) != 1 + count($x->td) - $td)
                 return $x->table = false;
-            $this->up->name = 'table';
-            $this->parent($this->up);
-            $thead = $this->push('thead', null, ['t' => chop($line)]);
-            $this->push('#text', "\n");
-            $this->push('tr', null, ['t' => $x->line]);
-            foreach ($x->table as $n => $align)
-                $this->push('th', $ary[$n], $align + ['t' => '']);
-            $this->last($thead);
+            $this->parent($this->up, 'table');
+            $this->push('thead', $this->tr('th', $x->table, $first)); //, null, ['t' => chop($line)]
+            return $this->add($x->line, ['c' => 'r']);
         }
-        return $this->j += strlen($x->line);
+    }
+
+    private function tr($tag, $ary, $node) {
+        $val = "<$tag" . array_shift($ary) . '>';
+        $close = false;
+        if ('yd' == $node->name) {
+            $node->val = $val;
+            $node->attr['t'] = '|';
+            $tr = XML::node('tr', $node);
+        } else {
+            $tr = XML::node('tr', $yd = XML::node('yd', $val, null, $node));
+            [$node->left, $node] = [$yd, $yd];
+        }
+        for ($node->up = $tr, $last = $node; $node = $node->right; $last = $node) {
+            $node->up = $tr;
+            $yd = 'yd' == $node->name;
+            if ($ary && $yd) {
+                $node->val = "</$tag><$tag" . array_shift($ary) . '>';
+                $node->attr['t'] = '|';
+            } elseif ($close) {
+                $node->name = '#skip';
+            } elseif ($yd) {
+                $node->val = "</$tag>";
+                $node->attr['t'] = '|';
+                $close = true;
+            }
+        }
+        if (!$close) {
+            $yd = XML::node('yd', str_repeat("</$tag><$tag>", count($ary)) . "</$tag>");
+            [$last->right, $yd->left, $yd->up] = [$yd, $last, $tr];
+        }
+        return $tr;
     }
 
     private function leaf_p($x, &$y) {
@@ -222,7 +249,8 @@ set_time_limit(5);
             $this->old_blk($x, $y, $empty);
             if ($x->empty && $this->close('p')) {
                 $this->use_close($x);
-            } elseif ($x->empty && $this->close('tbody')) {
+            } elseif ($x->empty && $x->table) {
+                $this->close('tbody');
                 $this->close('table');
                 $x->table = false;
             } else {
@@ -236,26 +264,34 @@ set_time_limit(5);
         return $this->root->val;
     }
 
-    private function line($x) {
-        $in =& $this->in;
-        $j =& $this->j;
+    private function line($x, $line = '') {
+        if ('' === $line) {
+            $in =& $this->in;
+            $j =& $this->j;
+            $x->td = [];
+        } else {
+            $in =& $line;
+            $j = 0;
+        }
         while (!in_array($y = $in[$j] ?? '', ['', "\n"], true)) {
             $next = $in[1 + $j] ?? '';
             if ("\\" == $y) { # escape
-                $esc = '' !== $next && strpbrk($next, MD::$MD->esc);
-                if ($esc) {              #$this->push('#esc', $next, ['t' => "\\$next"]);             #$j += 2;
+                if ('' !== $next && strpbrk($next, MD::$MD->esc)) {
                     $this->add("\\", ['c' => 'r']);
                     $this->add($next);
                 } else {
                     $this->add("\\");// 2do <br>
                 }
+            } elseif ('|' == $y) {
+                $j++;
+                $x->td[] = $this->push('yd', '|', ['i' => count($x->td)]);
             } elseif (strpbrk($y, MD::$MD->esc)) {
                 $img = '!' == $y;
-                if (!$img && '[' != $y || !$this->in_square($x, $y, true, $img)) {
-                    $uu = $this->spn($y);
+                if (!$img && '[' != $y || !$this->square($x, $y, true, $img)) {
+                    $uu = substr($in, $j, strspn($in, $y, $j));
                     if (strpbrk($y, "*_")) {
                         $j += $sz = strlen($uu);
-                        $this->inline($uu, $sz, $in[$j - $sz - 1] ?? '', $in[$j] ?? '');
+                        $this->stk_call($uu, $sz, $in[$j - $sz - 1] ?? '', $in[$j] ?? '');
                     } else {
                         $this->add($uu);
                     }
@@ -267,7 +303,7 @@ set_time_limit(5);
                     $this->add($t2 = chop($y));
                     $this->push('br', 0, ['t' => $rest = substr($y, strlen($t2))]);
                     $j += strlen($rest);
-                } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_link($j, $y)) {
+                } elseif (':' == ($in[$j + $n] ?? '') && $this->auto_link($j, $y, $in)) {
                     $j += strlen($y);
                     $this->push('a', $y, ['href' => $y, 'c' => 'g']);
                 } else {
@@ -337,7 +373,7 @@ set_time_limit(5);
         }
     }
 
-    private function inline($uu, $sz, $left, $right) {
+    private function stk_call($uu, $sz, $left, $right) {
         $u2 = $uu[0] . $uu[0];
         $y = ($em = 1 == $sz) ? $uu : $u2;
         $close = $left !== '' && !strpbrk($left, " \t\r\n");
@@ -346,18 +382,18 @@ set_time_limit(5);
         if ($close && $node) {
             $node->val = $em ? '<em>' : '<strong>';
             $node = false;
-            $this->push('#raw', $em ? '</em>' : '</strong>', ['t' => $uu]);
+            $this->push('y', $em ? '</em>' : '</strong>', ['t' => $uu]);
         } elseif ($open && !$node) {
-            $node = $this->push('#raw', $uu, ['t' => $uu]);
+            $node = $this->push('y', $uu, ['t' => $uu]);
         } else {
             $this->push('#text', $uu);
         }
     }
 
-    private function auto_link($j, &$y) {
+    private function auto_link($j, &$y, &$in) {
         if (!preg_match("/\bhttps?$/ui", $y, $m1))
             return false;
-        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($this->in, $j + strlen($y)), $m2)) //2do substr
+        if (!preg_match("/^:\/\/[^\s<]+\b\/*/ui", substr($in, $j + strlen($y)), $m2)) //2do substr
             return false;
         if ($m1[0] === $y)
             return $y .= $m2[0];
@@ -365,7 +401,7 @@ set_time_limit(5);
         return false;
     }
 
-    private function in_square($x, $y, $inline = false, $img = false) { # 2do  footnote
+    private function square($x, $y, $inline = false, $img = false) { # 2do  footnote
         $j = $img ? 1 + $this->j : $this->j;
         if (!$len = strlen($head = Rare::bracket($this->in, '[', $j, "\n\\")))
             return false;
@@ -430,7 +466,7 @@ set_time_limit(5);
                     $out .= pre(tag(html($code), true === $type ? '' : "class=\"language-$type\"", 'code'), '');
                 }
                 $type = '';
-            } elseif ('#raw' == $node->name) {
+            } elseif ('y' == $node->name[0]) {
                 $out .= $node->val;
             } elseif ('#' == $node->name[0]) {
                 '' === $type ? ($out .= html($node->val)) : ($code .= $node->val);
