@@ -288,6 +288,8 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 }
                 if ($c = $attr('c')) {
                     $out .= self::span($c, $node->val);
+                } elseif ($c = $attr('bg')) {
+                    $out .= self::bg(html($node->val), self::$bg[$c]);
                 } else {
                     $out .= html($node->val);
                 }

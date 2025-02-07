@@ -445,13 +445,13 @@ class XML extends CSS
             $del->right->left = $last;
     }
 
-    static function node($name, $val = null, $attr = null, $right = null) {
+    static function node($name, $val = null, $attr = null, $right = null, $up = null, $left = null) {
         return (object)[
             'name' => $name,
             'attr' => $attr,
-            'up' => null,
+            'up' => $up,
             'val' => $val, # text | object=first-child | 0=void | null=not-void
-            'left' => null,
+            'left' => $left,
             'right' => $right,
         ];
     }

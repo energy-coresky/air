@@ -96,6 +96,7 @@ blk_chr: {
   '[':    square,
   '<':    leaf_html,
   '~`':   leaf_fenced,
+#  ':':   leaf_dl, # definition list <dl> <dt> <dd>
   '':     leaf_p,
 }
 blk_re: [
@@ -103,10 +104,11 @@ blk_re: [
   "/^()([\*\-\+])(\s+|\z)/", # for blk_ul [1]
   "/^()(>)(\s*)/",           # for blk_bq [2]
 ]
-#in_chr: {
-#  '*_': in_ems, '~': in_del, '^': in_sup, '=': in_mark, ':': in_emoji_dl, '|': in_table,
-#  '[': square, '`': in_code,
-#}
+in_chr: {
+  '*': [em, strong], '_': [em, strong], '~': [sub, del], '^': [sup, ''], '=': ['', mark], '`': [code, code],
+#':': in_emoji_dl, '|': in_table,
+#  '[': square, 
+}
 email_re: "/^[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*$/i"
 tagfilter: @csv title textarea style xmp iframe noembed noframes script plaintext
 tags: @csv {
