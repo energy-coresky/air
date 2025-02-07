@@ -441,8 +441,7 @@ class XML extends CSS
 
     protected function del_topology($del, $first, $last) {
         $del->left ? ($del->left->right = $first) : ($del->up->val = $first);
-        if ($del->right)
-            $del->right->left = $last;
+        is_null($del->right) or $del->right->left = $last;
     }
 
     static function node($name, $val = null, $attr = null, $right = null, $up = null, $left = null) {
