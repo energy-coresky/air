@@ -119,7 +119,7 @@ set_time_limit(3);
         } else {
             $node = $node->left = XML::node('-t', $val, ['t' => ''], $node);
         }
-        $node->up = $tr = XML::node('tr', $last = $node, null, null, $up);
+        $node->up = $tr = XML::node('tr', $last = $node, $up->attr ?? null, null, $up);
         for ($close = false; $node = $node->right; $last = $node) {
             $node->up = $tr;
             $vl = '-t' == $node->name;
@@ -147,7 +147,7 @@ set_time_limit(3);
             return false; # lazy continue
         $this->use_close($x);
         if (!$x->empty) {
-            $x->cvl = 0;
+            $x->cvl = $x->nls = 0;
             $x->added = $this->push('p');
         }
         return false;
@@ -161,9 +161,9 @@ set_time_limit(3);
         return $this->add($x->line);
     }
 
-    private function blk_bq($x, &$y) {
+    private function blk_blockquote($x, &$y) {
         $old = $x->pad;
-        if (!$this->set_x($x, 2, $y))
+        if (!$this->set_x(2, $x, $y))
             return false;
         $this->use_close($x);
         return $this->push_pad($x, $old);
@@ -178,7 +178,7 @@ set_time_limit(3);
 
     private function blk_ol($x, &$y, $n = 0) {
         $old = $x->pad;
-        if (!$attr = $this->set_x($x, $n, $y))
+        if (!$attr = $this->set_x($n, $x, $y))
             return false;
         if ($tag = $x->close) {
             if ('li' == $tag->name) {
@@ -229,34 +229,72 @@ set_time_limit(3);
 
     protected function parse(): ?stdClass {
         $x = new stdClass;
-        $pem = $x->grab = $x->nls = $x->table = $x->cvl = false;
+        $z = $x->grab = $x->nls = $x->table = $x->cvl = false;
         $this->parent($this->root);
         do {
-            $y = $this->in[$this->j] ?? '';
-            if (is_num($this->up->name[1] ?? ''))
-                $this->leaf_h6(false, false); # close h1..h6
-            if ("\n" == $y) {
+            $x->added = $x->close = false;
+            if ("\n" == ($this->in[$this->j] ?? '')) {
+                if (is_num($this->up->name[1] ?? ''))
+                    $this->leaf_h6(false); # close h1..h6
                 $this->add("\n", $x->nls);
                 if ($x->nls && $x->grab)
                     $x->nls = false;
             }
-            $x->added = $x->close = false;
-            $this->old_blk($x, $y, $empty);
-            if ($x->empty && $this->close('p')) {
-                $this->use_close($x);
-            } elseif ($x->empty && $x->table) {
-                $this->close('tbody');
-                $this->close('table');
-                $x->table = $x->cvl = false;
-            } else {
-                $this->new_blk($x, $y);
+            foreach ($this->set_x(3, $x, $y, $last) as $tag) {
+                if ('li' == $tag->name) {
+                    if (!$x->empty && $x->pad < ($tag->attr['pad'] + $x->base))
+                        goto brk;
+                    $x->base += $tag->attr['pad'];
+                } elseif ('>' != $y || $x->pad > 3) {
+                    brk: $x->close = $tag;
+                    break;
+                } else { # also blockquote
+                    $x->pad && $this->add($x->pad);
+                    $this->set_x(4, $x, $y, $last);
+                    if ($x->pad) {
+                        $this->last->val .= ' ';
+                        $x->base++;
+                    }
+                }
             }
-            $pem && $x->added && $this->set_tight($pem);
-            $pem = $empty;
+            $x->empty && ($x->table || $this->close('p')) ? $this->use_close($x) : $this->blocks($x, $y);
+            $z && $x->added && $this->set_tight($z);
+            $z = $last;
         } while ($this->line($x));
         $this->j = 0;
         $this->last->attr['last'] = 1;
         return $this->root->val;
+    }
+
+    private function blocks($x, $y) {
+        if ($x->pad >= $x->base && $x->base) {
+            $x->pad -= $x->base;
+            $this->add($x->base);
+        }
+        start: # add new blocks
+        $x->line = $this->cspn("\n");
+        if ($x->grab) {
+            if (!$x->close)
+                return $this->leaf_fenced($x, $y);
+            $this->use_close($x);
+        }
+        if ($x->pad > 3) {
+            $is_p = 'p' == $this->up->name or $this->use_close($x);
+            $this->add($is_p ? $x->pad : 4);
+            if ($is_p)
+                return $this->leaf_p($x);
+            return $this->leaf_code($x);
+        }
+        $this->close('x-code');
+        $x->pad && $this->add($x->pad);
+        foreach (MD::$MD->blk_chr as $chr => $func) {
+            if (('' === $chr || false !== strpbrk($y, $chr)) && $this->$func($x, $y)) {
+                $x->added = true;
+                if ($x->empty || 'b' != $func[0])
+                    break;
+                goto start;
+            }
+        }
     }
 
     private function line($x) {
@@ -282,12 +320,14 @@ set_time_limit(3);
             } elseif (strpbrk($y, MD::$MD->esc)) {
                 $img = '!' == $y;
                 if (!$img && '[' != $y || !$this->square($x, $y, true, $img)) {
-                    $uu = substr($in, $j, strspn($in, $y, $j));
-                    if (strpbrk($y, "*_")) {
-                        $j += $sz = strlen($uu);
-                        $this->stk_call($uu, $sz, $in[$j - $sz - 1] ?? '', $in[$j] ?? '');
+                    if (strpbrk($y, "*_`~^=")) { # inlines
+                        $b = isset($in[$j - 1]) && !strpbrk($in[$j - 1], " \t\r\n") ? 1 : 0; # end or not
+                        $j += strlen($uu = substr($in, $j, strspn($in, $y, $j)));
+                        $b += isset($in[$j]) && !strpbrk($in[$j], " \t\r\n") ? 2 : 0; # start or not
+                        $this->push('-i', $uu, ['b' => $b]);
+                        $this->up->attr['in'] = $uu;
                     } else {
-                        $this->add($uu);
+                        $this->add($y);
                     }
                 }
             } else {
@@ -306,65 +346,6 @@ set_time_limit(3);
             }
         }
         return "\n" == $y;
-    }
-
-    private function old_blk($x, &$y, &$empty) {
-        $ary = [];
-        for ($tag = $this->last; '#root' != $tag->name; $tag = $tag->up)
-            if (in_array($tag->name, ['li', 'blockquote']))
-                array_unshift($ary, $tag);
-        $y = $this->set_x($x, 7);
-        $empty = $x->empty ? $this->last : false;
-        foreach ($ary as $tag) {
-            if ('li' == $tag->name) {
-                if (!$x->empty && $x->pad < ($tag->attr['pad'] + $x->base))
-                    return $x->close = $tag;
-                $x->base += $tag->attr['pad'];
-            } elseif ('>' != $y || $x->pad > 3) {// && 'p' != $this->up->name
-                return $x->close = $tag;
-            } else { # also blockquote
-                $x->pad && $this->add($x->pad);
-                $y = $this->set_x($x, 5);
-                if ($x->empty)
-                    $empty = $this->last;
-                if ($x->pad) {
-                    $this->last->val .= ' ';
-                    $x->base++;
-                }
-            }
-        }
-    }
-
-    private function new_blk($x, &$y) {
-        if ($x->pad >= $x->base && $x->base) {
-            $x->pad -= $x->base;
-            $this->add($x->base);
-        }
-        start: # add new blocks
-        $x->line = $this->cspn("\n");
-        if ($x->grab) {
-            if (!$x->close)
-                return $this->leaf_fenced($x, $y);
-            $this->use_close($x);
-        }
-        if ($x->pad > 3) {
-            $is_p = 'p' == $this->up->name;
-            $is_p or $this->use_close($x);
-            $this->add($is_p ? $x->pad : 4);
-            if ($is_p)
-                return $this->leaf_p($x);
-            return $this->leaf_code($x, $y);
-        }
-        $this->close('x-code');
-        $x->pad && $this->add($x->pad);
-        foreach (MD::$MD->blk_chr as $chr => $func) {
-            if (('' === $chr || false !== strpbrk($y, $chr)) && $this->$func($x, $y)) {
-                $x->added = true;
-                if ($x->empty || 'b' != $func[0])
-                    break;
-                goto start;
-            }
-        }
     }
 
     private function stk_call($uu, $sz, $left, $right) {
@@ -446,6 +427,7 @@ set_time_limit(3);
     function md_nice($in) {
         $out = $type = $code = '';
         foreach ($this->gen($in, true) as $depth => $node) {
+            $depth < 0 or $this->inlines($node);
             if ('#skip' == $node->name)
                 continue;
             if ($depth < 0) {
@@ -471,7 +453,7 @@ set_time_limit(3);
             } else {
                 if ('li' == $node->name && $node->up->attr['tight'])
                     for ($tag = $node->val; $tag; $tag = $tag->right)
-                        'p' != $tag->name or $this->remove($tag, false);
+                        'p' != $tag->name or $this->inlines($tag, true);
                 $out .= str_pad('', $depth * 2) . $this->tag($node, $close, MD::$MD->attr);
                 $out .= null === $node->val || is_string($node->val) ? "$node->val$close\n" : "\n";
             }
@@ -479,11 +461,33 @@ set_time_limit(3);
         return $out;
     }
 
+    function inlines($p, $drop = false) {
+        if (isset($p->attr['in'])) {
+            unset($p->attr['in']);
+            $stk = [];
+            for ($node = $p->val; $node; $node = $node->right) {
+                if ('-t' == $node->name)
+                    $stk = [];
+                if ('-i' != $node->name)
+                    continue;
+                $tag = '`' == $node->val[0] ? 'code' : (MD::$MD->inline[$node->val] ?? '');
+                if ($from = $stk[$node->val] ?? false) {
+                    $stk[$node->val] = false;
+                    $from->attr['t'] = $node->attr['t'] = $node->val;
+                    $from->val = "<$tag>";
+                    $node->val = "</$tag>";
+                } elseif ($tag) {
+                    $stk[$node->val] = $node;
+                }
+            }
+        }
+        $drop && $this->remove($p, false);
+    }
+
     private function use_close($x) {
-        #if (!$x->close && 'tbody' == $this->up->name)
-        #    $x->close = $this->up->up; # table
-        #if (!$x->close && 'table' == $this->up->name)
-        #    $x->close = $this->up;
+        $this->close('tbody');
+        if ($this->close('table'))
+            $x->table = $x->cvl = false;
         $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
         $x->pad < 4 && $this->close('x-code');
         $x->close = $x->grab = false;
@@ -517,42 +521,37 @@ set_time_limit(3);
         $left->up->attr['tight'] = '0';
     }
 
-    private function set_x($x, $n, &$y = null) {
+    private function set_x($n, $x, &$y = null, &$last = null) {
         static $pad;
 
+        $ary = [];
         if ($n < 3) {
             if (!preg_match(MD::$MD->blk_re[$n], $x->line, $match))
                 return false;
-            $pad += $sz = 1 + strlen($x->m = $match[1]);
-            $this->j += $sz;
-            $attr = ['tight' => '1', 'd' => $match[2]];
-            $n or 1 == $x->m or $attr += ['start' => $x->m];
-            $x->m .= $match[2];
-        } elseif (7 == $n) {
+            $pad += $ary['tight'] = 1 + strlen($x->m = $match[1]);
+            $this->j += $ary['tight'];
+            $n or 1 == $x->m or $ary['start'] = $x->m;
+            $x->m .= $ary['d'] = $match[2];
+        } elseif (3 == $n) {
+            for ($tag = $this->last; '#root' != $tag->name; $tag = $tag->up)
+                if (in_array($tag->name, ['li', 'blockquote']))
+                    array_unshift($ary, $tag);
             $pad = $x->base = 0;
-        } elseif (5 == $n) {
+        } else {
             $pad++;
             $x->base = 0;
             $this->add('>', ['c' => 'r']);
         }
         $fn = fn() => $this->in[$this->j] ?? "\n";
         for ($base = $pad, $y = $fn(); strpbrk($y, " \t"); ) {
-            $this->j += $sz = strspn($this->in, ' ', $this->j);
-            $pad += $sz;
+            $pad += $sz = strspn($this->in, ' ', $this->j);
+            $this->j += $sz;
             for ($y = $fn(); "\t" == $y; $this->j++, $y = $fn())
                 $pad += 4 - $pad % 4;
         }
-        $x->empty = "\n" == $y;
+        $last = ($x->empty = "\n" == $y) ? $this->last : false;
         $x->pad = $pad - $base;
-        return $attr ?? $y;
-    }
-
-    protected function last($node, $down = false) {
-        if (!$down) {
-            //$this->last
-        }
-        //$this->stk = [];
-        return parent::last($node, $down);
+        return $ary;
     }
 
     private function spn($set, $j = 0, &$sz = null) { # collect $set

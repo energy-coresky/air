@@ -295,6 +295,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 }
             }
             $html = '-html' == $node->name && '' !== $node->val;
+            $md->inlines($node);
         }
         $bg .= $hl;
         return $out;
