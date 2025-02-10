@@ -125,6 +125,7 @@ css: |
   }
   #md-doc pre {
       padding: 10px;
+      overflow: auto;
   }
   #md-doc a {
       text-decoration: underline;
@@ -136,7 +137,10 @@ css: |
       background: blue;
       color: #fff;
   }
-#.md code{white-space: pre-wrap;}
+  #md-doc p code, #md-doc li code {
+      white-space: pre-wrap;
+  }
+#.md
 
 #.js
 keywords: @csv

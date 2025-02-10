@@ -348,23 +348,6 @@ set_time_limit(3);
         return "\n" == $y;
     }
 
-    private function stk_call($uu, $sz, $left, $right) {
-        $u2 = $uu[0] . $uu[0];
-        $y = ($em = 1 == $sz) ? $uu : $u2;
-        $close = $left !== '' && !strpbrk($left, " \t\r\n");
-        $open = $right !== '' && !strpbrk($right, " \t\r\n");
-        $node =& $this->stk[$y];
-        if ($close && $node) {
-            $node->val = $em ? '<em>' : '<strong>';
-            $node = false;
-            $this->push('-', $em ? '</em>' : '</strong>', ['t' => $uu]);
-        } elseif ($open && !$node) {
-            $node = $this->push('-', $uu, ['t' => $uu]);
-        } else {
-            $this->push('#text', $uu);
-        }
-    }
-
     private function auto_link($j, &$y, &$in) {
         if (!preg_match("/\bhttps?$/ui", $y, $m1))
             return false;
@@ -405,8 +388,12 @@ set_time_limit(3);
         }
         $this->j += strlen($t = ($img ? '!' : '') . $head . $tail);
         if ($img)
-            return $this->push('img', 0, ['src' => substr($tail, 1, -1), 'alt' => substr($head, 1, -1), 'c' => 'c', 't' => $t]);
+            return $this->push('img', 0, ['src' => $this->src($tail), 'alt' => substr($head, 1, -1), 'c' => 'c', 't' => $t]);
         return $this->push('a', substr($head, 1, -1), ['href' => substr($tail, 1, -1), 'c' => 'g', 't' => $t]);
+    }
+
+    function src($src) {
+        return preg_replace("~^https://github.*?/([^\/\.]+)[^/]+$~", '_png?$1=' . Plan::$pngdir, substr($src, 1, -1));
     }
 
     function md_raw($in) {//return $this->xml_mini($in);
@@ -461,23 +448,42 @@ set_time_limit(3);
         return $out;
     }
 
+    function code(&$n1) {
+        for ($n2 = $n1->right, $s = ''; $n2; $n2 = $n2->right) {
+            if ('-t' == $n2->name)
+                return;
+            if ($n1->val == $n2->val) {
+                $n1->attr['t'] = $n2->attr['t'] = $n1->val;
+                $n1->val = '<code>' . html($s);
+                $n2->val = '</code>';
+                $n2->left = $n1->right = XML::node('#skip', $s, ['bg' => '*'], $n2, $n1->up, $n1);
+                return $n1 = $n2;
+            }
+            $s .= $n2->val;
+        }
+    }
+
     function inlines($p, $drop = false) {
         if (isset($p->attr['in'])) {
             unset($p->attr['in']);
             $stk = [];
-            for ($node = $p->val; $node; $node = $node->right) {
-                if ('-t' == $node->name)
+            for ($n1 = $p->val; $n1; $n1 = $n1->right) {
+                if ('-t' == $n1->name)
                     $stk = [];
-                if ('-i' != $node->name)
+                if ('-i' != $n1->name)
                     continue;
-                $tag = '`' == $node->val[0] ? 'code' : (MD::$MD->inline[$node->val] ?? '');
-                if ($from = $stk[$node->val] ?? false) {
-                    $stk[$node->val] = false;
-                    $from->attr['t'] = $node->attr['t'] = $node->val;
-                    $from->val = "<$tag>";
-                    $node->val = "</$tag>";
-                } elseif ($tag) {
-                    $stk[$node->val] = $node;
+                if ('`' == $n1->val[0]) { # code
+                    $this->code($n1);
+                } else {
+                    $tag = MD::$MD->inline[$n1->val] ?? '';
+                    if (($from = $stk[$n1->val] ?? false) && (1 & $n1->attr['b'])) {
+                        array_splice($stk, array_search($n1->val, array_keys($stk)));
+                        $from->attr['t'] = $n1->attr['t'] = $n1->val;
+                        $from->val = "<$tag>";
+                        $n1->val = "</$tag>";
+                    } elseif ($tag && (2 & $n1->attr['b'])) {
+                        $stk[$n1->val] = $n1;
+                    }
                 }
             }
         }
