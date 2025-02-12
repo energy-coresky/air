@@ -87,8 +87,7 @@ omis: # tags omission rules
 #.md
 esc: "/\"'`*_{}[]()<>#+-.!|^=~:$%&;,?@"
 code_type: @csv jet php css js html yaml bash # 2do saw
-typ_1:   {'<![CDATA[': ']]>', '<!--': '-->', '<!': '>'}
-typ_2:   @csv script pre style
+typ_2:   @csv pre script style textarea
 blk_chr: {
   '-*_=': leaf_h2r, '#': leaf_h6,
   '-*+':  blk_ul, '0123456789': blk_ol, '>': blk_blockquote,
@@ -109,15 +108,11 @@ inline: {
 }
 email_re: "/^[a-z\d.!#$%&'*+/=?^_`{|}~-]+@[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?(?:\.[a-z\d](?:[a-z\d-]{0,61}[a-z\d])?)*$/i"
 tagfilter: @csv title textarea style xmp iframe noembed noframes script plaintext
-tags: @csv {
-  a: address article aside,        b: base basefont blockquote body,
-  c: caption center col colgroup,  d: dd details dialog dir div dl dt,
-  f: fieldset figcaption figure footer form frame frameset,
-  h: h1 h2 h3 h4 h5 h6 head header hr html,       i: iframe,
-  l: legend li link,               m: main menu menuitem,  n: nav noframes,
-  o: ol optgroup option,   p: p param,     s: section source summary,
-  t: table tbody td tfoot th thead title tr track,   u: ul
-}
+tags: @csv >
+  address article aside base basefont blockquote body caption center col colgroup
+  dd details dialog dir div dl dt fieldset figcaption figure footer form frame frameset
+  h1 h2 h3 h4 h5 h6 head header hr html iframe legend li link main menu menuitem nav noframes
+  ol optgroup option p param search section summary table tbody td tfoot th thead title tr track ul
 attr: @csv href start src alt align
 css: |
   #md-doc pre, #md-doc code {

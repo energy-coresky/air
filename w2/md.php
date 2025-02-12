@@ -21,25 +21,38 @@ set_time_limit(3);
     }
 
     private function leaf_html($x) {
-        if ($x->grab)
-            goto end;
-        if (!preg_match("/^<(\?|!|\/?[a-z][a-z\-]*)/i", $x->line, $m))
-            return false;
-        if ('?' == $m[1]) {
-            $x->grab = '?>';
-        } elseif ('!' == $m[1]) {
-            foreach (MD::$MD->typ_1 as $k => $v)
-                if ($k == substr($x->line, 0, strlen($k))) {
-                    $x->grab = $v;
-                    goto end;
+        $pre = fn($m) => $m[0] == "<$m[1]" || $m[2] && '/' != $m[2][0];
+        if (!$x->grab) {
+            if (!preg_match("/^<(\?|![a-z]|!|\/?[a-z][a-z\d\-]*)(\s|\/>|>)*.*$/i", $x->line, $m))
+                return false;
+            if ('?' == $m[1]) {
+                $x->grab = '?>';
+            } elseif ('!' == $m[1]) {
+                if ('<!--' == substr($x->line, 0, 4)) {
+                    $x->grab = '-->';
+                } elseif ('<![CDATA[' == substr($x->line, 0, 9)) {
+                    $x->grab = ']]>';
+                } else {
+                    return false;
                 }
-            return false;
-        } elseif (in_array($v = strtolower($m[1]), MD::$MD->typ_2)) {
-            $x->grab = "</$v>";
-        } else {
-            $x->grab = "<"; # blank line
+            } elseif ('!' == $m[1][0]) {
+                $x->grab = '>';
+            } elseif (in_array($tag = strtolower($m[1]), ['pre', 'script', 'style', 'textarea']) && $pre($m)) {
+                $x->grab = "</$tag>";
+            } else {
+                $tag = strtolower($m[1]);
+                if ($close = '/' == $tag[0])
+                    $tag = substr($tag, 1);
+                $tags = in_array($tag, MD::$MD->tags) && ($m[2] || $m[0] == "<$m[1]");
+                if ($tags || 1) {
+                    $x->grab = "<"; # blank line
+                } else {
+                    return false;
+                }
+            }
         }
-        end:
+        //$this->close('p');
+        //$this->use_close($x);
         $blank = '<' == $x->grab;
         if ($blank && $x->empty || !$blank && false !== strpos($x->line, $x->grab))
             $x->grab = false;
@@ -60,7 +73,6 @@ set_time_limit(3);
         if (!preg_match("/^(#{1,6})(\s+#+\s*\z|\s+|\z)(.*)$/", $x->line, $m))
             return false;
         $this->use_close($x);
-        $this->close('p');
         $h = strlen($m[1]);
         $this->j += $h + strlen($m2 = $m[2]);
         preg_match("/(\s+#+\s*|\s*)$/", $m[3], $n);
@@ -95,7 +107,7 @@ set_time_limit(3);
             $x->nls = true;
             $x->cvl = 0;
             $this->line($x);
-            return $this->last($node = $this->tr('td', $x->table, $node, $tbody));
+            return $this->last($node = $this->tr('td', $x->table, $node, $tbody, $tbody));
         } elseif (!is_int($x->cvl) || '' !== chop($x->line, "\t -:|")) {
             return $this->leaf_p($x);
         } else {
@@ -106,12 +118,12 @@ set_time_limit(3);
             if (count($x->table) != $x->cvl)
                 return $x->table = $x->cvl = false;
             $this->parent($this->up, 'table');
-            $this->push('thead', $this->tr('th', $x->table, $this->up->val));
+            $this->push('thead', $this->tr('th', $x->table, $this->up->val, $this->up));
             return $this->add($x->line, ['c' => 'r']);
         }
     }
 
-    private function tr($tx, $ary, $node, $up = null) {
+    private function tr($tx, $ary, $node, $parent, $up = null) {
         $val = "<$tx" . array_shift($ary) . '>';
         if ('-t' == $node->name) {
             $node->val = $val;
@@ -119,7 +131,7 @@ set_time_limit(3);
         } else {
             $node = $node->left = XML::node('-t', $val, ['t' => ''], $node);
         }
-        $node->up = $tr = XML::node('tr', $last = $node, $up->attr ?? null, null, $up);
+        $node->up = $tr = XML::node('tr', $last = $node, $parent->attr ?? null, null, $up);
         for ($close = false; $node = $node->right; $last = $node) {
             $node->up = $tr;
             $vl = '-t' == $node->name;
@@ -218,7 +230,6 @@ set_time_limit(3);
                 $x->pad = 0;
             }
         } elseif (preg_match("/^($y{3,})\s*(\w*).*$/", $x->line, $m)) {
-            $this->close('p');
             $this->use_close($x);
             $x->grab = $x->nls = $m[1];
             $this->j += strlen($x->line);
@@ -439,8 +450,8 @@ set_time_limit(3);
                 $code = ''; # fenced code start
             } else {
                 if ('li' == $node->name && $node->up->attr['tight'])
-                    for ($tag = $node->val; $tag; $tag = $tag->right)
-                        'p' != $tag->name or $this->inlines($tag, true);
+                    for ($p = $node->val; $p; $p = $p->right)
+                        'p' != $p->name or $this->inlines($p, true);
                 $out .= str_pad('', $depth * 2) . $this->tag($node, $close, MD::$MD->attr);
                 $out .= null === $node->val || is_string($node->val) ? "$node->val$close\n" : "\n";
             }
@@ -454,9 +465,11 @@ set_time_limit(3);
                 return;
             if ($n1->val == $n2->val) {
                 $n1->attr['t'] = $n2->attr['t'] = $n1->val;
+                $n2->left = $n1->right = XML::node('#skip', $s, ['bg' => '*'], $n2, $n1->up, $n1);
+                if (' ' == $s[0] && ' ' == $s[-1] && '' !== trim($s))
+                    $s = substr($s, 1, -1);
                 $n1->val = '<code>' . html($s);
                 $n2->val = '</code>';
-                $n2->left = $n1->right = XML::node('#skip', $s, ['bg' => '*'], $n2, $n1->up, $n1);
                 return $n1 = $n2;
             }
             $s .= $n2->val;
@@ -491,6 +504,7 @@ set_time_limit(3);
     }
 
     private function use_close($x) {
+        $this->close('p');
         $this->close('tbody');
         if ($this->close('table'))
             $x->table = $x->cvl = false;

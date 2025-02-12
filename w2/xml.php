@@ -9,6 +9,7 @@ class XML extends CSS
 
     public $selected = [];
     public $root;
+    public $strong = false; # 2do: 0-auto 1-html -1-xml
 
     protected $up;
     protected $left;
@@ -17,6 +18,7 @@ class XML extends CSS
     protected $j = 0;
 
     function __construct(string $in = '', $tab = 2) {
+set_time_limit(3);
         parent::__construct($in, $tab);
         $this->root = XML::node('#root');
         XML::$XML or XML::$XML = yml('+ @inc(html)');
@@ -78,10 +80,10 @@ class XML extends CSS
         return $this->root->val;
     }
 
-    static function tag($node, &$close, $allow = false) {
+    static function tag($node, &$close, $attr = false) {
         $close = '</' . ($open = $node->name) . '>';
         foreach ($node->attr ?? [] as $k => $v)
-            if ((!$allow || in_array($k, $allow)) && (XML::$void_slash || '/' !== $k))
+            if ((!$attr || in_array($k, $attr)) && (XML::$void_slash || '/' !== $k))
                 $open .= ' ' . (0 === $v ? $k : "$k=\"$v\"");
         return "<$open>";
     }
@@ -285,16 +287,13 @@ class XML extends CSS
         return $old;
     }
 
-    function each($fn) {
-        foreach ($this->selected as $n => $to)
-            $fn($to, $n);
-    }
-
     function tokens(?stdClass $y = null) {
         $y or $y = (object)['mode' => 'txt', 'find' => false];
+        $y->err = '';
         $len = strlen($in =& $this->in);
+        $lt = fn($t) => '<' == $t && ('txt' == $y->mode || $this->strong);
         for ($j = 0; $j < $len; $j += $y->len) {
-            $y->end = false;
+            $y->end = $y->space = false;
             if ($y->found = $y->find) {
                 if (false === ($sz = strpos($in, $y->find, $j))) {
                     $t = substr($in, $j); # /* </style> */ is NOT comment inside <style>!
@@ -302,25 +301,23 @@ class XML extends CSS
                     $t = substr($in, $j, $sz - $j);
                     $y->find = false;
                 }
-            } elseif ($y->space = 'attr' == $y->mode && ($sz = strspn($in, "\t \n", $j))) {
-                $t = substr($in, $j, $sz);
-            } elseif ('>' != ($t = $in[$j]) && 'attr' == $y->mode) {
-                if ('"' == $t || "'" == $t) {
-                    $sz = Rare::str($in, $j, $len);
-                    $t = !$sz ? substr($in, $j) : substr($in, $j, $sz - $j);
-                } elseif ('=' != $t) {
-                    $t = substr($in, $j, strcspn($in, "=>\t \n", $j));
-                }
-            } elseif ('<' == $t && preg_match("@^(<!\-\-|<!\[CDATA\[|</?[a-z][a-z\d\-]*)(\s|>)@is", substr($in, $j, 51), $match)) {
-                [$m0, $t] = $match;
+            } elseif ($lt($t = $in[$j]) && $this->tag_name($j, $t)) {
                 $y->mode = '/' == $t[1] ? 'close' : 'open';
                 if ('<!--' == $t) { # comment
                     $y->end = '-->';
                 } elseif ('<![CDATA[' == $t) {
                     $y->end = ']]>';
-                } elseif ('/' == $t[1] && '>' == $m0[-1]) {
-                    $t = $m0;
                 }
+            } elseif ('attr' == $y->mode) {
+                if ($y->space = strspn($in, "\t \n", $j)) {
+                    $t = substr($in, $j, $y->space);
+                } elseif ('"' == $t || "'" == $t) {
+                    $t .= substr($in, 1 + $j, $sz = strcspn($in, $t, 1 + $j));
+                    $len == $j + 1 + $sz or $t .= $t[0];
+                } elseif (!strpbrk($t, '<=>')) {
+                    $t = substr($in, $j, strcspn($in, "=>\t \n", $j));
+                }
+                $y->err .= $t;
             } elseif ('>' != $t && '<' != $t) {
                 $t = substr($in, $j, strcspn($in, '<', $j));
             }
@@ -329,7 +326,14 @@ class XML extends CSS
         }
     }
 
-    function set_attr(&$attr, $t) { # attr-name= /^[a-z_:][a-z_:\d\.\-]*$/
+    function tag_name($j, &$t) {
+        $tag = "</[a-z][a-z\d\-]*\s*>|<[a-z][a-z\d\-]*";
+        if (preg_match("@^(<!\-\-|<!\[CDATA\[|$tag)@is", substr($this->in, $j, 51), $match))
+            $t = $match[1];
+        return $match;
+    }
+
+    function tag_attr(&$attr, $t) { # attr-name= /^[a-z_:][a-z_:\d\.\-]*$/
         static $key = '', $val = false;
         if ($quot = in_array($t[0], ["'", '"']))
             $t = substr($t, 1, -1);
@@ -347,11 +351,11 @@ class XML extends CSS
 
     protected function parse(): ?stdClass { # 2do strict mode
         $name = $str = $attr = null;
-        $flush = function () use (&$name, &$str, &$attr) {
+        $flush = function ($val = null) use (&$name, &$str, &$attr) {
             if ('#text' == $name) {
                 $this->push($name, $str);
             } elseif (!is_null($name)) {
-                $this->push($name, null, $attr);
+                $this->push($name, $val, $attr);
                 is_null($str) or $this->push('#text', $str);
             }
             $name = $str = $attr = null;
@@ -366,26 +370,34 @@ class XML extends CSS
                 $this->push('-->' == $y->found ? '#comment' : '#data', $t);
                 $y->len += $y->find ? 0 : 3; # correct $y->len!
             } elseif ('open' == $y->mode) { # sample: <tag
+                if ($y->err) {
+                    $str = $y->err;
+                    $name = '#text';
+                }
                 $flush();
-                $name = rtrim(strtolower(substr($t, 1)), '/'); ///
+                $name = rtrim(strtolower(substr($y->err = $t, 1)), '/'); ///
                 $y->mode = 'attr';
                 continue;
             } elseif ('attr' == $y->mode) {
                 if ($y->space || '>' != $t) {
-                    $y->space || $this->set_attr($attr, $t);
+                    $y->space || $this->tag_attr($attr, $t);
                     continue;
                 }
                 if (in_array($name, ['script', 'style'])) {
                     $y->find = "</$name>";
                 } elseif (in_array($name, $this->void) || $attr && '/' == array_key_last($attr) && 0 === $attr['/']) {
-                    $this->push($name, 0, $attr);
-                    $name = $str = $attr = null;
+                    $flush(0);
                 }
+                $y->err = '';
             } elseif ('close' == $y->mode) { # sample: </tag>
-                is_null($name) or $this->push($name, $str ?? '', $attr);
                 $tag = strtolower(substr($t, 2, -1));
-                $tag === $name or $this->close($tag);
-                $name = $str = $attr = null;
+                if ($tag === $name) {
+                    $this->push($tag, $str ?? '', $attr);
+                    $name = $str = $attr = null;
+                } else {
+                    $flush();
+                    $this->close($tag, true);
+                }
             } else { # text
                 if (is_null($name))
                     $name = '#text';
@@ -397,8 +409,12 @@ class XML extends CSS
         return $this->root->val;
     }
 
-    protected function close($tag = null) {
-        return is_null($tag) || $tag === $this->up->name ? $this->last($this->up) : false;
+    protected function close($name = null, $search = false) {
+        $up = $this->up;
+        if (($nul = is_null($name)) || !$search)
+            return $nul || $up->name == $name ? $this->last($up) : false;
+        for (; $up && $up->name != $name; $up = $up->up);
+        return $up ? $this->last($up) : false;
     }
 
     protected function last($node) { # setup cursor right

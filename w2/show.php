@@ -5,7 +5,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
-    const style = 'style="tab-size:4; line-height:14px; margin:0; color:%s; background-color:%s"';//width:100%%; 
+    const style = 'style="tab-size:4; line-height:1.166666em; margin:0; color:%s; background-color:%s"';//width:100%%; 
 
     private static $bg;
     private static $clr;
@@ -303,7 +303,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
 
     static function css($code, $option = '', $no_lines = false) {
         $x = self::xdata($option);
-        $y = false;
+        $y = null;
         $ary = explode("\n", self::highlight_css($code, $y));
         $x->len = strlen($x->diff);
         return self::table($ary, $x, $no_lines);
@@ -328,7 +328,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
 
     static function js($code, $option = '', $no_lines = false) {
         $x = self::xdata($option);
-        $y = false;
+        $y = null;
         $ary = explode("\n", self::highlight_js($code, $y));
         $x->len = strlen($x->diff);
         return self::table($ary, $x, $no_lines);
@@ -363,16 +363,17 @@ class Show # php jet yaml html bash || php_method md || var diff log
     static function highlight_html($code, &$y = null, $u = '') { # r g d c m j - gray
         $xml = new XML($code);
         $out = '';
+        $len = 0;
         $attr = [];
         foreach ($xml->tokens($y) as $t => $y) {
             if ($y->end) { # from <!-- or <![CDATA[
                 $out .= self::span($u . 'c', $t);
                 $y->find = $y->end;
             } elseif ('</style>' == $y->found) {
-                isset($y->css) or $y->css = false;
+                isset($y->css) or $y->css = null;
                 $out .= self::highlight_css($t, $y->css, $u);
             } elseif ('</script>' == $y->found) {
-                isset($y->js) or $y->js = false;
+                isset($y->js) or $y->js = null;
                 $out .= self::highlight_js($t, $y->js, $u);
             } elseif (in_array($y->found, ['-->', ']]>'])) {
                 $out .= self::span($u . 'c', $t . ($y->find ? '' : $y->found));
@@ -381,12 +382,16 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 '/style' != ($t = substr($t, 1, -1)) or $y->css = false;
                 $out .= '&lt;' . self::span($u . 'r', $t) . '&gt;';
             } elseif ('open' == $y->mode) { # sample: <tag
-                $out .= '&lt;' . self::span($u . 'r', $y->tag = substr($t, 1));
+                if ($y->err)
+                    $out = substr($out, 0, $len) . html($y->err);
+                $len = strlen($out);
+                $out .= '&lt;' . self::span($u . 'r', $y->tag = substr($y->err = $t, 1));
                 $y->mode = 'attr';
                 continue;
             } elseif ($u && $y->space || 'attr' != $y->mode) { # text
                 $out .= html($t);
             } elseif ('>' == $t) {
+                $y->err = '';
                 $out .= '&gt;';
                 if (in_array($y->tag, ['script', 'style']))
                     $y->find = "</$y->tag>";
@@ -394,7 +399,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 if ($y->space) {
                     $out .= $t;
                 } else {
-                    $v = $xml->set_attr($attr, $t);
+                    $v = $xml->tag_attr($attr, $t);
                     $out .= $v ? html($t) : self::span($u . 'j', $t);
                 }
                 continue;
