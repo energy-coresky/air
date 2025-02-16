@@ -272,6 +272,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
         $md = new MD($code);
         $out = $node = $bg = $html = '';
         $hl = '=';
+       self::$bg['*'] = '#ffa';
         $attr = function ($n) use (&$node, $md) {
             return $md->attr($node, $n);
         };
@@ -281,11 +282,10 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 if ('x-code' == $node->name)
                     $hl = '*';
             } elseif (is_string($node->val)) {
-                if ($cnt = substr_count($node->val, "\n")) {
+                if ($cnt = substr_count($node->val, "\n"))
                     $bg .= str_pad('', $cnt, $html ? '+' : ('#skip' == $node->name ? '=' : $hl));
-                    if (is_null($node->right) && !$attr('last'))
-                        $hl = '=';
-                }
+                if (is_null($node->right) && !$attr('last'))
+                    $hl = '=';
                 if ($c = $attr('c')) {
                     $out .= self::span($c, $node->val);
                 } elseif ($c = $attr('bg')) {

@@ -41,7 +41,7 @@ set_time_limit(3);
                 $x->grab = "</$tag>";
             } else {
                 $tag = strtolower($m[1]);
-                if ($close = '/' == $tag[0])
+                if ('/' == $tag[0])
                     $tag = substr($tag, 1);
                 $tags = in_array($tag, MD::$MD->tags) && ($m[2] || $m[0] == "<$m[1]");
                 if ($tags || 1) {
@@ -50,14 +50,14 @@ set_time_limit(3);
                     return false;
                 }
             }
+            //$this->close('p');
+            //$this->use_close($x);
         }
-        //$this->close('p');
-        //$this->use_close($x);
         $blank = '<' == $x->grab;
         if ($blank && $x->empty || !$blank && false !== strpos($x->line, $x->grab))
             $x->grab = false;
         $x->empty or $this->j += strlen($x->line);
-        return $this->push('-html', $x->line);//, ['c' => 'r']
+        return $this->push('-html', $x->line);
     }
 
     private function leaf_h6($x) {
@@ -322,6 +322,9 @@ set_time_limit(3);
                 } else {
                     $this->add("\\");// 2do <br>
                 }
+            } elseif ('&' == $y && preg_match("/^&[a-z]+;/i", $this->cspn("\n"), $m)) {
+                $this->push('-', $m[0], ['bg' => '+']);
+                $j += strlen($m[0]);
             } elseif ('<' == $y && preg_match("/^<\/?([a-z_:][\w:\.\-]*)\b[^>]*>/i", $this->cspn("\n"), $m)) {
                 $this->push('-', $m[0], ['bg' => '+']);
                 $j += strlen($m[0]);
@@ -572,6 +575,10 @@ set_time_limit(3);
         $last = ($x->empty = "\n" == $y) ? $this->last : false;
         $x->pad = $pad - $base;
         return $ary;
+    }
+
+    static function html($str) {
+        return str_replace(['<', '>'], ['&lt;', '&gt;'], $str);
     }
 
     private function spn($set, $j = 0, &$sz = null) { # collect $set

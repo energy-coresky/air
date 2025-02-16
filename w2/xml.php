@@ -18,7 +18,6 @@ class XML extends CSS
     protected $j = 0;
 
     function __construct(string $in = '', $tab = 2) {
-set_time_limit(3);
         parent::__construct($in, $tab);
         $this->root = XML::node('#root');
         XML::$XML or XML::$XML = yml('+ @inc(html)');
