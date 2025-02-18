@@ -274,6 +274,24 @@ set_time_limit(3);
         } while ($this->line($x));
         $this->j = 0;
         $this->last->attr['last'] = 1;
+
+        foreach ($this->for as $rf => $set) {
+            if (!isset($this->ref[$rf]))
+                continue;
+            $url = $this->ref[$rf];
+            foreach ($set as $node) {
+                $head = substr($node->attr['head'], 1, -1);
+                if ('!' == $node->val[0]) { # img
+                    $node->name = 'img';
+                    $node->attr = ['src' => $url, 'alt' => $head, 't' => $node->val, 'c' => 'c'];
+                    $node->val = 0;
+                } else {
+                    $node->name = 'a';
+                    $node->attr = ['href' => $url, 't' => $node->val, 'c' => 'g'];
+                    $node->val = $head;
+                }
+            }
+        }
         return $this->root->val;
     }
 
@@ -338,8 +356,12 @@ set_time_limit(3);
                         $b = isset($in[$j - 1]) && !strpbrk($in[$j - 1], " \t\r\n") ? 1 : 0; # end or not
                         $j += strlen($uu = substr($in, $j, strspn($in, $y, $j)));
                         $b += isset($in[$j]) && !strpbrk($in[$j], " \t\r\n") ? 2 : 0; # start or not
-                        $this->push('-i', $uu, ['b' => $b]);
-                        $this->up->attr['in'] = $uu;
+                        if (3 != $b || '*' == $y || '`' == $y) {
+                            $this->push('-i', $uu, ['b' => $b]);
+                            $this->up->attr['in'] = $uu;
+                        } else {
+                            $this->push('#text', $uu);
+                        }
                     } else {
                         $this->add($y);
                     }
@@ -384,21 +406,21 @@ set_time_limit(3);
                 goto schem_1;
             if ('[' == $chr) {
                 $rf = strtolower($tail);
-                goto schem_2; # scheme: [][q] or [a][q]
+                goto schem_2;
             }
         } elseif (':' == $chr) {
             if ($inline || ':' == trim($tail = $this->cspn("\n", $j)))
                 return false; # not reference
             $this->use_close($x);
             $this->ref[$rf] = trim(substr($tail, 1));
-            return $this->add($head . $tail, ['c' => 'm']);
+            return $this->add($head . $tail, ['c' => 'j']);
         } else {
             schem_1: # scheme: [q]
             if (2 == $len)
                 return false;
             schem_2:
-            $this->for[$rf][] = true;
-            $p =& $this->for[$rf][array_key_last($this->for[$rf])];
+            $this->j += strlen($t = ($img ? '!' : '') . $head . $tail);
+            return $this->for[$rf][] = $this->push('#a', $t, ['head' => $head]);
         }
         $this->j += strlen($t = ($img ? '!' : '') . $head . $tail);
         if ($img)
@@ -589,14 +611,6 @@ set_time_limit(3);
         return substr($this->in, $j ?: $this->j, $sz = strcspn($this->in, $set, $j ?: $this->j));
     }
 }
-/*      foreach ($this->for as $i => $for) {
-            if (isset($this->ref[$for])) {
-                #$this->tok[$i][4] = $this->ref[$for];
-            } else {
-                #$this->tok[$i][2] = $this->tok[$i][1];
-                #$this->tok[$i][0] = 11;
-            }
-        }
-
+/*
         sprintf('<img src="%s" alt="%s">', $p4, substr($p3, 1, -1)) # image
 trace($x->close, '===');*/
