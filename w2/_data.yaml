@@ -86,7 +86,7 @@ omis: # tags omission rules
 
 #.md
 esc: "/\"'`*_{}[]()<>#+-.!|^=~:$%&;,?@"
-code_type: @csv jet php css js html yaml bash # 2do saw
+code_type: @csv jet php css js html yaml bash md # 2do saw,xml,json
 typ_2:   @csv pre script style textarea
 blk_chr: {
   '-*_=': leaf_h2r, '#': leaf_h6,
@@ -114,6 +114,7 @@ tags: @csv >
   h1 h2 h3 h4 h5 h6 head header hr html iframe legend li link main menu menuitem nav noframes
   ol optgroup option p param search section summary table tbody td tfoot th thead title tr track ul
 attr: @csv href start src alt align
+puncts: "!\"#$%&'()*+,-./:;<=>?[]^_{|}~"
 css: |
   #md-doc pre, #md-doc code {
       background-color: #eee;

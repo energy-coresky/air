@@ -2,7 +2,7 @@
 
 class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.org/
 { # and rich MarkDown from https://github.com/xoofx/markdig
-    const version = '0.599';
+    const version = '0.701';
 
     static $MD;
 
@@ -12,7 +12,6 @@ class MD extends XML # the MarkDown, follow Common Mark https://spec.commonmark.
     private $for = [];
 
     function __construct(string $in = '', $tab = 2) {
-set_time_limit(3);
         parent::__construct($in, $tab);
         MD::$MD or MD::$MD = Plan::set('main', fn() => yml('md', '+ @object @inc(md)', false, true));
     }
@@ -30,6 +29,7 @@ set_time_limit(3);
             } elseif ('!' == $m[1]) {
                 if ('<!--' == substr($x->line, 0, 4)) {
                     $x->grab = '-->';
+                    $this->use_close($x);
                 } elseif ('<![CDATA[' == substr($x->line, 0, 9)) {
                     $x->grab = ']]>';
                 } else {
@@ -50,8 +50,6 @@ set_time_limit(3);
                     return false;
                 }
             }
-            //$this->close('p');
-            //$this->use_close($x);
         }
         $blank = '<' == $x->grab;
         if ($blank && $x->empty || !$blank && false !== strpos($x->line, $x->grab))
@@ -353,10 +351,9 @@ set_time_limit(3);
                 $img = '!' == $y;
                 if (!$img && '[' != $y || !$this->square($x, $y, true, $img)) {
                     if (strpbrk($y, "*_`~^=")) { # inlines
-                        $b = isset($in[$j - 1]) && !strpbrk($in[$j - 1], " \t\r\n") ? 1 : 0; # end or not
+                        $left = $in[$j - 1] ?? '';
                         $j += strlen($uu = substr($in, $j, strspn($in, $y, $j)));
-                        $b += isset($in[$j]) && !strpbrk($in[$j], " \t\r\n") ? 2 : 0; # start or not
-                        if (3 != $b || '*' == $y || '`' == $y) {
+                        if ($b = $this->boundary($left, $y, $in[$j] ?? '')) {
                             $this->push('-i', $uu, ['b' => $b]);
                             $this->up->attr['in'] = $uu;
                         } else {
@@ -382,6 +379,19 @@ set_time_limit(3);
             }
         }
         return "\n" == $y;
+    }
+
+    private function boundary($left, $y, $right) {
+        $as = '*' == $y || '`' == $y;
+        $spl = '' === $left || strpbrk($left, "\t \r\n");
+        $spr = '' === $right || strpbrk($right, "\t \r\n");
+        if (!$spl && !$spr && !$as) {
+            if (!$spl = strpbrk($left, MD::$MD->puncts))
+                $spr = strpbrk($right, MD::$MD->puncts);
+        }
+        $b = $spl ? 0 : 1; # end or not
+        $b += $spr ? 0 : 2; # start or not
+        return 3 != $b || $as ? $b : false;
     }
 
     private function auto_link($j, &$y, &$in) {
@@ -530,8 +540,7 @@ set_time_limit(3);
 
     private function use_close($x) {
         $this->close('p');
-        $this->close('tbody');
-        if ($this->close('table'))
+        if ($this->close('table', true))
             $x->table = $x->cvl = false;
         $x->close && $this->last('li' == $x->close->name ? $x->close->up : $x->close);
         $x->pad < 4 && $this->close('x-code');
@@ -599,10 +608,6 @@ set_time_limit(3);
         return $ary;
     }
 
-    static function html($str) {
-        return str_replace(['<', '>'], ['&lt;', '&gt;'], $str);
-    }
-
     private function spn($set, $j = 0, &$sz = null) { # collect $set
         return substr($this->in, $j ?: $this->j, $sz = strspn($this->in, $set, $j ?: $this->j));
     }
@@ -611,6 +616,4 @@ set_time_limit(3);
         return substr($this->in, $j ?: $this->j, $sz = strcspn($this->in, $set, $j ?: $this->j));
     }
 }
-/*
-        sprintf('<img src="%s" alt="%s">', $p4, substr($p3, 1, -1)) # image
-trace($x->close, '===');*/
+/*trace($x->close, '===');*/

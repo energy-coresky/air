@@ -259,7 +259,7 @@ class DEV
             }
             $cls = [];
             if ('prod' == $type && -2 == $mode) {
-                $doc = is_file($fn = "$dir/README.md") ? Show::md(file_get_contents($fn)) : '';
+                $doc = is_file($fn = "$dir/README.md") ? Show::doc(file_get_contents($fn)) : '';
                 if (is_file($fn = "$dir/LICENSE"))
                     $doc .= Show::bash(file_get_contents($fn));
                 return [
@@ -412,7 +412,7 @@ class DEV
 
     function j_readme() {
         Plan::$pngdir = $dir = $_POST['dir'];
-        $html = is_file($fn = "$dir/README.md") ? Show::md(file_get_contents($fn)) : '';
+        $html = is_file($fn = "$dir/README.md") ? Show::doc(file_get_contents($fn)) : '';
         if (is_file($fn = "$dir/LICENSE"))
             $html .= Show::bash(file_get_contents($fn));
         return ['html' => $html, 'dir' => $dir];

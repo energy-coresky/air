@@ -226,7 +226,7 @@ class Show # php jet yaml html bash || php_method md || var diff log
         }, $text), 'style="background:#e0e7ff;"');
     }
 
-    static function md($text) {
+    static function __2del($text) {
         self::scheme();
         $code = function ($text, $re) {
             return preg_replace_callback("@$re@s", function ($m) {
@@ -245,19 +245,6 @@ class Show # php jet yaml html bash || php_method md || var diff log
                 return 'jet' == $m[1] ? self::jet(unhtml($m[2]), '-', true) : pre(html($m[2]), '');
             }, $text);
         };
-        if (!$exist = Plan::has('Parsedown')) {
-            if (is_dir('vendor/erusev/parsedown')) {
-                Plan::vendor();
-                $exist = true;
-            }
-        }
-        if ($exist) {
-            $md = new Parsedown;
-            $text = preg_replace("~\"https://github.*?/([^/\.]+)[^/\"]+\"~", '"_png?$1=' . Plan::$pngdir . '"', $md->text($text));
-            return $code($text, '<pre><code class="language\-(jet|php|html|css|js|bash|yaml)">(.*?)</code></pre>');
-        }
-        $text = str_replace("\n\n", '<p>', unl($text));
-        return $code($text, "```(jet|php|html|css|js|bash|yaml|)(.*?)```");
     }
 
     static function doc($markdown, $render = 'md_nice', $hightlight = true) {
@@ -267,12 +254,12 @@ class Show # php jet yaml html bash || php_method md || var diff log
         return (string)$md;
     }
 
-    static function highlight_md($code, &$bg) { # r g d c m j - gray
-        self::scheme();
+    static function md($code, $no_lines = false) { # r g d c m j - gray
+        self::scheme('z_php');
+       self::$bg['*'] = '#ffa';
         $md = new MD($code);
         $out = $node = $bg = $html = '';
         $hl = '=';
-       self::$bg['*'] = '#ffa';
         $attr = function ($n) use (&$node, $md) {
             return $md->attr($node, $n);
         };
@@ -297,8 +284,9 @@ class Show # php jet yaml html bash || php_method md || var diff log
             $html = '-html' == $node->name && '' !== $node->val;
             $md->inlines($node);
         }
-        $bg .= $hl;
-        return $out;
+        $x = self::xdata($bg .= $hl);
+        $x->len = strlen($bg);
+        return self::table(explode("\n", $out), $x, $no_lines);
     }
 
     static function css($code, $option = '', $no_lines = false) {

@@ -189,7 +189,7 @@ class Root
             case 'Readme':
                 //$fn = $menu[$i] == 'Readme';
                 $file = file_get_contents(DIR_S . ($fn ?? '/README.md'));
-                echo Show::md($file);
+                echo Show::doc($file);
                 break;
         }
         return $top;
