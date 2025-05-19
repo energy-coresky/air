@@ -1,7 +1,7 @@
 <?php
 
-class Show # php jet yaml html bash || php_method md || var diff log
-{
+class Show # php html css js jet yaml bash md || php_method doc || var diff log
+{ # 2do saw, xml, json
     const lay_l = '<table cellpadding="0" cellspacing="0" style="width:100%"><tr><td class="tdlnum code" style="width:10px">';
     const lay_m = '</td><td style="padding-left:1px;vertical-align:top">';
     const lay_r = '</td></tr></table>';
@@ -530,9 +530,6 @@ class Show # php jet yaml html bash || php_method md || var diff log
             $inner = $x->_[$key] ?? false;
             $c = self::$bg[$inner ? "_$chr" : $chr]; # = - + * .
         }
-#        $val = $x->prev . $val;
-#        if ($x->prev = preg_match("/(<[^\/][^>]+>)([^>]*)$/", $val, $m) ? $m[1] : '')
-#            $val .= '</span>';
         $x->lnum .= str_pad(++$key, 3, 0, STR_PAD_LEFT) . "<br>";
         if ('' === $val)
             $val = '&nbsp;';
