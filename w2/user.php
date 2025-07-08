@@ -153,7 +153,7 @@ class USER
         }
         $sky->csrf = $this->v_csrf;
 
-        if (START_TS - $sky->s_online_ts > 60) {
+        if (START_TS - (float)$sky->s_online_ts > 60) {
             $query = '+select 1 + count(1) from $_visitors where ' . $now . ' < ' . $dd->f_dt('dt_l', '+', '%d', 'minute') . ' and id<>%d';
             $sky->s_online = sqlf($query, $sky->s_visit, $this->vid);
             $sky->s_online_ts = START_TS;

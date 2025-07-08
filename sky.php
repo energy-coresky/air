@@ -98,7 +98,7 @@ class SKY implements PARADISE
         $this->trace_cli = $this->s_trace_cli;
 
         if (DEV && !CLI && $this->static_new) {
-            $s = substr($this->s_statp, 0, -1) + 1;
+            $s = (int)substr($this->s_statp, 0, -1) + 1;
             $this->s_statp = $s > 9999 ? '1000p' : $s . 'p';
         }
         trace($msg, 'SKY OPENED', 1);

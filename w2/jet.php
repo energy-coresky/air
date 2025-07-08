@@ -426,7 +426,7 @@ class Jet
             $iv = $cnt - 1 ? '$_' . $cnt : '$_';
             if ('' !== $arg) { # do-while
                 array_pop($this->loop);
-                return sprintf("<?php $iv++; } while (%s); ?>", preg_match('/^\$e_\w+$/', $arg) ? "\$row = $arg->one()" : $arg);
+                return sprintf("<?php $iv++; } while (%s); ?>", preg_match('/^\$e_\w+$/', $arg) ? "\$row = {$arg}->one()" : $arg);
             } elseif (end(Jet::$empty) == $cnt) {
                 array_pop(Jet::$empty);
                 array_pop(Jet::$if);
