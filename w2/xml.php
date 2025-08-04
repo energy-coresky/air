@@ -168,6 +168,20 @@ class XML extends CSS
         return $new;
     }
 
+    function query($q, $is_all = false) {
+        $new = new XML;
+        $tmp = [];
+        foreach ($this->gen($from) as $depth => $node) {
+            if ($node->attr) {
+                foreach ($node->attr as $k => $v) {
+                    if ($attr == $k && ($single ? in_array($val, preg_split("/\s+/s", $v)) : $val == $v))
+                        $new->selected[] = $node;
+                }
+            }
+        }
+        return $new;
+    }
+
     function has_childs($node, &$obj = null) {
         $obj = is_object($node->val);
         return $obj || is_string($node->val) && '' !== $node->val && '#' != $node->name[0];
@@ -262,9 +276,6 @@ class XML extends CSS
 
     function next($m = 1, $text = false) {
         return $this->go($this->selected, 'right', $m, $text);
-    }
-
-    function query($q, $is_all = false) {
     }
 
     function childs($query) {
