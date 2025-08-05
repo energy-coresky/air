@@ -4,20 +4,25 @@ class dd_sqlsrv implements DriverDatabase
 {
     use SQL_COMMON;
 
-    public $name = 'MicrosoftSQL';
-    public $quote = '"'; # no: `switch.sqlite3`.`memory` yes: `memory` yes: "memory" yes: 'memory'
+    public $name = 'MS SQL';
+    public $quote = '"';
     public $conn;
     public $pref;
     public $cname;
 
     static $timezone = false;
+    static $charset = '';
+
+    private $last_err = 0;
+    private $last_insert_id = 0;
 
     function __construct($dsn, $pref) {
         if (!function_exists('sqlsrv_connect'))
             throw new Error('sqlsrv_connect function not exists');
-        $ary = bang($dsn, '=', ' '); # "server=Name\sqlexpress Database=dbName UID=username PWD=password"
-        $this->conn = sqlsrv_connect($qq=array_shift($ary), $ary);
+        $ary = bang($dsn, '=', ' '); # "0=serverName\Instanc Database=dbName UID=username PWD=password"
+        $this->conn = sqlsrv_connect(array_shift($ary), $ary += ['CharacterSet' => 'UTF-8']);
         $this->pref = $pref;
+        self::$charset = $ary['CharacterSet'];
         self::$timezone or self::$timezone = date_default_timezone_get();
     }
 
@@ -29,7 +34,7 @@ class dd_sqlsrv implements DriverDatabase
             'name' => $this->name,
             'version' => unbang(sqlsrv_server_info($this->conn), '=', ' '),
             'client' => unbang(sqlsrv_client_info($this->conn), '=', ' '),
-            'charset' => 'Utf-8',//$this->sqlf('+pragma encoding'),    mysqli_character_set_name($this->conn)
+            'charset' => self::$charset,
         ];
         return $ary + ['str' => implode(', ', $ary)] + ['tables' => array_map(function($v) {
             $v['crdate'] = $v['crdate']->format(DATE_DT);
@@ -42,7 +47,7 @@ class dd_sqlsrv implements DriverDatabase
         sqlsrv_close($this->conn);
     }
 
-    function escape($s, $quote = true) {
+    function escape($s, $quote = true) {///////////////////////////////////////
         return $quote ? "'" . SQLite3::escapeString($s) . "'" : SQLite3::escapeString($s);
     }
 
@@ -50,17 +55,25 @@ class dd_sqlsrv implements DriverDatabase
         return $quote ? str_replace("''", "'", substr($s, 1, -1)) : str_replace("''", "'", $s);
     }
 
-    function error() {
-        return sqlsrv_errors()[0]['message'];
+    function error($last_query = true) {
+        $e = $last_query ? $this->last_err : (sqlsrv_errors(SQLSRV_ERR_ERRORS) ?? 0);
+        return $e ? implode(' | ', array_map(fn($v) => $v['message'], $e)) : '';
     }
 
-    function has_result($s4) {
-        return in_array($s4, ['prag']); // sqlsrv_has_rows($q->stmt)
+    function has_result($s4, $stmt) {
+        return sqlsrv_has_rows($stmt);
     }
 
-    function query($sql_string, &$q) {
-        $q = @sqlsrv_query($this->conn, $sql_string);
-        return sqlsrv_errors();
+    function query($sql, &$q) {
+        if ($id = 'insert' == strtolower(substr($sql, 0, 6)))
+            $sql .= " DECLARE @ID INT SELECT @ID = SCOPE_IDENTITY() SELECT @ID";
+        $q = @sqlsrv_query($this->conn, $sql);
+        $this->last_err = sqlsrv_errors(SQLSRV_ERR_ERRORS) ?? 0;
+        if ($id && !$this->last_err) {
+            sqlsrv_next_result($q);
+            $this->last_insert_id = sqlsrv_fetch_array($q, SQLSRV_FETCH_NUMERIC)[0];
+        }
+        return $this->last_err ? implode('.', array_map(fn($v) => $v['code'], $this->last_err)) : 0;
     }
 
     function one($q, $meth = 'A', $free = false) { # assoc as default
@@ -83,11 +96,11 @@ class dd_sqlsrv implements DriverDatabase
     }
 
     function insert_id() {
-        return 0;//$this->conn->lastInsertRowID();
+        return $this->last_insert_id;
     }
 
-    function affected() {
-        return sqlsrv_rows_affected($q->stmt);//$this->conn
+    function affected($stmt = null) {
+        return sqlsrv_rows_affected($stmt);
     }
 
     function free($q) {

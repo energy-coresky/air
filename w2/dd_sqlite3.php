@@ -55,7 +55,7 @@ class dd_sqlite3 implements DriverDatabase
         return $this->conn->lastErrorMsg();
     }
 
-    function has_result($s4) {
+    function has_result($s4, $stmt) {
         return in_array($s4, ['prag']);
     }
 
@@ -86,7 +86,7 @@ class dd_sqlite3 implements DriverDatabase
         return $this->conn->lastInsertRowID();
     }
 
-    function affected() {
+    function affected($stmt = null) {
         return $this->conn->changes();
     }
 

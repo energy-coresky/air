@@ -46,7 +46,7 @@ class dd_oci implements DriverDatabase
         return $this->error['message'];
     }
 
-    function has_result($sql_string) {
+    function has_result($s4, $stmt) {
     }
 
     function query($sql_string, &$q) {
@@ -87,7 +87,7 @@ class dd_oci implements DriverDatabase
   //      return ($this->conn);/////////////////
     }
 
-    function affected() {
+    function affected($stmt = null) {
         return oci_num_rows($this->q);
     }
 

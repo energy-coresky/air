@@ -54,7 +54,7 @@ class dd_mysqli implements DriverDatabase
         return mysqli_error($this->conn);
     }
 
-    function has_result($s4) {
+    function has_result($s4, $stmt) {
         return in_array($s4, ['show', 'help']);
     }
 
@@ -87,7 +87,7 @@ class dd_mysqli implements DriverDatabase
         return mysqli_insert_id($this->conn);
     }
 
-    function affected() {
+    function affected($stmt = null) {
         return mysqli_affected_rows($this->conn);
     }
 

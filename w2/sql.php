@@ -116,7 +116,7 @@ final class SQL
         $s4 = strtolower(substr(trim($this->qstr), 0, 4));
         if (in_array($s4, ['sele', 'expl']))
             return true;
-        return $this->_dd->has_result($s4);
+        return $this->_dd->has_result($s4, $this->stmt);
     }
 
     function one($meth = 'A', $free = false) {
@@ -183,7 +183,7 @@ final class SQL
         if ($no)
             return false;
         switch (strtolower(substr($qstr, 0, 6))) {
-            case 'delete': case 'update': case 'replac': return $this->_dd->affected();
+            case 'delete': case 'update': case 'replac': return $this->_dd->affected($this->stmt);
             case 'insert': return $this->_dd->insert_id();
             default: switch ($char) {
                 case '+': return $this->_dd->one($this->stmt, 'C', true);
@@ -454,7 +454,7 @@ interface DriverDatabase
     function one($q, $meth = 'A', $free = false);
     function num($q, $rows = true);
     function insert_id();
-    function affected();
+    function affected($stmt = null);
     function free($q);
     function multi_sql($sql);
     function _xtrace();

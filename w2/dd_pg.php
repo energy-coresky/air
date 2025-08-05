@@ -50,7 +50,7 @@ class dd_pg implements DriverDatabase
     }
 
 
-    function has_result($sql_string) {
+    function has_result($s4, $stmt) {
     }
 
     function query($sql_string, &$q) {
@@ -79,7 +79,7 @@ class dd_pg implements DriverDatabase
         //return ($this->conn);//////////////
     }
 
-    function affected() {
+    function affected($stmt = null) {
         return pg_affected_rows($this->q);
     }
 
