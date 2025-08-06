@@ -12,6 +12,7 @@ class dd_sqlsrv implements DriverDatabase
 
     static $timezone = false;
     static $charset = '';
+    static $code = 'if ($r = sqlsrv_fetch_array($q->stmt, SQLSRV_FETCH_ASSOC)) extract($r, EXTR_PREFIX_ALL, "r"); else sqlsrv_free_stmt($q->stmt); return $r;';
 
     private $last_err = 0;
     private $last_insert_id = 0;
@@ -83,11 +84,11 @@ class dd_sqlsrv implements DriverDatabase
     }
 
     function query($sql, &$q) {
-        if ($id = 'insert' == strtolower(substr($sql, 0, 6)))
-            $sql .= " DECLARE @ID INT SELECT @ID = SCOPE_IDENTITY() SELECT @ID";
+        if ($ins = 'insert' == strtolower(substr($sql, 0, 6)))
+            $sql .= " DECLARE @IDA INT SELECT @IDA = SCOPE_IDENTITY() SELECT @IDA";
         $q = @sqlsrv_query($this->conn, $sql);
         $this->last_err = sqlsrv_errors(SQLSRV_ERR_ERRORS) ?? 0;
-        if ($id && !$this->last_err) {
+        if ($ins && !$this->last_err) {
             sqlsrv_next_result($q);
             $this->last_insert_id = sqlsrv_fetch_array($q, SQLSRV_FETCH_NUMERIC)[0];
         }
@@ -95,16 +96,24 @@ class dd_sqlsrv implements DriverDatabase
     }
 
     function one($q, $meth = 'A', $free = false) { # assoc as default
-        if ('E' == $meth)
-            return 'if ($r = sqlsrv_fetch_array($q->stmt, SQLSRV_FETCH_ASSOC)) extract($r, EXTR_PREFIX_ALL, "r"); else sqlsrv_free_stmt($q->stmt); return $r;';
         if ($q instanceof SQL)
             $q = $q->stmt;
-        $row = 'A' == $meth ? sqlsrv_fetch_array($q, SQLSRV_FETCH_ASSOC) : ('O' == $meth ? sqlsrv_fetch_object($q) : sqlsrv_fetch_array($q, SQLSRV_FETCH_NUMERIC));
-        if ($row && 'C' == $meth)
-            $row = $row[0];
-        if ($free || !$row)
-            sqlsrv_free_stmt($q);
-        return $row;
+        $data = function ($row, $cell = false) use ($q, $free) {
+            if ($free || !$row)
+                sqlsrv_free_stmt($q);
+            return $cell && $row ? $row[0] : $row;
+        };
+        switch ($meth) {
+            case 'E': # eval
+                return self::$code;
+            case 'C': # cell
+            case 'R': # row
+                return $data(sqlsrv_fetch_array($q, SQLSRV_FETCH_NUMERIC), 'C' == $meth);
+            case 'A': # associated
+                return $data(sqlsrv_fetch_array($q, SQLSRV_FETCH_ASSOC));
+            case 'O': # object
+                return $data(sqlsrv_fetch_object($q));
+        }
     }
 
     function num($q, $rows = true) {
