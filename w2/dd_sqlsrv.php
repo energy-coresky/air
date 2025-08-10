@@ -30,7 +30,7 @@ class dd_sqlsrv implements DriverDatabase
     function init($tz = null) {
     }
 
-    function info() {
+    function __info() {
         $ary = [
             'name' => $this->name,
             'version' => unbang(sqlsrv_server_info($this->conn), '=', ' '),
@@ -42,6 +42,22 @@ class dd_sqlsrv implements DriverDatabase
             $v['refdate'] = $v['refdate']->format(DATE_DT);
             return $v;
         }, $this->sqlf("%SELECT * FROM sysobjects WHERE xtype='U'"))];
+    }
+
+    function info() {
+        $d = array_map(function($k) {
+            $struct = $this->_struct($k);
+            return ['Columns' => pre(implode(",\n", array_map(function($v) {
+                return $v[2];
+            }, $struct)))];
+        }, $tables = $this->_tables());
+        $ary = [
+            'name' => $this->name,
+            'version' => unbang(sqlsrv_server_info($this->conn), '=', ' '),
+            'client' => unbang(sqlsrv_client_info($this->conn), '=', ' '),
+            'charset' => self::$charset,
+        ];
+        return $ary + ['str' => implode(', ', $ary)] + ['tables' => array_combine($tables, $d)];
     }
 
     function close() {
@@ -162,24 +178,28 @@ class dd_sqlsrv implements DriverDatabase
     }
 
     function _tables($table = false) {
-        $select = "SELECT * FROM sysobjects WHERE xtype='U'";
-        #if ($table)
-        #    return (bool)$this->sqlf("+$select LIKE %s", $this->pref . $table);
-        return $this->sqlf("@$select");  //  NOT LIKE 'sqlite_%'
+        $select = "SELECT name FROM sysobjects WHERE xtype='U'";
+        if ($table)
+            return (bool)$this->sqlf("+$select AND name like %s", $this->pref . $table);
+        return $this->sqlf("@$select");
     }
 
     function _struct($table = false) {
-        $data = $this->sql(1, '@pragma table_info($_`)', $table);
-        $out = [];
-        array_walk($data, function(&$v, $k) use (&$out) {
-            $d = "$this->quote$v[0]$this->quote $v[1] ";
-            $d .= $v[4]
-                ? 'PRIMARY KEY AUTOINCREMENT NOT NULL'
-                : (!$v[2] ? 'DEFAULT NULL' : (null === $v[3] ? 'NOT NULL' : 'NOT NULL DEFAULT ' . $v[3]));
-            $default = !$v[2] ? null : (null === $v[3] ? 0 : $v[3]);
-            $out[$v[0]] = [$v, $default, $d, 0];
-        });    # 0-original, 1-defvalue, 2-definition
-        return $out;
+        $ary = iterator_to_array($this->sql(1, '&exec sp_columns $_`', $table), false);
+        $key = [];
+        $val = array_map(function($v) use (&$key) {
+            $key[] = $v->COLUMN_NAME;
+            $i = ' identity' == substr($v->TYPE_NAME, -9);
+            #$d = "$this->quote$v->COLUMN_NAME$this->quote $v->TYPE_NAME($v->PRECISION) ";
+            $d = "[$v->COLUMN_NAME] $v->TYPE_NAME" . ($i ? '(1,1)' : "($v->PRECISION) ");
+ # int datetime
+            $d .= $v->NULLABLE ? ($i ? '' : 'NULL') : ($i ? '' : 'NOT NULL');
+            if (!empty($v->COLUMN_DEF))
+                $d .= ' DEFAULT ' . $v->COLUMN_DEF;
+            $default = '(NULL)' == $v->COLUMN_DEF ? null : ('' === $v->COLUMN_DEF ? '' : substr($v->COLUMN_DEF, 1, -1));
+            return [$v, $default, $d, 0];
+        }, $ary);    # 0-original, 1-defvalue, 2-definition
+        return array_combine($key, $val);
     }
 
     function _rows_count($table) {

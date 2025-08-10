@@ -129,7 +129,7 @@ class dd_sqlite3 implements DriverDatabase
     function _struct($table = false) {
         $data = $this->sql(1, '@pragma table_info($_`)', $table);
         $out = [];
-        array_walk($data, function(&$v, $k) use (&$out) {
+        array_walk($data, function(&$v) use (&$out) {
             $d = "$this->quote$v[0]$this->quote $v[1] ";
             $d .= $v[4]
                 ? 'PRIMARY KEY AUTOINCREMENT NOT NULL'
