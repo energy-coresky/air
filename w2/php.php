@@ -72,7 +72,9 @@ class PHP
         try {
             $this->tok = token_get_all(unl($in), TOKEN_PARSE);
         } catch (Throwable $e) {
-            $fn = self::$php_fn ? 'File ' . self::$php_fn . ', ' : '';
+            $fn = self::$php_fn ? 'File ' . self::$php_fn . ', ' : 'See Log CRON, ';
+            if (!self::$php_fn)
+                SKY::log($in);
             self::$warning = $fn . 'Line ' . $e->getLine() . ', ' . $e->getMessage();
             $this->tok = token_get_all(unl($in));
         }

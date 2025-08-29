@@ -357,7 +357,7 @@ class MVC extends MVC_BASE
         array_walk($new, function (&$v, string $k) use (&$all, $pref) {
             $p = strlen($k) > 1 && '_' == $k[1] ? $k[0] : false;
             if ('e' === $p) {
-                $all[$k] = new eVar($v);
+                $all[$k] = new eVar($v, $all);
             } elseif ('_' == $k[0]) {
                 SKY::$reg[$k] = $v;
             } elseif (!$p && $pref) {
