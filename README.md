@@ -14,6 +14,8 @@ Energy
 
 See the [wiki section](https://github.com/energy-coresky/air/wiki) (russian only).
 
+Benchmark comparison with other PHP frameworks on the [web-frameworks-benchmark][5] page.
+
 ### Empty Coresky application (HOLE.SKY)
 
 Just PHP required: will work embedded into PHP's SQLite3 database and PHP's web-server:
@@ -109,3 +111,5 @@ to production. In this case, the code of the old version is moved to the **aold*
 [2]: https://coresky.net/api?get=ab.zip
 [3]: https://coresky.net/api?get=medcrm.zip
 [4]: https://coresky.net/api?get=hole.zip
+[5]: https://web-frameworks-benchmark.netlify.app/result?l=php
+
