@@ -161,7 +161,7 @@ final class SQL
             $char = '';
         }
         if ('^' == $char)
-            return '$q = sql(' . ++$this->mode . ',' . var_export($qstr, true) . ');' . $this->_dd->one(null, 'E');
+            return 'if (empty($q)) $q = sql(' . ++$this->mode . ',' . var_export($qstr, true) . ');' . $this->_dd->one(null, 'E');
 
         global $sky;
         $ts = microtime(true);
