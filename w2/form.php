@@ -98,9 +98,6 @@ class Form
 
     function def($row = [], $as_string = false) { # default processing
         $html = $this->draw_form($row, $this->mk); # this one should be running first then ->js()
-        $etc = unbang($this->tag, function($k, $v) {
-            return !$k ? trim($v) : $k . '="' . $v . '"';
-        }, ' ');
         $js = '';
         if ($this->has_js || $this->repeat) {
             $s = '{' . unbang($this->js, function($k, $v) {
@@ -112,6 +109,7 @@ class Form
             if ($this->div_top)
                 $js = tag('', "id=\"{$this->tag['id']}-message\"") . $js;
         }
+        $etc = unbang($this->tag, fn($k, $v) => $k ? $k . '="' . $v . '"' : trim($v), ' ');
         return $as_string ? $js . tag($html, $etc, 'form') : [$js, tag($html, $etc, 'form')];
     }
 

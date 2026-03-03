@@ -116,7 +116,7 @@ class Globals
         return $this->c_settings();
     }
 
-    function c_nmand($extns) {
+    function c_nmand($extns) { # not mandatory extensions from "Open SkyProject"
         if ($x = !$extns) {
             $extns = self::extensions();
             $this->exclude_dirs();

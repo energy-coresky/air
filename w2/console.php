@@ -452,4 +452,14 @@ class Console
         global $sky;
         eval($php);
     }
+
+    function args($in, $default = [], $func = false) {
+        foreach ($in as $x) {
+            [$k, $v] = explode('=', $x, 2) + [1 => ''];
+            if ($func && $func($k, $v))
+                continue;
+            $default[$k] = $v;
+        }
+        return $default;
+    }
 }
