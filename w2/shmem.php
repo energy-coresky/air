@@ -3,7 +3,6 @@
 class Shmem
 {
     private $id;
-    private $size;
     private $char;
     private $timeout;
     private $namespace; # logical name
@@ -14,7 +13,6 @@ class Shmem
 
     private function __construct($id, $char, $timeout, $namespace) {
         $this->id = $id;
-        $this->size = shmop_size($id);
         $this->char = $char;
         $this->timeout = $timeout;
         $this->namespace = $namespace;
@@ -72,7 +70,7 @@ class Shmem
         if ($header === false)
             return [];
         $len = unpack('Vlen', $header)['len'];
-        if ($len < 2 || $len > $this->size)
+        if ($len < 2 || $len > shmop_size($this->id))
             return [];
         return json_decode(shmop_read($this->id, 4, $len), true);
     }
@@ -84,7 +82,7 @@ class Shmem
         
         $retry or $data = pack('V', strlen($data = json_encode($data, JSON_UNESCAPED_SLASHES))) . $data;
         
-        if (strlen($data) <= $this->size) {
+        if (strlen($data) <= shmop_size($this->id)) {
             shmop_write($this->id, $data, 0);
             return true;
         }
@@ -94,7 +92,7 @@ class Shmem
 
         if ($changed) {
             self::end_id($regId);
-            if (strlen($data) <= $this->size) {
+            if (strlen($data) <= shmop_size($this->id)) {
                 shmop_write($this->id, $data, 0);
                 return true;
             }
@@ -107,8 +105,8 @@ class Shmem
         }
 
         $this->char = $map[$this->namespace] = self::findFreeChar($map);
-        $this->size = (int)ceil((strlen($data) * 1.5) / 1024) * 1024;
-        $id = shmop_open(ftok(__FILE__, $this->char), "c", 0777, $this->size);
+        $size = (int)ceil((strlen($data) * 1.5) / 1024) * 1024;
+        $id = shmop_open(ftok(__FILE__, $this->char), "c", 0777, $size);
         if (!$id)
             throw new Error("Failed to allocate new block '$this->char'");
         shmop_write($id, $data, 0);
@@ -176,7 +174,6 @@ class Shmem
             if (!$this->id)
                 throw new Error("Failed to switch block to '$char'");
             $this->char = $char;
-            $this->size = shmop_size($this->id);
         }
         return $map;
     }
