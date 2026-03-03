@@ -20,6 +20,104 @@ class Shmem
         $this->namespace = $namespace;
     }
 
+    static function open($namespace, $timeout = 0) {
+        global $sky;
+
+        $map = self::loadMap($regId);
+        if ($char = $map[$namespace] ?? false) {
+            self::end_id($regId);
+        } else {
+            $key = ftok(__FILE__, $char = self::findFreeChar($map));
+            // Safety cleanup
+            if ($old = @shmop_open($key, "w", 0, 0)) {
+                @shmop_delete($old);
+                self::end_id($old);
+                usleep(50000);
+            }
+            if (!shmop_open($key, "c", 0777, self::DEFAULT_SIZE))
+                throw new Error("Failed to create block '$char'");
+            $map[$namespace] = $char;
+            self::saveMap($regId, $map);
+        }
+        
+        // Open physical block
+        $id = shmop_open(ftok(__FILE__, $char), "w", 0, 0);
+        if (!$id)
+            throw new Error("Failed to open block '$char'");
+            
+        $sky->shutdown[] = [$obj = new self($id, $char, $timeout, $namespace), 'close'];
+        return $obj;
+    }
+
+    public function close() {
+        if (!$this->id)
+            return;
+        self::end_id($this->id, true);
+        $this->id = null;
+        $map = self::loadMap($regId);
+        unset($map[$this->namespace]);
+        if (empty($map)) {
+            self::end_id($regId, true);
+        } else {
+            self::saveMap($regId, $map);
+        }
+    }
+
+    public function read() {
+        if (empty($map = $this->resync($regId)))
+            return [];
+        self::end_id($regId);
+
+        $header = shmop_read($this->id, 0, 4);
+        if ($header === false)
+            return [];
+        $len = unpack('Vlen', $header)['len'];
+        if ($len < 2 || $len > $this->size)
+            return [];
+        return json_decode(shmop_read($this->id, 4, $len), true);
+    }
+
+    public function write($data, $retry = 0): bool {
+        if (empty($map = $this->resync($regId)))
+            return false;
+        self::end_id($regId);
+        
+        $retry or $data = pack('V', strlen($data = json_encode($data, JSON_UNESCAPED_SLASHES))) . $data;
+        
+        if (strlen($data) <= $this->size) {
+            shmop_write($this->id, $data, 0);
+            return true;
+        }
+
+        if (empty($map = $this->resync($regId, $changed)))
+            return false; // Namespace gone?
+
+        if ($changed) {
+            self::end_id($regId);
+            if (strlen($data) <= $this->size) {
+                shmop_write($this->id, $data, 0);
+                return true;
+            }
+            
+            if ($retry > 10)
+                throw new Error("Shared memory concurrency conflict");
+            if ($this->timeout)
+                usleep($this->timeout);
+            return $this->write($data, ++$retry);
+        }
+
+        $this->char = $map[$this->namespace] = self::findFreeChar($map);
+        $this->size = (int)ceil((strlen($data) * 1.5) / 1024) * 1024;
+        $id = shmop_open(ftok(__FILE__, $this->char), "c", 0777, $this->size);
+        if (!$id)
+            throw new Error("Failed to allocate new block '$this->char'");
+        shmop_write($id, $data, 0);
+        self::saveMap($regId, $map); // This closes $regId
+        self::end_id($this->id, true);
+        $this->id = $id;
+        return true;
+    }
+
     private static function saveMap($id, array $map) {
         $json = json_encode($map, JSON_UNESCAPED_SLASHES);
         shmop_write($id, pack('V', strlen($json)) . $json, 0);
@@ -65,35 +163,6 @@ class Shmem
         throw new Error("Out of memory slots");
     }
 
-    static function open($namespace, $timeout = 0) {
-        global $sky;
-
-        $map = self::loadMap($regId);
-        if ($char = $map[$namespace] ?? false) {
-            self::end_id($regId);
-        } else {
-            $key = ftok(__FILE__, $char = self::findFreeChar($map));
-            // Safety cleanup
-            if ($old = @shmop_open($key, "w", 0, 0)) {
-                @shmop_delete($old);
-                self::end_id($old);
-                usleep(50000);
-            }
-            if (!shmop_open($key, "c", 0777, self::DEFAULT_SIZE))
-                throw new Error("Failed to create block '$char'");
-            $map[$namespace] = $char;
-            self::saveMap($regId, $map);
-        }
-        
-        // Open physical block
-        $id = shmop_open(ftok(__FILE__, $char), "w", 0, 0);
-        if (!$id)
-            throw new Error("Failed to open block '$char'");
-            
-        $sky->shutdown[] = [$obj = new self($id, $char, $timeout, $namespace), 'close'];
-        return $obj;
-    }
-
     private function resync(&$regId, &$changed = null): array {
         $map = self::loadMap($regId);
         if (!$char = $map[$this->namespace] ?? false) {
@@ -110,77 +179,6 @@ class Shmem
             $this->size = shmop_size($this->id);
         }
         return $map;
-    }
-
-    public function read() {
-        if (empty($map = $this->resync($regId)))
-            return [];
-        self::end_id($regId);
-
-        $header = shmop_read($this->id, 0, 4);
-        if ($header === false)
-            return [];
-        $len = unpack('Vlen', $header)['len'];
-        if ($len < 2 || $len > $this->size)
-            return [];
-        return json_decode(shmop_read($this->id, 4, $len), true);
-    }
-
-    public function write($data, $retry = 0): bool {
-        if (empty($map = $this->resync($regId)))
-            return false;
-        self::end_id($regId);
-        
-        $retry or $data = pack('V', strlen($data = json_encode($data, JSON_UNESCAPED_SLASHES))) . $data;
-        
-        if (strlen($data) <= $this->size) {
-            shmop_write($this->id, $data, 0);
-            return true;
-        }
-
-        $map = $this->resync($regId, $changed);
-        if (empty($map))
-            return false; // Namespace gone?
-
-        if ($changed) {
-            if (strlen($data) <= $this->size) {
-                self::end_id($regId);
-                shmop_write($this->id, $data, 0);
-                return true;
-            }
-            self::end_id($regId);
-            
-            if ($retry > 10)
-                throw new Error("Shared memory concurrency conflict");
-            if ($this->timeout)
-                usleep($this->timeout);
-            return $this->write($data, ++$retry);
-        }
-
-        $this->char = $map[$this->namespace] = self::findFreeChar($map);
-        $this->size = (int)ceil((strlen($data) * 1.5) / 1024) * 1024;
-        $id = shmop_open(ftok(__FILE__, $this->char), "c", 0777, $this->size);
-        if (!$id)
-            throw new Error("Failed to allocate new block '$this->char'");
-        shmop_write($id, $data, 0);
-        self::saveMap($regId, $map); // This closes $regId
-        self::end_id($this->id, true);
-        $this->id = $id;
-        return true;
-    }
-
-    public function close() {
-        if (!$this->id)
-            return;
-        self::end_id($this->id, true);
-        $this->id = null;
-        $map = self::loadMap($regId);
-        unset($map[$this->namespace]);
-        if (empty($map)) {
-            self::end_id($regId, true);
-        } else {
-            self::saveMap($regId, $map);
-        }
     }
 
     private static function end_id($id, $is_delete = false) {
