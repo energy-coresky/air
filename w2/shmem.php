@@ -5,20 +5,22 @@ class Shmem
     private $id;
     private $char;
     private $timeout;
+    private $is_owner;
     private $namespace; # logical name
 
     const DEFAULT_SIZE = 65536;
     const REGISTRY_CHAR = 'a';
     const REGISTRY_SIZE = 4096;
 
-    private function __construct($id, $char, $timeout, $namespace) {
+    private function __construct($id, $char, $timeout, $is_owner, $namespace) {
         $this->id = $id;
         $this->char = $char;
         $this->timeout = $timeout;
+        $this->is_owner = $is_owner;
         $this->namespace = $namespace;
     }
 
-    static function open($namespace, $timeout = 0) {
+    static function open($namespace, $is_owner = true, $timeout = 0) {
         global $sky;
 
         $map = self::loadMap($regId);
@@ -43,15 +45,17 @@ class Shmem
         if (!$id)
             throw new Error("Failed to open block '$char'");
             
-        $sky->shutdown[] = [$obj = new self($id, $char, $timeout, $namespace), 'close'];
+        $sky->shutdown[] = [$obj = new self($id, $char, $timeout, $is_owner, $namespace), 'close'];
         return $obj;
     }
 
     public function close() {
         if (!$this->id)
             return;
-        self::end_id($this->id, true);
+        self::end_id($this->id, $this->is_owner);
         $this->id = null;
+        if (!$this->is_owner)
+            return;
         $map = self::loadMap($regId);
         unset($map[$this->namespace]);
         if (empty($map)) {
