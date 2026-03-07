@@ -65,7 +65,13 @@ class Shmem
         }
     }
 
-    public function read() {
+    public function replace($decode = true, $write = []) {
+        $data = $this->read($decode);
+        $this->write($write);
+        return $data;
+    }
+
+    public function read($decode = true) {
         if (empty($map = $this->resync($regId)))
             return [];
         self::end_id($regId);
@@ -76,7 +82,8 @@ class Shmem
         $len = unpack('Vlen', $header)['len'];
         if ($len < 2 || $len > shmop_size($this->id))
             return [];
-        return json_decode(shmop_read($this->id, 4, $len), true);
+        $str = shmop_read($this->id, 4, $len);
+        return $decode ? json_decode($str, true) : $str;
     }
 
     public function write($data, $retry = 0): bool {
