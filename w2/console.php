@@ -453,13 +453,15 @@ class Console
         eval($php);
     }
 
-    function args($in, $default = [], $func = false) {
-        foreach ($in as $x) {
-            [$k, $v] = explode('=', $x, 2) + [1 => ''];
+    function args($in, &$default, $func = false) {
+        $all = $default;
+        foreach ($in as $one) {
+            [$k, $v] = explode('=', $one, 2) + [1 => ''];
+            $all[$k] = $v;
             if ($func && $func($k, $v))
                 continue;
             $default[$k] = $v;
         }
-        return $default;
+        return $all;
     }
 }
