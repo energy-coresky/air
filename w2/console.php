@@ -458,9 +458,9 @@ class Console
         foreach ($in as $one) {
             [$k, $v] = explode('=', $one, 2) + [1 => ''];
             $all[$k] = $v;
-            if ($func && $func($k, $v))
-                continue;
-            $default[$k] = $v;
+            $func && $func($k, $v);
+            if (array_key_exists($k, $default))
+                $default[$k] = $v;
         }
         return $all;
     }

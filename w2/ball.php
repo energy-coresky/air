@@ -1,6 +1,6 @@
 <?php
 
-class Shmem
+class Ball
 {
     private $id;
     private $char;
